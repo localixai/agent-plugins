@@ -1,5 +1,5 @@
-import { error, type PluginIssue } from '../format/issues.ts';
-import { pathNotFound } from '../format/messages.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import { missingPath } from '../format/messages.ts';
 import { readTheme } from '../format/theme.ts';
 import { inspectWorkflowScript } from '../format/workflow-script.ts';
 import type { DiscoveredFile } from './discovered.ts';
@@ -41,7 +41,7 @@ const where = (path: string, issues: readonly PluginIssue[]): PluginIssue[] =>
   issues.map((issue) => ({ ...issue, path }));
 
 function missing(kind: ReadKind, path: string): PluginIssue {
-  return error(kind, pathNotFound(kind, path));
+  return missingPath(kind, path);
 }
 
 export async function readThemes(

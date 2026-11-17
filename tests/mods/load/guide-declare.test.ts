@@ -209,7 +209,7 @@ describe('what validate leaves unchecked in a declaration', () => {
     expect(result.text).not.toContain('is not declared');
   });
 
-  test('a $.state write inside a ui.render hook is not refused: validate lists it as a state write, and at runtime it does not redraw its own site (tests/mods/ui/redraw.test.ts)', async () => {
+  test('a $.state write inside a ui.render hook is not refused by validate: it is listed as a state write, and refused at run time (tests/mods/ui/redraw.test.ts)', async () => {
     const writing = `
 import { atom, read, update } from 'claude-code'
 const count = atom({ plugin: 'hello-tabs', key: 'count' }, 0)
@@ -224,5 +224,18 @@ export function register(on) {
     expect(result.exitCode).toBe(0);
     expect(result.text).toContain('state reads: hello-tabs.count');
     expect(result.text).toContain('state writes: hello-tabs.count');
+  });
+});
+
+// Agent Plugins Extended §10.3.2 item 4, Judgment J10.3 (oracle 2.1.325): the file's absence is not a refusal.
+describe('a namespace added without a types file', () => {
+  test('a module that hooks engine.create and has no types file validates', async () => {
+    const adding = `
+export function register(on) {
+  on('engine.create', async ($, e, next) => ({ ...(await next(e)), topo: { layers: async () => [] } }))
+}`;
+    const result = await check({}, adding);
+    expect(result.exitCode).toBe(0);
+    expect(result.text).not.toContain('must declare the namespace');
   });
 });

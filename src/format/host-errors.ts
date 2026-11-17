@@ -144,16 +144,30 @@ export const ELICITATION_REJECTED =
 export const noSuchTool = (name: string, hint?: string): string =>
   `Error: No such tool available: ${name}${hint === undefined ? '' : `.${hint.startsWith(' ') ? '' : ' '}${hint}`}`;
 
+/** Codes reported under another name: `ESTALE` is reported and handled as `EIO` (spec J17.29). */
+const REPORTED_AS: Readonly<Record<string, string>> = { ESTALE: 'EIO' };
+
+/** The code a path check reports: its own name, except those `REPORTED_AS` folds. */
+export const reportedCheckCode = (code: string): string =>
+  Object.hasOwn(REPORTED_AS, code) ? (REPORTED_AS[code] ?? code) : code;
+
 /** `/plugin` Errors tab: a path the operating system could not check (any error but "not found"). */
 export const pathCouldNotBeChecked = (component: string, path: string, code: string): string =>
-  `${component} path could not be checked: ${path} (${code})`;
+  `${component} path could not be checked: ${path} (${reportedCheckCode(code)})`;
 
 /** The same error as `claude plugin list` prints it. */
 export const pathCouldNotBeCheckedInList = (
   component: string,
   path: string,
   code: string,
-): string => `Path not found: ${path} (${component}, ${code})`;
+): string => `Path not found: ${path} (${component}, ${reportedCheckCode(code)})`;
+
+/**
+ * `<component> path escapes plugin directory: <path>` as `claude plugin` commands print it:
+ * `Path escapes plugin directory: ./../shared.md (commands)` (errors.md, "Path escapes plugin directory").
+ */
+export const pathEscapesInList = (component: string, path: string): string =>
+  `Path escapes plugin directory: ${path} (${component})`;
 
 /** Where a marketplace plugin's manifest resolves when it is not inside the plugin or its marketplace. */
 export function manifestNotRead(manifest: string, reason: string): string {
@@ -172,8 +186,8 @@ export function sandboxAllowIgnored(input: {
   const honored = read
     ? 'only allowRead paths from managed settings are honored'
     : 'only allowed domains (and WebFetch domain rules) from managed settings are honored';
-  const entries = input.count === 1 ? 'entry' : 'entries';
-  return `${key} is ignored — managed settings set ${lock}, so ${honored}. The ${input.count} ${entries} in ${input.file} will NOT apply (see https://code.claude.com/docs/en/settings#sandbox-settings).`;
+  // "The <N> entries in <file>" (errors.md): the docs give one form, whatever the count.
+  return `${key} is ignored — managed settings set ${lock}, so ${honored}. The ${input.count} entries in ${input.file} will NOT apply (see https://code.claude.com/docs/en/settings#sandbox-settings).`;
 }
 
 /** The startup notice for skill or command names Claude Code refused; `names` is the count. */

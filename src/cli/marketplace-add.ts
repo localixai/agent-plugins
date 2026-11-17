@@ -19,6 +19,7 @@ import {
   usageError,
   type CommandOutput,
 } from './result.ts';
+import { lfsPointerLine } from './lfs-pointer-line.ts';
 import { chooseScope, type ConfigScope } from './scope.ts';
 
 /**
@@ -118,6 +119,8 @@ export interface AddFetched {
   readonly graph?: GraphFacts;
   /** The source a user or managed `extraKnownMarketplaces` entry lists for this name; absent when none does. */
   readonly declared?: MarketplaceSource;
+  /** How many LFS-tracked files the clone left as pointer files (`github` and `git` sources). */
+  readonly lfsPointers?: number;
 }
 
 export interface AddConclusion {
@@ -189,9 +192,11 @@ function concludeFetch(
     };
   }
   const where = settingsLabel(start.scope);
-  const message = found.alreadyOnDisk
+  const head = found.alreadyOnDisk
     ? `Marketplace '${found.name}' already on disk — declared in ${where}`
     : `Successfully added marketplace: ${found.name} (declared in ${where})`;
+  const lfs = lfsPointerLine(found.lfsPointers ?? 0);
+  const message = lfs === undefined ? head : `${head}\n${lfs}`;
   return {
     output: marketplaceSuccess('marketplace-add', found.name, message),
     declare: { scope: start.scope, name: found.name, source: start.source },

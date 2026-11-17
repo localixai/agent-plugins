@@ -2,7 +2,8 @@
  * plugins/cli-reference.md § plugin details: "Claude Code prints the plugin's name, version,
  * description, and source, then these sections: `Component inventory`, `Projected token cost`,
  * `Per-component (rounded)` ... Omitted when the plugin has none"; a plugin that is not loaded
- * prints a message and exits `1`, and an `@builtin` id has its own message.
+ * prints a message and exits `1`, and an `@builtin` id has its own message. Spec §17.9 item 1: each
+ * kind "with its count and names"; the `Skills (1)  a` layout is oracle 2.1.325's (J17.11).
  */
 import { describe, expect, test } from 'bun:test';
 import { planPluginDetails, type PluginDetails } from '../../src/cli/index.ts';
@@ -55,15 +56,18 @@ describe('plugin details (the page prose outside the three section ids)', () => 
 });
 
 spec('cli.plugin.plugin details.Component inventory', () => {
-  test('lists skills, agents, hooks, MCP servers and LSP servers', () => {
-    const out = planPluginDetails('formatter', details).stdout;
+  test('lists skills, agents, hooks, MCP servers and LSP servers, each with its count and names', () => {
+    const out = planPluginDetails('formatter', {
+      ...details,
+      inventory: { ...details.inventory, skills: ['format', 'lint'] },
+    }).stdout;
     const at = out.indexOf('Component inventory');
     expect(out.slice(at + 1, at + 6)).toEqual([
-      '  Skills: format',
-      '  Agents: none',
-      '  Hooks: PostToolUse',
-      '  MCP servers: docs',
-      '  LSP servers: none',
+      '  Skills (2)  format, lint',
+      '  Agents (0)',
+      '  Hooks (1)  PostToolUse',
+      '  MCP servers (1)  docs',
+      '  LSP servers (0)',
     ]);
   });
 });

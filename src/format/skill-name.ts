@@ -1,5 +1,6 @@
 import { error, warning, type PluginIssue } from './issues.ts';
 import type { SkillLayout, SkillOrigin, SkillOriginKind } from './skill-types.ts';
+import { codePointLength } from './code-points.ts';
 
 /**
  * How a skill gets its command name (skills.md, "How a skill gets its command name" and
@@ -12,9 +13,12 @@ export interface SkillName {
   /** What the user types after `/`. */
   readonly command: string;
   /**
-   * `path` is the field the issue is about: `name` (the frontmatter) or `folder`. A message is a
-   * whole sentence that already starts with the field (`folder name has ...`), so a host shows it
-   * as it is. An error means the skill is refused and does not load; a warning means it loads.
+   * `path` is the field the issue is about: `name` (the frontmatter) or `folder`. A refused name's
+   * message is its debug-log line, `[names] <name> is not offered` (the skill does not load) or
+   * `[names] <value> is not shown for <skill>` (it loads without that `name`), hidden characters
+   * spelled `\u{200B}`; a host writes it to the debug log and counts the lines for the startup
+   * notice (`skillNamesRefused`). Any other message is a whole sentence that starts with the field
+   * (`folder name uses ...`). An error means the skill does not load; a warning means it loads.
    */
   readonly issues: readonly PluginIssue[];
 }
@@ -57,6 +61,36 @@ function hyphenate(text: string): string {
 const cannotHold = (field: string, found: readonly string[]): string =>
   `${field} has a character a command name can't hold (${found.join(', ')})`;
 
+/** skills.md, "Characters a skill name can't hold"; errors.md: "or be over 256 characters". */
+const MAX_NAME = 256;
+
+/** Whether Claude Code refuses `text` as a name: a character it can't hold, or over 256 code points. */
+const isRefused = (text: string): boolean =>
+  codePointLength(text) > MAX_NAME || refusedFlags(text).flags.includes(true);
+
+/**
+ * `text` as the debug log spells it (errors.md, "Skill or command name refused": "spells out some
+ * hidden characters as codes, such as `\u{200B}`"): every refused character but the visible `<`
+ * and `>` as its code point, so a blank at either end or a doubled space shows too.
+ */
+function spelled(text: string): string {
+  const { points, flags } = refusedFlags(text);
+  return points
+    .map((point, index) =>
+      flags[index] === true && point !== '<' && point !== '>'
+        ? `\\u{${(point.codePointAt(0) ?? 0).toString(16).toUpperCase()}}`
+        : point,
+    )
+    .join('');
+}
+
+/** errors.md, "Skill or command name refused": the `[names]` line of a name a skill goes by. */
+const notOffered = (name: string): string => `[names] ${spelled(name)} is not offered`;
+
+/** The same, for a frontmatter `name` the skill loads without. */
+const notShownFor = (value: string, skill: string): string =>
+  `[names] ${spelled(value)} is not shown for ${skill}`;
+
 interface Chosen {
   readonly name: string;
   readonly issues: readonly PluginIssue[];
@@ -72,7 +106,7 @@ export const reservedNamespace = (text: string): string | undefined =>
 const reservedFolder = (text: string): string | undefined =>
   text.toLowerCase() === 'synced' ? 'synced' : undefined;
 
-interface Field {
+interface Reserved {
   /** The issue's `path`, and the first word of its message. */
   readonly path: 'folder' | 'name';
   readonly label: string;
@@ -82,37 +116,33 @@ interface Field {
   readonly reserved: (text: string) => string | undefined;
 }
 
-/** The errors of one field: refused characters, and a reserved name (each refuses the skill). */
-function fieldErrors(field: Field): PluginIssue[] {
+/** The error of a reserved name: it refuses the skill (skills.md, "Names reserved for synced skills"). */
+function reservedErrors(field: Reserved): PluginIssue[] {
   const { path, label, text, fix } = field;
-  if (text === undefined) return [];
-  const issues: PluginIssue[] = [];
-  const found = refusedCharacters(text);
-  if (found.length > 0) {
-    issues.push(error(path, `${cannotHold(label, found)}; the skill is refused, ${fix}`));
-  }
-  const word = field.reserved(text);
-  if (word !== undefined) {
-    issues.push(
-      error(
-        path,
-        `${label} uses "${word}", a name reserved for skills synced from claude.ai; the skill does not load, ${fix}`,
-      ),
-    );
-  }
-  return issues;
+  const word = text === undefined ? undefined : field.reserved(text);
+  if (word === undefined) return [];
+  return [
+    error(
+      path,
+      `${label} uses "${word}", a name reserved for skills synced from claude.ai; the skill does not load, ${fix}`,
+    ),
+  ];
 }
 
 /**
- * Outside a plugin the skill is refused when its folder name or its frontmatter `name` holds a
- * refused character or is reserved. The folder `synced` is reserved only where Claude Code
- * authors no `synced` folder of its own: the user and project locations, not a synced skill.
+ * Outside a plugin (skills.md, "Characters a skill name can't hold"; errors.md, "Skill or command
+ * name refused"): a folder name Claude Code refuses keeps the skill from loading, an error; a
+ * refused frontmatter `name` is ignored, a warning, and the skill loads under its folder's name. A
+ * reserved folder or `name` refuses the skill. The folder `synced` is reserved only where Claude
+ * Code authors no `synced` folder of its own: the user and project locations, not a synced skill.
  */
 const strict =
   (reservesSyncedFolder: boolean) =>
   (dirName: string, declared: string | undefined): Chosen => {
+    const ignored = declared !== undefined && isRefused(declared);
     const issues = [
-      ...fieldErrors({
+      ...(isRefused(dirName) ? [error('folder', notOffered(dirName))] : []),
+      ...reservedErrors({
         path: 'folder',
         label: 'folder name',
         text: dirName,
@@ -120,7 +150,8 @@ const strict =
         reserved: (text) =>
           reservedNamespace(text) ?? (reservesSyncedFolder ? reservedFolder(text) : undefined),
       }),
-      ...fieldErrors({
+      ...(ignored ? [warning('name', notShownFor(declared, dirName))] : []),
+      ...reservedErrors({
         path: 'name',
         label: 'name',
         text: declared,
@@ -128,23 +159,20 @@ const strict =
         reserved: reservedNamespace,
       }),
     ];
-    return { name: declared ?? dirName, issues };
+    return { name: ignored ? dirName : (declared ?? dirName), issues };
   };
 
 /**
  * In a plugin the skill always loads. A folder's refused characters become hyphens in the command
- * name; a refused frontmatter `name` is not used (spec/judgments.md: the folder names the skill).
+ * name; a refused frontmatter `name` is not used, with its `[names]` line (spec/judgments.md: the
+ * folder names the skill). A long folder name is kept: the docs give a plugin folder only the
+ * hyphen rule.
  */
 function lenient(dirName: string, declared: string | undefined): Chosen {
-  const bad = declared === undefined ? [] : refusedCharacters(declared);
-  if (declared !== undefined && bad.length === 0) return { name: declared, issues: [] };
+  if (declared !== undefined && !isRefused(declared)) return { name: declared, issues: [] };
   const issues: PluginIssue[] = [];
-  if (bad.length > 0) {
-    issues.push(
-      warning('name', `${cannotHold('name', bad)}; it is not used, the folder names the skill`),
-    );
-  }
   const name = hyphenate(dirName);
+  if (declared !== undefined) issues.push(warning('name', notShownFor(declared, name)));
   if (name !== dirName) {
     issues.push(
       warning(

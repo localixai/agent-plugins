@@ -27,6 +27,17 @@ export interface SandboxBlockInput {
   readonly startDirectory: string;
   /** The home directory of the user. */
   readonly home: string;
+  /**
+   * What the block re-opens: "the working directories, worktrees Claude Code creates in the
+   * session, the session temp directory, and the parts of `~/.claude` that commands need". The host
+   * knows each; the kit returns them as `reopened`.
+   */
+  readonly reopened?: readonly string[];
+  /**
+   * The repository's common `.git` directory when the session's working directory is a linked git
+   * worktree, "including one Claude Code entered mid-session"; absent otherwise.
+   */
+  readonly worktreeCommonGitDir?: string;
 }
 
 export interface SandboxBlock {
@@ -34,6 +45,15 @@ export interface SandboxBlock {
   readonly reachesSandbox: boolean;
   /** Roots a sandboxed command may not read. */
   readonly denyRead: readonly string[];
+  /** What a sandboxed command may read again below the denied roots. */
+  readonly reopened: readonly string[];
+  /** "The repository's common `.git` directory stays readable and writable to sandboxed commands." */
+  readonly readWrite: readonly string[];
+  /**
+   * What stays write-denied inside `readWrite`: "Writes to `hooks/` and `config` inside that
+   * directory remain denied" (sandboxing.md, "Filesystem isolation").
+   */
+  readonly denyWrite: readonly string[];
   /** "`allowRead` and `allowWrite` entries from repository settings don't count" while the block is in force. */
   readonly repositoryAllowEntriesCount: boolean;
 }
@@ -41,6 +61,9 @@ export interface SandboxBlock {
 const OFF: SandboxBlock = {
   reachesSandbox: false,
   denyRead: [],
+  reopened: [],
+  readWrite: [],
+  denyWrite: [],
   repositoryAllowEntriesCount: true,
 };
 
@@ -52,9 +75,13 @@ export function sandboxReadBlock(input: SandboxBlockInput): SandboxBlock {
     input.managedReadPathsOnly ||
     /[*?[]/.test(input.startDirectory);
   if (exempt) return OFF;
+  const commonGit = input.worktreeCommonGitDir === undefined ? [] : [input.worktreeCommonGitDir];
   return {
     reachesSandbox: true,
     denyRead: [input.home, ...BLOCKED_USER_ROOTS],
+    reopened: [...(input.reopened ?? []), ...commonGit],
+    readWrite: commonGit,
+    denyWrite: commonGit.flatMap((git) => [`${git}/hooks`, `${git}/config`]),
     repositoryAllowEntriesCount: false,
   };
 }

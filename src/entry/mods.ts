@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/mods`: Mods: the hook chain, the events, the API, the interface, loading and their test kit (docs/API.md, "Mods"). */
+/** `@localix-ai/agent-plugins/mods`: Mods: the hook chain, the events, the API, the interface, loading and their test kit (docs/API.md, "Mods"). */
 // The shared pieces a mod host or author needs (docs/API.md, "Mods"), not the rest of foundation.
 export {
   createBudget,

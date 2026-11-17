@@ -49,13 +49,21 @@ describe('an invalid value is dropped with a warning and the agent still loads',
   });
 
   test('an empty value is the same as an absent one: nothing is set or reported', () => {
-    const result = read('color:\nmodel: ""\nmaxTurns: null');
+    const result = read('color:\nmaxTurns: null');
     expect(result.issues).toEqual([]);
     expect(loaded(result).extras).toEqual({});
     expect(loaded(result).definition).toEqual({
       description: 'Helps',
       prompt: 'You are a reviewer.\n',
     });
+  });
+
+  test('an empty model is outside "any non-empty text": dropped with a warning (J5.5)', () => {
+    const result = read('model: ""');
+    expect(loaded(result).definition).not.toHaveProperty('model');
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]).toMatchObject({ severity: 'warning', path: 'agents/reviewer.md' });
+    expect(result.issues[0]?.message).toContain('"model"');
   });
 
   test('a plain integer scalar written as a string still counts: maxTurns: "8"', () => {

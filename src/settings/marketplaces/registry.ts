@@ -27,7 +27,7 @@ type Entry = NonNullable<Settings['extraKnownMarketplaces']>[string];
  * docs' allowlist example names ("Allow only the official marketplace").
  */
 export const OFFICIAL_MARKETPLACE = 'claude-plugins-official';
-const OFFICIAL_SOURCE: SdkMarketplaceSource = {
+export const OFFICIAL_SOURCE: SdkMarketplaceSource = {
   source: 'github',
   repo: 'anthropics/claude-plugins-official',
 };

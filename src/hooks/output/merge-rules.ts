@@ -23,6 +23,10 @@ export interface Read {
     | undefined;
   /** A Monitor call reached the hook through a `Bash` matcher: its `allow` and `updatedInput` do not apply. */
   readonly effectsIgnored: boolean;
+  /** The hook itself held the action back: by exit 2, a failure that blocks, or `decision: "block"`. */
+  readonly blocks: boolean;
+  /** Raw stdout of a `WorktreeCreate` command hook: its last non-empty line is the path. */
+  readonly stdout: string | undefined;
 }
 
 export interface Merged {

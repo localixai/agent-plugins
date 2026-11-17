@@ -5,7 +5,7 @@
  */
 import { expect, test } from 'bun:test';
 import manifest from '../../package.json';
-import { STANDARD_LAYOUT as publicLayout } from '@rsaryev/llx-plugin/layout';
+import { STANDARD_LAYOUT as publicLayout } from '@localix-ai/agent-plugins/layout';
 import { STANDARD_LAYOUT } from '../../src/format/layout.ts';
 
 const packageName = (specifier: string): string =>

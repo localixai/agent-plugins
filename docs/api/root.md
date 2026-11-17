@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin`
+# `@localix-ai/agent-plugins`
 
 What a host needs to run plugins: the plugin host and its sessions, loading and validation, the permission decision, the port types, and Claude Code's own types and closed lists.
 
@@ -38,6 +38,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `CommandRun` | type | The `run` argument of `CommandRunner.run`; What `nodeDepsRun` returns |
 | `CommandRunner` | type | The `commands` field of `HookPorts`; The `runner` argument of `runMcpHeadersHelper` |
 | `CommandSpec` | type | A command a port runs: a program and its arguments with no shell, or a shell command line |
+| `CoreCallFacts` | type | What the host knows of a call or a prompt that Claude Code's input does not carry, for core handlers' tool profiles (`SessionDispatchOptions.core`) |
 | `createPermissionsPolicy` | function | The permissions policy of a settings view |
 | `createPluginHost` | function | The public entry: the loaded plugins, the ports the host implements and the settings, composed once and replaced by `update` |
 | `createPolicyView` | function | The view of settings layers that reads each key by its merge |
@@ -114,6 +115,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `HookSourceKind` | type | Where a registered handler was declared |
 | `HookSpecificOutputOf` | type | The `hookSpecificOutput` of one hook event |
 | `HooksSettings` | type | The shape of hook configuration, derived from the official `Settings` type |
+| `HostCorePackage` | type | A core Agent Plugins package the host was given (`loadPluginPackage`, form `core`), known by its `name@marketplace` id like any plugin |
 | `HostedPlugin` | type | A plugin the host knows and whether it runs |
 | `HostPlugin` | type | A plugin the host was given: loaded once (`loadPlugin`), known by its `name@marketplace` id |
 | `HostPorts` | type | What the host passes: the ports, with the ones its hook handler types need |
@@ -124,6 +126,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `HttpFailure` | type | What `HttpClient.request` returns; What `ModFetcher.request` returns |
 | `HttpRequest` | type | One HTTP request |
 | `HttpResponse` | type | What `HttpClient.request` returns |
+| `InitPluginFields` | type | The `plugins` and `plugin_errors` fields of the SDK's `SDKSystemMessage` |
 | `InvocableHead` | type | The `invocable` field of `ResolvedFolderSkill`; The `invocable` field of `ScannedEntry` |
 | `InvocationPolicy` | type | The `policy` field of `SessionSkill`; What `invocationPolicy` returns |
 | `LinkRoots` | type | The real paths (`/`-separated, one spelling) a link is judged against |
@@ -263,6 +266,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SdkOnlyTool` | type | One of `SDK_ONLY_TOOLS` |
 | `SDKPermissionDeniedMessage` | type | Claude Code's official `SDKPermissionDeniedMessage` (`@anthropic-ai/claude-agent-sdk`) |
 | `SdkPluginConfig` | type | Claude Code's official `SdkPluginConfig` (`@anthropic-ai/claude-agent-sdk`) |
+| `SDKPluginInstallMessage` | type | Claude Code's official `SDKPluginInstallMessage` (`@anthropic-ai/claude-agent-sdk`) |
 | `SDKResultError` | type | Claude Code's official `SDKResultError` (`@anthropic-ai/claude-agent-sdk`) |
 | `SendFeedbackInput` | type | The input of Claude Code's `SendFeedback` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |
 | `SendFeedbackOutput` | type | The output of Claude Code's `SendFeedback` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |

@@ -21,12 +21,16 @@ const SIGNAL_KEYS = ['cwd', 'cli', 'hosts', 'filesRead', 'manifestDeps'] as cons
 /** A list of `count` strings of at most `length` characters. */
 const list = (count: number, length: number) => z.array(z.string().max(length)).max(count);
 
-/** "Bare lowercase hostname only: no scheme, port, or path". */
+/**
+ * "Bare lowercase hostname only: no scheme, port, or path". Oracle 2.1.325 accepts only lower-case
+ * letters, digits, `.` and `-`, so an upper-case letter, a space, an underscore or a non-ASCII
+ * letter invalidates the entry like a scheme (spec J15.10; spec/judgments.md).
+ */
 const host = z
   .string()
   .max(128)
-  .refine((value) => !/[:/]/.test(value), {
-    message: 'Invalid host: use a bare hostname, with no scheme, port, or path',
+  .refine((value) => /^[a-z0-9.-]*$/.test(value), {
+    message: 'must be a lowercase bare hostname (no scheme, port, or path)',
   });
 
 const signalsSchema = z.looseObject({

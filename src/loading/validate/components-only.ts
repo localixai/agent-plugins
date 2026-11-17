@@ -22,11 +22,16 @@ const FOLDER_OF: { readonly [K in ComponentKind]: string } = {
   agent: 'agents',
   command: 'commands',
 };
-/** Agents of a bare folder are only looked at for links, not for frontmatter (oracle 2.1.319). */
-const READ_FRONTMATTER: { readonly [K in ComponentKind]: boolean } = {
-  skill: true,
-  agent: false,
-  command: true,
+/**
+ * Agents of a bare folder named `agents` are only looked at for links, not for frontmatter (oracle
+ * 2.1.319); those of a project's `.claude/agents/` are read, with their own unparsed-YAML wording
+ * and the description warning (spec §2.11 table, J2.4, oracle 2.1.319 and 2.1.322).
+ */
+const READ_FRONTMATTER: {
+  readonly [S in 'plugin' | 'project']: { readonly [K in ComponentKind]: boolean };
+} = {
+  plugin: { skill: true, agent: false, command: true },
+  project: { skill: true, agent: true, command: true },
 };
 
 async function hasSkillsTree(files: PluginFiles, signal?: AbortSignal): Promise<boolean> {
@@ -57,9 +62,9 @@ async function bareIssues(
   signal?: AbortSignal,
 ): Promise<ValidationIssue[]> {
   const scan = await scanBare(kind, files, where, signal);
-  if (!READ_FRONTMATTER[kind]) return [...scan.issues];
+  if (!READ_FRONTMATTER[where.style][kind]) return [...scan.issues];
   const shown = scan.files.map((path) => (where.report === '' ? path : `${where.report}/${path}`));
-  const found = await frontmatterIssues(kind, files, scan.files, { signal });
+  const found = await frontmatterIssues(kind, files, scan.files, { signal, place: where.style });
   return [
     ...scan.issues,
     ...found.map((issue, index) => ({ ...issue, file: shown[index] ?? issue.file })),

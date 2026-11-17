@@ -33,7 +33,6 @@ const TARGETS: Readonly<Record<string, string>> = {
   '.vscode': `${PROJECT}/.vscode/settings.json`,
   '.yarn': `${PROJECT}/.yarn/releases/yarn.cjs`,
   'gradle-wrapper.properties': `${PROJECT}/gradle/wrapper/gradle-wrapper.properties`,
-  'remote-settings.json': `${PROJECT}/remote-settings.json`,
   '~/.claude/dev-mods/': '/home/alice/.claude/dev-mods/mod.js',
 };
 

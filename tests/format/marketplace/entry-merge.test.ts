@@ -49,7 +49,7 @@ spec(
       test('mcpServers, lspServers, userConfig and channels apply too', () => {
         const extra = {
           mcpServers: { db: { command: 'db-mcp' } },
-          lspServers: { ts: { command: 'tsserver' } },
+          lspServers: { ts: { command: 'tsserver', extensionToLanguage: { '.ts': 'typescript' } } },
           userConfig: {
             api_token: {
               type: 'string',
@@ -181,7 +181,7 @@ spec('marketplace.entry.strict', () => {
     test('entry mcpServers, lspServers, userConfig and channels do not apply when plugin.json is present (either strict)', () => {
       const entryOnly = {
         mcpServers: { db: { command: 'entry-db' } },
-        lspServers: { ts: { command: 'entry-ts' } },
+        lspServers: { ts: { command: 'entry-ts', extensionToLanguage: { '.ts': 'typescript' } } },
         userConfig: { k: { type: 'string', title: 'K', description: 'k' } },
         channels: [{ server: 'db' }],
       };

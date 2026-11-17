@@ -151,13 +151,20 @@ describe('resolveSkillName', () => {
       expect(errors(plugin('synced'))).toEqual([]);
     });
 
-    test.each(REFUSED)('outside a plugin a frontmatter name with %s is refused', (_kind, name) => {
-      for (const layout of [project('ok'), user('ok'), synced('ok')]) {
-        const found = errors(layout, name);
-        expect(found).toHaveLength(1);
-        expect(blocksLoading(found)).toBe(true);
-      }
-    });
+    test.each(REFUSED)(
+      'outside a plugin a frontmatter name with %s is ignored: the skill loads under its folder name',
+      (_kind, name) => {
+        // errors.md, "Skill or command name refused": "`name` field ignored ... The skill still loads".
+        for (const layout of [project('ok'), user('ok'), synced('ok')]) {
+          const found = resolveSkillName(layout, name);
+          expect(blocksLoading(found.issues)).toBe(false);
+          expect(found.name).toBe('ok');
+          expect(found.issues.map((issue) => [issue.severity, issue.path])).toEqual([
+            ['warning', 'name'],
+          ]);
+        }
+      },
+    );
 
     test.each(REFUSED)('outside a plugin a folder name with %s is refused', (_kind, folder) => {
       expect(errors(project(folder))).toHaveLength(1);
@@ -216,20 +223,10 @@ describe('resolveSkillName', () => {
       expect(resolveSkillName(plugin('a b'), undefined).command).toBe('my-plugin:a b');
     });
 
-    test('an issue names the field and the refused character, and a hyphenated folder is a warning', () => {
-      const [issue] = resolveSkillName(project('ok'), 'a\u200Bb').issues;
-      expect(issue).toMatchObject({ severity: 'error', path: 'name' });
-      expect(issue?.message).toContain('U+200B');
+    test('a hyphenated plugin folder is a warning naming the command', () => {
       const [folder] = resolveSkillName(plugin('a<b'), undefined).issues;
       expect(folder).toMatchObject({ severity: 'warning', path: 'folder' });
       expect(folder?.message).toContain('a-b');
-    });
-
-    test('a refused name still returns the name as written, for the host to report', () => {
-      expect(resolveSkillName(project('ok'), 'a<b')).toMatchObject({
-        name: 'a<b',
-        command: 'a<b',
-      });
     });
 
     test('an empty final segment is not refused: a trailing colon and an empty name are kept as written', () => {
@@ -251,7 +248,7 @@ describe('resolveSkillName', () => {
     });
 
     test('a Unicode format character outside the documented ones (a soft hyphen) is refused too', () => {
-      expect(errors(project('ok'), 'a\u00ADb')).toHaveLength(1);
+      expect(errors(project('a\u00ADb'))).toHaveLength(1);
     });
   });
 });
@@ -262,16 +259,15 @@ describe('readSkill with the name rules', () => {
     expect(blocksLoading(issues)).toBe(true);
     expect(issues[0]?.path).toBe('.claude/skills/a<b/SKILL.md');
     // The field is named once: `folder name has ...`, not `folder folder name has ...`.
-    expect(issues[0]?.message).toMatch(
-      /^folder name has a character a command name can't hold \(U\+003C\)/,
-    );
+    expect(issues[0]?.message).toBe('[names] a<b is not offered');
   });
 
-  test('a refused frontmatter name is reported once by field, and a plugin warning too', () => {
-    const refused = readSkill('s/SKILL.md', skillFile('name: a<b'), project('ok'));
-    expect(refused.issues[0]?.message).toMatch(/^name has a character/);
+  test('a refused frontmatter name is one warning, outside a plugin and in one', () => {
+    const ignored = readSkill('s/SKILL.md', skillFile('name: a<b'), project('ok'));
+    expect(ignored.skill.command).toBe('ok');
+    expect(ignored.issues[0]?.message).toBe('[names] a<b is not shown for ok');
     const warned = readSkill('s/SKILL.md', skillFile('name: a<b'), plugin('review'));
-    expect(warned.issues[0]?.message).toMatch(/^name has a character/);
+    expect(warned.issues[0]?.message).toBe('[names] a<b is not shown for review');
     const reserved = readSkill('s/synced/SKILL.md', 'x', project('synced'));
     expect(reserved.issues[0]?.message).toMatch(/^folder name uses "synced"/);
   });

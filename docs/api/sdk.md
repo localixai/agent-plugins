@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/sdk`
+# `@localix-ai/agent-plugins/sdk`
 
 A session's plugin hooks as the `hooks` option of a Claude Agent SDK query.
 

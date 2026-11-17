@@ -65,18 +65,6 @@ spec('marketplace.field.renames', () => {
     expect(validateRenames({ a: 'b', b: 'c', c: null }, [])).toEqual([]);
   });
 
-  test('a target that is not a valid plugin name is rejected with the PluginIdSchema message', () => {
-    for (const bad of ['has space', '-leading', 'a/b', '']) {
-      const found = validateRenames({ old: bad }, ['x']);
-      expect(found).toHaveLength(1);
-      expect(found[0]).toEqual({
-        severity: 'error',
-        path: 'renames.old',
-        message: `target "${bad}" is not a valid plugin name (PluginIdSchema)`,
-      });
-    }
-  });
-
   test('claude plugin validate reports a chain that does not resolve', () => {
     const raw = withFields({ renames: { formatter: 'missing' } });
     const issues = validateMarketplace(raw, {}, recordingEntryReader().read);
@@ -105,9 +93,21 @@ describe('what the docs leave open (spec/judgments.md)', () => {
     expect(validateRenames({ a: 'b', b: 'a' }, ['b'])).toEqual([]);
   });
 
-  test('an unresolved chain names the reason: where it ended, or the cycle', () => {
-    expect(validateRenames({ a: 'gone' }, [])[0]?.message).toContain('ends at "gone"');
-    expect(validateRenames({ a: 'b', b: 'a' }, [])[0]?.message).toContain('a -> b -> a');
+  test('an unresolved chain names the reason: target-missing or cycle (spec J15.11, oracle 2.1.325)', () => {
+    expect(validateRenames({ a: 'gone' }, [])[0]?.message).toBe(`${PREFIX}target-missing${SUFFIX}`);
+    expect(validateRenames({ a: 'b', b: 'a' }, [])[0]?.message).toBe(`${PREFIX}cycle${SUFFIX}`);
+  });
+
+  test('a target that breaks the id grammar draws target-missing, not the PluginIdSchema text (J15.11)', () => {
+    for (const bad of ['bad name', 'x@y', '', '_p', '-leading', 'a/b']) {
+      expect(validateRenames({ old: bad }, ['x'])).toEqual([
+        { severity: 'error', path: 'renames.old', message: `${PREFIX}target-missing${SUFFIX}` },
+      ]);
+    }
+  });
+
+  test('a target that is itself a renames key is followed, whatever its spelling (J15.11)', () => {
+    expect(validateRenames({ 'bad key': 'a', o: 'bad key' }, ['a'])).toEqual([]);
   });
 
   test('keys that name object members are plain names, never inherited ones', () => {

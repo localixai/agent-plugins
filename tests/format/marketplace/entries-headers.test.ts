@@ -79,12 +79,40 @@ spec(
   },
 );
 
-describe('the routing and identity header names (judgment: only the names the docs give)', () => {
-  test('Host, Cookie and X-Forwarded-* in any casing; nothing else', () => {
-    for (const name of ['Host', 'HOST', 'cookie', 'Cookie', 'X-Forwarded-For', 'x-forwarded-']) {
+describe('the routing and identity header names (judgment J15.12: the set the oracle 2.1.325 warns for)', () => {
+  test('the listed names and the x-forwarded-, x-original- and proxy- prefixes, in any casing, `_` read as `-`', () => {
+    for (const name of [
+      'Host',
+      'HOST',
+      'cookie',
+      'Forwarded',
+      'X-Real-IP',
+      'X_Real_IP',
+      'True-Client-IP',
+      'CF-Connecting-IP',
+      'Connection',
+      'Transfer-Encoding',
+      'Content-Length',
+      'TE',
+      'Via',
+      'X-Forwarded-For',
+      'x-forwarded-',
+      'X-Original-Host',
+      'proxy-foo',
+      'Proxy_Authorization',
+    ]) {
       expect(isRoutingHeader(name)).toBe(true);
     }
-    for (const name of ['Authorization', 'X-Api-Key', 'X-Team', 'Hostname', 'Cookies']) {
+  });
+  test('every other name is kept: Authorization, X-Api-Key, a bare X-Forwarded', () => {
+    for (const name of [
+      'Authorization',
+      'X-Api-Key',
+      'X-Team',
+      'X-Forwarded',
+      'Hostname',
+      'Cookies',
+    ]) {
       expect(isRoutingHeader(name)).toBe(false);
     }
   });

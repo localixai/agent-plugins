@@ -36,12 +36,13 @@ export { modOptions, type ModOptions } from './options.ts';
 export { REGISTER_RULES } from './register-call.ts';
 export { activeModsLine } from './commands/active-line.ts';
 
-export {
-  validateMod,
-  type FileReport,
-  type ValidateInput,
-  type ValidateReport,
-} from './commands/validate.ts';
+export { validateMod } from './commands/validate.ts';
+export type {
+  FileReport,
+  ReportEntry,
+  ValidateInput,
+  ValidateReport,
+} from './commands/validate-report.ts';
 export {
   ESM_FORMAT,
   scanSourceOf,

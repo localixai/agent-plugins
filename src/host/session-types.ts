@@ -1,6 +1,6 @@
 import type { PolicyView } from '../settings/index.ts';
 import type { OptionValues } from '../settings/plugins/index.ts';
-import type { HostPlugin } from './types.ts';
+import type { HostCorePackage, HostPlugin } from './types.ts';
 import type { HookPorts } from '../hooks/index.ts';
 import type { Locations } from '../ports/index.ts';
 import type { DecideContext, HostToolNames, PermissionRule } from '../rules/index.ts';
@@ -134,6 +134,8 @@ export interface SessionOptions {
    * (spec/judgments.md) for the layering.
    */
   readonly plugins?: readonly HostPlugin[];
+  /** This session's own core packages, layered by id with `plugins` over the host's (as `plugins`). */
+  readonly corePackages?: readonly HostCorePackage[];
   /**
    * The saved values of this session's plugins by plugin id (the host's secure store for this
    * project), in the form of `PluginHostOptions.userConfig`: an option by its key, a bundled server's

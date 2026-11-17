@@ -26,8 +26,8 @@ spec("marketplace.rule.Failures that validation doesn't catch", () => {
   });
 
   test('an error fetching a source appears only after install: validation reports nothing for a source that cannot be fetched', () => {
+    // An archive url on a loopback host is reported by the validator itself (spec §15.6.5).
     const sources = [
-      { source: 'archive', url: 'https://localhost/formatter.zip' },
       { source: 'npm', package: 'github:acme/formatter' },
       { source: 'github', repo: 'your-org/formatter' },
     ];

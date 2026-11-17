@@ -17,13 +17,13 @@ describe('the exports map', () => {
   test('each subpath lists the source, types, bun, import and default conditions, in that order', () => {
     for (const [, conditions] of subpaths) {
       expect([...conditions.keys()]).toEqual([
-        'llx-plugin-source',
+        'agent-plugins-source',
         'types',
         'bun',
         'import',
         'default',
       ]);
-      expect(conditions.get('llx-plugin-source')).toBe(conditions.get('bun'));
+      expect(conditions.get('agent-plugins-source')).toBe(conditions.get('bun'));
       expect(conditions.get('default')).toBe(conditions.get('import'));
     }
   });

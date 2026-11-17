@@ -13,11 +13,15 @@ import { planCommand } from './plan.ts';
  * and the run the port reports. What the exit code means is the interpreter's.
  */
 
-/** A plan with no spec ran nothing: the first error says why. */
-const skipped = (issues: readonly PluginIssue[]): CommandRawRun => ({
-  kind: 'skipped',
-  reason: issues.find(({ severity }) => severity === 'error')?.message ?? 'The hook did not run.',
-});
+/** A plan with no spec ran nothing: its notice, else the first error, says why. */
+const skipped = (issues: readonly PluginIssue[], notice: string | undefined): CommandRawRun =>
+  notice === undefined
+    ? {
+        kind: 'skipped',
+        reason:
+          issues.find(({ severity }) => severity === 'error')?.message ?? 'The hook did not run.',
+      }
+    : { kind: 'skipped', reason: notice, notice };
 
 async function request(
   entry: HandlerEntry<'command'>,
@@ -73,7 +77,8 @@ export async function runCommand(
   if (plan.notStarted !== undefined) {
     return { run: { kind: 'not-started', message: plan.notStarted }, issues: plan.issues };
   }
-  if (plan.spec === undefined) return { run: skipped(plan.issues), issues: plan.issues };
+  if (plan.spec === undefined)
+    return { run: skipped(plan.issues, plan.notice), issues: plan.issues };
   const prepared = await request(entry, plan.spec, plan.exported ?? {}, context);
   const issues = [...plan.issues, ...prepared.issues];
   const { runner } = context.ports;

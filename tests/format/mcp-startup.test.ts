@@ -74,7 +74,7 @@ spec('environment.host.CLAUDE_CODE_DISABLE_MCP_TASK_BACKGROUND', () => {
 });
 
 spec('environment.host.MCP_CONNECTION_NONBLOCKING', () => {
-  const plain = { alwaysLoad: false, cached: false };
+  const plain = { alwaysLoad: false, cached: false, transport: 'http' } as const;
   const interactive = { printMode: false };
 
   test('startup is non-blocking by default', () => {
@@ -90,8 +90,9 @@ spec('environment.host.MCP_CONNECTION_NONBLOCKING', () => {
   });
 
   test('a server with alwaysLoad: true makes startup wait regardless, except when served from the cache', () => {
-    expect(mcpStartupWaitsFor(env(), { alwaysLoad: true, cached: false }, interactive)).toBe(true);
-    expect(mcpStartupWaitsFor(env(), { alwaysLoad: true, cached: true }, interactive)).toBe(false);
+    const always = { ...plain, alwaysLoad: true };
+    expect(mcpStartupWaitsFor(env(), always, interactive)).toBe(true);
+    expect(mcpStartupWaitsFor(env(), { ...always, cached: true }, interactive)).toBe(false);
   });
 
   test('claude -p waits for pending servers before the first turn regardless of the variable', () => {
@@ -240,6 +241,8 @@ spec('environment.host.MCP_PROTOCOL_NEGOTIATION', () => {
   });
 });
 
+const CACHED_HTTP = { alwaysLoad: false, cached: true, transport: 'http' } as const;
+
 describe('what the docs leave open', () => {
   test('a value that is not plain digits is ignored', () => {
     for (const text of ['', 'many', '-1', '2.5', '0x10']) {
@@ -277,9 +280,7 @@ describe('what the docs leave open', () => {
 
   test('a cached server is never waited for at startup, even with MCP_CONNECTION_NONBLOCKING=0', () => {
     const variables = env({ MCP_CONNECTION_NONBLOCKING: '0' });
-    expect(
-      mcpStartupWaitsFor(variables, { alwaysLoad: false, cached: true }, { printMode: true }),
-    ).toBe(false);
+    expect(mcpStartupWaitsFor(variables, CACHED_HTTP, { printMode: true })).toBe(false);
   });
 
   test('a variable that does not name a setting is a warning only on the runtime it belongs to', () => {

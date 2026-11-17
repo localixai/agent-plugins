@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../format/env-flag.ts';
 import type { PolicyView } from '../view.ts';
 
 /** What the host tells the workflow keys besides the layers: plain data, the kit reads no `process.env`. */
@@ -15,9 +16,6 @@ export interface WorkflowsContext {
 
 /** `CLAUDE_CODE_DISABLE_WORKFLOWS`, equivalent to `disableWorkflows` for one session (env-vars.md). */
 export const WORKFLOWS_ENV = 'CLAUDE_CODE_DISABLE_WORKFLOWS';
-
-/** The documented value (env-vars.md: "Set to `1`"). */
-const ENV_ON = '1';
 
 /** What can turn workflows off, in the order a decision lists them. */
 export const WORKFLOWS_OFF_BY = [
@@ -69,7 +67,8 @@ const disabledByFile: Reading = (view) =>
 
 const OFF_BY: { readonly [R in WorkflowsOffBy]: Reading } = {
   disableWorkflows: disabledByFile,
-  env: (_view, context) => context.env[WORKFLOWS_ENV] === ENV_ON,
+  // An on/off variable: any on spelling (env-vars.md, "Variables"; spec J3.16).
+  env: (_view, context) => isTruthyEnv(context.env[WORKFLOWS_ENV]),
   orgPolicy: (_view, context) => context.orgWorkflowsOff === true,
   enableWorkflows: (view) => view.get('enableWorkflows') === false,
   plan: (view, context) => view.get('enableWorkflows') === undefined && context.plan.pro,

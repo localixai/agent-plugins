@@ -73,3 +73,8 @@ export const HOOKS_LINK = {
 } as const;
 
 export const MCP_NOT_REGULAR = `The file is not a regular file (a symlink, a FIFO, a directory) and was not read — MCP server files ${CAP} The plugin loader has neither limit, so validate the real file separately.`;
+
+/** The most of an MCP server file the validator reads (oracle 2.1.325, spec J8.27). */
+export const MCP_FILE_CAP_BYTES = 1_048_576;
+
+export const MCP_PAST_CAP = `The file is past the size cap and was not read — MCP server files ${CAP} The plugin loader has neither limit, so validate the real file separately.`;

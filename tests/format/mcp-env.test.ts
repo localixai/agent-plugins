@@ -281,3 +281,16 @@ describe('expansion edges (judgments)', () => {
     expect(displayReference({ type: 'http', url: 'not a url' }, 'managed')).toBe('…');
   });
 });
+
+describe('a url written empty (mcp.md: "shows as `not configured`")', () => {
+  test('is a placeholder, not the invalid-URL error', () => {
+    const out = expandMcpServer('later', { type: 'http', url: '' }, lookupOf({}));
+    expect(out).toEqual({
+      server: undefined,
+      issues: [],
+      missing: [],
+      debug: [],
+      notConfigured: true,
+    });
+  });
+});

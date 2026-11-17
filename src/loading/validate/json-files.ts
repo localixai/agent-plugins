@@ -11,8 +11,14 @@ import { mcpFindings } from '../../format/validate/mcp-check.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 import { kindOf } from '../../format/validate/received.ts';
 import type { PluginFiles } from '../../ports/index.ts';
-import { parseJson, type JsonRead, invalidJsonSyntax } from '../../format/read-json.ts';
-import { HOOKS_LINK, isLink, MCP_NOT_REGULAR } from './links.ts';
+import {
+  BOM_PARSE_ERROR,
+  invalidJsonSyntax,
+  opensWithBom,
+  parseJson,
+  type JsonRead,
+} from '../../format/read-json.ts';
+import { HOOKS_LINK, isLink, MCP_FILE_CAP_BYTES, MCP_NOT_REGULAR, MCP_PAST_CAP } from './links.ts';
 
 /**
  * The JSON files a plugin declares (oracle 2.1.319): `hooks/hooks.json` and the files `hooks`
@@ -28,7 +34,6 @@ type Parsed =
   | { readonly issues: readonly ValidationIssue[] }
   | undefined;
 
-const BOM = [0xef, 0xbb, 0xbf] as const;
 const decoder = new TextDecoder();
 
 /**
@@ -44,7 +49,7 @@ async function parsed(
   const { tail } = how;
   if (!(await files.exists(path, signal))) return undefined;
   const bytes = await files.readBytes(path, signal);
-  if (bytes !== undefined && BOM.every((byte, index) => bytes[index] === byte)) {
+  if (bytes !== undefined && opensWithBom(bytes)) {
     return { issues: [errorIn(path, 'json', invalidJsonSyntax(`${how.bom} ${tail}`))] };
   }
   const read: JsonRead =
@@ -56,7 +61,7 @@ async function parsed(
   return { issues: [errorIn(path, 'json', message)] };
 }
 
-const HOOKS_BOM = "JSON Parse error: Unrecognized token ''";
+const HOOKS_BOM = BOM_PARSE_ERROR;
 const MCP_BOM =
   'the file starts with a UTF-8 byte-order mark (BOM), which this file (unlike plugin.json) must not have — re-save it as UTF-8 without BOM.';
 
@@ -75,10 +80,10 @@ function hooksFileFindings(value: unknown): Finding[] {
     return [errorAt('root', `Invalid input: expected object, received ${kindOf(value)}`)];
   }
   const modules = Array.isArray(value.modules) && value.modules.length > 0;
+  // oracle 2.1.325: a guard key beside a `hooks` object is refused as one without it.
   const stray =
-    value.hooks === undefined
-      ? GUARD_KEYS.some((key) => declared(value[key]))
-      : Array.isArray(value.hooks) && declared(value.hooks);
+    GUARD_KEYS.some((key) => declared(value[key])) ||
+    (Array.isArray(value.hooks) && declared(value.hooks));
   if (stray) return [errorAt('hooks', OUTSIDE)];
   if (value.hooks === undefined) return modules ? [] : [errorAt('root', MISSING_HOOKS)];
   if (!isRecord(value.hooks)) {
@@ -110,7 +115,12 @@ export async function mcpFileIssues(
   declared: ReadonlySet<string>,
   signal?: AbortSignal,
 ): Promise<ValidationIssue[]> {
-  if (await isLink(files, path, signal)) return [warningIn(path, 'directory', MCP_NOT_REGULAR)];
+  const stat = await files.stat(path, signal);
+  if (stat?.isSymlink === true) return [warningIn(path, 'directory', MCP_NOT_REGULAR)];
+  // A regular file over the cap is not read (spec §8 validator table, J8.27).
+  if (stat !== undefined && stat.size > MCP_FILE_CAP_BYTES) {
+    return [warningIn(path, 'directory', MCP_PAST_CAP)];
+  }
   const read = await parsed(files, path, { tail: SKIPPED_MCP, bom: MCP_BOM }, signal);
   if (read === undefined) return [];
   return 'issues' in read ? [...read.issues] : inFile(path, mcpFindings(read.value, declared));

@@ -5,7 +5,7 @@
  * `CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS`, `CLAUDE_CODE_PLUGIN_PREFER_HTTPS`, `CLAUDE_CODE_SYNC_PLUGIN_INSTALL`
  * (and its timeout), `DISABLE_TELEMETRY`, `DO_NOT_TRACK`.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   DEFAULT_MAX_CONCURRENT_SUBAGENTS,
   DEFAULT_PLUGIN_GIT_TIMEOUT_MS,
@@ -176,5 +176,31 @@ spec('environment.host.CLAUDE_CODE_TMPDIR', () => {
     expect(claudeTempDirectory(none, { platform: 'posix', uid: 7, fallback: '/tmp' })).toBe(
       '/tmp/claude-7/',
     );
+  });
+});
+
+describe('on/off variables read every on spelling, in any casing, trimmed (env-vars.md, "Variables"; spec §3.6.1, J3.16)', () => {
+  const ON = ['1', 'true', 'yes', 'on', ' TRUE ', 'Yes', 'ON'];
+  const OFF = ['0', 'false', 'no', 'off', 'enabled', ''];
+  test.each(ON)('%p turns each switch on', (value) => {
+    expect(
+      officialMarketplaceAutoinstallEnabled(
+        env('CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL', value),
+      ),
+    ).toBe(false);
+    expect(policySkillsEnabled(env('CLAUDE_CODE_DISABLE_POLICY_SKILLS', value))).toBe(false);
+    expect(preferHttps(env('CLAUDE_CODE_PLUGIN_PREFER_HTTPS', value))).toBe(true);
+    expect(telemetryOptedOut(env('DO_NOT_TRACK', value))).toBe(true);
+    const refresh = env('CLAUDE_CODE_ENABLE_BACKGROUND_PLUGIN_REFRESH', value);
+    expect(backgroundPluginRefreshEnabled(refresh, { interactive: false })).toBe(true);
+    const notify = env('CLAUDE_CODE_DISABLE_PERMISSION_PROMPT_NOTIFY_HOOKS', value);
+    expect(permissionPromptNotifyHooksEnabled(notify, { usesCanUseTool: true })).toBe(false);
+    const sync = env('CLAUDE_CODE_SYNC_PLUGIN_INSTALL', value);
+    expect(syncPluginInstall(sync, { interactive: false }).wait).toBe(true);
+  });
+  test.each(OFF)('%p leaves each switch off', (value) => {
+    expect(preferHttps(env('CLAUDE_CODE_PLUGIN_PREFER_HTTPS', value))).toBe(false);
+    expect(telemetryOptedOut(env('DO_NOT_TRACK', value))).toBe(false);
+    expect(policySkillsEnabled(env('CLAUDE_CODE_DISABLE_POLICY_SKILLS', value))).toBe(true);
   });
 });

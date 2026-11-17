@@ -250,15 +250,18 @@ describe('both forms export the placeholders as environment variables', () => {
     }
   });
 
-  test('on Windows the exported paths are native, as the host reports them', async () => {
-    const { call } = await ran(pluginCommand({ command: 'run' }), {
-      locations: windowsLocations(),
-      windows: true,
-    });
+  test('on Windows a Git Bash hook gets the exported paths with forward slashes (J3.6); exec form keeps them native', async () => {
+    const host = { locations: windowsLocations(), windows: true };
+    const { call } = await ran(pluginCommand({ command: 'run' }), host);
     expect(call.env).toMatchObject({
+      CLAUDE_PROJECT_DIR: 'C:/Users/you/app',
+      CLAUDE_PLUGIN_ROOT: 'C:/Users/you/.claude/plugins/cache/formatter@acme-tools',
+      CLAUDE_PLUGIN_DATA: 'C:/Users/you/.claude/plugins/data/formatter-acme-tools',
+    });
+    const exec = await ran(pluginCommand({ command: 'run', args: [] }), host);
+    expect(exec.call.env).toMatchObject({
       CLAUDE_PROJECT_DIR: 'C:\\Users\\you\\app',
       CLAUDE_PLUGIN_ROOT: 'C:\\Users\\you\\.claude\\plugins\\cache\\formatter@acme-tools',
-      CLAUDE_PLUGIN_DATA: 'C:\\Users\\you\\.claude\\plugins\\data\\formatter-acme-tools',
     });
   });
 });

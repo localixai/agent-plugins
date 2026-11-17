@@ -1,5 +1,6 @@
 import type { PluginIssue } from '../../format/issues.ts';
 import { readMcpConfig } from '../../format/mcp-config.ts';
+import { withoutReservedServers } from '../../format/mcp-reserved.ts';
 import type { McpCandidate, McpScope } from './scope.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
@@ -11,7 +12,7 @@ export interface McpCandidatesRead {
 /** The servers of one `mcpServers` map as candidates of `scope`; an entry Claude Code drops is an issue. */
 function candidatesOf(scope: McpScope, servers: unknown, origin: string): McpCandidatesRead {
   if (!isRecord(servers)) return { candidates: [], issues: [] };
-  const read = readMcpConfig(servers, origin);
+  const read = withoutReservedServers(readMcpConfig(servers, origin), origin);
   return {
     candidates: Object.entries(read.servers).map(([name, server]) => ({ scope, name, server })),
     issues: read.issues,
@@ -55,7 +56,7 @@ export function claudeJsonServers(state: unknown, projectPath: string): McpCandi
  */
 export function projectFileServers(mcpJson: unknown): McpCandidatesRead {
   if (mcpJson === undefined) return { candidates: [], issues: [] };
-  const read = readMcpConfig(mcpJson, '.mcp.json');
+  const read = withoutReservedServers(readMcpConfig(mcpJson, '.mcp.json'), '.mcp.json');
   return {
     candidates: Object.entries(read.servers).map(([name, server]) => ({
       scope: 'project',

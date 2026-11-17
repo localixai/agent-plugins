@@ -1,5 +1,7 @@
 import type { PluginSourceKind, PluginSourceOf } from '../format/marketplace/types.ts';
 import type { CatalogPlugin } from '../marketplace/dependency-graph.ts';
+import { alreadyAddedFromDifferentSource } from '../marketplace/install-errors.ts';
+import { sameMarketplaceSource } from '../marketplace/known-marketplaces.ts';
 import { NOT_REFRESHED } from '../updates/refresh-before-install.ts';
 import type { DisplayedCommand } from './command-acceptance.ts';
 import type { InstallFound } from './install-plan.ts';
@@ -62,11 +64,31 @@ export function marketplaceRefusal(
   found: InstallFound,
 ): CommandOutput | undefined {
   const added = found.addedMarketplace;
-  if (added === undefined || added.alreadyKnown) return undefined;
+  if (added === undefined) return undefined;
+  if (added.alreadyKnown) return sameNameRefusal(pending, added);
   const reason = nameRefusal(added, pending.addMarketplace?.source);
   return reason === undefined
     ? undefined
     : commandFailed('install', reason, { failureCode: 'invalid_name' });
+}
+
+/**
+ * A catalog whose name is a marketplace already added from another source: the existing one is kept
+ * and nothing is installed (§17.20.2). Judgment: the failure code is `invalid_source`
+ * (spec/judgments.md).
+ */
+function sameNameRefusal(
+  pending: PendingInstall,
+  added: NonNullable<InstallFound['addedMarketplace']>,
+): CommandOutput | undefined {
+  const given = pending.addMarketplace?.source;
+  const existing = added.existingSource;
+  if (given === undefined || existing === undefined || sameMarketplaceSource(existing, given)) {
+    return undefined;
+  }
+  return commandFailed('install', alreadyAddedFromDifferentSource(added.name, existing), {
+    failureCode: 'invalid_source',
+  });
 }
 
 /** What prints ahead of the result: the marketplace that was added, a refresh that failed. */

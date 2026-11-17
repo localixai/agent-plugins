@@ -28,6 +28,13 @@ export interface PolicyContext {
    * "When your local settings file needs trust"). Defaults to `false`.
    */
   readonly localSettingsTracked?: boolean;
+  /**
+   * `.claude/settings.local.json` sits inside a git repository. "In a directory that isn't a git
+   * repository, or when git tracks the file, Claude Code treats `.claude/settings.local.json` as
+   * repository settings" for the read and write blocks (settings-reference.md,
+   * `permissions.blockReadsOutsideWorkingDirectories`). Defaults to `false`, the side that grants less.
+   */
+  readonly localSettingsInRepository?: boolean;
   /** The host's environment: `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS`, `CLAUDE_CODE_DISABLE_WORKFLOWS` (env-vars.md). */
   readonly env: PolicyEnv;
   /** Anthropic's default channel allowlist; "the channel plugins in claude-plugins-official" (channels.md), not listed in the docs. */

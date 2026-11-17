@@ -65,8 +65,6 @@ function matcherIssues(matcher: unknown, path: string, ignored: boolean): Plugin
   }
 }
 
-const GROUP_KEYS = new Set(['matcher', 'hooks']);
-
 /** How a hooks object treats an entry it cannot read. */
 export interface HooksReadOptions {
   /**
@@ -106,9 +104,7 @@ function readGroup(
   const issues = matcherIssues(raw.matcher, `${path}.matcher`, ignoresMatcher);
   // A group whose matcher cannot be read is dropped: loaded without it, it would match everything.
   if (blocksLoading(issues)) return { issues };
-  for (const key of Object.keys(raw).filter((found) => !GROUP_KEYS.has(found))) {
-    issues.push(warning(`${path}.${key}`, `Unknown field "${key}" is ignored`));
-  }
+  // Another key of a group is dropped without a warning (Judgment J7.10, oracle 2.1.325).
   if (!Array.isArray(raw.hooks)) {
     return {
       issues: [...issues, error(`${path}.hooks`, 'Invalid "hooks": expected an array of handlers')],

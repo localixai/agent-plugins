@@ -20,9 +20,9 @@ export const readTypes = (
 
 /**
  * Why a module needs a types file it does not have, or `undefined` (reference.md, "Files": the file is
- * "Required when the mod uses `$.state` or adds a namespace to the mods API"). A mod adds a namespace
- * in an `engine.create` hook; judgment: a module that has one needs the file, as the scan cannot tell
- * a hook that adds a namespace from one that only withholds.
+ * "Required when the mod uses `$.state` or adds a namespace to the mods API"). Only `$.state` keeps
+ * the mod from loading: a module that adds a namespace in `engine.create` without the file loads
+ * (Agent Plugins Extended §10.3.2 item 4, Judgment J10.3; oracle 2.1.325 validates such a mod).
  */
 export function missingTypes(
   scan: ModScan,
@@ -31,11 +31,8 @@ export function missingTypes(
 ): string | undefined {
   // A `types` path that leaves the plugin names no file the mod can have (judgment).
   const file = typesPath ?? 'a types file inside the plugin';
-  if (scan.stateReads.length + scan.stateWrites.length > 0) {
-    return `${written}: the module uses $.state, so ${file} must declare its values`;
-  }
-  return scan.hooks.some((hook) => hook.event === 'engine.create')
-    ? `${written}: the module hooks engine.create, so ${file} must declare the namespace it adds`
+  return scan.stateReads.length + scan.stateWrites.length > 0
+    ? `${written}: the module uses $.state, so ${file} must declare its values`
     : undefined;
 }
 
@@ -115,4 +112,11 @@ export function declaredState(declarations: string): ReadonlySet<string> {
     entries.lastIndex = values.end;
   }
   return declared;
+}
+
+/** The namespaces a declaration file adds to `$`: the members of `interface EngineInterface`. */
+export function declaredNamespaces(declarations: string): readonly string[] {
+  const start = /interface\s+EngineInterface\s*\{/.exec(declarations);
+  const found = start ? block(declarations, start.index + start[0].length - 1) : undefined;
+  return found ? memberKeys(found.inner) : [];
 }

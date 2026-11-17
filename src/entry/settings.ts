@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/settings`: Settings: layers, merge, every policy key, managed settings, MCP, permission and `env` settings (docs/API.md, "Settings"). */
+/** `@localix-ai/agent-plugins/settings`: Settings: layers, merge, every policy key, managed settings, MCP, permission and `env` settings (docs/API.md, "Settings"). */
 export {
   API_PROVIDERS,
   CROSS_SESSION_MODES,

@@ -36,18 +36,28 @@ const createdBy = (...stdouts: readonly string[]) =>
   ).then(({ outcome }) => outcome);
 const IN = { ranIn: '/work/app' };
 
-describe('WorktreeCreate: two kinds of hook answer', () => {
-  test('an HTTP hook worktreePath wins over what a command hook printed', async () => {
-    const hooks = [
-      entry('WorktreeCreate'),
-      entry('WorktreeCreate', { handler: { type: 'http', url: 'http://wt.test/h' } }),
-    ];
-    const body = JSON.stringify(specific('WorktreeCreate', { worktreePath: '/from/http' }));
-    const { outcome } = await fire('WorktreeCreate', hooks, [{ stdout: '/from/command\n' }], {
-      output: stage,
-      http: [{ status: 200, body }],
-    });
-    expect(await resolveWorktreePath(outcome, { ranIn: '/w' })).toEqual({ path: '/from/http' });
+/** A command hook and an HTTP hook on `WorktreeCreate`, in the order `httpFirst` says. */
+async function bothAnswer(httpFirst: boolean, httpPath = '/from/http') {
+  const printer = entry('WorktreeCreate');
+  const http = entry('WorktreeCreate', { handler: { type: 'http', url: 'http://wt.test/h' } });
+  const body = JSON.stringify(specific('WorktreeCreate', { worktreePath: httpPath }));
+  const { outcome } = await fire(
+    'WorktreeCreate',
+    httpFirst ? [http, printer] : [printer, http],
+    [{ stdout: '/from/command\n' }],
+    { output: stage, http: [{ status: 200, body }] },
+  );
+  return resolveWorktreePath(outcome, { ranIn: '/w' });
+}
+
+describe('WorktreeCreate: two kinds of hook answer (Agent Plugins Extended §7.5.29, Judgment J7.143)', () => {
+  test('the last answer in handler order is the path, an HTTP worktreePath and a command line alike', async () => {
+    expect(await bothAnswer(false)).toEqual({ path: '/from/http' });
+    expect(await bothAnswer(true)).toEqual({ path: '/from/command' });
+  });
+
+  test('an HTTP hook that answers with an empty path gives none, so the command line counts', async () => {
+    expect(await bothAnswer(false, '  ')).toEqual({ path: '/from/command' });
   });
 
   test('the failures name the rejected component and say what was wrong', async () => {

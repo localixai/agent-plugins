@@ -1,6 +1,6 @@
 /**
  * The unquoted-placeholder warning of `claude plugin validate` on a shell-form hook command (oracle
- * 2.1.319; the changelog's "leaves `${CLAUDE_PLUGIN_ROOT}` unquoted (it breaks on plugin paths with
+ * 2.1.325, spec §3.2.3 item 5 and J3.20: the placeholders in order of first appearance; the changelog's "leaves `${CLAUDE_PLUGIN_ROOT}` unquoted (it breaks on plugin paths with
  * spaces)"). The validator reads three placeholders; a use inside single or double quotes is fine.
  */
 const PLACEHOLDERS = ['CLAUDE_PLUGIN_DATA', 'CLAUDE_PLUGIN_ROOT', 'CLAUDE_PROJECT_DIR'] as const;
@@ -15,7 +15,7 @@ function advance(state: Quote, char: string): Quote {
   return state === char ? '' : state;
 }
 
-/** The placeholders a command uses outside any quotes, sorted and without repeats. */
+/** The placeholders a command uses outside any quotes, in order of first appearance, without repeats. */
 function unquotedPlaceholders(command: string): string[] {
   const found = new Set<string>();
   let state: Quote = '';
@@ -32,7 +32,7 @@ function unquotedPlaceholders(command: string): string[] {
     }
     state = advance(state, char);
   }
-  return [...found].toSorted();
+  return [...found];
 }
 
 const ADVICE =

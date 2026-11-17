@@ -9,7 +9,8 @@ import { canonicalJson } from '../../format/canonical-json.ts';
  * branches on the kind of the thing it compares (rule K2).
  */
 export interface Facts {
-  readonly kind: SourceKind;
+  /** The source's kind; `claudeai` for a marketplace hosted on claude.ai, which has no source object. */
+  readonly kind: SourceKind | 'claudeai';
   /** Whether it names a place a marketplace comes from; `hostPattern`, `pathPattern`, `skills-dir` do not. */
   readonly concrete: boolean;
   /** The text an exact comparison uses: the repo, url, path, package or name. */
@@ -107,3 +108,16 @@ const FACTS: ByKind<Facts> = {
 };
 
 export const factsOf = (source: SdkMarketplaceSource): Facts => byKind(FACTS, source);
+
+/**
+ * A marketplace hosted on claude.ai (plugins/org.md, "Marketplaces hosted on claude.ai"; Agent
+ * Plugins Extended §14.8.2 item 1): no source object types it, so it is a kind of its own whose only
+ * fact is its host, `claude.ai`. An exact entry of any kind never equals it and a `pathPattern` finds
+ * no path, so only a `hostPattern` names it, on either list.
+ */
+export const CLAUDE_AI_FACTS: Facts = {
+  ...BASE,
+  kind: 'claudeai',
+  locator: 'claude.ai',
+  host: () => 'claude.ai',
+};

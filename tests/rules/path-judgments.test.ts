@@ -106,7 +106,33 @@ describe('tools whose path the docs do not give', () => {
     expect(denies('MultiEdit(*)', '/work/app/docs/a.md', { tool: 'MultiEdit' })).toBe(true);
   });
 
-  test('a Read deny or ask rule covers every LSP call, an allow rule none, and no ! rule reopens one', () => {
+  test("a Read rule is matched against an LSP call's filePath, relative or absolute, for every operation (J7.210)", () => {
+    for (const behavior of ['deny', 'ask'] as const) {
+      for (const operation of ['hover', 'workspaceSymbol', 'findReferences']) {
+        expect(
+          matches(behavior, 'Read(secrets/**)', 'LSP', { operation, filePath: 'secrets/a.ts' }),
+        ).toBe(true);
+        expect(
+          matches(behavior, 'Read(secrets/**)', 'LSP', {
+            operation,
+            filePath: '/work/app/secrets/a.ts',
+          }),
+        ).toBe(true);
+        expect(
+          matches(behavior, 'Read(secrets/**)', 'LSP', { operation, filePath: 'src/a.ts' }),
+        ).toBe(false);
+      }
+    }
+    // With `!` rules too, an LSP call is decided as a Read of the same file is.
+    const rules = [parsed('Read(src/**)', 'deny'), parsed('Read(!src/public/*.ts)', 'deny')];
+    for (const path of ['/work/app/src/public/a.ts', '/work/app/src/a.ts', '/work/app/b.ts']) {
+      const asRead = evaluateRules(rules, call('Read', { file_path: path }), matchContext).behavior;
+      const lsp = call('LSP', { operation: 'hover', filePath: path });
+      expect(evaluateRules(rules, lsp, matchContext).behavior).toBe(asRead);
+    }
+  });
+
+  test('an LSP call without a filePath: a Read deny or ask rule covers it, an allow rule none, no ! rule reopens it', () => {
     const lsp = { operation: 'hover' };
     for (const behavior of ['deny', 'ask'] as const) {
       expect(matches(behavior, 'Read(secrets/**)', 'LSP', lsp)).toBe(true);

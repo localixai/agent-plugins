@@ -14,7 +14,14 @@ import type { Locations } from '../ports/index.ts';
 import { readCatalog, type PluginCatalog } from './catalog.ts';
 import { withDependencies } from './plugin-dependencies.ts';
 import { distinctPlugins, layeredPlugins, withNameConflicts } from './plugin-set.ts';
-import type { HostedPlugin, HostPlugin, HostUpdate, PluginHostOptions } from './types.ts';
+import type {
+  HostCorePackage,
+  HostedPlugin,
+  HostPlugin,
+  HostUpdate,
+  PluginHostOptions,
+} from './types.ts';
+import { coreOf, hostPluginOfCore } from './core-view.ts';
 import { hookSessionGates, type HookSessionGates } from '../settings/hooks/session-gates.ts';
 
 /** A plugin the host runs: what its components read to, and the options saved for it. */
@@ -83,9 +90,15 @@ function userConfigOf(
   };
 }
 
+/** The plugins and the core packages given, as one list in which the core packages come last. */
+const givenPlugins = (options: PluginHostOptions): readonly HostPlugin[] => [
+  ...options.plugins,
+  ...(options.corePackages ?? []).map(hostPluginOfCore),
+];
+
 export function createHostState(options: PluginHostOptions): HostState {
   const view = options.settings ?? NO_SETTINGS;
-  const distinct = distinctPlugins(options.plugins);
+  const distinct = distinctPlugins(givenPlugins(options));
   const named = withNameConflicts(
     view,
     distinct.kept.map((entry) => ({ entry, enabled: runs(view, entry) })),
@@ -114,6 +127,7 @@ export function createHostState(options: PluginHostOptions): HostState {
       id: entry.id,
       name: entry.plugin.name,
       enabled,
+      ...(coreOf(entry.plugin) === undefined ? {} : { core: true as const }),
     })),
     active: active.map((each) => each.active),
     issues: [
@@ -133,9 +147,11 @@ export function mergeHostOptions(base: PluginHostOptions, update: HostUpdate): P
   const settings = update.settings ?? base.settings;
   const parentSettings = update.parentSettings ?? base.parentSettings;
   const userConfig = update.userConfig ?? base.userConfig;
+  const corePackages = update.corePackages ?? base.corePackages;
   return {
     ...base,
     plugins: update.plugins ?? base.plugins,
+    ...(corePackages === undefined ? {} : { corePackages }),
     ...(settings === undefined ? {} : { settings }),
     ...(parentSettings === undefined ? {} : { parentSettings }),
     ...(userConfig === undefined ? {} : { userConfig }),
@@ -159,6 +175,7 @@ export interface HostStateCell extends HostStateSource {
 export interface SessionOwn {
   readonly settings?: PolicyView | undefined;
   readonly plugins?: readonly HostPlugin[] | undefined;
+  readonly corePackages?: readonly HostCorePackage[] | undefined;
   readonly userConfig?: PluginHostOptions['userConfig'] | undefined;
   readonly locations?: Locations | undefined;
 }
@@ -174,15 +191,25 @@ const sessionOptionsOf = (host: PluginHostOptions, own: SessionOwn): PluginHostO
   return {
     ...host,
     ports: { ...host.ports, locations: own.locations ?? host.ports.locations },
-    plugins: layeredPlugins(host.plugins, own.plugins),
+    // Both forms layer by id together: a session's own core package replaces a host plugin of its id.
+    plugins: layeredPlugins(givenPlugins(host), ownPlugins(own)),
+    corePackages: [],
     ...(settings === undefined ? {} : { settings }),
     ...(userConfig === undefined ? {} : { userConfig }),
   };
 };
 
+/** The session's own plugins and core packages, or `undefined` when it brings neither. */
+const ownPlugins = (own: SessionOwn): readonly HostPlugin[] | undefined =>
+  own.plugins === undefined && own.corePackages === undefined
+    ? undefined
+    : [...(own.plugins ?? []), ...(own.corePackages ?? []).map(hostPluginOfCore)];
+
 /** Whether the session brings anything of its own, so its state is not the host's. */
 const bringsOwn = (own: SessionOwn): boolean =>
-  [own.settings, own.plugins, own.userConfig, own.locations].some((part) => part !== undefined);
+  [own.settings, own.plugins, own.corePackages, own.userConfig, own.locations].some(
+    (part) => part !== undefined,
+  );
 
 /**
  * A session's state: the host's, or, for a session with its own settings, plugins, saved values or

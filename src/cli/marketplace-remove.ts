@@ -45,6 +45,8 @@ export interface RemoveFacts {
   readonly plugins: readonly InstalledFromMarketplace[];
   /** Every `enabledPlugins` entry in the user, project and local settings files. */
   readonly enabledEntries: readonly EnabledEntry[];
+  /** `CLAUDE_CODE_PLUGIN_SEED_DIR` supplies it: the seed directory; it is read-only. */
+  readonly seeded?: string;
 }
 
 /** One `enabledPlugins` key in one settings file. */
@@ -119,6 +121,21 @@ const declarationsToRemove = (
     ? facts.declaredIn.filter((declared) => declared === chosen.scope)
     : facts.declaredIn;
 
+/**
+ * "`remove` without `--scope` on a seed marketplace fail[s] with a message that names the seed
+ * directory" (plugins/org.md, "Seed containers and CI"). Judgment: the wording follows `marketplace
+ * update`'s and the code is its `seed_managed` (spec/judgments.md).
+ */
+const seedManaged = (name: string, seed: string): RemovePlan =>
+  nothing(
+    marketplaceFailure(
+      'marketplace-remove',
+      name,
+      `Marketplace '${name}' is seed-managed (${seed}). Ask your administrator to remove it from the seed directory, or remove it from one scope with --scope`,
+      'seed_managed',
+    ),
+  );
+
 /** What `plugin marketplace remove` does and prints. */
 export function planMarketplaceRemove(args: RemoveArguments, facts: RemoveFacts): RemovePlan {
   if (isReservedName(args.name)) {
@@ -136,6 +153,8 @@ export function planMarketplaceRemove(args: RemoveArguments, facts: RemoveFacts)
       ),
     );
   }
+  if (facts.seeded !== undefined && !('scope' in chosen))
+    return seedManaged(args.name, facts.seeded);
   const removeFrom = declarationsToRemove(chosen, facts);
   if ('scope' in chosen && removeFrom.length === 0) {
     return nothing(

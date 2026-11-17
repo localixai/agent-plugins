@@ -15,7 +15,7 @@ import type {
   Locations,
   ModelRunner,
   PluginFiles,
-} from '@rsaryev/llx-plugin';
+} from '@localix-ai/agent-plugins';
 import { generateText, type LanguageModel } from 'ai';
 
 const inside = (root: string, path: string) => path === root || path.startsWith(root + sep);

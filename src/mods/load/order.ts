@@ -5,6 +5,7 @@ import {
   decideModLoad,
   guardLoads,
   isGuardId,
+  managedButUsers,
   type ModCandidate,
 } from './policy.ts';
 import { listSetting, type ModsPolicyInput } from './policy-input.ts';
@@ -94,7 +95,7 @@ function nameHolders(policy: ModsPolicyInput, candidates: readonly ModCandidate[
 /** The mods the policy lets load, with the tier each runs in, in running order. */
 export function orderMods(policy: ModsPolicyInput, plugins: readonly ModCandidate[]): ModOrder {
   const skipped: SkippedMod[] = [];
-  const notes: string[] = [];
+  const notes = plugins.flatMap((candidate) => managedButUsers(candidate, policy.platform) ?? []);
   const holders = nameHolders(policy, plugins);
   const decided = plugins.flatMap((candidate): OrderedMod[] => {
     if (holders.get(candidate.name) !== candidate) {

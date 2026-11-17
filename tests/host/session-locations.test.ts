@@ -99,8 +99,8 @@ describe("judgment: a session's locations are the session's for everything it re
       expect(lsp.resolved[0]).toMatchObject({ command: `${root}/ls`, args: [`/work/${name}`] });
       const monitors = await session.monitors();
       expect(monitors.resolved[0]).toMatchObject({
-        command: 'tail ${CLAUDE_PLUGIN_ROOT} ${CLAUDE_PROJECT_DIR}',
-        environment: { CLAUDE_PLUGIN_ROOT: root, CLAUDE_PROJECT_DIR: `/work/${name}` },
+        command: `tail ${root} /work/${name}`,
+        environment: {},
       });
     }
   });

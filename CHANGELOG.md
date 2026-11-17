@@ -2,6 +2,416 @@
 
 ## [Unreleased]
 
+- The converter's hook adapter derives profiles as `hooks/core` does (J18.16, J18.21): a text `Read`
+  gets no profile (no more `cat -n` numbering), a completed command with `returnCodeInterpretation`
+  gets none, and an MCP name with `__` more than once after `mcp__` gets none. It fires core
+  `UserPromptSubmit` on `system` and source-less turns and skips only `loop_wakeup` and
+  `schedule_wakeup` (J18.23); `coreToClaudeCode` lists each adapted `UserPromptSubmit` handler as
+  `not-converted` (it also runs on task notifications and automatic continuations).
+- A failed core handler's notice labels it by `command` and `args` as written in `hooks.json`
+  (J18.22). `loadPluginPackage` given a core package's marketplace `entry` reports each component
+  field and `strict: false` as an error and loads the package from its own files (J18.15).
+- New `matchClaudeAiMarketplace(list, entry)`: the policy facts of a marketplace hosted on claude.ai
+  (host `claude.ai`, a kind of its own), which only a `hostPattern` names; `checkClaudeAi` uses it.
+- `--mcp-config`'s wait reads `MCP_TIMEOUT` as a positive whole number (`2e3`, `64_000`; J3.17).
+- Six more numeric variables read scientific notation and digit separators (`2e3`, `64_000`; J3.17):
+  `MCP_TIMEOUT` in an `mcp_tool` hook's wait, `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`,
+  `MAX_STRUCTURED_OUTPUT_RETRIES` and `CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS` as positive whole
+  numbers, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` and the self-hosted `CLAUDE_CODE_MCP_STARTUP_WAIT_MS`
+  as whole numbers where `0` keeps its meaning (no cap, no wait). Surrounding white space no longer
+  passes in the first three.
+- `validateMod` prints a refusal of the §10.4.2 rules at `modules.<entry>` as `<plugin>: <absolute
+  file>:<line>: <message>; $ is always spelled ...` (J10.2), from the new `ValidateInput.root`;
+  `ModScanIssue` carries `rule` and `line`.
+
+- Core handlers follow Agent Plugins Extended chapter 18 as settled on 2026-11-17 (J18.7, J18.16,
+  J18.21, J18.22). `CoreCallFacts.externalSubmission` is replaced by `turnOrigin` (`external` or
+  `client`): a `UserPromptSubmit` turn whose `source` is `system` is classified by the origin the
+  host gives, and with a core `UserPromptSubmit` handler the dispatch throws without it instead of
+  skipping the turn. `file.read` text is `readText` exactly, and a read without it gets no profile
+  (no more `cat -n` numbering of `file.content`). An MCP call gets no profile without
+  `mcpToolName` when the text after `mcp__` holds `__` more than once, and a completed command with
+  `returnCodeInterpretation` gets none without the host's `exitCode`. A failed core handler's notice
+  carries a Claude Code exec-form hook's cause (`Failed with non-blocking status code: <first stderr
+  line>`, the launch error, `timed out`, on `UserPromptSubmit` `timed out after 30s; the hook's
+  output was discarded`); several core reasons join by one newline with empty ones left out.
+
+- Conversion between the two plugin forms (Agent Plugins Extended §18.4), from `./core`:
+  `coreToClaudeCode` and `claudeCodeToCore` are pure over a loaded package or plugin and return the
+  files to write beside it (a dual package) with a note for every field, entry, file and behaviour
+  not carried over (`not-converted`), carried with a difference (`reported`) or stopping the
+  conversion (`stopped`); `convertPluginPackage` converts a root through the files port, loads a core
+  package with every extension namespace it carries, reports what the source loader skipped, refuses
+  to overwrite a file, and judges the output with `claude plugin validate` or the core loader before
+  a host writes it. Names are never changed (a name the target refuses stops); MCP servers follow
+  §18.3.3 with the environment bridged (J18.18); hook handlers convert only through a generated hook
+  adapter (`hooks/run-core-handler.mjs`, `hooks/run-claude-code-handler.mjs`, Node.js), which
+  translates inputs, tool profiles, results and exit statuses by §18.2 (J18.17) and which a converter
+  unwraps when it converts back, so the §18.3.5 example round-trips.
+- New subpath `./core`: the core Agent Plugins form (Agent Plugins 1.1.0). `detectPluginForm`
+  decides a root's form by Agent Plugins Extended §1.3 (a dual package is a Claude Code plugin,
+  J1.1, J1.2); `loadPluginPackage` then loads it by `loadPlugin`, unchanged, or by the new
+  `loadCorePackage`, which implements core §4–§10: the closed manifest (unknown fields warned and
+  ignored, other violations fatal), `$schema` selection and the version match of `mcp.json` and
+  `hooks.json`, name and metadata rules, fixed locations, skills by Agent Skills, the three closed
+  MCP variants with command, `cwd`, `url` and header rules, the five hook events and closed
+  handlers, containment with the narrowest failure boundary, extension data and directories, icon
+  candidates. `coreServerProcess`, `coreHandlerProcess` and `coreEnvironment` give what a host
+  launches (`${PLUGIN_ROOT}`/`${PLUGIN_DATA}` in one non-recursive pass, `PLUGIN_ROOT` and
+  `PLUGIN_DATA` set last). `checkDualPackage` reports what of a dual package's manifests loads in one
+  form only (§18.3.1).
+- Sessions run core packages beside Claude Code plugins (Agent Plugins Extended §18.1, §18.2):
+  `PluginHostOptions.corePackages`, `SessionOptions.corePackages` and `HostUpdate.corePackages`
+  take `HostCorePackage`s, plugins by id to settings, policy, conflicts and dependencies
+  (`HostedPlugin.core`). Their skills are `/<name>:<directory>` plugin skills that are never
+  expanded (arguments appended); their servers resolve under `plugin:<name>:<server>` with
+  `PLUGIN_ROOT`/`PLUGIN_DATA` and no `CLAUDE_PLUGIN_*` (`ResolvedMcpServer.core`); their handlers
+  run on the same occurrence as Claude Code's hooks (`SessionStart` on startup, clear and fork;
+  `UserPromptSubmit` for external prompts; `PostToolUse` also on non-interrupt failures; `Stop`),
+  with the core input and tool profiles, Claude Code first on `PreToolUse`, results combined
+  `deny` > `defer` > `ask` > `allow`, one Stop continuation under one cap, and a failed core handler
+  never blocking. `SessionDispatchOptions.core` (`CoreCallFacts`) gives what only the host knows.
+- `readCoreHooks` returns each kept handler's index in the file (`positions`), so a handler a
+  later check skips is named `hooks.<Event>[i]` by its own index, not by its place among the
+  handlers kept before it.
+- The hooks engine names the event in `<Event> hook needs quotes around a path with a space
+  (<script>)`: a command hook's plan passes its event to `resolveHookCommand`, the skipped run
+  carries the line (`SkippedRun.notice`) and the handler's verdict hands it on as its `notice`
+  (errors.md, "Hook needs quotes around a path with a space"; spec §17.18.8).
+
+- Format, loading, skills and agents follow Agent Plugins Extended chapters 2–6, 8, 9 and 17 where
+  they did not: a manifest that is not JSON is `Invalid JSON syntax: <parse error>.` with its period;
+  `<component> path not found` names the absolute path when the host passes `roots` (§2.5); in a
+  folder without a manifest a `.claude/agents/` agent's frontmatter is read, with `At runtime this
+  agent does not load at all — ...` (J2.4); `support` and `privacy_policy` draw the many-tools
+  warning (J2.7); a list or map output style `name` reads as `a,b` / `[object Object]` (J6.2);
+  numeric variables read `2e3` and `64_000` (new `env-number`, J3.17); the four "set to 1"
+  variables (`CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD`, `CLAUDE_CODE_SAFE_MODE`,
+  `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`, `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT`) take every on spelling
+  (J3.16); `uninstallRetention` takes `caseInsensitiveFileSystem` (J3.19); `ESTALE` is reported as
+  `EIO` (`reportedCheckCode`, J17.29); the cross-check parse warning names the entry's
+  root-relative `plugin.json`.
+- MCP: a user server named `workspace`, `claude-in-chrome`, `computer-use`, `Claude Preview` or
+  `Claude Browser` is skipped with `"<name>" is a reserved MCP server name and was not loaded`
+  (`RESERVED_MCP_SERVER_NAMES`); `McpConnection.bareElicitationCapability` offers form mode only;
+  `registersAsChannel` keeps a v2 server on revision 2026-07-28 from registering as a channel; the
+  validator does not read an MCP file past 1,048,576 bytes (J8.27); a stdio server's
+  `ResolvedMcpServer.start` runs through `CLAUDE_CODE_SHELL_PREFIX` with the POSIX-quoted command
+  line (`mcpStdioStart`, `shellPrefixed`, `posixQuote`, J8.26).
+- New: `outputStyleCommand` with the Remote Control and no-`local`-source refusals;
+  `pathEscapesInList` (`Path escapes plugin directory: <path> (<component>)`); an `asyncRewake`
+  shell-form hook with an unquoted path placeholder that resolves to a path with a space does not
+  run, `HookCommandResolution.notice` carrying `<Event> hook needs quotes around a path with a
+  space (<script>)` (`HookCommandOptions.event`); `forkModeOn` and `BackgroundInput.interactive` /
+  `forkSubagent` (`CLAUDE_CODE_FORK_SUBAGENT`), `agentTeamsOn`
+  (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), `teammateSetup` and `restoreTeammate` (agent-teams.md).
+
+- The mod validator's results all carry `gatingHooks` (`[]` when the file gates nothing): the
+  manifest, a `hooks.json` with issues and a module that cannot be read (J17.15).
+  `FileReport.gatingHooks` is required.
+- `remote-settings.json` is protected only in the configuration directory: a file of that name in a
+  project is an ordinary write (§13.10).
+- `untrustedSourceMessage(name, source?)` takes the source: for one that is not GitHub or git the
+  middle sentence reads `The name can only be used with GitHub sources from the 'anthropics'
+  organization.`; `untrustedSource` passes the entry's (§13.20 item 2).
+- `SandboxBlock.denyWrite`: `hooks/` and `config` inside a linked worktree's common `.git` stay
+  write-denied to sandboxed commands (§13.12 item 4).
+- `grantsFocus` in the VS Code panel keeps the terminal's rule as well (a command or a press,
+  nothing else focused), then adds the panel's (§10.27.1 item 2).
+- The scan says `$ itself is bound to a name (bound, passed, spread, returned or read)` and `a
+  computed or optional member access on $`, Claude Code 2.1.325's words (J10.2).
+- A `PreModelSwitch` hook that times out blocks with `PreModelSwitch hook <name> did not respond
+  before its timeout`; `MODEL_SWITCH_REASONS`, `cannotAskReason`, `managedHooksUncheckedReason` and
+  `modelSwitchBlocked` give the other reasons and the report line (§7.5.33).
+- `CLAUDE_CODE_SHELL_PREFIX` wraps a shell-form Bash command hook as `<prefix> '<command>'`;
+  exec-form and PowerShell hooks run without it (§7.3.2.3 item 5, J7.66).
+- The hooks-file validator refuses a `PreToolUse` or `PermissionRequest` key beside a `hooks`
+  object, as without one (oracle 2.1.325, J7.20).
+- `decide`: `ModOutcome.overridesDenyRules` (`allowModsToOverrideDenyRules`) lifts, under policy,
+  the rules' outcomes, the read block and a hook's outside managed settings;
+  `PreToolUseHookOutcome.managed` marks a managed hook's block or ask, which no mod lifts; the
+  permission callback stays (§14.9.6, J14.14).
+- `backgroundSessionTrust`: before a background session starts, `start`, the trust dialog, or
+  `Workspace not trusted. ...` and its two variants (§13.15 item 4).
+- `claude plugin validate` of a mod lists `adds to $:` and `withholds from $:` for an
+  `engine.create` hook in the form oracle 2.1.325 reads (§10.4.3).
+- `session.takeBackground()` and `onBackground` skip an async `SessionStart` hook's repeat of what
+  the session last handed on from it, unless a synchronous `SessionStart` hook added text since;
+  after a `compact` or `clear` start it delivers again (§7.3.3 item 7).
+
+- `--mcp-config` with `-p`: a remote server whose tool list the discovery cache holds
+  (`FlagFacts.cachedToolLists`) skips the first-turn wait (`SessionPlan.mcpWaitSkips`); in a
+  self-hosted environment (`FlagFacts.selfHosted`) the wait is 2 seconds, or
+  `CLAUDE_CODE_MCP_STARTUP_WAIT_MS`, and covers stdio servers only (§17.15.3).
+- The sandbox lock warning reads `The <N> entries in <file>` for every count, as §17.21 quotes it
+  (its row in `spec/judgments.md` changed).
+- `MarketplaceGate.checkClaudeAi(name, scope)`: a marketplace hosted on claude.ai is matched by its
+  host; an allowlist `hostPattern` for `claude.ai` admits the organization's and default ones, not a
+  member's uploads or one of unstated scope (§15.8.1, §14.8.3).
+- `initPluginFields` and `pluginInstallEvents`: the `plugins` / `plugin_errors` fields of
+  `system/init` and the `system/plugin_install` events, for a host to emit (§17.15.2). New official
+  types `InitPluginFields`, `SDKPluginInstallMessage`.
+- `planRemotePlugins`: which plugins an SSH session's remote machine gets copied to
+  `~/.claude/remote/plugins/`, which a Windows one leaves out, and none for WSL (§16.5.6 item 5).
+- `backgroundSessionFlags`, `agentViewFlags` and `planBackgrounding`: the flags a background session
+  and agent view keep, and which running work carries, waits for a relaunch or stops (§17.15.1
+  item 6).
+
+- **BREAKING** A monitor `command` is pasted by default: its `${CLAUDE_PLUGIN_ROOT}`,
+  `${CLAUDE_PLUGIN_DATA}` and `${CLAUDE_PROJECT_DIR}` are written in as paths and none is in
+  `ResolvedMonitor.environment` or `MonitorStart.env`, referenced or not (Agent Plugins Extended
+  §9.2.4, J9.17). `shellPaths: 'environment-reference'` is the explicit opt-in for the reference
+  form; a `headersHelper` and a skill's `!` command keep the reference by default.
+  `shellPathsOf` takes the surface, and `shellExports` takes it first.
+- **BREAKING** Only `remote-settings.json` of the configuration directory and the files the host
+  names in `ProtectedPathOptions.remoteSettingsFiles` are protected as the stored server-managed
+  settings; other `remote-settings*` files are no longer guessed (J13.35).
+- **BREAKING** `validationJson`: `notes` entries are plain strings (new `notes` input, by file),
+  and `GatingHook.pattern` is a non-null string, the pattern given to `on` (J17.15).
+- Marketplace validation uses the specification's messages: a command over 500 characters is
+  `command must not be longer than the install consent UI can display` (before the printable-ASCII
+  message when both break), and an archive `url` that does not parse draws `Invalid URL` beside the
+  https message (§15.6.5, §15.6.6, J15.8). The bare `Invalid input` cases of §15.6.7 are tested.
+- `MultiEdit` rules are tested as an unknown tool: `matches no tool`, and for a path rule the
+  file-permission warning too (J13.34). The registry order comment of `hookEntries` now says the
+  settings files come first, highest precedence first, then plugins, then what registers (J7.2);
+  the empty and missing LSP `command` cases of §9.1.3 are tested.
+
+- Mods follow Agent Plugins Extended chapter 10 and §14.9 where they did not: a mod Claude wrote
+  loads in a non-interactive run in `auto` and `bypassPermissions` modes; a module that hooks
+  `engine.create` loads without a types file (J10.3); `telemetry.mark` events carry no `to`, so a
+  `{ to: 'collector' }` hook never runs on one (J10.20); `$.state.set` while a `ui.render` hook
+  draws is refused and nothing is written (J10.112); a `Raster`'s `cells` must decode to exactly
+  `columns × rows × 3` numbers (J10.105); the mobile app draws no `Client` (J10.104, `drawsElement`);
+  a backdrop's `glass` is `{ blur, tint, opacity }` with its defaults filled in, or `false`; past 50
+  toasts held behind a dialog the oldest leaves (J10.107); `e.uses.calls` is sorted; a managed-enabled
+  plugin that counts as a user's gets the debug line `<id> is enabled by managed settings, but ...`.
+- `claude plugin test` and `claude plugin validate` use Claude Code 2.1.325's words (J10.2): the
+  turned-off and no-hooks-module lines (`allowManagedHooksOnly` turns mods off too), the rule
+  messages, `on` twice without a matcher and a non-generator streaming hook refused, an imported
+  file not named like code refused, `$.state.get`/`set` refs checked against the declarations, the
+  lines `answers its own command:`, `hooks telemetry for:`, `state of other plugins, not checked`,
+  `types <path> declares ...`, the telemetry events and gating globs. A `hooks.json` with neither
+  `hooks` nor `modules` fails (J10.174). `--json` errors and warnings are `{ path, message }`
+  (`ReportEntry`, J17.15) and a gating hook's `pattern` is the event as `on` was given it. The debug
+  log gets `a hook returned a tree that does not validate: <reason>` and `ui.render (<site>): the
+  chain settled on a tree that does not validate`.
+- Format and loading follow Agent Plugins Extended chapters 1–3, 6, 9 and 12.6 where they did not:
+  an inline `lspServers` map or monitors array with an unknown key or a bad value keeps the plugin
+  from loading, and `validatePlugin` reports each entry problem in the oracle's words
+  (`lspServers.go: Unrecognized key: "foo"`, `Command should not contain spaces. Use args array for
+  arguments.`, `Monitor names must be unique within a plugin`, the two `when` messages); a monitors
+  file with an invalid entry is skipped whole (J9.5, J9.7). `LSP_TRANSPORTS` moves to the LSP schema
+  module (same export).
+- `userConfig` `options` get the full rule table with the oracle's messages and paths: a non-empty
+  list, values of 1 to 64 code points, no edge space, no control, invisible or bidi character, no
+  repeat in any case (J3.10).
+- Output styles are read from the subfolders of `output-styles/` (J6.4); of two styles of one plugin
+  with one name only the last by path is kept (J6.7); the `/output-style` list shows the first body
+  line of a style without `description` (J6.3). A marketplace entry's `themes` join
+  `experimental.themes` when plugin.json uses it.
+- A `hooks/hooks.json` that opens with a byte order mark loads no hooks (J2.3). A plugin's
+  `settings.json` that is not JSON or not an object is a warning (J12.10).
+- Path messages: a declared path that is not there carries `PluginIssue.guidance`; the commands
+  debug line ends `: <path>. Expected .md files or SKILL.md in subdirectories.`; a backslash path
+  adds `— its path contains a backslash, which is not resolved reliably on this platform`; a
+  missing LSP binary is `Executable not found in $PATH: "<binary>"`.
+- The `PluginFiles` port gains its error channel, `FileStat.checkFailed` (and `{ checkFailed }` in
+  `memoryFiles`): a path the system could not check is refused as `<component> path could not be
+  checked: <path> (<code>)` while the rest loads.
+- Every on/off variable is read with the shared spellings (`1`, `true`, `yes`, `on`, any case):
+  `CLAUDE_CODE_SYNC_PLUGIN_INSTALL`, `CLAUDE_CODE_PLUGIN_PREFER_HTTPS`, `DO_NOT_TRACK`,
+  `CLAUDE_CODE_DISABLE_WORKFLOWS` and the rest (J3.16); `CLAUDE_CODE_PLUGIN_DIR_WATCH=0` turns
+  watching off in an interactive session too; a relative `CLAUDE_CODE_PLUGIN_DIRS` entry is skipped.
+- On Windows a Git Bash hook gets the path variables with forward slashes in its environment (J3.6);
+  under `CLAUDE_CODE_MCP_ALLOWLIST_ENV` a stdio server keeps the plugin's exported variables
+  (`McpStdioEnvironmentInput.exported`, J3.22); the unquoted-placeholder warning names the
+  placeholders in order of appearance (J3.20).
+- Validator frontmatter findings of §4.10 and §5.4.4: wrong-type `description`, an `allowed-tools`
+  list with a non-string, both `shell` errors, `metadata` on commands, a list `name` as `object`;
+  agents get only `name` and `description`. A command name over 256 characters is refused; an empty
+  agent `model` is dropped with a warning.
+- A plugin whose own folder cannot be checked loads nothing (`plugin path could not be checked: .
+  (<code>)`); a `.claude-plugin/plugin.json` that cannot be checked, or (with `roots`) resolves
+  outside the plugin and its marketplace, loads nothing either: `Plugin not loaded: its manifest
+  <path> was not read, because <reason>` (spec §17.18.3, §17.18.5). A root `SKILL.md` that cannot be
+  checked is reported as `skills path could not be checked: SKILL.md (<code>)`.
+- A `Read(...)` deny or ask rule is matched against an LSP call's `filePath`, a relative one against
+  the working directory, for every operation (spec §7.6.6, J7.210); an LSP call without `filePath`
+  is still covered whole.
+- An option with only a `default` is not set (spec §3.4.4): the configuration dialog opens for it,
+  `plugin configure` lists it as `not set` and under `unconfigured`, and the install line counts it.
+- `validatePlugin` reports no error for a remote MCP `url` written empty, a `not configured`
+  placeholder (spec §8.2).
+- MCP: an `oauth` field of the wrong type or a non-https `authServerMetadataUrl` drops the entry and
+  is reported (J8.3); a remote entry whose `url` is written empty is a `not configured` placeholder
+  (`notConfigured`), not an error; `McpStartupServer.transport` limits `cached` to `http` and `sse`.
+
+- Hooks follow Agent Plugins Extended chapter 7 where they did not: registry order is the settings
+  files' hooks, then the plugins' (J7.2); of several `WorktreeCreate` hooks the last answer in
+  handler order is the path, an HTTP `worktreePath` and a command hook's stdout alike (J7.143); a
+  relative `watchPaths` entry is resolved against the input's `cwd` (J7.131); only a hook that
+  itself blocks can set `suppressOriginalPrompt` (J7.144).
+- A hook run reports the debug lines the docs quote as warnings: `Hook output does not start with
+  {, treating as plain text`, `Hook JSON output had unrecognized keys: <keys>`
+  (`ParseResult.unrecognizedKeys`), and a dropped async response field (`BackgroundDelivery.issues`).
+- `outcome.runs` and `observer.finished` carry each run's `RunFacts`: matched value, handler label,
+  plugin, `RunEnding`, exit code, the timeout reached and the duration by the engine's `clock`.
+- `hipaa` (`subprocessEnvironment`, `HookEngineOptions`, the host options) removes
+  `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN` from hooks and other
+  subprocesses under the HIPAA configuration.
+- An unknown key of a hook matcher group or handler, or another handler type's field, is dropped
+  without a warning (J7.10).
+
+- `ruleWarnings` returns the startup warnings of a rule list as values (`RuleWarning`: the rule as
+  written, its behaviour, source, kind and, for `never matches`, the replacement rule); a `Write`,
+  `NotebookEdit`, `MultiEdit` or `Glob` path rule now draws the `never matches` warning from every
+  source (a `Glob` allow rule of `--allowedTools` excepted), and `ruleIssues` reports it as
+  `Permission <behavior> rule (<source>): <rule> is not matched by file permission checks — …`.
+- A `.claude/settings.local.json` outside a git repository counts as repository settings for the
+  read and write blocks: its `additionalDirectories` no longer let a file tool through. The new
+  `PolicyContext.localSettingsInRepository` says the file is in one (default `false`).
+- `sandboxReadBlock` returns what the block re-opens (`reopened`, from the new
+  `SandboxBlockInput.reopened`) and, in a linked git worktree (`worktreeCommonGitDir`), the
+  repository's common `.git` as readable and writable (`readWrite`).
+- `startupFetchFailure` says what a failed startup fetch of server-managed settings does: a gateway
+  `401` on an attended interactive launch with `forceRemoteSettingsRefresh` off prints
+  `Cloud gateway session expired — run /login to reconnect.` and opens signed out; any other gateway
+  failure exits.
+- A managed drop-in merge keeps each list entry at its first occurrence in file order
+  (`managed-settings.json`, then the drop-ins alphabetically); it used to put the later file's
+  entries first.
+- `officialMarketplaceRegistration` decides whether the official marketplace registers itself:
+  at the first interactive terminal session only, never in `-p`, a cloud-attached terminal or the
+  VS Code extension, and never again after a recorded blocked attempt or the opt-out variable.
+
+- `plugin uninstall` that stops because a settings file still switches the plugin on prints the
+  documented text (`it is still switched on in <file>, although the settings change reported no
+  error. It is still installed. Take it out of "enabledPlugins" in that file yourself, then
+  uninstall it again.`) and its variants: `and the settings change failed (<error>)`, `<file> is
+  there and could not be read`, `<file> (not read: ...)`. **BREAKING** `AfterRemoval.settingsStillOn`
+  is a `StillSwitchedOn` (`{ file, cause }`), no longer the file alone.
+- `plugin install --marketplace <source>` whose catalog is named after a marketplace added from
+  another source (`InstallFound.addedMarketplace.existingSource`) installs nothing, keeps the
+  existing marketplace and fails with `Marketplace "<name>" is already added from a different
+  source (<source>). ...` (`invalid_source`).
+- `plugin list --json` leaves `installPath` out for a plugin loaded in place, which carries
+  `readFromFolder` (`ListedPlugin.installPath` is optional); the text form shows a session-only
+  plugin as `Path: <dir>` and `Status: ✔ loaded`.
+- `plugin details` gives each kind its count: `Skills (2)  a, b`, `Agents (0)`.
+- A README line pasted with `--marketplace <owner>/<repo>` unchanged no longer clears the advice.
+- `validate` reports a remote MCP `url` that is not a valid absolute URL (an error), a `ws://` URL
+  to a host that is not loopback and a header value that looks like a literal credential (warnings),
+  in `.mcp.json` and inline `mcpServers`.
+- `validationJson` gives every file result `gatingHooks` (`GatingHook`: `module`, `pattern`,
+  `hook`, `hasCatch`), from the new `gatingHooks` input by file; `ValidationEntry` names the
+  `{ path, message }` entry.
+- `marketplace remove` without `--scope` refuses a seed marketplace (`RemoveFacts.seeded`), naming
+  the seed directory (`seed_managed`).
+- `marketplace add` reports how many LFS files a clone left as pointer files
+  (`AddFetched.lfsPointers`); `lfsPointerLine(count)` is the line, for `marketplace update` too.
+- Marketplace validation names the field that breaks its rule, in the oracle's wording:
+  `source.sha: Must be a full 40-character lowercase git commit SHA` (after `Too small`/`Too big`
+  for another length), `source.sha256: Must be a 64-character hex SHA-256 digest`,
+  `source.timeout: Too small: expected number to be >0` / `Too big: expected number to be <=600`,
+  and an archive `source.url` that is not https or names a loopback, link-local or cloud-metadata
+  host: `Archive URLs must use https:// and must not point at a loopback, link-local, or
+  cloud-metadata host`. A non-ASCII command or a run of four spaces draws one message, `command
+  must be printable ASCII (letters, digits, punctuation, single spaces) with no runs of 4 or more
+  spaces`. `isBlockedHost` moves to `format/marketplace` (still exported from the marketplace entry).
+- A `relevance.signals.hosts` entry must be lower-case letters, digits, `.` and `-`: an upper-case
+  host now invalidates the entry, with `must be a lowercase bare hostname (no scheme, port, or
+  path)`.
+- A backslash after `./` in a relative source is no longer reported by `validate`; loading refuses
+  it with `Plugin source path refused: <path> does not stay inside its marketplace directory. ...`.
+  A bare name under a `pluginRoot` that climbs out or is absolute fails as `Invalid string: must
+  start with "./"`.
+- `renames` chains that do not resolve give the reason `target-missing` or `cycle`; a target that
+  breaks the id grammar is `target-missing`, and a target that is itself a key is followed.
+- `validate` reports `npm`, `pip`, `uv`, `cargo`, `github` and `gh` in lower case only; adding or
+  loading refuses every other casing. `claude-plugin-test` is `reserved for plugins loaded by claude
+  plugin test`.
+- `refusedMarketplaceName(name, source)`: a registered marketplace whose name imitates an official
+  one stops loading, with `Claude Code refuses the marketplace name "<name>"` on each plugin, the
+  marketplace's own `Claude Code refuses this marketplace's name: it looks like one of Anthropic's
+  own`, and for a `settings` source the steps that keep it.
+- `marketplace add` refuses an empty `#ref` on a git URL, an SSH address or shorthand with `Invalid
+  marketplace source format...`.
+- **BREAKING** `@rsaryev/llx-plugin` → `@localix-ai/agent-plugins`. The project is renamed
+  `agent-plugins` and moves to the Localix Lab organisation: the package is
+  `@localix-ai/agent-plugins`, the repository `github.com/localixai/agent-plugins`, and the source
+  export condition `agent-plugins-source` (was `llx-plugin-source`). Import from the new name; the
+  subpaths are unchanged.
+- **BREAKING** `afterBackgroundCheck(result, env, checkoutHoldsCatalog)`:
+  `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE=1` keeps the checkout without a re-clone only when
+  it already contains `.claude-plugin/marketplace.json`; a marketplace never cloned, or cloned
+  partway, still gets the clone attempt.
+- `clonePlan` carries `sshOptions`: the client's own `ssh` runs with `BatchMode=yes` and
+  `StrictHostKeyChecking=yes`; a user-named SSH program gets none added.
+- The request-routing and client-identity header names dropped from an entry's `headers` are the
+  full set the validator warns for (`forwarded`, `x-real-ip`, `connection`, `via`, the `x-original-`
+  and `proxy-` prefixes and the rest), with `_` read as `-`, and the catalog validator, the archive
+  download and the settings-file filter share one copy.
+- A `dependencies` string with two `@` and an object without `name` are `Invalid input` on the item,
+  in the manifest, the validator and `normalizeDependency`.
+- **BREAKING** A disabled dependency is named as its entry declares it, a `--plugin-dir` copy too
+  (`Dependency "q2" is disabled — …`, never `q2@inline`); `InstalledDependency.id` is gone.
+- An install of a relative entry from a marketplace added by URL is refused as `Cannot install <id>:
+  its marketplace entry path does not stay inside the marketplace directory (…)`, naming the plugin
+  given as `FetchPlanContext.pluginId`.
+- `disableSideloadFlags`: the rejected flags are followed by `Plugins, custom agents, and MCP servers
+  can only be loaded from sources your administrator has approved.`, the Agent SDK `plugins` option
+  (`SideloadFacts.sdkPlugins`) is rejected too, and the CLI's `CLAUDE_CODE_PLUGIN_DIRS` refusal says
+  `: unset the variable` as the mods loader's does.
+
+### Fixed (security)
+
+- A skill's frontmatter hooks now carry where the skill came from: a project skill's hooks wait
+  for workspace trust in an interactive session, a personal or project skill registers none under a
+  plugin-only lock on hooks, and a skill of the managed settings directory keeps its hooks under
+  `allowManagedHooksOnly` and that lock (hooks.md, "Hooks in skills and agents"). `HookPolicy.runs`
+  (`createHookPolicy`) now lets a managed-directory skill's or command's hooks run under
+  `allowManagedHooksOnly` too.
+- A `PermissionRequest` hook's `setMode` to `bypassPermissions` is dropped from the session's
+  dispatch outcome unless bypass mode is available, and kept only in memory when it is
+  (`destination: "session"`); `permissionUpdatesInEffect` (`./rules`) applies the same rule for a
+  host. `--restricted` now leaves bypass out of `bypassAvailable` even with
+  `--allow-dangerously-skip-permissions`.
+- `decide` denies a PowerShell `Remove-Item` on a system path or a wildcard, and `cmd` `rd`,
+  `rmdir`, `del` and `erase` on a system path, in every mode, `bypassPermissions` included (reason
+  `powershell-removal`; `DecideContext.powershellCmdRemovalDenyOff` for
+  `CLAUDE_CODE_DISABLE_POWERSHELL_CMD_RM_DENY`). A read of another organization's public artifact
+  (`DecideContext.foreignArtifact`) asks in every mode, auto included, and is denied in `dontAsk`
+  and `bypassPermissions` (reason `foreign-artifact`).
+- The write block treats as settings files the files the session was started with (`--settings`,
+  `--agents`, `--mcp-config`), the stored server-managed settings and the files kept with it, and
+  any `.json` while `DecideContext.managedSettingsFolderUnresolved`; `writeBlockRefusal` and
+  `writeBlockShortRefusal` (`./rules`) give the refusals verbatim. The files kept beside
+  `remote-settings.json` in the configuration directory are protected paths
+  (`ProtectedPathOptions.remoteSettingsFiles` for others).
+- Auto mode drops wildcarded `bash`, `sh` and `zsh` allow rules (and the legacy `:*` spelling of a
+  wildcarded interpreter), and sends a command carrying per-command allowed domains
+  (`PreparedCall.allowedDomains`) to the classifier even when an allow rule matches.
+- `PermissionsPolicy.runningMode(current)` (`./settings`) moves a running auto session to `default`
+  with `auto mode disabled by settings` (`AUTO_MODE_DISABLED_NOTICE`) when managed settings set
+  `disableAutoMode`.
+- The built-in mods guard turns a user's mod's approval of a call an `ask` rule covers into the
+  prompt (`decision: "ask"`) instead of a denial, and `allowModsToOverrideDenyRules` lets it past;
+  `ModsPolicyInput.managedMcp` makes a machine with only `managed-mcp.json` load the guard and close
+  the user's `prependPlugins` and `appendPlugins`.
+
+### Fixed (skills and agents)
+
+- Outside a plugin a skill whose frontmatter `name` holds a character a command name can't hold
+  now loads under its folder name, with a warning, instead of being refused; a folder or frontmatter
+  `name` over 256 characters is refused the same way. A refused name's issue message is its
+  debug-log line, `[names] <name> is not offered` or `[names] <value> is not shown for <skill>`,
+  hidden characters spelled `\u{200B}` (errors.md, "Skill or command name refused").
+- When a plugin named `anthropic-skills` and a synced skill share a name,
+  `/anthropic-skills:<name>` runs the synced skill (`skillLookup`).
+- `scanSavedWorkflows` leaves out a workflow named `anthropic-skills` or `anthropic-skills:<name>`,
+  with an error at its file.
+
 ## [0.1.1] - 2026-11-12
 
 ### Added

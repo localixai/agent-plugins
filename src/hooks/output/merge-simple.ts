@@ -2,6 +2,7 @@ import { warning, type PluginIssue } from '../../format/issues.ts';
 import { classifierNote } from './classifier-note.ts';
 import { boolIn, specificOf, stringIn, stringsIn, textIn } from './fields.ts';
 import { checkToolOutput, isMcpToolName } from './tool-output.ts';
+import { lastPathLine } from './worktree-path.ts';
 import { factOf } from '../input/fact-read.ts';
 import { NOTHING, lastOf, type Merged, type Merger, type Read } from './merge-rules.ts';
 import type { HookSpecificOutputOf } from '../../protocol/hook-events.ts';
@@ -46,9 +47,18 @@ export const mergeSessionStart: Merger = (reads, facts) => {
   };
 };
 
+/**
+ * `suppressOriginalPrompt` is "if `true` when the hook blocks the prompt" (hooks.md, "UserPromptSubmit
+ * decision control"), "whether the hook blocks with `decision: "block"` or by exiting 2": only a hook
+ * that blocks by itself counts, so a hook that lets the prompt through never changes another's
+ * block message (Agent Plugins Extended §7.5.8, Judgment J7.144).
+ */
 export const mergeUserPrompt: Merger = (reads) => {
   const sessionTitle = lastText(reads, 'sessionTitle');
-  const suppressOriginalPrompt = anyTrue(reads, 'suppressOriginalPrompt');
+  const suppressOriginalPrompt = anyTrue(
+    reads.filter((read) => read.blocks),
+    'suppressOriginalPrompt',
+  );
   return {
     effects: {
       ...(sessionTitle === undefined ? {} : { sessionTitle }),
@@ -94,8 +104,20 @@ export const mergeRetry: Merger = (reads, facts) => {
   return { effects: { retry }, issues: [] };
 };
 
+/** One hook's answer: an HTTP hook's `worktreePath`, or a command hook's last non-empty line. */
+function worktreeAnswerOf(read: Read): string | undefined {
+  const given = stringIn(read.specific, 'worktreePath')?.trim();
+  if (given !== undefined && given !== '') return given;
+  return read.stdout === undefined ? undefined : lastPathLine(read.stdout);
+}
+
+/**
+ * Of several `WorktreeCreate` hooks the last answer in handler order is the path, an HTTP hook's
+ * `worktreePath` and a command hook's stdout counting alike (Agent Plugins Extended §7.5.29,
+ * Judgment J7.143).
+ */
 export const mergeWorktreeCreate: Merger = (reads) => {
-  const worktreePath = lastOf(reads.map((read) => stringIn(read.specific, 'worktreePath')));
+  const worktreePath = lastOf(reads.map(worktreeAnswerOf));
   return worktreePath === undefined ? NOTHING : { effects: { worktreePath }, issues: [] };
 };
 

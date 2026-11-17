@@ -9,12 +9,7 @@ import {
   CLASSIC_EVENT_NAMES,
   ENGINE_EVENT_NAMES,
 } from '../../src/protocol/mods-events.ts';
-import {
-  ELEMENT_COLUMN_OF,
-  ELEMENT_NAMES,
-  ELEMENT_SURFACES,
-  UI_SURFACES,
-} from '../../src/protocol/mods-ui-names.ts';
+import { drawsElement, ELEMENT_NAMES, UI_SURFACES } from '../../src/protocol/mods-ui-names.ts';
 import { apiHarness } from './mods-api.ts';
 import { fn, harness } from './mods-chain.ts';
 import { DECLARED, fieldDifferences, nameDifferences, zodFields } from './mods-declarations.ts';
@@ -108,8 +103,7 @@ export async function nextDifferences(): Promise<string[]> {
 export function elementDifferences(): string[] {
   const lines: string[] = [];
   for (const surface of UI_SURFACES) {
-    const column = ELEMENT_COLUMN_OF[surface];
-    const ours = ELEMENT_NAMES.filter((name) => ELEMENT_SURFACES[name].includes(column));
+    const ours = ELEMENT_NAMES.filter((name) => drawsElement(name, surface));
     lines.push(
       ...nameDifferences(`elements of ${surface}`, ours, DECLARED.elements[surface] ?? []),
     );

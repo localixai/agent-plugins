@@ -4,13 +4,37 @@
  * output": "Claude Code drops request-routing and client-identity names such as `Host`, `Cookie`,
  * and `X-Forwarded-*` ... and keeps authentication names such as `Authorization`").
  *
- * The docs say "such as": the kit drops exactly the names they give (spec/judgments.md).
+ * The docs say "such as": the set is the one `claude plugin validate` 2.1.325 warns for, the spec's
+ * Judgment J15.12 (spec/judgments.md). The one copy: the catalog validator, the archive download
+ * and the settings-file filter all read it.
  */
-const EXACT = new Set(['host', 'cookie']);
-const FORWARDED_PREFIX = 'x-forwarded-';
+const EXACT = new Set([
+  'host',
+  'cookie',
+  'forwarded',
+  'x-real-ip',
+  'x-client-ip',
+  'true-client-ip',
+  'client-ip',
+  'cf-connecting-ip',
+  'fastly-client-ip',
+  'x-originating-ip',
+  'x-remote-ip',
+  'x-remote-addr',
+  'x-cluster-client-ip',
+  'connection',
+  'upgrade',
+  'transfer-encoding',
+  'content-length',
+  'te',
+  'trailer',
+  'expect',
+  'via',
+]);
+const PREFIXES: readonly string[] = ['x-forwarded-', 'x-original-', 'proxy-'];
 
-/** True for `Host`, `Cookie` and any `X-Forwarded-*`, in any letter case. */
+/** True for a routing or identity name, lowercased with `_` read as `-` (J15.12). */
 export function isRoutingHeader(name: string): boolean {
-  const lower = name.toLowerCase();
-  return EXACT.has(lower) || lower.startsWith(FORWARDED_PREFIX);
+  const folded = name.toLowerCase().replaceAll('_', '-');
+  return EXACT.has(folded) || PREFIXES.some((prefix) => folded.startsWith(prefix));
 }

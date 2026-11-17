@@ -5,7 +5,8 @@ import { scrubEnvironment } from '../../../loading/resolve/subprocess-scrub.ts';
  * The environment of a subprocess Claude Code starts (env-vars.md, "Set variables in settings files",
  * "Precedence", `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, `CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`,
  * `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID`; hooks.md, "Common input fields"): the host's environment
- * with the settings files' `env` written over it, its credentials removed when the scrub is on, the
+ * with the settings files' `env` written over it, its credentials removed when the scrub is on (and
+ * the Anthropic ones under the HIPAA configuration), the
  * `OTEL_*` exporter variables removed ("from every subprocess it spawns"), and the variables Claude
  * Code sets for that kind of subprocess. One pure function, so a host builds the environment of its
  * own Bash, PowerShell, stdio MCP and Monitor processes the way the kit builds a hook's.
@@ -61,7 +62,24 @@ export interface SubprocessEnvironmentInput {
   readonly processId?: number | undefined;
   /** The effort level when the process starts, for `CLAUDE_EFFORT` ("only set when the model supports" it). */
   readonly effort?: string | undefined;
+  /** The HIPAA configuration applies to the session: the Anthropic credentials are removed. */
+  readonly hipaa?: boolean | undefined;
 }
+
+/**
+ * hipaa-setup.md, "Anthropic credentials in commands, hooks, and MCP servers": "With the HIPAA
+ * configuration applied, Claude Code removes the credentials it uses to reach Anthropic, such as
+ * `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`, from the environment of the shell commands,
+ * hooks, and MCP servers it starts"; cloud provider and GitHub credentials stay (Agent Plugins
+ * Extended §7.3.2.3 item 2). Judgment (spec/judgments.md): the credentials are the environment
+ * variables of authentication.md, "Authentication precedence", that reach Anthropic, so
+ * `CLAUDE_CODE_OAUTH_TOKEN` too; matched in any case on Windows.
+ */
+const ANTHROPIC_CREDENTIALS: ReadonlySet<string> = new Set([
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'CLAUDE_CODE_OAUTH_TOKEN',
+]);
 
 const OTEL = /^OTEL_/;
 const OTEL_ANY_CASE = /^OTEL_/i;
@@ -89,9 +107,12 @@ export function subprocessEnvironment(input: SubprocessEnvironmentInput): Record
   const parent = applySettingsEnv(input.environment, input.settingsEnv ?? {}, windows);
   const scrubbed = scrubEnvironment(parent);
   const exporter = windows ? OTEL_ANY_CASE : OTEL;
-  const isEnvFile = (name: string): boolean => (windows ? name.toUpperCase() : name) === ENV_FILE;
+  const nameOf = (name: string): string => (windows ? name.toUpperCase() : name);
+  const isEnvFile = (name: string): boolean => nameOf(name) === ENV_FILE;
+  const isCredential = (name: string): boolean =>
+    input.hipaa === true && ANTHROPIC_CREDENTIALS.has(nameOf(name));
   const inherited = Object.entries(scrubbed).filter(
-    ([name]) => !exporter.test(name) && !isEnvFile(name),
+    ([name]) => !exporter.test(name) && !isEnvFile(name) && !isCredential(name),
   );
   return { ...Object.fromEntries(inherited), ...setByClaudeCode(input) };
 }

@@ -23,7 +23,7 @@ export function planLspStartup(
 ): LspStartupPlan {
   if (!facts.executableAvailable) {
     return {
-      issues: [error(server.name, `Executable not found in $PATH: ${server.command}`)],
+      issues: [error(server.name, `Executable not found in $PATH: "${server.command}"`)],
     };
   }
   return {

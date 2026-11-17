@@ -59,7 +59,11 @@ spec('manifest.field.commands', () => {
 for (const field of ['hooks', 'mcpServers', 'lspServers'] as const) {
   spec(`manifest.field.${field}`, () => {
     test('takes a .json path, an inline object, or an array mixing both', () => {
-      const inline = { anything: {} };
+      // An inline LSP map is checked as one (spec §9.1.1 item 3), so it must be a valid one.
+      const inline =
+        field === 'lspServers'
+          ? { go: { command: 'gopls', extensionToLanguage: { '.go': 'go' } } }
+          : { anything: {} };
       for (const value of ['./config/x.json', inline, ['./config/x.json', inline]]) {
         expect(loads({ [field]: value }).manifest?.[field]).toEqual(value);
       }

@@ -52,7 +52,7 @@ export function isCarvedOut(
   const rule = rules[index];
   // Only deny and ask rules carve; an allow rule that starts with `!` approves nothing.
   if (rule === undefined || !RESTRICTS[rule.behavior]) return false;
-  // A call with no path the kit reads (LSP) is never carved out: there is nothing for a `!` to match.
+  // A call with no path the kit reads (LSP without `filePath`) is never carved out: there is nothing for a `!` to match.
   if (requestedPath(call, ctx.paths) === undefined) return false;
   const carveOuts = carveOutsAfter(rule, rules.slice(index + 1));
   return carveOuts.length > 0 && !matchPathRule(rule, call, ctx, carveOuts);

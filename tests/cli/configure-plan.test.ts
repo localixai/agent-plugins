@@ -62,6 +62,14 @@ spec('cli.plugin.plugin configure', () => {
     expect(text).toContain('retries (optional, not set)');
   });
 
+  test('an option with only a default is listed as not set (spec §3.4.4)', () => {
+    const text = human(plan({}, { api_url: 'https://example.com' })).stdout.join('\n');
+    expect(text).toContain('tone (optional, not set)');
+    expect(human(plan({}, { tone: 'neutral' })).stdout.join('\n')).toContain(
+      'tone (optional, set)',
+    );
+  });
+
   test('it prints no saved values', () => {
     const text = human(plan()).stdout.join('\n');
     expect(text).not.toContain('https://example.com');
@@ -73,8 +81,8 @@ spec('cli.plugin.plugin configure', () => {
     expect(found).toMatchObject({
       choices: { tone: ['neutral', 'warm'] },
       inputs: { api_url: 'https://example.com', tone: 'neutral' },
-      configured: ['api_url', 'tone'],
-      unconfigured: ['api_token', 'retries'],
+      configured: ['api_url'],
+      unconfigured: ['api_token', 'retries', 'tone'],
     });
     expect(found['schema']).toMatchObject({ api_token: { type: 'string', sensitive: true } });
   });
@@ -141,7 +149,7 @@ spec('cli.plugin.plugin configure', () => {
 
   test('--json with --values-stdin carries the saved option names and the ones still unconfigured', () => {
     const found = json(plan({ json: true, valuesStdin: '{"retries":"1"}' }, { api_url: 'u' }));
-    expect(found).toMatchObject({ saved: ['retries'], unconfigured: ['api_token'] });
+    expect(found).toMatchObject({ saved: ['retries'], unconfigured: ['api_token', 'tone'] });
   });
 
   test('--json with --values-stdin leaves unconfigured out when the saved values could not be read back', () => {

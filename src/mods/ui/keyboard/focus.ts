@@ -24,16 +24,16 @@ export interface FocusGrantInput {
  * Whether `focus: true` is granted (interface.md, "How a pane gets keyboard focus"; "Draw in the VS
  * Code extension", "Keyboard focus"). Claude Code grants it "only while the prompt is empty and
  * nothing else has keyboard focus", so a pane that opens while the user types takes no keystrokes;
- * the panel adds that it has focus, Claude is idle and no question waits. Judgment: the Desktop app
+ * the panel adds to that rule (Agent Plugins Extended §10.27.1 item 2) that it has focus, Claude is
+ * idle and no question waits. Judgment: the Desktop app
  * follows the terminal's rule, the docs state none for it.
  */
 export function grantsFocus(input: FocusGrantInput): boolean {
-  if (!input.requested || !input.isPromptEmpty) return false;
-  if (input.surface === 'vscode') {
-    const panel = input.panel;
-    return panel !== undefined && panel.hasFocus && panel.isIdle && !panel.questionWaiting;
-  }
-  return input.fromUserAction && !input.otherHasFocus;
+  const granted =
+    input.requested && input.isPromptEmpty && input.fromUserAction && !input.otherHasFocus;
+  if (!granted || input.surface !== 'vscode') return granted;
+  const panel = input.panel;
+  return panel !== undefined && panel.hasFocus && panel.isIdle && !panel.questionWaiting;
 }
 
 /**

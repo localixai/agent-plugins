@@ -10,6 +10,8 @@
  * more than one defines the same name Claude Code runs the one closest to the working directory. If a
  * project workflow and a personal workflow share a name, the project one runs." What the docs leave
  * open (file names, ties inside one folder, a script without `meta`) is tested outside spec().
+ * skills.md § Names reserved for synced skills and errors.md § A skill, command, or workflow wasn't
+ * loaded because its name is reserved: a saved workflow named `anthropic-skills` does not load.
  */
 import { describe, expect, test } from 'bun:test';
 import {
@@ -272,6 +274,25 @@ describe('judgments: names and unreadable scripts', () => {
     expect(scan.winners.map((w) => w.name)).toEqual(['ok']);
     expect(scan.issues.map((issue) => [issue.severity, issue.path])).toEqual([
       ['warning', '/work/mono/.claude/workflows/big.js'],
+    ]);
+  });
+});
+
+spec("cli.errors.A skill, command, or workflow wasn't loaded because its name is reserved", () => {
+  test('a saved workflow named anthropic-skills or anthropic-skills:<name> does not load, with an error at its file', async () => {
+    const files = {
+      '/work/mono/.claude/workflows/a.js': script('anthropic-skills'),
+      '/work/mono/.claude/workflows/b.js': script('anthropic-skills:pdf'),
+      '/work/mono/.claude/workflows/c.js': script('anthropic-skillset'),
+    };
+    const scan = await scanSavedWorkflows(folderScan(files, { repositories: [REPO] }), {
+      cwd: REPO,
+      home: HOME,
+    });
+    expect(scan.winners.map((w) => w.name)).toEqual(['anthropic-skillset']);
+    expect(scan.issues.map((issue) => [issue.severity, issue.path])).toEqual([
+      ['error', '/work/mono/.claude/workflows/a.js'],
+      ['error', '/work/mono/.claude/workflows/b.js'],
     ]);
   });
 });

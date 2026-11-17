@@ -4,7 +4,9 @@ import { finalizeEffects } from './output/finalize.ts';
 import { consumedByRun } from './select/once.ts';
 import type { HookOutcome } from './outcome.ts';
 import { routedBlock } from './verdict/route.ts';
-import type { HandlerVerdict, MergedBlock, MergedOutput } from './verdict/types.ts';
+import { handlerLabel } from './verdict/notices.ts';
+import { isPluginSource, pluginLabel } from './source-kind.ts';
+import type { HandlerVerdict, MergedBlock, MergedOutput, RunFacts } from './verdict/types.ts';
 
 /**
  * What an event came to once every handler's run is read and the outputs merged (docs/API.md,
@@ -61,6 +63,20 @@ function decisionBlock(event: HookEvent, merged: MergedOutput): Blocked {
   };
 }
 
+/**
+ * The facts of a verdict's run (`RunFacts`); a verdict the run stage did not time (one built by
+ * hand) still names its handler and plugin, and says it finished.
+ */
+export function runFactsOfVerdict(verdict: HandlerVerdict): RunFacts {
+  if (verdict.ran !== undefined) return verdict.ran;
+  const plugin = isPluginSource(verdict.handler.source) ? pluginLabel(verdict.handler) : undefined;
+  return {
+    handler: handlerLabel(verdict.handler.handler),
+    ...(plugin === undefined ? {} : { plugin }),
+    ending: 'finished',
+  };
+}
+
 const present = <T>(items: readonly (T | undefined)[]): T[] =>
   items.flatMap((item) => (item === undefined ? [] : [item]));
 
@@ -87,6 +103,8 @@ export function assemble<E extends HookEvent>(
     feedback: present(verdicts.map((verdict) => verdict.feedback)),
     stdout: present(verdicts.map((verdict) => verdict.stdout)),
     runs: verdicts.map((verdict) => ({
+      ...runFactsOfVerdict(verdict),
+      ...(verdict.exitCode === undefined ? {} : { exitCode: verdict.exitCode }),
       handlerId: verdict.handler.id,
       status: verdict.status,
       ...(verdict.block === undefined ? {} : { via: verdict.block.via }),

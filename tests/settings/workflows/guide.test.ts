@@ -139,11 +139,11 @@ spec('workflows.behavior.Turn workflows off', () => {
     expect(none.keyword(prompt).triggers).toBe(false);
   });
 
-  test('an environment value other than 1 does not turn them off', () => {
-    for (const value of ['0', 'true', '']) {
-      expect(workflowsDecision(viewOf(), { ...off, env: { [WORKFLOWS_ENV]: value } }).enabled).toBe(
-        true,
-      );
-    }
+  test('the environment variable is on/off: an on spelling turns them off, any other does not', () => {
+    // spec §3.6.1 item 1 and J3.16: `1`, `true`, `yes`, `on` in any case, white space trimmed.
+    const enabled = (value: string) =>
+      workflowsDecision(viewOf(), { ...off, env: { [WORKFLOWS_ENV]: value } }).enabled;
+    for (const value of ['1', 'true', 'Yes', ' on ']) expect(enabled(value)).toBe(false);
+    for (const value of ['0', 'false', 'no', 'off', '', 'maybe']) expect(enabled(value)).toBe(true);
   });
 });

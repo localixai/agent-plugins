@@ -44,10 +44,11 @@ spec(['marketplace.source.github', 'marketplace.rule.Invalid input on a source']
     invalid({ source: 'github', repo: ['a/b'] });
   });
 
-  test('sha must be a full 40-character lowercase commit SHA', () => {
-    for (const sha of [SHA.slice(0, 39), SHA.toUpperCase(), `${SHA}0`, 'main', 12]) {
-      invalid({ source: 'github', repo: 'a/b', sha });
+  test('sha must be a full 40-character lowercase commit SHA; a sha that is not a string is Invalid input', () => {
+    for (const sha of [SHA.slice(0, 39), SHA.toUpperCase(), `${SHA}0`, 'main']) {
+      expect(parse({ source: 'github', repo: 'a/b', sha }).source).toBeUndefined();
     }
+    invalid({ source: 'github', repo: 'a/b', sha: 12 });
   });
 
   test('ref must be a string', () => {
@@ -81,7 +82,9 @@ spec('marketplace.source.url', () => {
   test('url, ref and sha follow the shared rules: url is required, sha is 40 lowercase hex', () => {
     invalid({ source: 'url' });
     invalid({ source: 'url', url: 4 });
-    invalid({ source: 'url', url: 'https://x.example/r.git', sha: 'abc' });
+    expect(parse({ source: 'url', url: 'https://x.example/r.git', sha: 'abc' }).source).toBe(
+      undefined,
+    );
     expect(parse({ source: 'url', url: 'git@host:o/r.git', sha: SHA }).source).toEqual({
       kind: 'url',
       url: 'git@host:o/r.git',
@@ -181,9 +184,10 @@ spec('marketplace.source.archive', () => {
       url,
       sha256: DIGEST.toUpperCase(),
     });
-    for (const sha256 of [DIGEST.slice(1), `${DIGEST}0`, 'z'.repeat(64), 9]) {
-      invalid({ source: 'archive', url, sha256 });
+    for (const sha256 of [DIGEST.slice(1), `${DIGEST}0`, 'z'.repeat(64)]) {
+      expect(parse({ source: 'archive', url, sha256 }).source).toBeUndefined();
     }
+    invalid({ source: 'archive', url, sha256: 9 });
   });
 
   test('url is required', () => {
@@ -221,8 +225,10 @@ spec('marketplace.source.command', () => {
         timeoutSeconds: ok,
       });
     }
-    for (const timeout of [0, 601, -5, 1.5, '60', null])
-      invalid({ source: 'command', command: 'x', timeout });
+    for (const timeout of [0, 601, -5]) {
+      expect(parse({ source: 'command', command: 'x', timeout }).source).toBeUndefined();
+    }
+    for (const timeout of [1.5, '60', null]) invalid({ source: 'command', command: 'x', timeout });
   });
 
   test('mode is copy or link', () => {

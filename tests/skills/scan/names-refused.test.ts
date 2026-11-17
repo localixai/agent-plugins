@@ -3,6 +3,9 @@
  * skills load"): outside a plugin a skill folder, a command file and a folder inside `.claude/commands/`
  * whose name has one of the listed classes does not load. One case per class, for each of the three
  * places a name comes from. (`tests/format/skill-name.test.ts` proves the classes on the name itself.)
+ * A refused frontmatter `name` leaves the skill loaded under its folder name, and a name over 256
+ * characters is refused too (skills.md, "Characters a skill name can't hold"; errors.md, "Skill or
+ * command name refused").
  */
 import { describe, expect, test } from 'bun:test';
 import { HOME, PROJECT, scanOf, skillText } from '../../support/scan.ts';
@@ -66,5 +69,32 @@ spec('skills.behavior.Choose where skills load.Characters in the name', () => {
   test('a single plain space between words is a name a folder can have', async () => {
     const files = { [`${PROJECT}/.claude/skills/my skill/SKILL.md`]: skillText('Spaced') };
     expect(await loads(files)).toEqual(['my skill']);
+  });
+});
+
+spec("skills.behavior.Characters a skill name can't hold", () => {
+  test('a refused frontmatter name is ignored: the skill loads under its folder name and not under the name', async () => {
+    const files = {
+      [`${PROJECT}/.claude/skills/deploy/SKILL.md`]: skillText('Deploy', 'name: "a<b"'),
+    };
+    const outcome = await scanOf(files);
+    expect(outcome.entries.map((entry) => entry.invocable.command)).toEqual(['deploy']);
+    expect(outcome.issues.map((issue) => [issue.severity, issue.message])).toEqual([
+      ['warning', '[names] a<b is not shown for deploy'],
+    ]);
+  });
+
+  test('a folder name over 256 characters does not load; a frontmatter name over 256 is ignored', async () => {
+    const long = 'd'.repeat(300);
+    const files = {
+      [`${PROJECT}/.claude/skills/${long}/SKILL.md`]: skillText('Long'),
+      [`${PROJECT}/.claude/skills/fine/SKILL.md`]: skillText('Fine', `name: ${long}`),
+    };
+    const outcome = await scanOf(files);
+    expect(outcome.entries.map((entry) => entry.invocable.command)).toEqual(['fine']);
+    expect(outcome.issues.map((issue) => [issue.severity, issue.message])).toEqual([
+      ['error', `[names] ${long} is not offered`],
+      ['warning', `[names] ${long} is not shown for fine`],
+    ]);
   });
 });

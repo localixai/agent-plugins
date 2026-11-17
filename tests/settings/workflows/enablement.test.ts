@@ -157,8 +157,12 @@ describe('what the docs leave open (spec/judgments.md)', () => {
     expect(workflowsDecision(view, team).enabled).toBe(false);
   });
 
-  test('only the documented value 1 of the variable counts', () => {
-    for (const value of ['0', 'true', '', undefined]) {
+  test('the variable is an on/off one: any on spelling counts, nothing else does (J3.16)', () => {
+    for (const value of ['1', 'true', ' YES ', 'On']) {
+      const context = { ...team, env: { [WORKFLOWS_ENV]: value } };
+      expect(workflowsDecision(viewOf(), context).enabled).toBe(false);
+    }
+    for (const value of ['0', 'off', 'enabled', '', undefined]) {
       const context = { ...team, env: { [WORKFLOWS_ENV]: value } };
       expect(workflowsDecision(viewOf(), context).enabled).toBe(true);
     }

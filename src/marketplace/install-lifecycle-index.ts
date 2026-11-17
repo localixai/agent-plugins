@@ -40,6 +40,7 @@ export {
   type IgnoredReason,
   type IgnoredSurface,
 } from './ignored-marketplace.ts';
+export { refusedMarketplaceName, type RefusedMarketplaceName } from './refused-name.ts';
 export {
   RECORDS_UNREADABLE_CODE,
   recoveryNotes,
@@ -95,6 +96,24 @@ export {
   type StageReport,
   type StartupAction,
 } from './stage-report.ts';
+export {
+  initPluginFields,
+  pluginInstallEvents,
+  type FailedPluginDirectory,
+  type InitPluginFacts,
+  type LoadedPluginRow,
+  type MarketplaceInstallOutcome,
+  type PluginInstallStamp,
+  type PluginLoadError,
+  type PluginNotLoaded,
+} from './headless-report.ts';
+export {
+  planRemotePlugins,
+  REMOTE_PLUGINS_DIRECTORY,
+  type RemotePluginFacts,
+  type RemotePluginPlan,
+  type RemoteTarget,
+} from './remote-plugins.ts';
 export {
   closePanel,
   marketplaceCommand,

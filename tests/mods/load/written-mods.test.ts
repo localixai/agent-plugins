@@ -19,10 +19,25 @@ import { spec } from '../../support/spec.ts';
 const interactive = { isInteractive: true } as const;
 
 spec(`mods.create.Sessions where a mod Claude writes can't load.Nobody is there to approve`, () => {
-  test('a `claude -p` run has no one to approve: the mod does not load', () => {
+  test('a `claude -p` run outside auto and bypassPermissions has no one to approve: the mod does not load', () => {
     expect(writtenModRefusal(policy(), { isInteractive: false })).toMatchObject({
       gate: 'no-approver',
     });
+    for (const permissionMode of ['default', 'acceptEdits', 'plan', 'dontAsk'] as const) {
+      expect(
+        writtenModRefusal(policy(), { isInteractive: false, permissionMode }),
+        permissionMode,
+      ).toMatchObject({ gate: 'no-approver' });
+    }
+  });
+
+  test('a `claude -p` run in auto or bypassPermissions mode loads the mod', () => {
+    for (const permissionMode of ['auto', 'bypassPermissions'] as const) {
+      expect(
+        writtenModRefusal(policy(), { isInteractive: false, permissionMode }),
+        permissionMode,
+      ).toBeUndefined();
+    }
   });
 
   test('`dontAsk` mode cannot show a prompt either; the other modes can', () => {

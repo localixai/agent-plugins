@@ -1,5 +1,7 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 import { error, type PluginIssue } from './issues.ts';
+import type { LSP_TRANSPORTS } from './lsp-schema.ts';
+import { lspServerSchema } from './lsp-schema.ts';
 import { isRecord } from '../protocol/is-record.ts';
 
 /**
@@ -10,7 +12,6 @@ import { isRecord } from '../protocol/is-record.ts';
  */
 
 /** `stdio` (default) or `socket`: "Claude Code accepts `socket` but runs every server over stdio". */
-export const LSP_TRANSPORTS = ['stdio', 'socket'] as const;
 export type LspTransport = (typeof LSP_TRANSPORTS)[number];
 
 export interface LspServer {
@@ -58,60 +59,6 @@ export const LSP_FIELDS = [
   'diagnostics',
 ] as const satisfies readonly (keyof LspServer)[];
 
-const text = z.string({ error: 'expected a string' });
-const strings = z.record(text, text, { error: 'expected a map of strings' });
-const positive = z
-  .number({ error: 'expected a positive integer of milliseconds' })
-  .int({ error: 'expected an integer' })
-  .positive({ error: 'must be a positive integer' });
-const flag = z.boolean({ error: 'expected true or false' });
-
-/** "No spaces unless the value starts with `/`; put arguments in `args`" (judgment: any whitespace, and not empty). */
-const command = text
-  .min(1, { error: 'must name a binary' })
-  .refine((value) => value.startsWith('/') || !/\s/.test(value), {
-    error: 'must not contain spaces unless it starts with "/"; put arguments in "args"',
-  });
-
-const withoutDot = (map: Readonly<Record<string, string>>): string[] =>
-  Object.keys(map).filter((key) => !key.startsWith('.'));
-
-const extensions = strings.check((context) => {
-  const map = context.value;
-  if (Object.keys(map).length === 0) {
-    context.issues.push({ code: 'custom', input: map, message: 'needs at least one entry' });
-  }
-  const bare = withoutDot(map);
-  if (bare.length > 0) {
-    context.issues.push({
-      code: 'custom',
-      input: map,
-      message: `every key must start with a dot, such as ".go"; no dot in ${bare.map((key) => `"${key}"`).join(', ')}`,
-    });
-  }
-});
-
-const lspServerSchema = z.strictObject({
-  command,
-  extensionToLanguage: extensions,
-  args: z.array(text, { error: 'expected an array of strings' }).exactOptional(),
-  transport: z.enum(LSP_TRANSPORTS, { error: 'must be "stdio" or "socket"' }).exactOptional(),
-  env: strings.exactOptional(),
-  initializationOptions: z.unknown().exactOptional(),
-  settings: z.unknown().exactOptional(),
-  workspaceFolder: text.exactOptional(),
-  startupTimeout: positive.exactOptional(),
-  shutdownTimeout: positive.exactOptional(),
-  requestTimeout: positive.exactOptional(),
-  restartOnCrash: flag.exactOptional(),
-  maxRestarts: z
-    .number({ error: 'expected an integer of zero or more' })
-    .int({ error: 'expected an integer' })
-    .nonnegative({ error: 'must be zero or more' })
-    .exactOptional(),
-  diagnostics: flag.exactOptional(),
-}) satisfies z.ZodType<LspServer>;
-
 const reason = (failure: z.ZodError): string =>
   failure.issues
     .map((found) =>
@@ -148,8 +95,9 @@ export interface LspConfigRead {
  * The servers of one map: a `.lsp.json` (or another `.json` file `lspServers` names) or an inline
  * map. Components.md: "The file maps each server name directly to its configuration, with no
  * wrapper object", and "When any entry is invalid, the whole file is skipped at load": one invalid
- * entry leaves no server from this map. Judgment: an inline map is read the same way, since the
- * manifest check rejects the plugin for a bad entry anyway.
+ * entry leaves no server from this map. An inline map never gets here invalid: it is part of the
+ * manifest's schema (manifest-schema.ts), so a bad inline entry keeps the plugin from loading
+ * (spec §9.1.1 item 3, J9.5).
  */
 export function readLspConfig(raw: unknown, origin: string): LspConfigRead {
   if (!isRecord(raw)) {

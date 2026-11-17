@@ -1,44 +1,62 @@
-import { RESTRICTS } from './restricts.ts';
 import { warning, type PluginIssue } from '../format/issues.ts';
-import { REMOVED_TOOLS } from '../protocol/tool-names.ts';
+import { fileToolRuleWarning } from '../format/host-errors.ts';
+import { SETTINGS_FILE } from '../format/settings-files.ts';
 import { wildcardBeforeSubcommand } from './bash/wildcard-warning.ts';
-import type { PermissionRule } from './types.ts';
-
-type RuleCheck = (rule: PermissionRule, knownTools: ReadonlySet<string>) => readonly PluginIssue[];
-
-const removedTools: ReadonlySet<string> = new Set(REMOVED_TOOLS);
+import { ruleWarnings, type RuleWarning, type RuleWarningKind } from './rule-warnings.ts';
+import type { PermissionRule, RuleSource } from './types.ts';
 
 /**
- * "A deny or ask rule whose tool name matches no known tool produces a startup warning to catch
- * typos. Tool names containing `_` or `*` are exempt from the check, and so are the names of tools
- * Claude Code has removed, such as `TaskOutput`." A label ("Stop Task") is such a name.
+ * What the parentheses of the "is not matched by file permission checks" warning name: "a settings
+ * file path, or the flag itself for `--allowed-tools` and `--disallowed-tools`", and for managed
+ * settings "the full warning's parentheses read `managed policy settings`" (errors.md).
  */
-const matchesNoTool: RuleCheck = (rule, knownTools) => {
-  const { toolName } = rule.value;
-  const exempt =
-    // Only deny and ask rules are checked for a tool they cannot match (permissions.md, "Tool name wildcards").
-    !RESTRICTS[rule.behavior] ||
-    toolName.includes('_') ||
-    toolName.includes('*') ||
-    knownTools.has(toolName) ||
-    removedTools.has(toolName);
-  return exempt
-    ? []
-    : [
-        warning(
-          `permissions.${rule.behavior}`,
-          `Permission ${rule.behavior} rule "${rule.text}" matches no known tool — check for typos.`,
-        ),
-      ];
+const FILE_TOOL_SOURCE: {
+  readonly [K in RuleSource['kind']]: (
+    warned: RuleWarning,
+    source: Extract<RuleSource, { kind: K }>,
+  ) => string;
+} = {
+  managed: () => 'managed policy settings',
+  'embedder-managed': () => 'managed policy settings',
+  project: () => SETTINGS_FILE.project,
+  local: () => SETTINGS_FILE.local,
+  user: () => SETTINGS_FILE.user,
+  'flag-settings': (_warned, source) => source.file,
+  cli: (warned) => (warned.behavior === 'allow' ? '--allowed-tools' : '--disallowed-tools'),
+  session: () => 'session',
 };
 
-/** Every check of a rule that is a startup warning rather than a reason to skip it. */
-const RULE_CHECKS: readonly RuleCheck[] = [matchesNoTool, wildcardBeforeSubcommand];
+const sourceOf = <K extends RuleSource['kind']>(
+  warned: RuleWarning & { readonly source: Extract<RuleSource, { kind: K }> },
+): string => FILE_TOOL_SOURCE[warned.source.kind](warned, warned.source);
 
-/** The startup warnings of a rule list (errors.md, "Configuration warnings"). */
+/** The stderr form of each warning kind (errors.md, the non-interactive text run). */
+const STDERR: { readonly [K in RuleWarningKind]: (warned: RuleWarning) => string } = {
+  'matches no tool': (warned) =>
+    `Permission ${warned.behavior} rule "${warned.rule}" matches no known tool — check for typos.`,
+  'never matches': (warned) =>
+    fileToolRuleWarning({
+      behavior: warned.behavior,
+      source: sourceOf(warned),
+      rule: warned.rule,
+      use: warned.use ?? 'Edit',
+      replacement: warned.replacement ?? '',
+    }),
+};
+
+const issueOf = (warned: RuleWarning): PluginIssue =>
+  warning(`permissions.${warned.behavior}`, STDERR[warned.kind](warned));
+
+/**
+ * The startup warnings of a rule list (errors.md, "Configuration warnings"), in the words of a
+ * non-interactive text run; `ruleWarnings` gives the same warnings as values.
+ */
 export function ruleIssues(
   rules: readonly PermissionRule[],
   knownTools: ReadonlySet<string>,
 ): readonly PluginIssue[] {
-  return rules.flatMap((rule) => RULE_CHECKS.flatMap((check) => check(rule, knownTools)));
+  return rules.flatMap((rule) => [
+    ...ruleWarnings([rule], knownTools).map(issueOf),
+    ...wildcardBeforeSubcommand(rule),
+  ]);
 }

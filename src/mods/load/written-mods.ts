@@ -24,7 +24,11 @@ export interface WrittenModRefusal {
 
 type Check = (policy: ModsPolicyInput, session: WrittenModSession) => string | undefined;
 
-/** The permission modes whose sessions cannot show the prompt: `dontAsk` answers nothing itself. */
+/**
+ * The permission modes whose sessions cannot show the prompt: `dontAsk` answers nothing itself.
+ * A non-interactive run (`claude -p`) still loads a written mod in `auto` and `bypassPermissions`
+ * (create.md, "Nobody is there to approve"; Agent Plugins Extended §10.8.4).
+ */
 const CANNOT_ASK: { readonly [M in PermissionMode]: boolean } = {
   default: false,
   acceptEdits: false,
@@ -34,10 +38,21 @@ const CANNOT_ASK: { readonly [M in PermissionMode]: boolean } = {
   auto: false,
 };
 
-const noApprover: Check = (_policy, session) =>
-  !session.isInteractive || CANNOT_ASK[session.permissionMode ?? 'default']
-    ? 'nobody is there to approve it: the session cannot show a prompt'
-    : undefined;
+/** The modes in which a session that cannot show a prompt still loads a mod Claude wrote. */
+const LOADS_UNATTENDED: { readonly [M in PermissionMode]: boolean } = {
+  default: false,
+  acceptEdits: false,
+  bypassPermissions: true,
+  plan: false,
+  dontAsk: false,
+  auto: true,
+};
+
+const noApprover: Check = (_policy, session) => {
+  const mode = session.permissionMode ?? 'default';
+  const cannotAsk = session.isInteractive ? CANNOT_ASK[mode] : !LOADS_UNATTENDED[mode];
+  return cannotAsk ? 'nobody is there to approve it: the session cannot show a prompt' : undefined;
+};
 
 const untrusted: Check = (policy) =>
   policy.isTrusted === false

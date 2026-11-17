@@ -109,18 +109,22 @@ spec('mods.troubleshoot.the parser stopped or the engine ran out of stack loadin
   });
 });
 
-spec('mods.troubleshoot.validate passes and lists no hooks line', () => {
-  const manifest = JSON.stringify({ name: 'first-mod', version: '0.1.0' });
-  const folder = (hooksJson: object) =>
-    memoryFiles({
-      '.claude-plugin/plugin.json': manifest,
-      'hooks/hooks.json': JSON.stringify(hooksJson),
-      'hooks/register.js':
-        "export function register(on) { on('session.start', async ($, e, next) => next(e)) }",
-    });
+const firstModManifest = JSON.stringify({ name: 'first-mod', version: '0.1.0' });
+const folder = (hooksJson: object) =>
+  memoryFiles({
+    '.claude-plugin/plugin.json': firstModManifest,
+    'hooks/hooks.json': JSON.stringify(hooksJson),
+    'hooks/register.js':
+      "export function register(on) { on('session.start', async ($, e, next) => next(e)) }",
+  });
 
-  test('a hooks.json with no `modules` key, or the key misspelled, passes and prints no hooks line', async () => {
-    for (const hooksJson of [{}, { module: ['./register.js'] }, { Modules: ['./register.js'] }]) {
+spec('mods.troubleshoot.validate passes and lists no hooks line', () => {
+  test('a hooks.json with settings hooks and no `modules` key, or the key misspelled, passes and prints no hooks line', async () => {
+    for (const hooksJson of [
+      { hooks: {} },
+      { hooks: {}, module: ['./register.js'] },
+      { hooks: {}, Modules: ['./register.js'] },
+    ]) {
       const report = await validateMod({ files: folder(hooksJson), target: '.' });
       expect(report.exitCode).toBe(0);
       expect(report.lines.at(-1)).toStartWith('✔ Validation passed');
@@ -135,6 +139,17 @@ spec('mods.troubleshoot.validate passes and lists no hooks line', () => {
     });
     expect(report.lines).toContain('  ❯ ./register.js hooks: session.start');
   });
+});
+
+// Agent Plugins Extended §10.42.3 item 1, Judgment J10.174 (oracle 2.1.321, 2.1.325): a deviation from the docs, outside the pass/fail the docs state.
+test('deviation: with neither `hooks` nor `modules` validate fails with the error at root', async () => {
+  for (const hooksJson of [{}, { module: ['./register.js'] }, { description: 'x' }]) {
+    const report = await validateMod({ files: folder(hooksJson), target: '.' });
+    expect(report.exitCode).toBe(1);
+    expect(report.lines).toContain(
+      '  ✘ root: hooks.json must have `hooks` (the hook matchers) or `modules` (hooks modules), or both',
+    );
+  }
 });
 
 spec('mods.troubleshoot.hooks module did not load', () => {

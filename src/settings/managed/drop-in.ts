@@ -1,6 +1,7 @@
 import type { PluginIssue } from '../../format/issues.ts';
 import type { Settings } from '../../protocol/official.ts';
 import { MERGES } from '../merge.ts';
+import { unionOf } from '../canonical.ts';
 import {
   harsherCause,
   readAdminDocument,
@@ -63,12 +64,34 @@ const laterSet = (parts: readonly Settings[], key: string): unknown =>
   parts.map((part) => part[key]).find((value) => value !== undefined);
 
 /**
+ * A later file's value over an earlier one's: blocks merge key by key, lists concatenate in file
+ * order with a later duplicate dropped (each entry stays where it first occurred, Judgment J14.1),
+ * any other value replaces.
+ */
+function laterOver(earlier: unknown, later: unknown): unknown {
+  if (later === undefined) return earlier;
+  if (Array.isArray(earlier) && Array.isArray(later)) return unionOf([earlier, later]);
+  if (!isRecord(earlier) || !isRecord(later)) return later;
+  const merged = new Map(Object.entries(earlier));
+  for (const [name, value] of Object.entries(later))
+    merged.set(name, laterOver(merged.get(name), value));
+  // `Object.fromEntries` defines own properties, so a JSON-parsed `__proto__` name stays a name.
+  return Object.fromEntries(merged);
+}
+
+/** The files merged in file order: `managed-settings.json`, then the drop-ins alphabetically. */
+const inFileOrder = (parts: readonly Settings[]): Settings =>
+  // The result has the keys of the documents it was merged from, which TypeScript cannot follow
+  // through a dynamic merge: the one place the shape is asserted, as in `MERGES.deepMerge`.
+  parts.toReversed().reduce<unknown>(laterOver, {}) as Settings;
+
+/**
  * The files' settings as one, later files first in `parts`: single values replaced, lists combined
  * with duplicates removed, nested blocks merged key by key with each key under these rules, and the
  * keys above replaced whole.
  */
 function mergeDropIns(parts: readonly Settings[]): Settings {
-  const merged = MERGES.deepMerge.combine(parts);
+  const merged = inFileOrder(parts);
   const whole = REPLACED_WHOLE.map((key): [string, unknown] => [key, laterSet(parts, key)]);
   const byName = REPLACED_BY_NAME.map((key): [string, unknown] => [
     key,

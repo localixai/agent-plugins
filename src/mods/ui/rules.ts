@@ -38,6 +38,7 @@ export function uiRules(): EventRuleBook {
           (component === 'AbovePrompt' ? bandProblem(result, isInner) : undefined)
         );
       },
+      shapeDebug: 'a hook returned a tree that does not validate',
       settle(result) {
         if (typeof result === 'object' && result !== null) inner.add(result);
         return result;

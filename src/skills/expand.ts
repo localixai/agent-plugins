@@ -11,7 +11,7 @@ import {
   type TurnOverrides,
 } from './execution.ts';
 import { findInjections, type Injection } from './shell-scan.ts';
-import { substituteArgumentPieces } from './substitute.ts';
+import { appendArguments, substituteArgumentPieces } from './substitute.ts';
 import {
   buildVariables,
   substituteAllowedTools,
@@ -123,6 +123,36 @@ function referencesOf(text: string, skill: Source, request: ExpandRequest, ports
   return readFileReferences(text, { cwd: request.cwd ?? locations.projectDir(), locations });
 }
 
+/**
+ * A core package's skill (Agent Plugins Extended §18.1.5 item 5, J18.14): the body as written, no
+ * argument placeholder, `${CLAUDE_*}` variable or injected command expanded, the arguments appended
+ * as `ARGUMENTS: <the arguments>`; `allowed-tools` as written, under the same managed policy.
+ */
+function coreExpansion(
+  skill: Source,
+  request: ExpandRequest,
+  vars: SkillVariables,
+  run: { readonly execution: ReturnType<typeof resolveExecution>; readonly turn: TurnOverrides },
+): Expansion {
+  const granted = grantApplies(skill, request.policy, request.session?.pluginSource);
+  return {
+    ok: true,
+    text: withFolderLine(
+      appendArguments(skill.body, request.arguments),
+      vars.scope.extra?.['CLAUDE_SKILL_DIR'],
+    ),
+    references: [],
+    grants: granted ? skill.allowedTools : [],
+    ignoredGrants: granted ? [] : skill.allowedTools,
+    disallowed: skill.disallowedTools,
+    ...run,
+    issues: [],
+  };
+}
+
+const isCoreSkill = (skill: Source): boolean =>
+  'core' in skill.origin && skill.origin.core === true;
+
 /** Expands `skill` for one invocation. */
 export async function expandSkill(
   skill: Source,
@@ -139,6 +169,7 @@ export async function expandSkill(
     backgroundTasksDisabled: environment.backgroundTasksDisabled,
   });
   const vars = variablesFor(skill, request, ports, turn);
+  if (isCoreSkill(skill)) return coreExpansion(skill, request, vars, { execution, turn });
   const injections = findInjections(skill.body);
   const body = await substitutePieces(cut(skill.body, injections), skill, request, vars);
   const pluginSource = request.session?.pluginSource;

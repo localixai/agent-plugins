@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { errorAt, warningAt, type Finding } from './finding.ts';
 import { inlineServersValid } from './mcp-check.ts';
-import { isPathKey, PATH_SHAPES, pathShapeFindings } from './plugin-paths.ts';
+import { isPathKey } from './plugin-paths.ts';
+import { sourceFindings } from './inline-sources.ts';
 import { kindOf } from './received.ts';
 import { zodFindings } from './zod-findings.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 import { USER_CONFIG_KEY } from '../user-config-refs.ts';
-import { userConfigOptionSchema } from '../manifest-schema.ts';
+import { dependencyText, userConfigOptionSchema } from '../manifest-schema.ts';
 
 /**
  * The type rules of `plugin.json` as `claude plugin validate` applies them (oracle 2.1.319): one
@@ -31,7 +32,7 @@ const SCHEMAS = {
   license: text,
   keywords: z.array(text),
   defaultEnabled: flag,
-  dependencies: z.array(z.union([text, z.looseObject({ name: text })])),
+  dependencies: z.array(z.union([dependencyText, z.looseObject({ name: text })])),
   channels: z.array(
     z.object({ server: text, displayName: text.optional(), userConfig: userConfig.optional() }),
   ),
@@ -82,8 +83,7 @@ const UNREAD = [
   'privacyPolicyUrl',
   'termsOfServiceUrl',
   'bugs',
-  'support',
-  'privacy_policy',
+  // `support` and `privacy_policy` are not here: they draw the "manifests across many tools" warning (J2.7).
   'privacyPolicy',
   'terms_of_service',
   'screenshots',
@@ -101,7 +101,7 @@ function keyFindings(key: (typeof ORDER)[number], value: unknown): Finding[] {
   if (key === 'mcpServers' && isRecord(value) && !inlineServersValid(value)) {
     return [errorAt('mcpServers', 'Invalid input')];
   }
-  return isPathKey(key) ? pathShapeFindings(key, PATH_SHAPES[key], value) : [];
+  return isPathKey(key) ? sourceFindings(key, key, value) : [];
 }
 
 /** The type errors of the keys present, in the validator's order. */

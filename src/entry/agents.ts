@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/agents`: Sub-agents, their catalog and workflows (docs/API.md, "Sub-agents", "Workflows"). */
+/** `@localix-ai/agent-plugins/agents`: Sub-agents, their catalog and workflows (docs/API.md, "Sub-agents", "Workflows"). */
 export * from '../agents/index.ts';
 export * from '../format/workflow-meta.ts';
 export * from '../format/workflow-meta-rewrite.ts';

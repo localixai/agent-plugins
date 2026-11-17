@@ -1,6 +1,6 @@
 import { loadNameIssues } from '../format/marketplace/marketplace-names.ts';
 import type { MarketplaceSource } from '../format/marketplace/types.ts';
-import { isBlockedHost } from './blocked-hosts.ts';
+import { isBlockedHost } from '../format/marketplace/blocked-hosts.ts';
 import type { ErrorsTabEntry } from './install-messages.ts';
 import { sameMarketplaceSource, type KnownMarketplace } from './known-marketplaces.ts';
 import { readGitAddress } from './source-safety.ts';
@@ -111,7 +111,7 @@ const refusedForSourceOnly = (name: string, source: MarketplaceSource): boolean 
  * `ignoredReason`, which leaves this case to it.
  */
 export const untrustedSource = (name: string, entry: KnownMarketplace): string | undefined =>
-  refusedForSourceOnly(name, entry.source) ? untrustedSourceMessage(name) : undefined;
+  refusedForSourceOnly(name, entry.source) ? untrustedSourceMessage(name, entry.source) : undefined;
 
 /**
  * Why an entry is ignored, or `undefined` when it loads: the first check that fails, in the order
@@ -167,10 +167,23 @@ export function ignoredLine(
   return LINES[surface](name, reason);
 }
 
+const GITHUB_REFUSAL = (name: string): string =>
+  `The name '${name}' is reserved for official Anthropic marketplaces. Only repositories from 'github.com/anthropics/' can use this name.`;
+
 /**
  * `Marketplace "<name>" is registered from an untrusted source: ...` (troubleshooting.md): a
  * marketplace registered under a reserved name whose source is not an `anthropics` GitHub
- * repository stops loading with its plugins.
+ * repository stops loading with its plugins. The middle sentence is the name refusal for that
+ * source (Agent Plugins Extended §13.20 item 2): for a source that is not GitHub or git it reads
+ * `can only be used with GitHub sources from the 'anthropics' organization`. Without a source, the
+ * GitHub sentence.
  */
-export const untrustedSourceMessage = (name: string): string =>
-  `Marketplace "${name}" is registered from an untrusted source: The name '${name}' is reserved for official Anthropic marketplaces. Only repositories from 'github.com/anthropics/' can use this name. To fix it, remove the marketplace and re-add it from the official source.`;
+export function untrustedSourceMessage(name: string, source?: MarketplaceSource): string {
+  const reserved = `The name '${name}' is reserved`;
+  const refusal =
+    source === undefined
+      ? undefined
+      : loadNameIssues(name, { origin: source }).find((issue) => issue.message.startsWith(reserved))
+          ?.message;
+  return `Marketplace "${name}" is registered from an untrusted source: ${refusal ?? GITHUB_REFUSAL(name)} To fix it, remove the marketplace and re-add it from the official source.`;
+}

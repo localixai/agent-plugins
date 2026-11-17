@@ -1,6 +1,5 @@
 import { parseFrontmatter } from '../format/frontmatter.ts';
-import { error } from '../format/issues.ts';
-import { pathNotFound } from '../format/messages.ts';
+import { missingPath } from '../format/messages.ts';
 import type { PluginIssue } from '../format/issues.ts';
 import type { DiscoveredFile } from './discovered.ts';
 import type { PluginTextFile } from './plugin-model.ts';
@@ -38,7 +37,7 @@ export const textFiles =
       find(context).map(async (file) => {
         const text = await textOf(context, file);
         if (text === undefined) {
-          issues.push(error(kind, pathNotFound(kind, file.path ?? file.name)));
+          issues.push(missingPath(kind, file.path ?? file.name));
           return [];
         }
         const name = file.alone === true ? aloneSkillName(text, file.name) : file.name;

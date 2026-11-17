@@ -186,6 +186,11 @@ describe('--add-dir', () => {
     test('CLAUDE.md files load only when CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1', () => {
       const on = add(['../apps'], { env: { CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: '1' } });
       expect(on.addDirLoads).toContain('claude-md');
+      // An on/off variable takes every on spelling (spec J3.16).
+      const yes = add(['../apps'], {
+        env: { CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: 'true' },
+      });
+      expect(yes.addDirLoads).toContain('claude-md');
     });
 
     test('--safe-mode loads none of it: the modes that skip a kind skip it from an added directory too', () => {

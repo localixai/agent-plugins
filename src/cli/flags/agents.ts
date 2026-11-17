@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../format/env-flag.ts';
 import { sideloadRefusal } from './sideload.ts';
 import { refuse, type Contribution, type FlagContext } from './types.ts';
 import { parseJson, type Parsed } from './values.ts';
@@ -74,7 +75,7 @@ const isInline = (value: string): boolean => value.trimStart().startsWith('{');
 
 /** `--safe-mode` or `CLAUDE_CODE_SAFE_MODE=1` ("Equivalent to passing `--safe-mode`", env-vars.md). */
 const safeModeOn = ({ given, facts }: FlagContext): boolean =>
-  given['--safe-mode'] === true || facts.env.CLAUDE_CODE_SAFE_MODE === '1';
+  given['--safe-mode'] === true || isTruthyEnv(facts.env.CLAUDE_CODE_SAFE_MODE);
 
 /** The value as JSON, or the refusal: an object starts with `{`; any other value is a path to a file. */
 function agentsJson(value: string, context: FlagContext): Parsed | { readonly refusal: string } {

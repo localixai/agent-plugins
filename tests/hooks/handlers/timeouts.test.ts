@@ -251,4 +251,14 @@ describe('judgments', () => {
       expect(ms(handlerOf('SessionEnd', 'command'), environment)).toBe(1500);
     }
   });
+
+  // J3.17 (spec/judgments.md): a numeric variable reads scientific notation and digit separators.
+  test('the SessionEnd override reads 2e3 and 64_000 (J3.17)', () => {
+    const read = (text: string) =>
+      ms(
+        handlerOf('SessionEnd', 'command'),
+        fakeEnvironment({ CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS: text }),
+      );
+    expect([read('2e3'), read('64_000')]).toEqual([2000, 64_000]);
+  });
 });

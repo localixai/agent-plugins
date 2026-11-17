@@ -92,7 +92,7 @@ spec('mods.command.claude plugin test [directory]', () => {
       policy: policy({ user: { disableAllHooks: true } }),
     });
     expect(own.lines[0]).toBe(
-      'claude plugin test: hooks modules are turned off here: disableAllHooks in your settings',
+      'claude plugin test: hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)',
     );
     expect(own.exitCode).toBe(1);
     const managed = await runPluginTests({

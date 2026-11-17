@@ -48,7 +48,7 @@ spec(['manifest.field.settings', 'manifest.rule.settings'], () => {
     expect(issues.map((found) => found.severity)).toEqual(['warning']);
   });
 
-  test('a settings.json that is not JSON is an error and the manifest settings still apply', async () => {
+  test('a settings.json that is not JSON is a warning and the manifest settings still apply (J12.10)', async () => {
     const { plugin, issues } = await load({
       '.claude-plugin/plugin.json': manifest({ agent: 'from-manifest' }),
       'settings.json': '{',
@@ -56,7 +56,7 @@ spec(['manifest.field.settings', 'manifest.rule.settings'], () => {
     expect(plugin?.settings).toEqual({ agent: 'from-manifest' });
     expect(issues).toEqual([
       {
-        severity: 'error',
+        severity: 'warning',
         path: 'settings.json',
         message: expect.stringMatching(/^settings\.json is not valid JSON: /),
       },

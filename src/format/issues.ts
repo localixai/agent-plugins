@@ -10,6 +10,12 @@ export interface PluginIssue {
   readonly severity: Severity;
   readonly path: string;
   readonly message: string;
+  /**
+   * The advice the `/plugin` Errors tab shows under the message, when Claude Code gives one
+   * (plugins/troubleshooting.md, "commands path not found": "with the guidance `Check that the path
+   * in your manifest or marketplace config is correct`"). A host shows it with the message.
+   */
+  readonly guidance?: string;
 }
 
 export const error = (path: string, message: string): PluginIssue => ({

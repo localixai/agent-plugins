@@ -186,7 +186,6 @@ export const localCopyOf = (
   return {
     enabled: local.enabled,
     local: true,
-    id: `${local.name}@inline`,
     ...(local.version === undefined ? {} : { version: local.version }),
   };
 };

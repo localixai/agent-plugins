@@ -1,11 +1,10 @@
 import { error, type PluginIssue } from '../format/issues.ts';
 import { STANDARD_LAYOUT, declaredKey } from '../format/layout.ts';
-import { pathNotFound } from '../format/messages.ts';
 import type { CommandEntry, PluginManifest } from '../format/manifest-schema.ts';
 import { COMBINE } from './combine.ts';
 import type { DiscoverContext, DiscoveredFile, Found } from './discovered.ts';
 import { ignoredFolderIssues } from './ignored-folder.ts';
-import { locate } from '../format/locate.ts';
+import { locate, missingAt } from '../format/locate.ts';
 import { rootRelative } from '../format/path-text.ts';
 import { DECLARED_SHAPE } from './declared-shape.ts';
 import { WALKERS, type ListedKind } from './walk.ts';
@@ -64,7 +63,7 @@ async function commandMap(
       const located = await locate(context, 'commands', source);
       if (located.issue) return { found: [], issues: [located.issue] };
       if (!located.stat) {
-        return { found: [], issues: [error('commands', pathNotFound('commands', source))] };
+        return { found: [], issues: [missingAt(context, 'commands', source)] };
       }
       return { found: [{ path: rootRelative(source, context.platform), name, entry }], issues: [] };
     }),
@@ -85,8 +84,7 @@ async function walkOne(
   const located = await locate(context, kind, written ?? path);
   if (located.issue) return { found: [], issues: [located.issue] };
   if (!located.stat) {
-    const missing: PluginIssue[] =
-      written === undefined ? [] : [error(kind, pathNotFound(kind, written))];
+    const missing: PluginIssue[] = written === undefined ? [] : [missingAt(context, kind, written)];
     return { found: [], issues: missing };
   }
   const wrong = written === undefined ? undefined : DECLARED_SHAPE[kind](located.stat, written);

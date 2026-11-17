@@ -1,5 +1,5 @@
 import type { CallExpression, Function as FunctionNode, MemberExpression, Node } from 'acorn';
-import { scanIssue, type ModScanIssue, type ModScanIssueCode } from './issue-codes.ts';
+import { scanIssue, type ModScanIssueCode } from './issue-codes.ts';
 import {
   isCall,
   isDeclarator,
@@ -13,12 +13,24 @@ import {
 } from './ast.ts';
 import { isOnName } from '../../chain/wildcard.ts';
 import { lacksTelemetryFilter } from '../../chain/validate.ts';
-import { GATING_EVENTS } from './event-names.ts';
+import { isGatingPattern } from './event-names.ts';
 import { onFilter } from './matcher-label.ts';
+import { onProblems, type OnRules } from './on-rules.ts';
 import { stateUse, type StateFunction } from './state-sources.ts';
-import { ATOM_UNREADABLE, type TopLevel } from './top-level.ts';
-import type { ScannedCall, ScannedHook } from './uses.ts';
-import { childrenOf } from './walk.ts';
+import { ATOM_UNREADABLE, atomOf, type TopLevel } from './top-level.ts';
+import type { Found } from './found.ts';
+import { engineFold } from './engine-fold.ts';
+import { walk } from './walk.ts';
+import {
+  AS_VALUE,
+  DOLLAR_BOUND,
+  DOLLAR_COMPUTED,
+  COMPUTED,
+  NOT_LITERAL,
+  SHADOWED,
+  TELEMETRY_STREAM,
+  unreadableHook,
+} from './messages.ts';
 
 /**
  * What the scan reads in the hooks of a module (plugins/mods/create.md, "Check what Claude Code reads
@@ -26,30 +38,6 @@ import { childrenOf } from './walk.ts';
  * `$.namespace.method`, with `$` passed only to a function declared at the top level of the same
  * file. The messages the docs quote are quoted; the others are the kit's words.
  */
-
-const NOT_LITERAL = 'the event name passed to on() is not a string literal';
-const SHADOWED = '"on" is declared again (shadowed)';
-const COMPUTED = '(computed)';
-
-export interface Found {
-  readonly hooks: ScannedHook[];
-  readonly calls: Map<string, ScannedCall>;
-  readonly envReads: Set<string>;
-  readonly envWrites: Set<string>;
-  readonly stateReads: Set<string>;
-  readonly stateWrites: Set<string>;
-  readonly issues: ModScanIssue[];
-}
-
-export const emptyFound = (): Found => ({
-  hooks: [],
-  calls: new Map(),
-  envReads: new Set(),
-  envWrites: new Set(),
-  stateReads: new Set(),
-  stateWrites: new Set(),
-  issues: [],
-});
 
 interface Ctx {
   readonly dollar: string;
@@ -66,29 +54,12 @@ export interface Run {
   readonly caught: Set<Node>;
   readonly seen: Set<string>;
   readonly queue: { readonly fn: FunctionNode; readonly via?: string }[];
+  readonly on: OnRules;
 }
 
-/** Children the walk follows: a function's parameters are declarations, so only its body is read. */
-const readable = (node: Node): readonly Node[] =>
-  isFunction(node) ? [node.body] : childrenOf(node);
-
-/** A walk with a context handed down: the visitor returns the context for the children, or `false` to stop. */
-function walk<C>(root: Node, context: C, visit: (node: Node, context: C) => C | false): void {
-  const stack: { readonly node: Node; readonly context: C }[] = [{ node: root, context }];
-  for (let frame = stack.pop(); frame; frame = stack.pop()) {
-    const next = visit(frame.node, frame.context);
-    if (next === false) continue;
-    for (const child of readable(frame.node).toReversed()) {
-      stack.push({ node: child, context: next });
-    }
-  }
-}
-
-const unreadableHook = (event: string): string =>
-  `the hook passed to on("${event}") is not a function the scan can read`;
-
-const fail = (run: Run, code: ModScanIssueCode, message: string): void => {
-  run.found.issues.push(scanIssue(code, run.file, message));
+/** An issue at the line where `node` starts. */
+const fail = (run: Run, code: ModScanIssueCode, message: string, node: Node): void => {
+  run.found.issues.push(scanIssue(code, run.file, message, run.on.lineOf(node.start)));
 };
 
 /** `$.ns.method(...)`: the namespace and method, when `node` is such a call on the `$` of `ctx`. */
@@ -111,13 +82,18 @@ function apiCall(
 
 /** The literal first argument of `$.env.get` and the others, or `(computed)`. */
 const literalArg = (call: CallExpression): string => stringOf(call.arguments[0]) ?? COMPUTED;
+/** A `$.state` ref written as a `{ plugin, key }` literal: `plugin.key`, else `(computed)`. */
+function refArg(call: CallExpression): string {
+  const ref = atomOf(call);
+  return ref === undefined ? COMPUTED : `${ref.plugin}.${ref.key}`;
+}
 
 function recordUse(run: Run, name: string, call: CallExpression): void {
   const { found } = run;
   if (name === 'env.get') found.envReads.add(literalArg(call));
   if (name === 'env.set') found.envWrites.add(literalArg(call));
-  if (name === 'state.get') found.stateReads.add(literalArg(call));
-  if (name === 'state.set') found.stateWrites.add(literalArg(call));
+  if (name === 'state.get') found.stateReads.add(refArg(call));
+  if (name === 'state.set') found.stateWrites.add(refArg(call));
 }
 
 /** One `$.ns.method` the module calls, once per function it is reached through. */
@@ -144,7 +120,7 @@ function handleApiCall(
 function handleState(run: Run, imported: StateFunction, call: CallExpression, via?: string): void {
   const use = stateUse(run.top, imported, call);
   if ('unreadable' in use)
-    return fail(run, 'state-unreadable', `${use.unreadable} ${ATOM_UNREADABLE}`);
+    return fail(run, 'state-unreadable', `${use.unreadable} ${ATOM_UNREADABLE}`, call);
   for (const name of use.calls) recordCall(run, name, via);
   for (const value of use.reads) run.found.stateReads.add(value);
   for (const value of use.writes) run.found.stateWrites.add(value);
@@ -171,6 +147,7 @@ function handlePassed(run: Run, call: CallExpression, dollar: Node, via: string 
     run,
     'dollar-escapes',
     `$ is passed to ${name ?? 'a method'}, which the scan cannot read: pass $ only to a function declared at the top level of this file`,
+    dollar,
   );
 }
 
@@ -204,9 +181,8 @@ function handleMemberNode(run: Run, node: MemberExpression, dollar: string): voi
   fail(
     run,
     'dollar-as-value',
-    namespace === undefined
-      ? '$ is indexed with a computed name'
-      : `$.${namespace} is used as a value`,
+    namespace === undefined ? DOLLAR_COMPUTED : `$.${namespace} ${AS_VALUE}`,
+    node,
   );
 }
 
@@ -217,7 +193,7 @@ function analyse(run: Run, node: Node, ctx: Ctx): Ctx | false {
   if (isCall(node)) handleCallNode(run, node, ctx);
   else if (isMember(node)) handleMemberNode(run, node, dollar);
   else if (isIdentifier(node) && node.name === dollar && !run.handled.has(node)) {
-    fail(run, 'dollar-as-value', '$ is used as a value');
+    fail(run, 'dollar-as-value', DOLLAR_BOUND, node);
   }
   return ctx;
 }
@@ -244,24 +220,32 @@ function hookFunction(run: Run, node: Node | undefined): FunctionNode | undefine
   return isIdentifier(node) ? run.top.functions.get(node.name) : undefined;
 }
 
+/** What an `engine.create` hook in the form adds to and withholds from `$` (`engineFold`). */
+function noteFold(run: Run, event: string, fn: FunctionNode | undefined): void {
+  const fold = fn && event === 'engine.create' ? engineFold(fn) : undefined;
+  if (fold) run.found.folds.push(fold);
+}
+
 function handleOn(run: Run, call: CallExpression): void {
   const [first, second, third] = call.arguments;
   const event = stringOf(first);
-  if (event === undefined) return fail(run, 'event-not-literal', NOT_LITERAL);
+  if (event === undefined) return fail(run, 'event-not-literal', NOT_LITERAL, call);
   // The chain's own rules: which names `on` takes and the telemetry filter (`chain/validate.ts`).
-  if (!isOnName(event)) return fail(run, 'unknown-event', `"${event}" is not an event`);
+  if (!isOnName(event)) return fail(run, 'unknown-event', `"${event}" is not an event`, call);
   const { label, matcher } = onFilter(second, third);
-  if (lacksTelemetryFilter(event, matcher))
-    fail(run, 'missing-filter', `${event} needs the filter { to: 'collector' }`);
+  if (lacksTelemetryFilter(event, matcher)) fail(run, 'missing-filter', TELEMETRY_STREAM, call);
   run.found.hooks.push({
     event,
     ...(label === undefined ? {} : { matcher: label }),
     hasCatch: run.caught.has(call),
-    isGating: GATING_EVENTS.has(event),
+    isGating: isGatingPattern(event),
   });
   const fn = hookFunction(run, third ?? second);
+  const at = { event, hasMatcher: matcher !== undefined, at: call.start, ...(fn ? { fn } : {}) };
+  for (const problem of onProblems(run.on, at)) fail(run, problem.code, problem.message, call);
   if (fn) analyseFunction(run, fn, undefined);
-  else fail(run, 'hook-unreadable', unreadableHook(event));
+  else fail(run, 'hook-unreadable', unreadableHook(event), call);
+  noteFold(run, event, fn);
 }
 
 /** Shadowing: a declaration of `on` anywhere in `register`. */
@@ -279,7 +263,7 @@ export function scanRegister(run: Run, register: FunctionNode): void {
   const onName = paramName(register, 0);
   if (onName === undefined) return;
   walk(register.body, undefined, (node) => {
-    if (isShadowing(node, onName)) fail(run, 'on-shadowed', SHADOWED);
+    if (isShadowing(node, onName)) fail(run, 'on-shadowed', SHADOWED, node);
     if (!isCall(node)) return undefined;
     if (isIdentifier(node.callee) && node.callee.name === onName) handleOn(run, node);
     const callee = node.callee;
@@ -293,6 +277,21 @@ export function scanRegister(run: Run, register: FunctionNode): void {
   drainQueue(run);
 }
 
-export function newRun(file: string, top: TopLevel, found: Found): Run {
-  return { file, top, found, handled: new Set(), caught: new Set(), seen: new Set(), queue: [] };
+export function newRun(
+  file: string,
+  top: TopLevel,
+  found: Found,
+  lineOf: (offset: number) => number,
+): Run {
+  const on = { file, lineOf, firsts: new Map<string, number>() };
+  return {
+    file,
+    top,
+    found,
+    handled: new Set(),
+    caught: new Set(),
+    seen: new Set(),
+    queue: [],
+    on,
+  };
 }

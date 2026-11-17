@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/loading`
+# `@localix-ai/agent-plugins/loading`
 
 Loading a plugin: its components, repository plugins and workspace trust, variable substitution, and its MCP servers, LSP servers and monitors.
 
@@ -7,6 +7,9 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | Name | Kind | What it is |
 | --- | --- | --- |
 | `attemptWithHeadersHelper` | function | One call or one connection with a helper: `produce` runs the helper fresh and gives the headers it printed (`runMcpHeadersHelper`'s output |
+| `backgroundSessionTrust` | function | What happens before a background session runs in a directory: start, the trust dialog, or the refusal and its message |
+| `BackgroundTrustFacts` | type | The `facts` argument of `backgroundSessionTrust` |
+| `BackgroundTrustVerdict` | type | What `backgroundSessionTrust` returns |
 | `binPathEntries` | function | The absolute `bin/` directory of a plugin, only when it has one ("while the plugin is enabled") |
 | `ChannelResolution` | type | What `resolveChannel` returns |
 | `classifyPluginFolder` | function | Judgment: the docs name the rule, not its edges |
@@ -94,6 +97,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `McpBundleSource` | type | Where an MCP bundle comes from: a path inside the plugin (relative to the plugin root, `/`-separated, no `./`) or an `https://` URL |
 | `McpResolution` | type | What `resolveMcpServer` returns |
 | `mcpServerKey` | function | `plugin:<plugin>:<server>` |
+| `mcpStdioStart` | function | How a stdio MCP server starts: an exec of `command` and `args`, or under `CLAUDE_CODE_SHELL_PREFIX` the prefix with the POSIX-quoted command line as its one argument |
 | `mergeHooks` | function | Joins the hooks of `hooks/hooks.json` and of the `hooks` manifest key; both load |
 | `MONITOR_GUARD` | constant | A monitor `command`, which runs through a shell |
 | `MonitorEvent` | type | What can start a monitor: a session starting, plugins reloading, or a skill running |
@@ -122,6 +126,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `PluginTheme` | type | A theme file of the plugin, read: it appears in `/theme` under the file's `name` (`theme.name`, else the slug), marked as from the plugin |
 | `PluginVariable` | type | One of `PLUGIN_VARIABLES` |
 | `PluginWorkflow` | type | A workflow script of the plugin, its `meta` block read without running it |
+| `posixQuote` | function | One word quoted for a POSIX shell: single quotes, an embedded `'` written `'\''` |
 | `prepareContentSubstitution` | function | `substituteContent` for a host that reads a body synchronously (a lazily loaded skill) |
 | `probeFolder` | function | Probes one folder |
 | `PROJECT_PERMISSION_ENTRIES` | constant | The kinds of entry a project settings file's `permissions` holds, and whether each grants capability |
@@ -172,8 +177,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ScrubOptions` | type | The `options` argument of `scrubEnvironment` |
 | `SENSITIVE_PLACEHOLDER` | function | What stands for a sensitive value in skill, command and agent content, where "a sensitive value there becomes a placeholder" |
 | `settingsHooksMayRun` | function | Whether hooks of a settings file may run: the trust table's `settings-hooks` row |
+| `SHELL_PREFIX_VARIABLE` | constant | `CLAUDE_CODE_SHELL_PREFIX`, the variable whose command wraps the shell commands the client spawns |
 | `ShellGuard` | type | A field whose value is passed to a shell refuses `${user_config.*}` |
 | `ShellPaths` | type | The two ways a string a shell parses carries a path variable (`SubstitutionScope.shellPaths`) |
+| `shellPrefixed` | function | `<prefix> '<line>'`: the prefix as written, then the line as its one quoted argument |
+| `shellPrefixOf` | function | The shell prefix in force: the variable's value, absent when unset or blank |
 | `SkillsDirBlock` | type | What stops skills-directory plugins in managed settings |
 | `skillsDirCommands` | function | The commands of a skills-directory plugin |
 | `SkillsDirFolder` | type | The `folder` argument of `skillsDirCommands` |

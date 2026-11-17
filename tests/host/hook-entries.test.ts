@@ -38,6 +38,27 @@ describe('session.hookEntries', () => {
     expect(own?.handler.type === 'command' && own.handler.command).toBe('./run.sh');
   });
 
+  test('registry order (Agent Plugins Extended §7.1, Judgment J7.2): the settings files highest precedence first, then the plugins, then what registers later', async () => {
+    const settings = createPolicyView([
+      layerOf('user', { hooks: guard('./user.sh') }),
+      layerOf('project', { hooks: guard('./project.sh') }),
+    ]);
+    const { host } = await hostOf({ settings });
+    const session = host.openSession(SESSION);
+    session.addHooks('run:1', guard('./run.sh'), { kind: 'session', label: '[run]' });
+    const kinds = session.hookEntries().map((entry) => entry.source.kind);
+    const lastSettings = kinds.lastIndexOf('settings');
+    const firstPlugin = kinds.indexOf('plugin');
+    expect(lastSettings).toBeGreaterThanOrEqual(0);
+    expect(firstPlugin).toBeGreaterThan(lastSettings);
+    expect(kinds.at(-1)).toBe('session');
+    const files = session
+      .hookEntries()
+      .filter((entry) => entry.source.kind === 'settings')
+      .map((entry) => entry.source.scope);
+    expect(files).toEqual(['project', 'user']);
+  });
+
   test('lists a handler written in several settings files once', async () => {
     const settings = createPolicyView([
       layerOf('project', { hooks: guard('./same.sh') }),

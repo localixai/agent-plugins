@@ -95,6 +95,22 @@ function entryAsManifest(
   };
 }
 
+/**
+ * The entry's `themes` added to the key of plugin.json that is read: `experimental.themes` when it
+ * is set (it wins over the top-level key, spec J6.10), else the top-level `themes` (spec §6.2.2
+ * item 3: with strict the entry's themes add to the manifest's, never into a key that is shadowed).
+ */
+function withThemes(
+  manifest: PluginManifest,
+  themes: string | string[] | undefined,
+): Pick<PluginManifest, 'themes' | 'experimental'> {
+  const { experimental } = manifest;
+  if (experimental?.themes !== undefined) {
+    return { experimental: { ...experimental, themes: appendPaths(experimental.themes, themes) } };
+  }
+  return defined({ themes: appendPaths(manifest.themes, themes) });
+}
+
 /** plugin.json is the manifest; the entry completes it (strict) and outranks it for the display fields. */
 function completeManifest(
   entry: MarketplaceEntry,
@@ -118,9 +134,9 @@ function completeManifest(
           agents: appendPaths(manifest.agents, agents),
           skills: appendPaths(manifest.skills, skills),
           outputStyles: appendPaths(manifest.outputStyles, outputStyles),
-          themes: appendPaths(manifest.themes, themes),
           hooks: hooks === undefined ? manifest.hooks : mergeHooks(manifest.hooks, hooks),
         }),
+        ...withThemes(manifest, themes),
       },
       issues,
     };

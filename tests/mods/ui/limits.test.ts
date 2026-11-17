@@ -11,10 +11,12 @@ import {
   foldRender,
   sizeProblem,
   treeProblem,
+  uiRules,
   type ElementNode,
 } from '../../../src/mods/ui/index.ts';
+import { apiHarness } from '../../support/mods-api.ts';
 import { fn } from '../../support/mods-chain.ts';
-import { node, renderOf, text, uiChain } from '../../support/mods-ui.ts';
+import { fakeInterface, node, renderOf, text, uiChain, uiOver } from '../../support/mods-ui.ts';
 import { spec } from '../../support/spec.ts';
 import { clipText, measureTree } from '../../../src/mods/ui/elements/limits.ts';
 
@@ -191,6 +193,17 @@ spec(
       });
     });
 
+    test('a refused drawing writes `ui.render (<site>): the chain settled on a tree that does not validate` in the debug log', async () => {
+      const { iface } = fakeInterface();
+      const h = await apiHarness({ rules: uiRules, ui: uiOver(iface) });
+      await h.mod('my-mod', 'user', [fn('ui.render', () => nested(33))]);
+      const drawn = await h.ui?.draw({ site: 'Pane', surface: 'terminal', requestId: 'p' });
+      expect(drawn).toMatchObject({ refused: 'deeper than 32; nothing was drawn' });
+      expect(h.debug).toContain(
+        'ui.render (Pane): the chain settled on a tree that does not validate',
+      );
+    });
+
     test('a ui.render hook may return a tree nested past 28,000 levels: the tree is refused as a drawing, the hook does not fail', async () => {
       const deep = nested(30_000);
       const h = uiChain();
@@ -206,3 +219,19 @@ spec(
     });
   },
 );
+
+spec("mods.troubleshoot.A pane or band is empty or shows Claude Code's usual content", () => {
+  test('the debug log has the whole reason after `a hook returned a tree that does not validate`', async () => {
+    const h = uiChain();
+    const bogus = () => node('Text', { bogusProp: 1, children: ['x'] });
+    h.mod('first-mod', 'user', [fn('ui.render', bogus)]);
+    const debug: string[] = [];
+    await h.fire('ui.render', renderOf('Pane'), {
+      core: () => Promise.resolve('engine'),
+      debug: (line) => debug.push(line),
+    });
+    expect(debug).toContain(
+      'first-mod: a hook returned a tree that does not validate: a tree Pane refuses: Text prop "bogusProp" is not allowed',
+    );
+  });
+});

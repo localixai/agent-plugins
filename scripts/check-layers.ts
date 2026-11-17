@@ -30,6 +30,8 @@ const LAYERS: Readonly<Record<string, number>> = {
   updates: 4,
   host: 5,
   cli: 5,
+  /** Conversion between the two plugin forms: loading, the skills scan and the validator below it. */
+  convert: 5,
   testing: 6,
   /** The package's subpath entries: each re-exports one domain (docs/API.md, "Entry points"). */
   entry: 7,

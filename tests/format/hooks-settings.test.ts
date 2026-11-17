@@ -173,10 +173,10 @@ describe('matcher groups', () => {
     }
   });
 
-  test('an unknown group key is dropped with a warning', () => {
+  test('an unknown group key is dropped without a warning (Agent Plugins Extended J7.10)', () => {
     const result = readHooksFile(file({ Stop: [{ hooks: [command], priority: 1 }] }));
     expect(plain(result.hooks.Stop?.[0])).toEqual({ hooks: [command] });
-    expect(warningsOf(result).length).toBeGreaterThan(0);
+    expect(result.issues).toEqual([]);
   });
 });
 

@@ -74,6 +74,21 @@ describe('folders and entries that are links', () => {
     const found = await plugin({ '.mcp.json': { symlink: 'real.json' }, 'real.json': '{}' });
     expect(found[0]?.message).toStartWith('The file is not a regular file');
   });
+
+  test('an .mcp.json past 1,048,576 bytes is not read and is a warning on the file (J8.27)', async () => {
+    const big = JSON.stringify({ mcpServers: { a: 5 }, pad: 'x'.repeat(1_048_576) });
+    const found = await plugin({ '.mcp.json': big });
+    expect(found.map((issue) => [issue.severity, issue.file, issue.path, issue.message])).toEqual([
+      [
+        'warning',
+        '.mcp.json',
+        'directory',
+        'The file is past the size cap and was not read — MCP server files are read without following symlinks and are capped at 1048576 bytes. The plugin loader has neither limit, so validate the real file separately.',
+      ],
+    ]);
+    const atCap = await plugin({ '.mcp.json': JSON.stringify({ mcpServers: { a: 5 } }) });
+    expect(atCap.map((issue) => issue.severity)).toEqual(['error']);
+  });
 });
 
 describe('a project .claude folder', () => {

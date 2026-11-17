@@ -71,6 +71,11 @@ spec('hooks.behavior.PostToolUse after an interrupt.Ctrl+Enter', () => {
     });
     await on.fire('PostToolUse', { interrupt: { key: 'ctrl-enter' } });
     expect(on.runner.calls).toHaveLength(1);
+    const yes = engineSession([afterWrite()], [{}], {
+      environment: { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: 'yes' },
+    });
+    await yes.fire('PostToolUse', { interrupt: { key: 'ctrl-enter' } });
+    expect(yes.runner.calls).toHaveLength(0);
   });
 });
 
@@ -254,6 +259,16 @@ spec('hooks.behavior.What a blocked prompt leaves behind', () => {
     expect(outcome.block?.message).not.toContain('Original prompt');
     expect(outcome.block?.message).not.toContain('deploy the secret');
     expect(outcome.block?.reason).toBe('no secrets');
+  });
+
+  test("a hook that lets the prompt through cannot leave the text out of another hook's block (Agent Plugins Extended §7.5.8, J7.144)", async () => {
+    const { fire } = engineSession(
+      [check('./lets-through.sh'), check('./blocks.sh')],
+      [{ stdout: suppress }, { exitCode: 2, stderr: 'no secrets' }],
+    );
+    expect(quoted(await fire('UserPromptSubmit', submitted))).toMatch(
+      /Original prompt: deploy the secret$/,
+    );
   });
 
   test('suppressOriginalPrompt: false keeps it', async () => {

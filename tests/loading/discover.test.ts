@@ -198,15 +198,30 @@ spec('layout.Executables', () => {
 });
 
 describe('discovery outside the documented layout (judgments)', () => {
-  test('output styles, workflows and themes are one folder deep; a file listed in the manifest is taken whatever its extension', async () => {
+  test('a file listed in the manifest is taken whatever its extension', async () => {
     const found = await discover(
       { 'output-styles/sub/deep.md': 'D.', 'styles/loud.markdown': 'L.' },
       { name: 'my-plugin', outputStyles: './styles/loud.markdown' },
     );
     expect(namesOf(found.outputStyles)).toEqual(['loud']);
-    expect(namesOf((await discover({ 'output-styles/sub/deep.md': 'D.' })).outputStyles)).toEqual(
-      [],
-    );
+  });
+
+  test('J6.4: output styles are read with their subfolders, which are no part of the name; workflows and themes stay one folder deep', async () => {
+    const tree = {
+      'output-styles/top.md': 'T.',
+      'output-styles/sub/deep.md': 'D.',
+      'output-styles/sub/notes.txt': 'no',
+      'workflows/sub/w.js': 'x',
+      'themes/sub/t.json': '{}',
+    };
+    const found = await discover(tree);
+    expect(pathsOf(found.outputStyles)).toEqual([
+      'output-styles/sub/deep.md',
+      'output-styles/top.md',
+    ]);
+    expect(namesOf(found.outputStyles)).toEqual(['deep', 'top']);
+    expect(found.workflows).toEqual([]);
+    expect(found.themes).toEqual([]);
   });
 
   test('a symlink loop does not hang the scan', async () => {

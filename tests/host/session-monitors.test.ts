@@ -72,9 +72,9 @@ describe('session.monitorsToStart', () => {
     expect(start?.cwd).toBe(SESSION.cwd);
     expect(start?.monitor).toMatchObject({
       pluginId: ID,
-      command: 'tail -F "${CLAUDE_PLUGIN_DATA}"/err.log',
+      command: 'tail -F "/data/ops-acme-tools"/err.log',
     });
-    expect(start?.env['CLAUDE_PLUGIN_DATA']).toBe('/data/ops-acme-tools');
+    expect(start?.env['CLAUDE_PLUGIN_DATA']).toBeUndefined();
     expect(start?.env['PATH']).toBe('/bin');
   });
 

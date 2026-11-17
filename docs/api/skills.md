@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/skills`
+# `@localix-ai/agent-plugins/skills`
 
 Skills and commands: scanning, the catalog, invocation, expansion and lifecycle.
 

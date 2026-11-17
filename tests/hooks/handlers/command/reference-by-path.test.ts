@@ -231,8 +231,7 @@ spec('environment.rule.Quoting and path separators', () => {
     );
   });
 
-  test('on Windows a bash hook substitutes nothing: the shell reads the native paths from its environment', async () => {
-    // The forward-slash form is for the fields Claude Code substitutes (tests/loading/resolve/components.test.ts).
+  test('on Windows a bash hook substitutes nothing: the shell reads the forward-slash paths from its environment (J3.6)', async () => {
     const { calls } = await run(
       plugin('"${CLAUDE_PLUGIN_ROOT}"/scripts/process.sh "${CLAUDE_PROJECT_DIR}"'),
       windowsHost,
@@ -240,7 +239,7 @@ spec('environment.rule.Quoting and path separators', () => {
     expect(calls[0]?.spec.command).toBe(
       '"${CLAUDE_PLUGIN_ROOT}"/scripts/process.sh "${CLAUDE_PROJECT_DIR}"',
     );
-    expect(calls[0]?.env['CLAUDE_PROJECT_DIR']).toBe('C:\\Users\\you\\app');
+    expect(calls[0]?.env['CLAUDE_PROJECT_DIR']).toBe('C:/Users/you/app');
   });
 
   test('they keep their native backslashes in an exec-form hook', async () => {

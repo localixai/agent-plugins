@@ -31,11 +31,13 @@ export interface SubstitutionScope {
   readonly extraPaths?: readonly string[];
   /**
    * How a string a shell parses (a monitor `command`, an MCP `headersHelper`, a skill's `!`
-   * command; never a bash shell-form hook, which always keeps the reference) writes the path variables. Default `environment-reference`: the braced
-   * POSIX reference `${CLAUDE_PLUGIN_ROOT}`, with the value in the process environment, so a folder
-   * name holding `$(...)`, a backtick or a quote is never parsed as shell (judgment, spec/judgments.md,
-   * as Claude Code does for PowerShell hooks, hooks.md). `pasted` writes the path itself, the docs'
-   * text, for a host that asks for it.
+   * command; never a bash shell-form hook, which always keeps the reference) writes the path
+   * variables. `environment-reference` (the default but for a monitor): the braced POSIX reference
+   * `${CLAUDE_PLUGIN_ROOT}`, with the value in the process environment, so a folder name holding
+   * `$(...)`, a backtick or a quote is never parsed as shell (judgment, spec/judgments.md, as Claude
+   * Code does for PowerShell hooks, hooks.md). `pasted` writes the path itself, the docs' text: the
+   * default for a monitor `command`, whose path variables are never exported (Agent Plugins
+   * Extended §9.2.4, J9.17).
    */
   readonly shellPaths?: ShellPaths;
   readonly signal?: AbortSignal;

@@ -35,6 +35,8 @@ spec('tools.tool.Bash', () => {
   test('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 or bare mode stops the command instead of moving it', () => {
     const off = env({ CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' });
     expect(shouldMoveToBackground('npm run build', off, local)).toBe(false);
+    const yes = env({ CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: 'TRUE' });
+    expect(shouldMoveToBackground('npm run build', yes, local)).toBe(false);
     expect(shouldMoveToBackground('npm run build', env(), { bare: true })).toBe(false);
     expect(
       shouldMoveToBackground(

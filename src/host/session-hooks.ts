@@ -12,7 +12,9 @@ import type { HookEvent } from '../protocol/official.ts';
 import { toolNamesOf } from '../rules/index.ts';
 
 import { currentOf, type SessionCore } from './session-core.ts';
-import { engineFor } from './session-engine.ts';
+import type { CoreCallFacts } from '../hooks/core/types.ts';
+import { dispatchBothForms } from './session-core-dispatch.ts';
+import { engineFor, uncappedEngineFor } from './session-engine.ts';
 import { portsOf, subprocessFor, type HookEnvironment } from './session-environment.ts';
 import {
   createHookScope,
@@ -20,6 +22,7 @@ import {
   type HookScope,
   type TurnScope,
 } from './session-hook-scope.ts';
+import { withUpdatesInEffect } from './session-permission-updates.ts';
 import { registerEntries } from './session-registry.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState } from './state.ts';
@@ -86,6 +89,14 @@ export type SessionDispatchOptions<E extends HookEvent> = Omit<
 > & {
   /** Limit this dispatch, without removing other registered sources. */
   readonly sourcesOnly?: readonly HookSourceKind[];
+  /**
+   * What the host knows of the call or the prompt that Claude Code's input does not carry, for the
+   * core packages' handlers (Agent Plugins Extended §18.2.7): a shell command's exit code, an MCP
+   * call's declared tool name and `CallToolResult`, the text a `Read` gave Claude, who started a
+   * prompt's turn (required for a `system` turn when a core package handles `UserPromptSubmit`).
+   * Without core packages it is not read.
+   */
+  readonly core?: CoreCallFacts;
 };
 
 export interface HookPart {
@@ -125,7 +136,7 @@ export function createHookPart(
     part: {
       subprocessEnvironment: (kind) => subprocessFor(core, optionsOf(), kind),
       ...createHookScope(core, sessionNow, turn),
-      async dispatch(event, facts, { sourcesOnly, ...request }) {
+      async dispatch(event, facts, { sourcesOnly, core: callFacts, ...request }) {
         const { state, gates } = currentOf(core);
         const options = optionsOf();
         const registry = core.registry.get();
@@ -135,14 +146,32 @@ export function createHookPart(
             : createHookRegistry(
                 registry.entries.filter((entry) => sourcesOnly.includes(entry.source.kind)),
               );
-        const outcome = await engineFor(core, options).dispatch(selected, {
-          ...request,
-          event,
-          facts: inClaudeNames(facts, options),
-          session: sessionOf(state, gates, options),
-        });
-        recordOutcome(core, outcome);
-        return outcome;
+        const named = inClaudeNames(facts, options);
+        const session = sessionOf(state, gates, options);
+        const outcome = await dispatchBothForms(
+          {
+            event,
+            facts: named,
+            use: {
+              state,
+              session,
+              ports: portsOf(state, options),
+              base: () => subprocessFor(core, options, 'hook'),
+            },
+            context: { cwd: options.cwd, subagent: options.agent?.id !== undefined },
+            core: callFacts,
+            sourcesOnly,
+            stopCap: core.stopCap,
+            signal: request.signal,
+          },
+          (capped) =>
+            (capped ? engineFor(core, options) : uncappedEngineFor(core, options)).dispatch(
+              selected,
+              { ...request, event, facts: named, session },
+            ),
+        );
+        recordOutcome(core, outcome, Reflect.get(facts, 'source'));
+        return withUpdatesInEffect(outcome, options);
       },
     },
   };

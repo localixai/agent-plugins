@@ -40,6 +40,10 @@ export interface StateStore {
   onWrite(listener: StateListener): () => void;
   /** Called after each read: a `ui.render` hook that reads a value subscribes to it. */
   onRead(listener: StateListener): () => void;
+  /** Runs one site's drawing: while any runs, `$.state.set` is refused (`isDrawing`). */
+  drawing<T>(run: () => Promise<T>): Promise<T>;
+  /** Whether a `ui.render` hook is drawing now. */
+  isDrawing(): boolean;
   /**
    * Every value back to its default, as `/clear`, `/resume` and `/branch` do. Judgment: each value
    * that was held counts as written, so a site that read it is drawn again and shows the default
@@ -54,6 +58,7 @@ export function createStateStore(): StateStore {
   const values = new Map<string, { ref: StateRef; value: unknown; version: number }>();
   const writes = new Set<StateListener>();
   const reads = new Set<StateListener>();
+  let draws = 0;
   return {
     get(ref) {
       for (const listener of reads) listener(ref.plugin, ref.key, ref.id);
@@ -75,6 +80,15 @@ export function createStateStore(): StateStore {
       reads.add(listener);
       return () => reads.delete(listener);
     },
+    async drawing(run) {
+      draws += 1;
+      try {
+        return await run();
+      } finally {
+        draws -= 1;
+      }
+    },
+    isDrawing: () => draws > 0,
     reset() {
       const held = [...values.values()];
       values.clear();
@@ -90,6 +104,15 @@ export function createStateStore(): StateStore {
 const REF = z.looseObject({ plugin: z.string(), key: z.string(), id: z.string().optional() });
 const OPTIONS = z.looseObject({ ifVersion: z.number().optional() });
 const WRITE = REF.extend({ value: z.unknown(), ifVersion: z.number().optional() });
+
+/**
+ * A write while a `ui.render` hook draws (declarations, `state.set`: "Refused while a `ui.render`
+ * hook draws"; Agent Plugins Extended §10.28.2 item 4, Judgment J10.112): not written, nothing
+ * redrawn. Wording ours (judgment): the declarations give no message. Judgment: the kit cannot tell
+ * whose call it is, so a write from a callback that lands while another site draws is refused too.
+ */
+const WHILE_DRAWING =
+  '$.state.set is refused while a ui.render hook draws: write from onPress or another event';
 
 /** oracle 2.1.322: the refusal of a value that is not a reference, a derived value among them. */
 const NOT_A_REF = "takes a reference { plugin, key } (and id for a family's member)";
@@ -112,6 +135,7 @@ export function stateApi(deps: Deps): ModsNamespaceApi<'state'> {
         Promise.resolve(deps.state.get(refOf(deps, 'get', e))),
       ),
     set: async (...args) => {
+      if (deps.state.isDrawing()) throw new Error(`${deps.plugin}: ${WHILE_DRAWING}`);
       const { ifVersion } = parse('$.state.set', OPTIONS, args[2] ?? {});
       const facts = { ...refOf(deps, 'set', args[0]), value: args[1] };
       return call(

@@ -128,7 +128,7 @@ spec('marketplace.field.name', () => {
       ['builtin', 'is reserved for built-in plugins'],
       ['skills-dir', 'is reserved for plugins auto-loaded from .claude/skills/'],
       ['synced', 'is reserved for plugins synced from your claude.ai account'],
-      ['claude-plugin-test', 'is reserved for plugin tests'],
+      ['claude-plugin-test', 'is reserved for plugins loaded by claude plugin test'],
       ['npm', 'is reserved'],
       ['pip', 'is reserved'],
       ['uv', 'is reserved'],
@@ -143,9 +143,10 @@ spec('marketplace.field.name', () => {
     }
   });
 
-  test('npm, pip, uv, cargo, github and gh are reserved in any casing', () => {
+  test('npm, pip, uv, cargo, github and gh in another casing pass validate and are refused at load (J15.3)', () => {
     for (const name of ['NPM', 'Pip', 'UV', 'Cargo', 'GitHub', 'GH']) {
-      expect(errorsOf(validate(withFields({ name }))).length).toBeGreaterThan(0);
+      expect(errorsOf(validate(withFields({ name })))).toEqual([]);
+      expect(read(withFields({ name })).marketplace).toBeUndefined();
     }
   });
 

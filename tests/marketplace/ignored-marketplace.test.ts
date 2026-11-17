@@ -170,6 +170,16 @@ spec(
         `Marketplace "claude-community" is registered from an untrusted source: The name 'claude-community' is reserved for official Anthropic marketplaces. Only repositories from 'github.com/anthropics/' can use this name. To fix it, remove the marketplace and re-add it from the official source.`,
       );
     });
+
+    test('for a source that is not GitHub or git, the middle sentence names GitHub sources of the anthropics organization', () => {
+      const source: MarketplaceSource = { kind: 'url', url: 'https://example.com/m.json' };
+      expect(untrustedSourceMessage('claude-community', source)).toBe(
+        `Marketplace "claude-community" is registered from an untrusted source: The name 'claude-community' is reserved for official Anthropic marketplaces. The name can only be used with GitHub sources from the 'anthropics' organization. To fix it, remove the marketplace and re-add it from the official source.`,
+      );
+      expect(untrustedSource('claude-community', entry(source))).toBe(
+        untrustedSourceMessage('claude-community', source),
+      );
+    });
   },
 );
 
@@ -182,7 +192,7 @@ spec(`install.troubleshooting.Marketplace "<name>" is registered from an untrust
       repo: 'acme/claude-community',
       path: 'm.json',
     };
-    expect(untrustedSource(reserved, entry(source))).toBe(untrustedSourceMessage(reserved));
+    expect(untrustedSource(reserved, entry(source))).toBe(untrustedSourceMessage(reserved, source));
     expect(ignoredReason(reserved, entry(source), OK)).toBeUndefined();
   });
 

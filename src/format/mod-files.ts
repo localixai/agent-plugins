@@ -82,6 +82,9 @@ function moduleIssues(value: unknown): PluginIssue[] {
   return [];
 }
 
+const SECOND_ENTRY =
+  'hooks.json `modules` names one hooks module per plugin; a second entry is refused';
+
 /**
  * Reads `modules` of `hooks/hooks.json`: "an array with one path, relative to this file" (`"modules":
  * ["./register.js"]`). A file with no `modules` key holds no mod (a mod-less plugin is valid), and
@@ -95,16 +98,13 @@ export function readHooksJsonModules(raw: unknown): HooksModules {
   if (!Array.isArray(modules)) {
     return { issues: [error(`${PATH}:modules`, '"modules" must be an array with one path')] };
   }
-  if (modules.length !== 1) {
+  if (modules.length === 0) {
     return {
-      issues: [
-        error(
-          `${PATH}:modules`,
-          `"modules" must list exactly one hooks module, found ${modules.length}`,
-        ),
-      ],
+      issues: [error(`${PATH}:modules`, '"modules" must list exactly one hooks module, found 0')],
     };
   }
+  // Claude Code 2.1.325's wording (Agent Plugins Extended §10.3.1 item 2, Judgment J10.2).
+  if (modules.length > 1) return { issues: [error(`${PATH}:modules`, SECOND_ENTRY)] };
   const written: unknown = modules[0];
   const issues = moduleIssues(written);
   const entry = typeof written === 'string' ? fromPluginRoot(written) : undefined;

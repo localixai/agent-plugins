@@ -14,7 +14,8 @@ import {
  * refreshes listings only (`planUpdate`'s `marketplace-listing`): installed plugins keep their
  * versions. In a session the line is `✔ Updated 1 marketplace` (plugins/troubleshooting.md, "Install
  * a plugin"). Pure; the host fetches. Judgment (spec/judgments.md): a session counts every listing
- * it refreshed the way a shell does, `✔ Updated N marketplaces`, 0 for an empty registry.
+ * it refreshed the way a shell does, `✔ Updated N marketplaces`, 0 for an empty registry. After a
+ * git refresh that left LFS files as pointer files the host adds `lfsPointerLine(count)`.
  */
 
 export interface UpdateArguments {

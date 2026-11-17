@@ -56,7 +56,8 @@ spec('outputStyles.frontmatter.description', () => {
         current: false,
       },
       { id: 'writer', name: 'writer', description: 'A writing assistant', current: false },
-      { id: 'my-plugin:terse', name: 'terse', current: false },
+      // No description: its first body line stands in (J6.3, tested below).
+      { id: 'my-plugin:terse', name: 'terse', description: 'Short.', current: false },
     ]);
   });
 
@@ -243,5 +244,20 @@ describe('judgments (spec/judgments.md)', () => {
     expect(resolveOutputStyle({ setting: 'my-plugin:diagrams', styles: [diagrams] }).id).toBe(
       'default',
     );
+  });
+});
+
+describe('the listed description (J6.3, oracle 2.1.325)', () => {
+  test('a style without description is listed with the first non-empty line of its body', () => {
+    const plain = style('plain.md', '\n\n  No frontmatter.  \nMore.');
+    const empty = style('empty.md', '---\nname: empty\n---\n');
+    const rows = listOutputStyles([plain, WRITER, empty], resolveOutputStyle({ styles: [] }));
+    const custom = rows.filter((row) => ['plain', 'writer', 'empty'].includes(row.id));
+    expect(custom).toEqual([
+      { id: 'plain', name: 'plain', description: 'No frontmatter.', current: false },
+      { id: 'writer', name: 'writer', description: 'A writing assistant', current: false },
+      { id: 'empty', name: 'empty', current: false },
+    ]);
+    expect(plain.description).toBeUndefined();
   });
 });

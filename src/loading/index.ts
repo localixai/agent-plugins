@@ -86,6 +86,8 @@ export {
   workspaceTrustState,
 } from './workspace-trust.ts';
 export type { TrustFacts, TrustKey, TrustStateOptions } from './workspace-trust.ts';
+export { backgroundSessionTrust } from './background-trust.ts';
+export type { BackgroundTrustFacts, BackgroundTrustVerdict } from './background-trust.ts';
 export { localSettingsVerdict } from './local-settings-trust.ts';
 export type { LocalSettingsFacts, LocalSettingsVerdict } from './local-settings-trust.ts';
 export {

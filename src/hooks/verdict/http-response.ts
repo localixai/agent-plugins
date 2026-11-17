@@ -2,6 +2,7 @@ import type { HttpFailedRun, HttpRun } from '../handlers/remote/types.ts';
 import { failureVerdict, type Failure } from './on-failure.ts';
 import type { Subject } from './subject.ts';
 import { readBody } from './stdout-kind.ts';
+import { unrecognizedKeysNote, withNotes } from './debug-lines.ts';
 import type { HandlerVerdict } from './types.ts';
 
 /**
@@ -41,7 +42,10 @@ function interpretBody(subject: Subject, body: string): HandlerVerdict {
   const checked = subject.parse(subject.event, reading.json);
   return checked.output === undefined
     ? failureVerdict(subject, invalid(checked.failure ?? 'the response failed validation'))
-    : success(subject, checked.output);
+    : withNotes(
+        success(subject, checked.output),
+        unrecognizedKeysNote(subject, checked.unrecognizedKeys),
+      );
 }
 
 export function interpretHttp(subject: Subject, run: HttpRun): HandlerVerdict {

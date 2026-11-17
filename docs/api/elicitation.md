@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/elicitation`
+# `@localix-ai/agent-plugins/elicitation`
 
 MCP elicitation shapes, without the plugin engine; these names are not in `./format`.
 

@@ -120,6 +120,10 @@ describe('the dispatch', () => {
       outcome: 'completed',
       exitCode: 0,
       additionalContext: 'Tests passed',
+      // "with a debug warning naming the field" (Agent Plugins Extended §7.3.3 item 3).
+      issues: [
+        expect.objectContaining({ severity: 'warning', path: `hooks.${hook.id}.systemMessage` }),
+      ],
     });
   });
 

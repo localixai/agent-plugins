@@ -1,3 +1,4 @@
+import { positiveWholeEnv } from '../../format/env-number.ts';
 import { error, type PluginIssue } from '../../format/issues.ts';
 
 /**
@@ -111,8 +112,8 @@ export const canRestartOnRequest = (attempt: number): boolean => attempt < MAX_A
 const DEFAULT_STALL_MS = 600_000;
 const STALL_ENV = 'CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS';
 
-const positiveInteger = (text: string | undefined): number | undefined =>
-  text !== undefined && /^\d+$/.test(text) && Number(text) > 0 ? Number(text) : undefined;
+/** J3.17: read as every numeric variable is (`2e3`, `64_000`). */
+const positiveInteger = positiveWholeEnv;
 
 export interface StallWindowInput {
   /** `stallMs` passed on this agent's `agent()` call. */

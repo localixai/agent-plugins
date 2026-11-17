@@ -22,7 +22,7 @@ the pulled docs.
 ## Fakes of the ports
 
 `src/testing/ports` holds an in-memory fake of every port (docs/API.md, "Testing kit"), published as
-`@rsaryev/llx-plugin/testing`; `tests/support/ports.ts` re-exports it, one copy:
+`@localix-ai/agent-plugins/testing`; `tests/support/ports.ts` re-exports it, one copy:
 `memoryFiles(record)`, `scriptedRunner(...replies)`, `recordingHttp(...replies)`,
 `fakeModel(...replies)`, `fakeMcp(options)`, `fixedClock(start)`, `locations(options)`,
 `fakeEnvironment(record)` and `memoryScratch()`. The scripted ones answer in order, record every

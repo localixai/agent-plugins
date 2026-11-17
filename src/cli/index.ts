@@ -89,6 +89,7 @@ export {
   type UpdateArguments,
   type UpdateFacts,
 } from './marketplace-update.ts';
+export { lfsPointerLine } from './lfs-pointer-line.ts';
 export { planSessionFlags, startupRefusal } from './session-flags.ts';
 export { ADD_DIR_CONFIGURATION, addDirLoads, type AddDirConfiguration } from './flags/add-dir.ts';
 export { sessionAgent } from './flags/agents.ts';
@@ -132,6 +133,7 @@ export {
   type UninstallFacts,
   type UninstallStart,
 } from './uninstall-plan.ts';
+export type { StillSwitchedOn } from './uninstall-refusal.ts';
 export {
   answerPrune,
   planPruneCommand,
@@ -218,7 +220,9 @@ export {
   unexpectedValidationError,
   manifestFileKind,
   validationJson,
+  type GatingHook,
   type ValidationAdvice,
+  type ValidationEntry,
   type ValidationFileResult,
   type ValidationJson,
 } from './validate-run.ts';
@@ -243,3 +247,13 @@ export {
   type CleanOutcome,
   type CleanShell,
 } from './clean-configuration.ts';
+export {
+  agentViewFlags,
+  backgroundSessionFlags,
+  planBackgrounding,
+  type AgentViewFlags,
+  type BackgroundingPlan,
+  type BackgroundWorkFate,
+  type BackgroundWorkKind,
+  type RunningWork,
+} from './background-session.ts';

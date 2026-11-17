@@ -9,7 +9,7 @@
  * § `needs a key`, `is drawn twice`. The kit validates and routes a tree; it draws nothing, so no
  * test here claims a pixel or a terminal cell.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 
 import { clientFailure, drawsAsLink, treeProblem } from '../../../src/mods/ui/index.ts';
 
@@ -190,10 +190,18 @@ spec(['mods.element.Client', 'mods.interface.When a Client fails'], () => {
   });
 });
 
+/** `count` cells as base64: three little-endian u32 each, as a `Uint32Array`'s bytes. */
+const cellsOf = (count: number): string => {
+  const bytes = new Uint8Array(new Uint32Array(count * 3).fill(0x01000000).buffer);
+  let text = '';
+  for (const byte of bytes) text += String.fromCharCode(byte);
+  return btoa(text);
+};
+
 spec(['mods.element.Raster', 'mods.interface.Draw a grid of colored cells'], () => {
   test('a Raster is drawn by the terminal only and takes key, columns up to 512, rows up to 256 and cells', () => {
     const raster = (columns: number, rows: number) =>
-      node('Raster', { key: 'grid', columns, rows, cells: 'AAAA' });
+      node('Raster', { key: 'grid', columns, rows, cells: cellsOf(columns * rows) });
     expect(problemOf(raster(512, 256), 'terminal')).toBeUndefined();
     expect(problemOf(raster(513, 1), 'terminal')).toBe(
       'a tree Pane refuses: Raster prop "columns" must be a whole number from 1 to 512',
@@ -205,6 +213,20 @@ spec(['mods.element.Raster', 'mods.interface.Draw a grid of colored cells'], () 
       'a tree Pane refuses: Raster is not drawn by the desktop app',
     );
     expect(problemOf(raster(3, 2), 'vscode')).toContain('Raster is not drawn');
+  });
+});
+
+// Agent Plugins Extended §10.23.2, Judgment J10.105: the cells decode to exactly columns × rows × 3 numbers.
+describe('a Raster whose cells do not fit its size', () => {
+  const grid = (cells: string) => node('Raster', { key: 'grid', columns: 2, rows: 1, cells });
+  test('cells of exactly 2 × 1 × 3 numbers validate; one cell short, one too many, or not base64 does not', () => {
+    expect(problemOf(grid(cellsOf(2)), 'terminal')).toBeUndefined();
+    const problem =
+      'a tree Pane refuses: Raster prop "cells" must be base64 of exactly columns × rows × 3 unsigned 32-bit numbers (24 bytes)';
+    expect(problemOf(grid(cellsOf(1)), 'terminal')).toBe(problem);
+    expect(problemOf(grid(cellsOf(3)), 'terminal')).toBe(problem);
+    expect(problemOf(grid('not base64!'), 'terminal')).toBe(problem);
+    expect(problemOf(grid(`${cellsOf(2)}A`), 'terminal')).toBe(problem);
   });
 });
 

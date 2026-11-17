@@ -3,6 +3,12 @@ export type { Exit2Effect, Exit2Rule, StderrChannel } from './exit2.ts';
 export { EXIT_TABLE, exitClassOf } from './exit-codes.ts';
 export type { Cell, ExitClass, Fields, MessageFrom, Result, StdoutClass } from './exit-codes.ts';
 export { interpretRun } from './interpret.ts';
+export {
+  cannotAskReason,
+  managedHooksUncheckedReason,
+  MODEL_SWITCH_REASONS,
+  modelSwitchBlocked,
+} from './model-switch.ts';
 export type { InterpretContext } from './interpret.ts';
 export { readAsyncResponse, readBody, readStdout } from './stdout-kind.ts';
 export type { BodyReading, StdoutReading } from './stdout-kind.ts';
@@ -24,6 +30,8 @@ export type {
   ParseOutput,
   ParsedOutput,
   ParseResult,
+  RunEnding,
+  RunFacts,
   TaggedOutput,
 } from './types.ts';
 

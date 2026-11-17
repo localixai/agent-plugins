@@ -68,6 +68,13 @@ export interface PreparedCall extends ToolCall {
    * knows its skills; the kit holds no skill catalog.
    */
   readonly skillNames?: readonly string[];
+  /**
+   * The hosts a sandboxed Bash, PowerShell or Monitor command names for itself in auto mode
+   * (sandboxing.md, "Per-command allowed domains in auto mode"). The SDK types no field for them, so
+   * the host reads them from its input. A command that carries hosts "goes to the classifier instead
+   * of being approved by a permission rule".
+   */
+  readonly allowedDomains?: readonly string[];
 }
 
 /** The folders and platform path rules are read against. Plain data the host supplies. */
@@ -133,7 +140,9 @@ export type DecisionReason =
   | 'critical-path'
   | 'outside-working-directory'
   | 'settings-file'
-  | 'unresolvable-path';
+  | 'unresolvable-path'
+  | 'powershell-removal'
+  | 'foreign-artifact';
 
 /**
  * The outcome of a permission check. `classify` means the host's reviewer decides (auto mode): the

@@ -6,7 +6,9 @@
  * prompt cannot, and the update fails quietly), a provider token in the environment alone does not
  * authenticate it, and after the check Claude Code leaves an up-to-date checkout, or re-clones when it
  * finds new commits or cannot reach or authenticate, keeping the existing checkout if the clone
- * fails, or keeping it without cloning when `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE=1`.
+ * fails, or keeping it without cloning when `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE=1` and
+ * the checkout already contains `.claude-plugin/marketplace.json` (plugins/troubleshooting.md,
+ * "Marketplace updates keep failing offline").
  * What a remote with no agent key or no helper does is outside `spec(...)` and in spec/judgments.md.
  */
 import { describe, expect, test } from 'bun:test';
@@ -65,7 +67,7 @@ spec(
     test('a helper that must prompt fails quietly: the check cannot authenticate, and the existing checkout stays when the clone fails too', () => {
       const result = backgroundCheckResult(https('must-prompt', true), NEW_COMMITS);
       expect(result).toBe('cannot-reach-or-authenticate');
-      expect(afterBackgroundCheck(result, fakeEnvironment())).toBe('reclone');
+      expect(afterBackgroundCheck(result, fakeEnvironment(), true)).toBe('reclone');
       expect(afterReclone(false)).toBe('keep-existing-checkout');
     });
 
@@ -80,12 +82,12 @@ spec(
     });
 
     test('an up-to-date checkout is left as it is', () => {
-      expect(afterBackgroundCheck('up-to-date', fakeEnvironment())).toBe('leave');
+      expect(afterBackgroundCheck('up-to-date', fakeEnvironment(), true)).toBe('leave');
     });
 
     test('new commits, or a remote it cannot reach or authenticate to, clone the marketplace again', () => {
-      expect(afterBackgroundCheck('new-commits', fakeEnvironment())).toBe('reclone');
-      expect(afterBackgroundCheck('cannot-reach-or-authenticate', fakeEnvironment())).toBe(
+      expect(afterBackgroundCheck('new-commits', fakeEnvironment(), true)).toBe('reclone');
+      expect(afterBackgroundCheck('cannot-reach-or-authenticate', fakeEnvironment(), true)).toBe(
         'reclone',
       );
     });
@@ -97,14 +99,19 @@ spec(
 
     test('CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE=1 keeps the checkout without cloning when the remote cannot be reached', () => {
       const env = fakeEnvironment({ CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE: '1' });
-      expect(afterBackgroundCheck('cannot-reach-or-authenticate', env)).toBe(
+      expect(afterBackgroundCheck('cannot-reach-or-authenticate', env, true)).toBe(
         'keep-existing-checkout',
       );
     });
 
+    test('that variable keeps only a checkout holding .claude-plugin/marketplace.json: one never cloned, or cloned partway, still gets the clone attempt', () => {
+      const env = fakeEnvironment({ CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE: '1' });
+      expect(afterBackgroundCheck('cannot-reach-or-authenticate', env, false)).toBe('reclone');
+    });
+
     test('that variable does not stop a re-clone for new commits', () => {
       const env = fakeEnvironment({ CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE: '1' });
-      expect(afterBackgroundCheck('new-commits', env)).toBe('reclone');
+      expect(afterBackgroundCheck('new-commits', env, true)).toBe('reclone');
     });
   },
 );

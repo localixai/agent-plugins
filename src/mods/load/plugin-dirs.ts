@@ -1,3 +1,5 @@
+import { isFalsyEnv, isTruthyEnv } from '../../format/env-flag.ts';
+import { isAbsolutePath } from '../../format/path-text.ts';
 import { MOD_SETTINGS } from '../../protocol/mods-settings.ts';
 import { sideloadVerdict, type SideloadVerdict } from '../../settings/managed/index.ts';
 import { createPolicyView } from '../../settings/view.ts';
@@ -11,7 +13,10 @@ import type { ModsPolicyInput } from './policy-input.ts';
 
 const SEPARATOR = { posix: ':', windows: ';' } as const;
 
-/** `CLAUDE_CODE_PLUGIN_DIRS`: "Absolute paths separated by `:`, or `;` on Windows". An empty piece is left out. */
+/**
+ * `CLAUDE_CODE_PLUGIN_DIRS`: "Absolute paths separated by `:`, or `;` on Windows". An empty piece is
+ * left out (J3.18), and so is a relative one: each entry is absolute or starts with `~` (spec §3.6.1).
+ */
 export function parsePluginDirs(
   value: string | undefined,
   platform: 'posix' | 'windows',
@@ -20,7 +25,7 @@ export function parsePluginDirs(
   return value
     .split(SEPARATOR[platform])
     .map((piece) => piece.trim())
-    .filter((piece) => piece !== '');
+    .filter((piece) => piece.startsWith('~') || isAbsolutePath(piece));
 }
 
 /**
@@ -78,10 +83,14 @@ export function sideloadRefusal(policy: ModsPolicyInput): string | undefined {
 
 /**
  * Whether a session reloads `--plugin-dir` mods when a file changes: "Claude Code watches a
- * directory loaded with `--plugin-dir`" in an interactive session, and `1` makes "a long-running
- * non-interactive session" do the same.
+ * directory loaded with `--plugin-dir`" in an interactive session, and the variable on makes "a
+ * long-running non-interactive session" do the same; off turns watching off in either.
  */
 export function watchesPluginDirs(policy: ModsPolicyInput, isInteractive: boolean): boolean {
-  if (isInteractive) return true;
-  return policy.env.CLAUDE_CODE_PLUGIN_DIR_WATCH === '1';
+  // An on/off variable: an on spelling turns watching on everywhere, an off one off everywhere,
+  // unset leaves the default (spec §3.6.1, J3.16).
+  const value = policy.env.CLAUDE_CODE_PLUGIN_DIR_WATCH;
+  if (isTruthyEnv(value)) return true;
+  if (isFalsyEnv(value)) return false;
+  return isInteractive;
 }

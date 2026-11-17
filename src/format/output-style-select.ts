@@ -1,4 +1,5 @@
 import type { OutputStyle } from './output-style.ts';
+import { firstContentLine } from './skill-fields.ts';
 
 /**
  * Which output style is active, and what that means for the system prompt (output-styles.md,
@@ -152,6 +153,16 @@ export interface OutputStyleChoice {
 }
 
 /**
+ * The text beside a custom style's name: its `description`, else the first non-empty line of its
+ * body (spec J6.3, oracle 2.1.325: a style without `description` is listed with its first body
+ * line); nothing for an empty body. The style's own `description` stays unset.
+ */
+function describe(style: OutputStyle): { description?: string } {
+  const description = style.description ?? firstContentLine(style.instructions);
+  return description === undefined ? {} : { description };
+}
+
+/**
  * What `/output-style` lists with no argument and the `/config` picker shows: Default, the
  * built-in styles, then each custom style with its `name` and `description`. It lists the same pool
  * `resolveOutputStyle` selects from, so a custom style that reuses a built-in id or an earlier
@@ -176,7 +187,7 @@ export function listOutputStyles(
     .map((style) => ({
       id: style.id,
       name: style.name,
-      ...(style.description === undefined ? {} : { description: style.description }),
+      ...describe(style),
       current: style.id === current.id,
     }));
   return [...builtin, ...custom];

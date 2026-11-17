@@ -15,6 +15,7 @@ import {
 import { matchingIds, nameOf, qualifiedCommands } from './plugin-ref.ts';
 import { chooseScope, type ConfigScope } from './scope.ts';
 import { DATA_PRESERVED, uninstallRetention, type Retention } from './uninstall-data.ts';
+import { stillOnReason, type StillSwitchedOn } from './uninstall-refusal.ts';
 
 /**
  * `claude plugin uninstall <plugin>` as two decisions around the host's writes (plugins/
@@ -68,8 +69,8 @@ export type UninstallStart =
 
 /** What the host found after switching the plugin off and removing its record. */
 export interface AfterRemoval {
-  /** The settings file that still switches the plugin on at the scope, when one does. */
-  readonly settingsStillOn?: string;
+  /** The settings file that still switches, or may still switch, the plugin on at the scope. */
+  readonly settingsStillOn?: StillSwitchedOn;
   /** The installed plugins read back; `'unreadable'` when the list could not be read. */
   readonly remaining: readonly InstalledRecord[] | 'unreadable';
   /** The answer to `Remove? [y/N]`, when `prune.confirm` was `ask`. */
@@ -177,12 +178,12 @@ const resultFields = (start: Extract<UninstallStart, { kind: 'remove' }>): Resul
 
 function stillOn(
   start: Extract<UninstallStart, { kind: 'remove' }>,
-  file: string,
+  fact: StillSwitchedOn,
 ): UninstallConclusion {
   const name = nameOf(start.id);
   const message = failureLine(
     start.argument,
-    `"${name}" was not uninstalled: ${file} still switches it on, so it stays installed with everything it saved`,
+    `"${name}" was not uninstalled: ${stillOnReason(fact)}`,
   );
   return {
     output: commandFailed('uninstall', message, {

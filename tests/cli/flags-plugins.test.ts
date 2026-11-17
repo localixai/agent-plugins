@@ -125,6 +125,8 @@ describe('what the docs leave open', () => {
 
 describe('disableSideloadFlags', () => {
   const sideloaded = { sideloadDisabled: true };
+  const CLOSING =
+    'Plugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.';
 
   test('rejects --plugin-dir and --plugin-url: the flag is disabled by managed settings and the run exits 1', () => {
     for (const given of [
@@ -132,7 +134,8 @@ describe('disableSideloadFlags', () => {
       { '--plugin-url': ['https://e.com/a.zip'] },
     ] as const) {
       const plan = planOf(given, sideloaded);
-      expect(plan.refusals).toHaveLength(1);
+      expect(plan.refusals).toHaveLength(2);
+      expect(plan.refusals[1]).toBe(CLOSING);
       expect(plan.refusals[0]).toContain("disabled by your organization's managed settings");
       expect(plan.refusals[0]).toContain('disableSideloadFlags');
       expect(plan.sessionPlugins).toEqual([]);
@@ -145,7 +148,7 @@ describe('disableSideloadFlags', () => {
 
   test('names the flag, in the words mods/load prints', () => {
     const plan = planOf({ '--plugin-dir': ['./x'] }, sideloaded);
-    expect(plan.refusals).toEqual([sideloadMessage('--plugin-dir')]);
+    expect(plan.refusals).toEqual([sideloadMessage('--plugin-dir'), CLOSING]);
     const mods = modsRefusal({
       managed: { disableSideloadFlags: true },
       user: {},
@@ -154,7 +157,7 @@ describe('disableSideloadFlags', () => {
       platform: 'posix',
       flags: { pluginDirs: ['./x'] },
     });
-    expect(plan.refusals[0]).toBe(mods);
+    expect(plan.refusals.join('\n')).toBe(mods ?? '');
   });
 
   test('also rejects --agents, and --mcp-config unless every server is type sdk', () => {
@@ -169,7 +172,10 @@ describe('disableSideloadFlags', () => {
 
   test('rejects folders named in CLAUDE_CODE_PLUGIN_DIRS at startup too', () => {
     const plan = planOf({}, { ...sideloaded, env: { CLAUDE_CODE_PLUGIN_DIRS: '/work/plugin' } });
-    expect(plan.refusals[0]).toContain('CLAUDE_CODE_PLUGIN_DIRS');
+    expect(plan.refusals).toEqual([
+      `${sideloadMessage('CLAUDE_CODE_PLUGIN_DIRS')}: unset the variable`,
+      CLOSING,
+    ]);
     expect(planOf({}, { ...sideloaded, env: {} }).refusals).toEqual([]);
   });
 

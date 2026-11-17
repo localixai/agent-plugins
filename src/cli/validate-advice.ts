@@ -13,7 +13,8 @@ const INSTALL = /\bplugin\s+(?:install|i)\s+(.*)$/;
 
 /**
  * Whether a line is an install line that counts: "`<plugin>@<marketplace>`" after the command, or
- * "the plugin's name and `--marketplace <source>`".
+ * "the plugin's name and `--marketplace <source>`". A source still holding `<owner>/<repo>` does not
+ * count (§17.13.5 item 2).
  */
 function countsAsInstall(rest: string, plugin: string): boolean {
   const words = rest.split(/\s+/).filter((word) => word !== '');
@@ -21,7 +22,8 @@ function countsAsInstall(rest: string, plugin: string): boolean {
     return true;
   }
   const flag = words.indexOf('--marketplace');
-  return words.includes(plugin) && flag !== -1 && words[flag + 1] !== undefined;
+  const source = flag === -1 ? undefined : words[flag + 1];
+  return words.includes(plugin) && source !== undefined && !source.includes(PLACEHOLDER);
 }
 
 /** Whether the README already holds a line that installs `plugin` from a marketplace. */

@@ -1,5 +1,7 @@
 import type { FileStat, PluginFiles } from '../ports/index.ts';
-import type { PluginIssue } from './issues.ts';
+import { error, type PluginIssue } from './issues.ts';
+import { pathCouldNotBeChecked } from './host-errors.ts';
+import { missingPath } from './messages.ts';
 import { escapedPathIssue, type DeclaredPath, type LinkRoots } from './path-escape.ts';
 import { rootRelative, type PathPlatform, withoutTrailingSlashes } from './path-text.ts';
 
@@ -39,7 +41,10 @@ export const locateContext = (files: PluginFiles, options: LocateOptions = {}): 
  * macOS and Linux, or a symlink that leads outside the plugin (other than to another plugin of
  * its marketplace) "doesn't load" and is reported as `<component> path escapes plugin directory:
  * <path>` (`escapedPathIssue`); a path that is not there is `undefined` and the caller decides
- * whether it was declared. `written` is the spelling the message quotes. A link is seen on the
+ * whether it was declared. A path the system could not check (`FileStat.checkFailed`, on it or a
+ * folder above it) does not load either: `<component> path could not be checked: <path> (<code>)`
+ * (errors.md, "Path could not be checked"), for a default location as for a declared one, the
+ * plugin's other components loading. `written` is the spelling the message quotes. A link is seen on the
  * path itself and on every folder above it: each ancestor is stat'd once per call, since a port
  * reports a link only on the entry it is asked about (`FileStat.realPath`). Every reader of a
  * declared or standard plugin path decides containment here, and nowhere else.
@@ -57,6 +62,10 @@ export async function locate(
   const [stat, ...folders] = await Promise.all(
     [path, ...ancestorsOf(path)].map((one) => context.files.stat(one, context.signal)),
   );
+  const failed = [...folders, stat].find((one) => one?.checkFailed !== undefined)?.checkFailed;
+  if (failed !== undefined) {
+    return { issue: error(component, pathCouldNotBeChecked(component, written, failed)) };
+  }
   const parts = path.split('/');
   const crossed = folders.map((folder, index) => through(folder, parts.slice(index + 1)));
   const leaf = stat?.isSymlink === true ? stat.realPath : undefined;
@@ -87,3 +96,15 @@ const linkIssue = (
   resolvesTo: string,
 ): PluginIssue | undefined =>
   escapedPathIssue({ ...declared, resolvesTo, ...(context.roots && { roots: context.roots }) });
+
+/**
+ * The load error of a declared path that is not there, `<component> path not found: <absolute
+ * path>` (spec §2.5 item 3): the plugin root joined with the path when the host gave `roots`, the
+ * path as written when it did not (the loader then knows no host path).
+ */
+export function missingAt(context: LocateContext, component: string, written: string): PluginIssue {
+  if (context.roots === undefined) return missingPath(component, written);
+  const relative = rootRelative(written, context.platform);
+  const root = withoutTrailingSlashes(context.roots.pluginRoot);
+  return missingPath(component, relative === '.' ? root : `${root}/${relative}`);
+}

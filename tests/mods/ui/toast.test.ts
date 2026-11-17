@@ -182,3 +182,23 @@ spec(
     });
   },
 );
+
+// Agent Plugins Extended §10.25.2, Judgment J10.107 (spec/judgments.md): outside `spec(...)`.
+test('judgment: past 50 toasts waiting behind a hold, the oldest leaves, and the debug log says so', () => {
+  const held = { value: true };
+  const debug: string[] = [];
+  const toasts = createToastBoard({
+    clock: fixedClock(),
+    renderer: () => 'fullscreen',
+    isHeld: () => held.value,
+    debug: (line) => debug.push(line),
+  });
+  toasts.syncHold();
+  for (let n = 1; n <= 51; n += 1) toasts.show('a', { text: `t${String(n)}`, timeoutMs: 4000 });
+  expect(debug).toEqual([
+    '$.ui.toast (a): t1 left the stack: more than 50 toasts wait behind a hold',
+  ]);
+  held.value = false;
+  toasts.syncHold();
+  expect(toasts.visible().map((toast) => toast.text)).toEqual(['t2', 't3', 't4']);
+});

@@ -52,13 +52,13 @@ spec(
       expect(found?.cause).toBe('disabled');
     });
 
-    test('a disabled `--plugin-dir` copy names itself as `<name>@inline` in the error', () => {
+    test('a disabled `--plugin-dir` copy is named as the entry declares it, not `<name>@inline` (J16.24)', () => {
       const found = checkInstalledDependency(
-        { name: 'my-dependency', marketplace: MARKETPLACE },
-        { enabled: false, local: true, id: 'my-dependency@inline' },
+        { name: 'my-dependency' },
+        { enabled: false, local: true },
       );
       expect(found?.message).toBe(
-        'Dependency "my-dependency@inline" is disabled — enable it or remove the dependency',
+        'Dependency "my-dependency" is disabled — enable it or remove the dependency',
       );
     });
 

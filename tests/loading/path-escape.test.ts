@@ -75,9 +75,13 @@ spec('install.loading.Paths that escape the plugin directory', () => {
       './commands/de\\ploy.md',
     ]) {
       expect((await where(written, { 'commands/deploy.md': 'x' }))?.message).toBe(
-        `commands path escapes plugin directory: ${written}`,
+        `commands path escapes plugin directory: ${written} — its path contains a backslash, which is not resolved reliably on this platform`,
       );
     }
+    // A path that climbs out is reported as such, without the backslash tail.
+    expect((await where('./..\\x/../../y.md', {}))?.message).toBe(
+      'commands path escapes plugin directory: ./..\\x/../../y.md',
+    );
   });
 
   test('on Windows a backslash is a separator, so a path with forward or back slashes that stays inside loads', async () => {
@@ -106,7 +110,7 @@ spec('install.loading.Paths that escape the plugin directory', () => {
     const loaded = await loadPlugin({ files });
     expect(loaded.plugin?.commands).toEqual([]);
     expect(messagesOf(loaded.issues)).toContain(
-      'commands path escapes plugin directory: ./commands\\deploy.md',
+      'commands path escapes plugin directory: ./commands\\deploy.md — its path contains a backslash, which is not resolved reliably on this platform',
     );
     const onWindows = await loadPlugin({ files, platform: 'windows' });
     expect(messagesOf(onWindows.issues)).not.toContain(

@@ -1,3 +1,4 @@
+import { positiveWholeEnv } from '../../format/env-number.ts';
 import type { Environment } from '../../ports/index.ts';
 import type { HookHandler, HookHandlerType } from '../../protocol/hook-config.ts';
 import type { HookEvent } from '../../protocol/official.ts';
@@ -65,13 +66,9 @@ const seconds = (value: number | undefined): number | undefined =>
 
 const toMs = (value: number): number => Math.round(value * 1000);
 
-/** A positive whole number of milliseconds, or `undefined` for text that is not one. */
-function overrideMs(environment: Environment): number | undefined {
-  const text = environment.get(SESSION_END_OVERRIDE);
-  if (text === undefined || !/^\d+$/.test(text.trim())) return undefined;
-  const value = Number(text);
-  return value > 0 ? value : undefined;
-}
+/** A positive whole number of milliseconds (`2e3`, `64_000`: J3.17), or `undefined` for text that is not one. */
+const overrideMs = (environment: Environment): number | undefined =>
+  positiveWholeEnv(environment.get(SESSION_END_OVERRIDE));
 
 /**
  * "SessionEnd hooks share a 1.5-second budget; if your settings set a longer per-hook `timeout`,

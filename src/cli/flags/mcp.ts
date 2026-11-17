@@ -8,6 +8,7 @@ import {
 } from './types.ts';
 import { wordsOf } from './values.ts';
 import { isRecord } from '../../protocol/is-record.ts';
+import { positiveWholeEnv, wholeEnv } from '../../format/env-number.ts';
 
 /**
  * `--mcp-config` and `--strict-mcp-config` (cli-reference.md, "CLI flags"; plugins/org.md,
@@ -52,22 +53,66 @@ const textOf = <K extends McpConfigSource['kind']>(
 // oxlint-disable-next-line kit/no-kind-literal -- `type` is a field of the user's JSON, not a closed set of the kit
 const isInProcessServer = (server: unknown): boolean => isRecord(server) && server.type === 'sdk';
 
-/** Whether every server of the config is `type: "sdk"`; a config that cannot be read is not. */
-function onlySdkServers(text: string | undefined): boolean {
-  if (text === undefined) return false;
+/** The `mcpServers` object of a config, by name; a config that cannot be read has none. */
+function serversIn(text: string | undefined): Readonly<Record<string, unknown>> | undefined {
+  if (text === undefined) return undefined;
   try {
     const parsed: unknown = JSON.parse(text);
     const servers = isRecord(parsed) ? parsed.mcpServers : undefined;
-    return isRecord(servers) && Object.values(servers).every(isInProcessServer);
+    return isRecord(servers) ? servers : undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
-/** `MCP_TIMEOUT` is in milliseconds; anything that is not a positive number is the default. */
-function waitMs(context: FlagContext): number {
-  const given = Number(context.facts.env.MCP_TIMEOUT);
-  return Number.isFinite(given) && given > 0 ? given : DEFAULT_MCP_TIMEOUT_MS;
+/** Whether every server of the config is `type: "sdk"`; a config that cannot be read is not. */
+function onlySdkServers(text: string | undefined): boolean {
+  const servers = serversIn(text);
+  return servers !== undefined && Object.values(servers).every(isInProcessServer);
+}
+
+/** The `type`s of a remote server: "a remote (`http` or `sse`) server" (mcp.md, "Server status detail"). */
+const REMOTE_TYPES: ReadonlySet<unknown> = new Set(['http', 'sse']);
+const isRemoteServer = (server: unknown): boolean =>
+  isRecord(server) && REMOTE_TYPES.has(server.type);
+
+/**
+ * `MCP_TIMEOUT` is in milliseconds, a positive whole number read as every numeric variable is (spec
+ * §3.6.1 item 2, J3.17: `2e3`, `64_000`); anything else is the default.
+ */
+const timeoutMs = (context: FlagContext): number =>
+  positiveWholeEnv(context.facts.env.MCP_TIMEOUT) ?? DEFAULT_MCP_TIMEOUT_MS;
+
+/**
+ * "In a self-hosted environment, a shorter wait applies instead" (cli-reference.md, `--mcp-config`):
+ * "the first turn waits up to 2 seconds for stdio servers that are still connecting", and
+ * `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` "changes only how long the wait lasts"
+ * (self-hosted-environments-configuration.md, "Wait for MCP servers before the first turn").
+ */
+const SELF_HOSTED_MCP_WAIT_MS = 2_000;
+
+function selfHostedWaitMs(context: FlagContext): number {
+  // J3.17: a whole number (`2e3`, `64_000`); `0` skips the wait.
+  return wholeEnv(context.facts.env.CLAUDE_CODE_MCP_STARTUP_WAIT_MS) ?? SELF_HOSTED_MCP_WAIT_MS;
+}
+
+const waitMs = (context: FlagContext): number =>
+  context.facts.selfHosted === true ? selfHostedWaitMs(context) : timeoutMs(context);
+
+/**
+ * The servers the first turn does not wait for: "a server with a cached tool list skips the wait and
+ * connects on first use" (only a remote one has a cached tool list: agent-sdk/mcp.md, "Connection
+ * timing"), and in a self-hosted environment the wait covers stdio servers only, HTTP and SSE ones
+ * connecting in the background.
+ */
+function waitSkips(sources: readonly McpConfigSource[], context: FlagContext): readonly string[] {
+  const cached = new Set(context.facts.cachedToolLists ?? []);
+  const selfHosted = context.facts.selfHosted === true;
+  return sources.flatMap((source) =>
+    Object.entries(serversIn(textOf(source, context)) ?? {})
+      .filter(([name, server]) => isRemoteServer(server) && (selfHosted || cached.has(name)))
+      .map(([name]) => name),
+  );
 }
 
 export function mcpConfig(values: readonly string[], context: FlagContext): Contribution {
@@ -81,7 +126,9 @@ export function mcpConfig(values: readonly string[], context: FlagContext): Cont
   }
   return {
     mcpConfigs: sources,
-    ...(context.facts.print ? { mcpWaitMs: waitMs(context) } : {}),
+    ...(context.facts.print
+      ? { mcpWaitMs: waitMs(context), mcpWaitSkips: waitSkips(sources, context) }
+      : {}),
   };
 }
 

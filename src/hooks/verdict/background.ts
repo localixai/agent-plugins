@@ -2,6 +2,7 @@ import type { BackgroundResult, ForegroundRun } from '../handlers/context.ts';
 import { readAsyncResponse } from './stdout-kind.ts';
 import type { BackgroundDelivery, BackgroundOutcome } from './types.ts';
 import { isRecord } from '../../protocol/is-record.ts';
+import { warning, type PluginIssue } from '../../format/issues.ts';
 
 /**
  * What a background hook hands over once its process ends (hooks.md, "How async hooks execute"):
@@ -15,6 +16,21 @@ import { isRecord } from '../../protocol/is-record.ts';
 
 const textOf = (value: unknown): string | undefined =>
   typeof value === 'string' && value !== '' ? value : undefined;
+
+/**
+ * "drops each field of the wrong type instead of delivering it, with a debug warning naming the
+ * field" (Agent Plugins Extended §7.3.3 item 3): a delivered field that is present and not a string.
+ */
+function droppedField(handlerId: string, field: string, value: unknown): readonly PluginIssue[] {
+  return value === undefined || typeof value === 'string'
+    ? []
+    : [
+        warning(
+          `hooks.${handlerId}.${field}`,
+          `The async hook response field ${field} is not a string and is dropped`,
+        ),
+      ];
+}
 
 const OUTCOMES: { readonly [K in ForegroundRun['kind']]: BackgroundOutcome } = {
   exited: 'completed',
@@ -35,16 +51,20 @@ export function deliveryOf(handlerId: string, result: BackgroundResult): Backgro
     response !== undefined && 'hookSpecificOutput' in response
       ? response.hookSpecificOutput
       : undefined;
-  const additionalContext = isRecord(specific) ? textOf(specific.additionalContext) : undefined;
-  const systemMessage =
-    response !== undefined && 'systemMessage' in response
-      ? textOf(response.systemMessage)
-      : undefined;
+  const givenContext = isRecord(specific) ? specific.additionalContext : undefined;
+  const givenMessage = isRecord(response) ? response.systemMessage : undefined;
+  const additionalContext = textOf(givenContext);
+  const systemMessage = textOf(givenMessage);
+  const issues = [
+    ...droppedField(handlerId, 'hookSpecificOutput.additionalContext', givenContext),
+    ...droppedField(handlerId, 'systemMessage', givenMessage),
+  ];
   return {
     handlerId,
     ...completionOf(result.run),
     ...(additionalContext === undefined ? {} : { additionalContext }),
     ...(systemMessage === undefined ? {} : { systemMessage }),
     ...(result.wake === undefined ? {} : { wake: result.wake }),
+    ...(issues.length === 0 ? {} : { issues }),
   };
 }

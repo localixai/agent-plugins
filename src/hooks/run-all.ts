@@ -9,6 +9,8 @@ import type { InterruptPlan } from './interrupt.ts';
 import type { DispatchRequest } from './outcome.ts';
 import { limitDelivery } from './output/limit.ts';
 import { interpretRun } from './verdict/interpret.ts';
+import { runFactsOf, startedAt } from './run-facts.ts';
+import { targetOf } from './select/matcher-targets.ts';
 import type { HandlerVerdict } from './verdict/types.ts';
 
 /**
@@ -42,6 +44,7 @@ function commandOptionsOf(config: DispatchConfig): Partial<RunContext> {
     ...(config.startDirectory === undefined ? {} : { startDirectory: config.startDirectory }),
     ...(config.tempDirectory === undefined ? {} : { tempDirectory: config.tempDirectory }),
     ...(config.processId === undefined ? {} : { processId: config.processId }),
+    ...(config.hipaa === true ? { hipaa: true } : {}),
     ...(config.settingsEnv === undefined ? {} : { settingsEnv: config.settingsEnv }),
   };
 }
@@ -139,24 +142,45 @@ export async function runAll<E extends HookEvent>(
   const { event } = request;
   const timeouts = planTimeouts(event, selection.selected, config.ports.environment, plan.capMs);
   const textOf = inputTexts(input, selection);
-  const ran = await runLimited(selection.selected, async (entry) => ({
-    entry,
-    result: plan.cancel
+  const { clock } = config.ports;
+  const matchedValue = matchedValueOf(request, config);
+  const ran = await runLimited(selection.selected, async (entry) => {
+    const started = startedAt(clock);
+    const result = plan.cancel
       ? CANCELLED
-      : await runGuarded(config, entry, contextOf(config, request, timeouts, textOf(entry))),
-  }));
-  return ran.map(({ entry, result }) =>
-    settled(request, config, {
-      ...interpretRun(entry, result.run, {
-        event,
-        facts: request.facts,
-        parse: config.stages.output.parse,
-        timeoutMs: handlerTimeoutMs(entry, timeouts),
-        effectsIgnored: selection.monitor.get(entry)?.effectsApply === false,
-        gitBashMissing: config.windows && config.defaultShell === 'powershell',
-        teammateStopped: request.taskCompletedBy === 'teammate-turn',
-      }),
-      issues: result.issues,
-    }),
-  );
+      : await runGuarded(config, entry, contextOf(config, request, timeouts, textOf(entry)));
+    const timeoutMs = handlerTimeoutMs(entry, timeouts);
+    return {
+      entry,
+      result,
+      timeoutMs,
+      facts: runFactsOf(entry, result.run, { clock, started, timeoutMs, matchedValue }),
+    };
+  });
+  return ran.map(({ entry, result, timeoutMs, facts }) => {
+    const verdict = interpretRun(entry, result.run, {
+      event,
+      facts: request.facts,
+      parse: config.stages.output.parse,
+      timeoutMs,
+      effectsIgnored: selection.monitor.get(entry)?.effectsApply === false,
+      gitBashMissing: config.windows && config.defaultShell === 'powershell',
+      teammateStopped: request.taskCompletedBy === 'teammate-turn',
+    });
+    return settled(request, config, {
+      ...verdict,
+      ran: facts,
+      issues: [...verdict.issues, ...result.issues],
+    });
+  });
+}
+
+/** The value the event's matcher is tested against on this occurrence, when it has one. */
+function matchedValueOf<E extends HookEvent>(
+  request: DispatchRequest<E>,
+  config: DispatchConfig,
+): string | undefined {
+  const context = config.modelCatalog === undefined ? {} : { modelCatalog: config.modelCatalog };
+  const matched = targetOf(request.event).valueOf(request.facts, context);
+  return matched.filters ? matched.value : undefined;
 }

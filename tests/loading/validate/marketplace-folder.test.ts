@@ -119,6 +119,9 @@ describe('the manifest of an entry in the marketplace', () => {
       ['warning', 'plugins[0].source'],
       ['error', 'plugins[0] plugin.json → json'],
     ]);
+    expect(found[0]?.[2]).toStartWith(
+      'Could not parse a/.claude-plugin/plugin.json for version cross-check: ',
+    );
   });
 
   test('a source that is a file cannot hold a manifest', async () => {

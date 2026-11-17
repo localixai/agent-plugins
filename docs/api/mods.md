@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/mods`
+# `@localix-ai/agent-plugins/mods`
 
 Mods: the mods host, its API, events and UI, and the test kit `modsTesting`.
 
@@ -363,6 +363,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `replayedLine` | function | The line for people when a call was not made again |
 | `ReplayLedger` | type | What `createReplayLedger` returns; The `replay` field of `Deps` |
 | `ReplayMode` | type | The first `session.start` of a copy records its calls; the one of a fresh copy replays them |
+| `ReportEntry` | type | An error or a warning of a `--json` result: `{ path, message }` |
 | `ResendFacts` | type | What Claude reads on the next turn for a prompt section or tool description invalidated by a mod |
 | `resizedColumns` | function | Ctrl+X then an arrow key: "Left or Up gives it more room, and Right or Down gives the room back" |
 | `ResultOf` | type | What `ModChain.dispatch` returns; What `ModChain.dispatchStream` returns |

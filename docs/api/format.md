@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/format`
+# `@localix-ai/agent-plugins/format`
 
 The reader of every plugin file: manifest, marketplace, skills, agents, hooks, MCP and LSP configs, output styles, themes and mod files.
 
@@ -57,6 +57,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `copyOfPluginTheme` | function | "Plugin themes are read-only, so when a user edits one in `/theme`, the edit is saved as a copy in their own themes directory" |
 | `CREDENTIAL_ENV_NAMES` | constant | The credential variables of mcp.md ("Credential variables that read as empty") |
 | `credentialDebugLine` | function | The debug-log line for a covered variable the user has set and a remote server's `url` or `headers` references |
+| `CUSTOM_STYLES_NOT_SELECTABLE` | constant | The notice `/output-style` adds over Remote Control or a relayed message |
 | `customThemeId` | function | What `/theme` stores as the preference when the theme is selected: `custom:<slug>`, or `custom:<plugin-name>:<slug>` for a plugin's theme |
 | `cutMcpDescription` | function | "Claude sees only the text before the cut"; the cut keeps a surrogate pair whole |
 | `DEFAULT_OUTPUT_STYLE_ID` | constant | The id Default has in the `/output-style` list |
@@ -104,6 +105,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `LinkRoots` | type | The real paths (`/`-separated, one spelling) a link is judged against |
 | `listablePrompts` | function | The MCP prompts a host lists, without those of the reserved server |
 | `listOutputStyles` | function | What `/output-style` lists with no argument and the `/config` picker shows: Default, the built-in styles, then each custom style with its `name` and `description` |
+| `LOCAL_SETTINGS_NOT_LOADED` | constant | The refusal of a style selection in a session that does not load the `local` setting source |
 | `LSP_FIELDS` | constant | The fourteen rows of the table |
 | `LSP_TRANSPORTS` | constant | `stdio` (default) or `socket`: "Claude Code accepts `socket` but runs every server over stdio" |
 | `LspConfigRead` | type | The `sources` argument of `mergeLspSources`; What `mergeLspSources` returns |
@@ -221,8 +223,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `organizationSettingsUnavailable` | function | The reasons the page lists for organization settings that could not load, as it names them |
 | `OutputStyle` | type | A custom output style: a Markdown file whose frontmatter is metadata and whose body is the instructions Claude Code sends with every request |
 | `OutputStyleChoice` | type | What `listOutputStyles` returns |
+| `outputStyleCommand` | function | The reply of `/output-style`: the list, the selection to write, an unknown name, or a refusal (Remote Control, relayed message, no `local` source) |
+| `OutputStyleCommand` | type | The argument of `outputStyleCommand` |
 | `OutputStyleContext` | type | Where the file was found |
 | `OutputStyleRead` | type | What `readOutputStyle` returns |
+| `OutputStyleReply` | type | What `outputStyleCommand` returns |
 | `OutputStyleRequest` | type | The argument of `resolveOutputStyle` |
 | `outputStyleSystem` | function | The system prompt an output style gives |
 | `oversizedMcpMessage` | function | What happens to a message of `bytes` (after decompression) from a server of `transport`: `undefined` when it is fine |
@@ -230,6 +235,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `parseMonitorTrigger` | function | `"always"` or `"on-skill-invoke:<skill>"` |
 | `pathCouldNotBeChecked` | function | `/plugin` Errors tab: a path the operating system could not check (any error but "not found") |
 | `pathCouldNotBeCheckedInList` | function | The same error as `claude plugin list` prints it |
+| `pathEscapesInList` | function | `Path escapes plugin directory: <path> (<component>)`, the escape error as `claude plugin` commands print it |
 | `permissionPromptToolNotFound` | function | The error of a run whose `--permission-prompt-tool` is not among the connected MCP tools when the first permission decision is needed |
 | `persistedResultMessage` | function | What replaces a saved result in the conversation: "a message that names the file path" (wording is the kit's) |
 | `planMcpOAuth` | function | Whether a server signs in with OAuth, and with which headers. "OAuth authentication works with HTTP servers" and the flags apply "to HTTP and SSE transports" |
@@ -277,6 +283,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RedactedPluginServer` | type | What `claude mcp get` and `claude mcp list` show of a plugin's servers |
 | `redactPluginServer` | function | The redacted view of a plugin's stdio or WebSocket server, or `undefined` for an http or sse server, whose values the docs do not say are hidden |
 | `refusedSchemaFallback` | function | The tool the API refused, resent "with the tool declared without parameters", and the line for the server's log |
+| `registersAsChannel` | function | Whether a channel server registers as a channel: not on the v2 runtime once it negotiated revision 2026-07-28 |
 | `REMOTE_MANAGED_SETTINGS_DID_NOT_LOAD` | constant | The notice shown when the remote managed settings did not load |
 | `REMOTE_MANAGED_SETTINGS_STILL_LOADING` | constant | The state lines of the fetch that appear in the Code tab |
 | `remoteManagedSettingsFailed` | function | The warning when server-managed settings could not be fetched or applied; `cause` names what failed |
@@ -286,9 +293,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `renderAgentFile` | function | Writes an agent draft as its Markdown file with frontmatter |
 | `renderCommandFile` | function | A command file is a skill file without `name` and `paths`: the one writer |
 | `renderSkillFile` | function | Writes a skill draft as its `SKILL.md` text with frontmatter |
+| `reportedCheckCode` | function | The code a failed path check reports: its own name, `ESTALE` as `EIO` |
 | `requestedOAuthScopes` | function | The `scope` of an MCP OAuth authorization request, or `undefined` to let the server decide |
 | `requiredBundleSettings` | function | The settings of a bundle the server cannot start without, as `<server>.<key>` |
 | `requiringInteraction` | function | The callable names of the tools of one server that "require explicit approval on every call", for `DecideContext.requiresUserInteraction` of the permission check |
+| `RESERVED_MCP_SERVER_NAMES` | constant | The MCP server names a user configuration may not use: `workspace`, `claude-in-chrome`, `computer-use`, `Claude Preview`, `Claude Browser` |
 | `reservedSkillNameNotice` | function | The startup notice for a skill, command or workflow whose name uses `anthropic-skills` |
 | `reservedSpellingIgnored` | function | The warning for a registered entry whose name is another spelling of a reserved name |
 | `reservedSpellingRefusal` | function | The refusal to add a marketplace whose name is another spelling of a reserved name |

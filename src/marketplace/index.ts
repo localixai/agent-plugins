@@ -28,7 +28,7 @@ export type {
   StateStoreFailure,
 } from '../ports/marketplace.ts';
 export { ARCHIVE_LIMITS, planPluginFetch, type Planned } from './fetch-plan.ts';
-export { isBlockedHost } from './blocked-hosts.ts';
+export { isBlockedHost } from '../format/marketplace/blocked-hosts.ts';
 export {
   runCommandSource,
   type CommandSourcePorts,

@@ -16,7 +16,8 @@ export type ElementColumn = (typeof ELEMENT_COLUMNS)[number];
 /**
  * The column of the elements table each app draws by. The table has no column for the mobile app,
  * which the docs name only as an app that raises `Backdrop`; the kit takes it to draw what the
- * Desktop app draws, with the same props (judgment, spec/judgments.md).
+ * Desktop app draws, with the same props, but no `Client` (`drawsElement`; judgment,
+ * spec/judgments.md).
  */
 export const ELEMENT_COLUMN_OF: { readonly [S in UiSurface]: ElementColumn } = {
   terminal: 'terminal',
@@ -158,6 +159,23 @@ export const ELEMENT_SURFACES: { readonly [N in ElementName]: readonly ElementCo
   Raster: TERMINAL,
   Image: TERMINAL,
 };
+
+/**
+ * The elements an app leaves out though its column of the table draws them: the mobile app takes
+ * the Desktop column but has no `Client` (the declarations' mobile `Elements` table,
+ * claude-code/index.d.ts:4108; Agent Plugins Extended §10.27, Judgment J10.104).
+ */
+const NOT_DRAWN_BY: { readonly [S in UiSurface]: readonly ElementName[] } = {
+  terminal: [],
+  desktop: [],
+  vscode: [],
+  mobile: ['Client'],
+};
+
+/** Whether `surface` draws the element `name`: its column's check mark, less what the app leaves out. */
+export const drawsElement = (name: ElementName, surface: UiSurface): boolean =>
+  ELEMENT_SURFACES[name].includes(ELEMENT_COLUMN_OF[surface]) &&
+  !NOT_DRAWN_BY[surface].includes(name);
 
 /**
  * The props the VS Code extension ignores: it draws the element as if they were left out

@@ -37,6 +37,11 @@ export async function substituteShellCommand(
   const done = await substitutePass(text, vars, policy, '');
   return {
     text: done.text,
-    environment: await shellExports(done.referenced, vars.scope, done.variable),
+    environment: await shellExports(
+      SHELL_SURFACE[shell],
+      done.referenced,
+      vars.scope,
+      done.variable,
+    ),
   };
 }

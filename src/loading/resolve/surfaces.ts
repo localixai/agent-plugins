@@ -113,12 +113,22 @@ const SHELL_PARSED: {
   'skill-powershell': { pasted: 'normalized', 'environment-reference': 'environment-reference' },
 };
 
-/** The default of `SubstitutionScope.shellPaths`: the one place it is decided (spec/judgments.md). */
-const DEFAULT_SHELL_PATHS: ShellPaths = 'environment-reference';
+/**
+ * The default of `SubstitutionScope.shellPaths`, per surface: the one place it is decided
+ * (spec/judgments.md). A monitor `command` is pasted, its path variables never exported (Agent
+ * Plugins Extended §9.2.4, Judgment J9.17), so the reference is a host's explicit opt-in there; a
+ * `headersHelper` and a skill's `!` command get the reference (J3.5 allows it).
+ */
+const DEFAULT_SHELL_PATHS: { readonly [S in SubstitutionSurface]?: ShellPaths } = {
+  'monitor-command': 'pasted',
+};
+const OTHER_DEFAULT: ShellPaths = 'environment-reference';
 
-/** The scope's `shellPaths`, or the default. */
-export const shellPathsOf = (scope: Pick<SubstitutionScope, 'shellPaths'>): ShellPaths =>
-  scope.shellPaths ?? DEFAULT_SHELL_PATHS;
+/** The scope's `shellPaths`, or the surface's default. */
+export const shellPathsOf = (
+  scope: Pick<SubstitutionScope, 'shellPaths'>,
+  surface: SubstitutionSurface,
+): ShellPaths => scope.shellPaths ?? DEFAULT_SHELL_PATHS[surface] ?? OTHER_DEFAULT;
 
 /**
  * The policy of a surface in this scope: `SURFACE_POLICY`, with a shell-parsed surface's paths as
@@ -131,7 +141,7 @@ export const surfacePolicy = (
   const rendering = SHELL_PARSED[surface];
   return rendering === undefined
     ? SURFACE_POLICY[surface]
-    : { ...SURFACE_POLICY[surface], paths: rendering[shellPathsOf(scope)] };
+    : { ...SURFACE_POLICY[surface], paths: rendering[shellPathsOf(scope, surface)] };
 };
 
 /** `substituteTemplate` with the policy of a surface in this scope. */

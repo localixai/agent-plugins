@@ -109,7 +109,8 @@ spec(
   `mcp.troubleshooting.Invalid MCP server config for "<server>": <error>.has an invalid MCP url`,
   () => {
     test("the plugin's own url is not a URL: the cause is the plugin configuration, not an option", async () => {
-      for (const url of ['not a url', '/relative/path', '']) {
+      // An empty url is a placeholder, not an error (mcp.md, "not configured"; tested below).
+      for (const url of ['not a url', '/relative/path']) {
         const { resolved, issues } = await resolveMcpServer(
           'api',
           { type: 'http', url },
@@ -228,5 +229,16 @@ describe('what the docs leave open', () => {
   test('a failure dated in the future does not cache', () => {
     const stdio: PluginMcpServer = { command: 'node' };
     expect(skipsStdioConnection(stdio, { atMs: 5_000, server: stdio }, 1_000)).toBe(false);
+  });
+});
+
+spec('mcp.behavior.Plugin-provided MCP servers.Automatic lifecycle', () => {
+  // mcp.md: a remote server with an empty `url` "shows as `not configured`" and "Claude Code doesn't
+  // attempt to connect to it", so it "doesn't report it as an error".
+  test('a remote entry whose url is written empty is a not-configured placeholder, with no issue', async () => {
+    for (const type of ['http', 'sse', 'ws'] as const) {
+      const result = await resolveMcpServer('later', { type, url: '' }, scopeOf());
+      expect(result).toEqual({ resolved: undefined, issues: [], notConfigured: true });
+    }
   });
 });

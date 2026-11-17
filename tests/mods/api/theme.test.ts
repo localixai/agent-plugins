@@ -21,6 +21,9 @@ import { rejection } from '../../support/rejection.ts';
 import { spec } from '../../support/spec.ts';
 import { THEME_CLEARED } from '../../../src/mods/api/theme.ts';
 
+/** The default glass a backdrop that names none carries (`ThemeBackdropGlass`, claude-code/index.d.ts:13967). */
+const GLASS = { blur: 16, opacity: 0.6 };
+
 const SECTION = 'mods.interface.Put a backdrop behind the conversation';
 
 /** A theme port whose apps draw backdrops (or not, with `reason`), recording each change. */
@@ -46,7 +49,7 @@ spec('mods.api.$.theme', () => {
     expectMethods(h.api.theme, MODS_API.theme);
     await h.api.theme.set({ backdrop: { id: 'night-sky' } });
     await h.api.theme.clear();
-    expect(changes).toEqual([{ id: 'night-sky', plugin: 'night-sky' }, undefined]);
+    expect(changes).toEqual([{ id: 'night-sky', plugin: 'night-sky', glass: GLASS }, undefined]);
   });
 
   test('each call is an event a hook of another mod sees and can rewrite', async () => {
@@ -60,29 +63,55 @@ spec('mods.api.$.theme', () => {
       fn('theme.clear', (_$, e, next) => (seen.push('clear'), next(e))),
     ]);
     await h.api.theme.set({ backdrop: { id: 'night-sky', colorScheme: 'dark' } });
-    expect(current()).toEqual({ id: 'dawn', plugin: 'night-sky', colorScheme: 'light' });
+    expect(current()).toEqual({
+      id: 'dawn',
+      plugin: 'night-sky',
+      colorScheme: 'light',
+      glass: GLASS,
+    });
     await h.api.theme.clear();
     expect(seen).toEqual([{ backdrop: { id: 'night-sky', colorScheme: 'dark' } }, 'clear']);
   });
 });
 
 spec(`${SECTION}.The backdrop fields`, () => {
-  test('id is required and a name; colorScheme is light or dark; glass is optional', async () => {
+  test('id is required and a name; colorScheme is light or dark; glass is { blur, tint, opacity } with its defaults filled in, or false', async () => {
     const { h, current } = await setup();
     await h.api.theme.set({ backdrop: { id: 'night-sky', colorScheme: 'dark' } });
-    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky', colorScheme: 'dark' });
-    await h.api.theme.set({ backdrop: { id: 'day_1', colorScheme: 'light', glass: true } });
+    expect(current()).toEqual({
+      id: 'night-sky',
+      plugin: 'night-sky',
+      colorScheme: 'dark',
+      glass: { blur: 16, opacity: 0.6 },
+    });
+    await h.api.theme.set({ backdrop: { id: 'lagoon', glass: { blur: 14, opacity: 0.55 } } });
+    expect(current()).toEqual({
+      id: 'lagoon',
+      plugin: 'night-sky',
+      glass: { blur: 14, opacity: 0.55 },
+    });
+    await h.api.theme.set({ backdrop: { id: 'veil', glass: { tint: '#102030' } } });
+    expect(current()).toEqual({
+      id: 'veil',
+      plugin: 'night-sky',
+      glass: { blur: 16, tint: '#102030', opacity: 0.6 },
+    });
+    await h.api.theme.set({ backdrop: { id: 'day_1', colorScheme: 'light', glass: false } });
     expect(current()).toEqual({
       id: 'day_1',
       plugin: 'night-sky',
       colorScheme: 'light',
-      glass: true,
+      glass: false,
     });
     for (const wrong of [
       { backdrop: {} },
       { backdrop: { id: 'night sky' } },
       { backdrop: { id: 'a'.repeat(65) } },
       { backdrop: { id: 'night-sky', colorScheme: 'dim' } },
+      { backdrop: { id: 'night-sky', glass: true } },
+      { backdrop: { id: 'night-sky', glass: { blur: 65 } } },
+      { backdrop: { id: 'night-sky', glass: { opacity: 1.5 } } },
+      { backdrop: { id: 'night-sky', glass: { tint: 'surface' } } },
     ]) {
       expect(await rejection(h.api.theme.set(wrong))).toStartWith('$.theme.set: ');
     }
@@ -90,7 +119,7 @@ spec(`${SECTION}.The backdrop fields`, () => {
       id: 'day_1',
       plugin: 'night-sky',
       colorScheme: 'light',
-      glass: true,
+      glass: false,
     });
   });
 });
@@ -111,7 +140,7 @@ spec(`${SECTION}.Whether the backdrop is drawn`, () => {
       isDrawn: false,
       reason: 'no app that draws backdrops is connected',
     });
-    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky' });
+    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky', glass: GLASS });
   });
 });
 
@@ -121,13 +150,13 @@ spec(`${SECTION}.One backdrop for each session`, () => {
     const other = await h.mod('other', 'user', []);
     await h.api.theme.set({ backdrop: { id: 'night-sky' } });
     await other.api.theme.set({ backdrop: { id: 'dawn' } });
-    expect(current()).toEqual({ id: 'dawn', plugin: 'other' });
+    expect(current()).toEqual({ id: 'dawn', plugin: 'other', glass: GLASS });
     const cleared = await h.api.theme.clear();
     expect(cleared).toMatchObject({ reason: 'the theme is cleared' });
     expect(current()).toBeUndefined();
     expect(changes).toEqual([
-      { id: 'night-sky', plugin: 'night-sky' },
-      { id: 'dawn', plugin: 'other' },
+      { id: 'night-sky', plugin: 'night-sky', glass: GLASS },
+      { id: 'dawn', plugin: 'other', glass: GLASS },
       undefined,
     ]);
   });
@@ -137,10 +166,10 @@ spec(`${SECTION}.One backdrop for each session`, () => {
     const other = await h.mod('other', 'user', []);
     await h.api.theme.set({ backdrop: { id: 'night-sky' } });
     other.dispose();
-    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky' });
+    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky', glass: GLASS });
     h.handle.dispose();
     expect(current()).toBeUndefined();
-    expect(changes).toEqual([{ id: 'night-sky', plugin: 'night-sky' }, undefined]);
+    expect(changes).toEqual([{ id: 'night-sky', plugin: 'night-sky', glass: GLASS }, undefined]);
   });
 });
 
@@ -158,6 +187,6 @@ describe('judgments', () => {
     expect(await rejection(h.api.theme.set({}))).toStartWith('$.theme.set: backdrop');
     expect(seen).toEqual([]);
     await h.api.theme.set({ backdrop: { id: 'night-sky', extra: 1 } });
-    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky' });
+    expect(current()).toEqual({ id: 'night-sky', plugin: 'night-sky', glass: GLASS });
   });
 });

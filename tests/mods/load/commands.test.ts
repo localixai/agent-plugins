@@ -109,7 +109,13 @@ export function register(on) {
           './register.js gating hook without .catch: prompt.submit',
         ],
         gatingHooks: [
-          { module: './register.js', pattern: null, hook: 'prompt.submit', hasCatch: false },
+          // `pattern` is what `on` was given, `hook` adds the matcher (§17.13; oracle 2.1.325).
+          {
+            module: './register.js',
+            pattern: 'prompt.submit',
+            hook: 'prompt.submit',
+            hasCatch: false,
+          },
         ],
       },
     ]);
@@ -129,8 +135,12 @@ export function register(on) {
     expect(strict.exitCode).toBe(1);
   });
 
-  test('hooks.json without `modules`, or with the key misspelled, passes and lists no hooks line', async () => {
-    for (const hooksJson of [{ description: 'no modules' }, { module: ['./register.js'] }]) {
+  // With neither `hooks` nor `modules` it fails (J10.174, tests/mods/load/troubleshoot.test.ts).
+  test('hooks.json with settings hooks and without `modules`, or with the key misspelled, passes and lists no hooks line', async () => {
+    for (const hooksJson of [
+      { hooks: {}, description: 'no modules' },
+      { hooks: {}, module: ['./register.js'] },
+    ]) {
       const files = memoryFiles({
         '.claude-plugin/plugin.json': MANIFEST,
         'hooks/hooks.json': JSON.stringify(hooksJson),
@@ -159,21 +169,21 @@ export function register(on) {
   test('a module that uses $.state needs its declaration file, and every value declared in it (interface.md)', async () => {
     const module = `
 import { atom, read } from 'claude-code'
-const count = atom({ plugin: 'hello-tabs', key: 'count' }, 0)
+const count = atom({ plugin: 'first-mod', key: 'count' }, 0)
 export function register(on) { on('ui.render', { component: 'Pane' }, async ($, e, next) => { await read($, count); return next(e) }) }`;
     const without = await validateMod({ files: folder(module), target: '.' });
     expect(without.exitCode).toBe(1);
     expect(without.lines.join('\n')).toContain('types/index.d.ts');
-    const declared = `declare module 'claude-code' { interface PluginState { 'hello-tabs': { count: number } } }`;
+    const declared = `declare module 'claude-code' { interface PluginState { 'first-mod': { count: number } } }`;
     const files = folder(module, { 'types/index.d.ts': declared });
     expect((await validateMod({ files, target: '.' })).lines).toContain(
-      '  ❯ ./register.js state reads: hello-tabs.count',
+      '  ❯ ./register.js state reads: first-mod.count',
     );
     const missing = folder(module, {
-      'types/index.d.ts': `declare module 'claude-code' { interface PluginState { 'hello-tabs': { tab: string } } }`,
+      'types/index.d.ts': `declare module 'claude-code' { interface PluginState { 'first-mod': { tab: string } } }`,
     });
     expect((await validateMod({ files: missing, target: '.' })).lines.join('\n')).toContain(
-      'hello-tabs.count is not declared',
+      'first-mod.count is not declared',
     );
     // a manifest `types` names another path
     const elsewhere = memoryFiles({
@@ -275,6 +285,8 @@ export function register(on) {
       '  ❯ ./register.js env reads: HOME',
       '  ❯ ./register.js state writes: nothing',
       '  ❯ ./register.js state reads: p.count, p.isOpen, p.other',
+      // Claude Code 2.1.325 lists the values of a plugin other than the mod's own (first-mod).
+      '  ❯ ./register.js state of other plugins, not checked (run validate in a session with them enabled): p.count, p.isOpen, p.other',
     ]);
   });
 });

@@ -156,6 +156,9 @@ spec('hooks.handler.command.onFailure', () => {
   test('PreModelSwitch: a hook canceled at its timeout blocks the switch even without onFailure', () => {
     const verdict = verdictOf('PreModelSwitch', { kind: 'timed-out' }, { hook: guard() });
     expect(verdict.block?.via).toBe('timeout');
+    expect(verdict.block?.reason).toMatch(
+      /^PreModelSwitch hook .+ did not respond before its timeout$/,
+    );
     // Judgment: an explicit "continue" lets the switch go ahead (spec/judgments.md).
     const open = verdictOf(
       'PreModelSwitch',

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { TELEMETRY_FILTER } from '../../protocol/mods-events.ts';
 import type { ModsNamespaceApi } from '../types.ts';
 import type { TelemetryMark } from '../ports.ts';
 import { call, parse, type Deps } from './call.ts';
@@ -27,13 +26,6 @@ const mark = z.object({
   props: props.optional(),
 });
 
-/**
- * Judgment (spec/judgments.md, D6): a mark "takes no `to`" (:3355), yet the docs make a mod's
- * telemetry hook name `{ to: 'collector' }` (reference.md, "Telemetry") and any plugin "may hook"
- * a mark (:3358); the kit's mark event keeps `to: 'collector'` so that filter lets it through.
- */
-const toCollector = TELEMETRY_FILTER;
-
 const markOf = (e: unknown): TelemetryMark => {
   const { feature, kind, reason, props: given } = parse('$.telemetry.mark', mark, e);
   return {
@@ -45,6 +37,10 @@ const markOf = (e: unknown): TelemetryMark => {
 };
 
 /**
+ * A mark "takes no `to`" (:3355), and its event carries none: a hook filtered `{ to: 'collector' }`
+ * never runs on it, and the kit adds no `to` to let one through (Agent Plugins Extended §10.38,
+ * Judgment J10.20).
+ *
  * `$.telemetry`: "A record is sent only when Claude Code or a built-in mod makes the call"
  * (reference.md, "Mods API methods"). A call by any other mod resolves and sends nothing, and fires
  * no event: no record is about to go to the collector (judgment).
@@ -64,7 +60,7 @@ export function telemetryApi(deps: Deps): ModsNamespaceApi<'telemetry'> {
     mark: async (...args) => {
       const given = markOf(args[0]);
       if (!sends()) return undefined;
-      return call(deps, 'telemetry.mark', { ...given, ...toCollector }, async (e) => {
+      return call(deps, 'telemetry.mark', { ...given }, async (e) => {
         const marked = markOf(e);
         return telemetry.mark(marked.feature, marked);
       });

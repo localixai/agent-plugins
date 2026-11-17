@@ -8,7 +8,7 @@ import { scopeOf } from '../../support/mcp-scope.ts';
 import { spec } from '../../support/spec.ts';
 
 spec('manifest.troubleshooting.${CLAUDE_PLUGIN_ROOT} shows forward slashes on Windows', () => {
-  test('a native Windows root is normalized in interpolated text and native in the environment', async () => {
+  test("a native Windows root is normalized in interpolated text and in a Git Bash hook's environment (J3.6)", async () => {
     const scope = scopeOf();
     const windows = {
       ...scope,
@@ -19,6 +19,6 @@ spec('manifest.troubleshooting.${CLAUDE_PLUGIN_ROOT} shows forward slashes on Wi
       (await substituteContent('${CLAUDE_PLUGIN_ROOT}/scripts/run.ps1', windows, 'SKILL.md')).text,
     ).toBe('C:/Plugins/my-tool/scripts/run.ps1');
     const hook = await resolveHookCommand({ type: 'command', command: 'run' }, windows);
-    expect(hook.resolved?.environment['CLAUDE_PLUGIN_ROOT']).toBe(String.raw`C:\Plugins\my-tool`);
+    expect(hook.resolved?.environment['CLAUDE_PLUGIN_ROOT']).toBe('C:/Plugins/my-tool');
   });
 });

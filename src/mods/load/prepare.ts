@@ -79,6 +79,7 @@ async function scanned(
   const types = await readTypes(files, typesPath, env.signal);
   const scan = scanHooksModule(module.code, module.entry, {
     isEntry: true,
+    plugin: manifest.name,
     directory: module.entry.slice(0, Math.max(module.entry.lastIndexOf('/'), 0)),
     ...(types === undefined ? {} : { declaredState: declaredState(types) }),
   });

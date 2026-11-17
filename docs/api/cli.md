@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/cli`
+# `@localix-ai/agent-plugins/cli`
 
 The `claude plugin` command line: parsing, planning and the result of each command.
 
@@ -18,9 +18,15 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `adviceNeedsSource` | function | Whether an advice line still holds the placeholder, so pasting it does not clear the advice |
 | `afterCleanRun` | function | The cause is in your user or project configuration, so copy `~/.claude.json` and the files in `~/.claude` into the clean directory one at a time |
 | `AfterRemoval` | type | What the host found after switching the plugin off and removing its record |
+| `agentViewFlags` | function | The flags agent view applies to itself and those it passes to the sessions it dispatches |
+| `AgentViewFlags` | type | What `agentViewFlags` returns |
 | `answerPrune` | function | The plan once the user has answered `Remove? [y/N]`; a plan that asked nothing is returned as it is |
 | `applyConfig` | function | What the `--config` values do to an install |
 | `AvailablePlugin` | type | A plugin a marketplace offers that is not installed |
+| `BackgroundingPlan` | type | What `planBackgrounding` returns |
+| `backgroundSessionFlags` | function | The launch flags a backgrounded session keeps: `--plugin-dir`, `--mcp-config`, `--strict-mcp-config`, `--settings`, `--setting-sources`, `--add-dir` |
+| `BackgroundWorkFate` | type | What backgrounding does to one piece of work: carries, relaunch or stops |
+| `BackgroundWorkKind` | type | The `kind` field of `RunningWork` |
 | `CheckedInput` | type | What `checkGiven` returns |
 | `checkGiven` | function | Each given `key` → text against the declared options; undeclared keys and failing values are problems |
 | `chooseScope` | function | The scope `command` works on: the flag's value, or what the command does without it |
@@ -86,6 +92,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `FlagArguments` | type | What each flag was given: a repeatable flag its values in order, a switch `true`, the rest the text |
 | `FlagFacts` | type | The `facts` argument of `planSessionFlags` |
 | `FlagName` | type | One of `FLAG_NAMES` |
+| `GatingHook` | type | A mod hook that can refuse an action (such as `tool.call`): `module`, `pattern` (the string given to `on`), `hook` (the pattern with its matcher in braces) and `hasCatch` (J17.15) |
 | `GivenFlags` | type | The `given` argument of `planSessionFlags` |
 | `InstallArguments` | type | The first half of `claude plugin install <plugin>`: what the arguments mean and what the host does before it looks the plugin up |
 | `InstallContext` | type | The `context` argument of `startInstall` |
@@ -94,6 +101,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `InstallFound` | type | What the host found after its `--marketplace` add and refresh |
 | `InstallOptions` | type | The `userConfig` of the plugin and of each bundled MCP server (by server name) |
 | `InstallRun` | type | What `planInstall` returns |
+| `lfsPointerLine` | function | The line for `count` pointer files, or none when the clone left none |
 | `ListedJson` | type | Every field is a string |
 | `ListedPlugin` | type | One installation, as the list shows it |
 | `ListedSource` | type | The sources the docs' `source` field names: `github`, `git`, `url`, `directory`, `file` and `claudeai` |
@@ -118,6 +126,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `notYetSetLine` | function | `N userConfig options not yet set (M required) — run /plugin configure <id> in Claude Code, or pass --config KEY=VALUE.` |
 | `PendingAdd` | type | The starts that wait for the host's fetch |
 | `PendingInstall` | type | What the host does before the lookup |
+| `planBackgrounding` | function | Which running work carries into a background session, waits for a relaunch or stops, and whether the user confirms first |
 | `planConfigure` | function | What `claude plugin configure` prints and saves |
 | `planDisable` | function | What `claude plugin disable` writes and prints |
 | `planEnable` | function | What `claude plugin enable` writes and prints |
@@ -160,6 +169,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `Retention` | type | What `uninstallRetention` returns |
 | `RetentionFacts` | type | The `facts` argument of `uninstallRetention` |
 | `RetryRequest` | type | A retry of the dependency install in the cached copy: the host runs it and reports with `concludeRetry` |
+| `RunningWork` | type | The `work` argument of `planBackgrounding` |
 | `SAVED_KEPT_UNREADABLE` | constant | "With `--json` the result carries `savedKept: \"install_records_unreadable\"`" |
 | `SavedValues` | type | What the host stores, split by where it goes |
 | `ScopeChoice` | type | What a command does when `--scope` is omitted |
@@ -180,6 +190,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `startMarketplaceAdd` | function | What to fetch, or what the command ends with before any fetch |
 | `startUninstall` | function | What to remove, or what the command ends with before anything is touched |
 | `startupRefusal` | function | What the run ends with when the plan refuses it: exit `1`, the reasons on stderr, no result line |
+| `StillSwitchedOn` | type | Why a settings file of the scope may still switch the plugin on |
 | `TagCommand` | type | The `commands` field of `TagPlan`; The `push` field of `TagPlan` |
 | `TagFacts` | type | Host observations, after walking upward for the marketplace that lists this directory |
 | `TagOptions` | type | The `options` argument of `planPluginTag` |
@@ -194,7 +205,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `UninstallFacts` | type | The `facts` argument of `startUninstall` |
 | `uninstallRetention` | function | What the uninstall of `facts.id` from `facts.scope` deletes and keeps |
 | `UninstallStart` | type | The `start` argument of `concludeUninstall`; What `startUninstall` returns |
-| `unsetKeys` | function | The options with no value: neither saved nor a declared `default` (judgment: "set" is the value `${user_config.KEY}` stands for, as `userConfigValue` reads it) |
+| `unsetKeys` | function | The options that are not set: no saved value. A `default` gives an option a value but does not set it, so the dialog, `plugin configure` and the install line still count it (spec §3.4.4, §3.4.6) |
 | `UpdatableInstall` | type | A plugin installed at one scope, with what an update needs to know about it |
 | `UpdateArguments` | type | `claude plugin marketplace update [name]` as a plan: which marketplaces' listings are refreshed, from what, and what is printed |
 | `UpdateEffects` | type | What the host carries out for an update that found a newer version |
@@ -203,6 +214,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `usageError` | function | The output of a command line used wrongly, with the reason |
 | `UsageError` | type | What `chooseScope` returns; What `exclusiveAcceptFlags` returns |
 | `ValidationAdvice` | type | One entry of `advice`: the README, the message and the line to paste |
+| `ValidationEntry` | type | One entry of `errors` or `warnings` (J17.15); `notes` entries are plain strings |
 | `ValidationFileResult` | type | The `manifest` field of `ValidationJson`; The `contents` field of `ValidationJson` |
 | `validationJson` | function | The `--json` report: `success` is the verdict the exit code gives, `strict` whether warnings failed the run, `target` the resolved path validated |
 | `ValidationJson` | type | What `validationJson` returns |

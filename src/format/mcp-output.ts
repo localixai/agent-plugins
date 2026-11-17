@@ -1,3 +1,4 @@
+import { positiveWholeEnv } from './env-number.ts';
 import type { McpCallToolResult } from '../protocol/official.ts';
 import type { McpTransport } from './mcp-config.ts';
 import type { EnvLookup } from './mcp-env.ts';
@@ -36,14 +37,10 @@ export interface McpOutputLimits {
 }
 
 /**
- * Judgment (spec/judgments.md): a variable that is not a positive whole number in plain digits is
- * ignored (the docs name no behaviour for one). Without a tokenizer, tokens are `estimateTokens`.
+ * A variable that is not a positive whole number (digits, `2e3`, `64_000`: spec §3.6.1 item 2, J3.17)
+ * is ignored. Without a tokenizer, tokens are `estimateTokens`.
  */
-function positiveWhole(text: string | undefined): number | undefined {
-  if (text === undefined || !/^\d+$/.test(text)) return undefined;
-  const value = Number(text);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
+const positiveWhole = positiveWholeEnv;
 
 /**
  * The limits for one tool. "The environment variable applies to tools that don't declare their own

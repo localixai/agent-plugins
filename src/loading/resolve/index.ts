@@ -33,6 +33,13 @@ export {
 } from './hook-command.ts';
 export { NO_PROGRAM, onlyQuotedStrings } from './powershell-no-program.ts';
 export {
+  mcpStdioStart,
+  posixQuote,
+  SHELL_PREFIX_VARIABLE,
+  shellPrefixed,
+  shellPrefixOf,
+} from './shell-prefix.ts';
+export {
   mcpServerKey,
   resolveMcpServer,
   type McpResolution,

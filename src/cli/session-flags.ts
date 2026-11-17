@@ -1,8 +1,9 @@
+import { isTruthyEnv } from '../format/env-flag.ts';
 import { usageError, type UsageError } from './result.ts';
 import { addDirLoads } from './flags/add-dir.ts';
 import { sessionAgent } from './flags/agents.ts';
 import { FLAG_STRATEGIES } from './flags/registry.ts';
-import { pluginDirsVariableRefusal } from './flags/sideload.ts';
+import { pluginDirsVariableRefusal, withSideloadClosing } from './flags/sideload.ts';
 import { forwardSubagentTextVariable } from './flags/subagent-prompt.ts';
 import {
   FLAG_NAMES,
@@ -86,18 +87,19 @@ function settled(plan: SessionPlan, given: GivenFlags, facts: FlagFacts): Sessio
       ? []
       : addDirLoads({
           bare: given['--bare'] === true,
-          claudeMdEnabled: facts.env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD === '1',
+          claudeMdEnabled: isTruthyEnv(facts.env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD),
           skipped: plan.skipped,
           ...(plan.settingScopes === undefined ? {} : { settingScopes: plan.settingScopes }),
         });
   const variable = pluginDirsVariableRefusal(facts);
-  return combine(
+  const combined = combine(
     { ...plan, addDirLoads: loads, ...(named === undefined ? {} : { agent: named }) },
     {
       ...forwardSubagentTextVariable(facts),
       ...(variable === undefined ? {} : { refusals: [variable] }),
     },
   );
+  return { ...combined, refusals: withSideloadClosing(combined.refusals) };
 }
 
 /** What the flags a run was given add up to, in the order of `FLAG_NAMES`. */

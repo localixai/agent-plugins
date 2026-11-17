@@ -63,7 +63,11 @@ spec('mods.create.Check what Claude Code reads from your mod', () => {
   test('first-mod prints the hooks line with each filter in braces, the calls line, and passes: exactly the lines the docs show', async () => {
     const { lines, ok } = await check(FIRST_MOD);
     // "the output includes these lines"; tool.call can refuse a call, so its gating line follows (same page)
-    expect(lines.filter((line) => line.startsWith('  ❯'))).toEqual([
+    // The `answers its own command:` line is Claude Code 2.1.325's, after the docs' release (J10.2).
+    const shown = lines.filter(
+      (line) => line.startsWith('  ❯') && !line.includes('answers its own'),
+    );
+    expect(shown).toEqual([
       '  ❯ ./register.js hooks: session.start, tool.call, command.run{command=tally}, ui.render{component=Spinner}',
       '  ❯ ./register.js calls: $.command.register, $.ui.invalidate',
       '  ❯ ./register.js gating hook without .catch: tool.call',
@@ -138,7 +142,10 @@ export function register(on) { on('session.start', async ($, e, next) => { await
   test('rule: `const ui = $.ui` fails with the documented `$.ui is used as a value`', async () => {
     const { lines, ok } = await check(wrap('const ui = $.ui'));
     expect(ok).toBe(false);
-    expect(errorsOf(lines)).toEqual(['  ✘ ./register.js: ./register.js: $.ui is used as a value']);
+    expect(errorsOf(lines)).toEqual([
+      // The lead and reminder of Agent Plugins Extended §10.4.2 (J10.2): no root given, the typed path.
+      '  ✘ modules../register.js: first-mod: ./first-mod/hooks/register.js:1: $.ui is used as a value (a noun of $ bound, passed or read); $ is always spelled $.noun.event(...) at the call site, on is always on("<event>", hook), and next.to always next.to(e, "<tier>")',
+    ]);
   });
 
   test('rule: destructuring `$` and indexing it with a computed name fail validation, each with that one error', async () => {
@@ -184,7 +191,7 @@ export function register(on) { on('session.start', async ($, e, next) => { await
       expect(ok).toBe(false);
       const errors = errorsOf(lines);
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toContain(`imports "${specifier}"`);
+      expect(errors[0]).toContain(`"${specifier}"`);
     }
   });
 

@@ -90,10 +90,16 @@ describe('session.fileChangedWatchList', () => {
     expect(session.fileChangedWatchList()).toEqual(['.envrc', '.env', '/a/one']);
   });
 
-  test('a path that is also a static name is listed once', async () => {
-    const { session } = await watching([paths('CwdChanged', ['.env', '/b/x'])]);
+  test('a path that is also a dynamic one is listed once', async () => {
+    const { session } = await watching([paths('CwdChanged', ['/b/x', '/b/x'])]);
     await session.dispatch('CwdChanged', { old_cwd: '/a', new_cwd: '/b' }, { signal: signal() });
     expect(session.fileChangedWatchList()).toEqual(['.envrc', '.env', '/b/x']);
+  });
+
+  test('a relative watchPaths entry is resolved against the input cwd, so it is not a static name (Judgment J7.131)', async () => {
+    const { session } = await watching([paths('CwdChanged', ['.env'])]);
+    await session.dispatch('CwdChanged', { old_cwd: '/a', new_cwd: '/b' }, { signal: signal() });
+    expect(session.fileChangedWatchList()).toEqual(['.envrc', '.env', '/work/app/.env']);
   });
 
   test('the list belongs to the session: every turn view reads and replaces the same one', async () => {

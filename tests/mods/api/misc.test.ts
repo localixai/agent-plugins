@@ -229,17 +229,22 @@ spec('mods.api.$.telemetry', () => {
     ]);
   });
 
-  test('a hook with the { to: "collector" } filter sees the record and next(e) sends it', async () => {
+  test('a mark carries no `to`: a hook filtered { to: "collector" } never runs on it, an unfiltered built-in one sees it and next(e) sends it (Agent Plugins Extended J10.20)', async () => {
     const telemetry = sink();
+    const filtered: unknown[] = [];
     const seen: unknown[] = [];
     const h = await apiHarness({ plugin: 'sec-default', tier: 'builtin', ports: { telemetry } });
     await h.mod('observer', 'prepend', [
-      fn('telemetry.mark', (_$, e, next) => (seen.push(e), next(e)), {
+      fn('telemetry.mark', (_$, e, next) => (filtered.push(e), next(e)), {
         matcher: { to: 'collector' },
       }),
     ]);
+    await h.mod('sec-watch', 'builtin', [
+      fn('telemetry.mark', (_$, e, next) => (seen.push(e), next(e))),
+    ]);
     await h.api.telemetry.mark({ feature: 'guard_used', kind: 'ok' });
-    expect(seen).toEqual([{ to: 'collector', feature: 'guard_used', kind: 'ok' }]);
+    expect(filtered).toEqual([]);
+    expect(seen).toEqual([{ feature: 'guard_used', kind: 'ok' }]);
     expect(telemetry.sent).toEqual([['mark', 'guard_used', { feature: 'guard_used', kind: 'ok' }]]);
   });
 

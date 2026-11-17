@@ -49,13 +49,19 @@ interface ElicitationEffects {
 
 /** The rest: one field per event that has one. */
 interface MiscEffects {
-  /** `SessionStart`, `CwdChanged`, `FileChanged`: replaces the dynamic watch list; `[]` clears it. */
+  /**
+   * `SessionStart`, `CwdChanged`, `FileChanged`: replaces the dynamic watch list; `[]` clears it. A
+   * relative entry is resolved against the input's `cwd` (Judgment J7.131).
+   */
   readonly watchPaths?: readonly string[];
   /** `MessageDisplay`: shown in place of the delta. */
   readonly displayContent?: string;
   /** `PermissionDenied`: the model may retry the denied call. */
   readonly retry?: boolean;
-  /** `WorktreeCreate` (an HTTP hook): the path of the created worktree. */
+  /**
+   * `WorktreeCreate`: the path of the created worktree, the last answer in handler order of an HTTP
+   * hook's `worktreePath` or a command hook's last stdout line (Judgment J7.143), as returned.
+   */
   readonly worktreePath?: string;
   /** `PreCompact`: the hooks' stdout, instructions for the compaction summary. */
   readonly compactionInstructions?: readonly string[];

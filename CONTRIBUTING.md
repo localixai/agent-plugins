@@ -1,5 +1,7 @@
 # Contributing
 
+How to work on `@localix-ai/agent-plugins`, a Localix Lab library.
+
 ```sh
 bun install          # also installs the git hooks
 bun test             # every test, or one file: bun test tests/format/…
@@ -21,6 +23,13 @@ bun run check        # everything CI and the pre-push hook run
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 - **Never copy a hole.** Where Claude Code's behaviour is unsafe, the kit is safe by default and
   [docs/SECURITY.md](docs/SECURITY.md) records the deviation.
+
+## The specification
+
+The library is becoming the implementation of Agent Plugins Extended. Until the move is done, the
+contract is this repository's `spec/requirements.json` and judgments are rows of
+`spec/judgments.md`; [docs/SPEC.md](docs/SPEC.md), "The specification", says what the move
+changes and how the conventions map.
 
 ## Figures in the documentation
 

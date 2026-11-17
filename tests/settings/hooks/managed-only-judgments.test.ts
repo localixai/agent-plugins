@@ -45,10 +45,17 @@ describe('which reason is given when two locks stop one hook (judgment: the docs
 });
 
 describe('origins the docs leave open (judgments)', () => {
-  test('a skill or command frontmatter hook follows the same rule as an agent one under the key', () => {
+  test('a bundled skill or command frontmatter hook follows the same rule as an agent one under the key', () => {
     const policy = hookPolicyOf([managed(only)]);
-    expect(plain(policy.runs(fromFrontmatter('skill', 'managed')))).toEqual(blocked);
     expect(plain(policy.runs(fromFrontmatter('command', 'bundled')))).toEqual(blocked);
+    expect(plain(policy.runs(fromFrontmatter('skill', 'bundled')))).toEqual(blocked);
+  });
+
+  test('a managed-directory skill or command frontmatter hook is a managed hook and runs; an agent one does not', () => {
+    const policy = hookPolicyOf([managed(only)]);
+    expect(runs(policy, fromFrontmatter('skill', 'managed'))).toBe(true);
+    expect(runs(policy, fromFrontmatter('command', 'managed'))).toBe(true);
+    expect(plain(policy.runs(fromFrontmatter('agent', 'managed')))).toEqual(blocked);
   });
 
   test('a skill frontmatter hook of a force-enabled plugin runs, an agent one does not', () => {

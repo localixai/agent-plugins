@@ -1,4 +1,4 @@
-import { error, type PluginIssue } from '../format/issues.ts';
+import { error, warning, type PluginIssue } from '../format/issues.ts';
 import { declaredKey } from '../format/layout.ts';
 import { readLspConfig, mergeLspSources, type LspConfigRead } from '../format/lsp-config.ts';
 import { collectMcpServers } from '../format/mcp-sources.ts';
@@ -11,7 +11,7 @@ import {
 } from '../format/plugin-settings.ts';
 import type { ConfigInput } from './discovered.ts';
 import { mergeHooks } from './merge-hooks.ts';
-import { readJson } from '../format/read-json.ts';
+import { readJson, readJsonWithoutBom } from '../format/read-json.ts';
 import type { ComponentRead, ComponentValues, ReaderContext } from './reader-types.ts';
 
 const failed = (path: string, message: string): PluginIssue[] => [error(path, message)];
@@ -25,10 +25,13 @@ async function readInput<R extends { readonly issues: readonly PluginIssue[] }>(
     readonly inline: (value: unknown) => R;
     readonly empty: R;
     readonly failure: (path: string, reason: string) => string;
+    /** A byte order mark makes the file unreadable (hooks files only, spec J2.3). */
+    readonly refusesBom?: true;
   },
 ): Promise<R> {
   if ('inline' in input) return reader.inline(input.inline);
-  const parsed = await readJson(context.files, input.file, context.signal);
+  const read = reader.refusesBom ? readJsonWithoutBom : readJson;
+  const parsed = await read(context.files, input.file, context.signal);
   if ('problem' in parsed) {
     return {
       ...reader.empty,
@@ -74,6 +77,7 @@ export async function readHooks(
         inline: (raw) => readHooksSettings(raw, LENIENT),
         empty: noHooks,
         failure: (path, reason) => `Failed to load hooks from ${path}: ${reason}`,
+        refusesBom: true,
       }),
     ),
   );
@@ -150,7 +154,8 @@ async function readSettingsFile(
   if ('problem' in parsed) {
     return {
       read: undefined,
-      issues: failed(file, `settings.json is not valid JSON: ${parsed.problem}`),
+      // A load warning, never a failure (spec §12.6 item 1, J12.10).
+      issues: [warning(file, `settings.json is not valid JSON: ${parsed.problem}`)],
     };
   }
   return { read: readPluginSettings(parsed.value, file), issues: [] };

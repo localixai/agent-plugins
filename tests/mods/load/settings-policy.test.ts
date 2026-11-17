@@ -138,7 +138,7 @@ spec(
       const settings = managed({ disableSideloadFlags: true });
       const flags = { ...settings, flags: { pluginDirs: ['./any-mod'] } };
       expect(sideloadRefusal(flags)).toBe(
-        "--plugin-dir is disabled by your organization's managed settings (disableSideloadFlags)",
+        "--plugin-dir is disabled by your organization's managed settings (disableSideloadFlags)\nPlugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.",
       );
       const { host } = session({ 'any-mod': register }, { policy: flags });
       const report = await host.load([modPlugin(inline('any-mod'), register)]);
@@ -165,7 +165,7 @@ spec(
         flags: { pluginDirs: [], pluginUrls: ['https://example.com/mod.zip'] },
       };
       expect(sideloadRefusal(flags)).toBe(
-        "--plugin-url is disabled by your organization's managed settings (disableSideloadFlags)",
+        "--plugin-url is disabled by your organization's managed settings (disableSideloadFlags)\nPlugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.",
       );
       const { host } = session({ 'any-mod': register }, { policy: flags });
       const report = await host.load([modPlugin(inline('any-mod'), register)]);
@@ -207,7 +207,7 @@ spec('mods.setting.disableSideloadFlags', () => {
   test('CLAUDE_CODE_PLUGIN_DIRS naming a plugin folder makes startup exit with an error that names the variable and says to unset it', async () => {
     const withVariable = { ...settings, env: { CLAUDE_CODE_PLUGIN_DIRS: '/a:/b' } };
     expect(sideloadRefusal(withVariable)).toBe(
-      "CLAUDE_CODE_PLUGIN_DIRS is disabled by your organization's managed settings (disableSideloadFlags): unset the variable",
+      "CLAUDE_CODE_PLUGIN_DIRS is disabled by your organization's managed settings (disableSideloadFlags): unset the variable\nPlugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.",
     );
     expect(pluginDirsOf(withVariable)).toEqual([]);
     const { host } = session({ 'any-mod': register }, { policy: withVariable });
@@ -256,12 +256,13 @@ spec('mods.setting.disableSideloadFlags', () => {
       flags: { pluginDirs: ['./x'], pluginUrls: ['https://e/p.zip'], agents: true },
     };
     const lines = sideloadRefusal(all)?.split('\n') ?? [];
-    expect(lines).toHaveLength(4);
+    expect(lines).toHaveLength(5);
     expect(lines.map((line) => line.split(' ')[0])).toEqual([
       '--plugin-dir',
       '--plugin-url',
       '--agents',
       'CLAUDE_CODE_PLUGIN_DIRS',
+      'Plugins,',
     ]);
   });
 

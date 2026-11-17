@@ -218,6 +218,8 @@ export interface EventRule {
     answered: boolean,
     input: unknown,
   ) => string | undefined;
+  /** The debug-log lead before the whole reason of a wrong shape (troubleshoot.md, "A pane or band is empty"). */
+  readonly shapeDebug?: string;
   /** Why the event a hook passes to `next` is refused, comparing it with the one the hook received. */
   readonly changeProblem?: (original: unknown, changed: unknown) => string | undefined;
   /** What Claude Code's own behaviour receives, from the event as fired and the one the hooks passed on. */

@@ -120,7 +120,8 @@ spec('manifest.field.experimental', () => {
       expect.objectContaining({ path: 'experimental.monitors' }),
       expect.objectContaining({ path: 'experimental.monitors' }),
     ]);
-    expect(errorsOf({ experimental: { monitors: [{ name: 'x' }] } })).toEqual([]);
+    const monitor = { name: 'x', command: 'poll', description: 'd' };
+    expect(errorsOf({ experimental: { monitors: [monitor] } })).toEqual([]);
   });
 
   test('a value of another type inside it fails', () => {

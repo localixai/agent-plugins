@@ -2,7 +2,7 @@
   "name": "kit-demo",
   "version": "1.0.0",
   "description": "Exercises every plugin part the example agent supports: a skill, hooks of four handler types, an agent and an MCP server with user configuration.",
-  "author": { "name": "llx-plugin" },
+  "author": { "name": "agent-plugins" },
   "userConfig": {
     "greeting": {
       "type": "string",

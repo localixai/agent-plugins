@@ -39,6 +39,12 @@ export interface ModsPolicyInput {
   readonly managed?: ModsSettingsFile;
   /** Managed settings exist and the guard cannot read them: it refuses every user's mod ("The guard fails closed"). */
   readonly managedUnreadable?: boolean;
+  /**
+   * The machine has a `managed-mcp.json` file. Like managed settings it loads the guard and closes
+   * the user's `prependPlugins` and `appendPlugins` (admin.md, "Know what happens by default";
+   * reference.md, "Settings and environment variables"), though it holds no mod settings itself.
+   */
+  readonly managedMcp?: boolean;
   readonly user: ModsSettingsFile;
   readonly credential: Credential;
   /** The process environment. */
@@ -72,9 +78,14 @@ export interface ModsPolicyInput {
   readonly where?: ModsWhere;
 }
 
-/** Whether the machine has managed settings, or the session signed in with a Team or Enterprise `/login`: where the guard loads. */
+/**
+ * Whether the machine has managed settings or a `managed-mcp.json`, or the session signed in with a
+ * Team or Enterprise `/login`: where the guard loads.
+ */
 export const isManagedContext = (policy: ModsPolicyInput): boolean =>
-  policy.managed !== undefined || policy.credential === 'team-or-enterprise-login';
+  policy.managed !== undefined ||
+  policy.managedMcp === true ||
+  policy.credential === 'team-or-enterprise-login';
 
 /** The files whose value of `name` counts, from `MOD_SETTINGS`: managed first, then the user's when the table lets it. */
 function filesFor(policy: ModsPolicyInput, name: ModSettingName): readonly ModsSettingsFile[] {

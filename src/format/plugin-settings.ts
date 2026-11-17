@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Settings } from '../protocol/official.ts';
-import { error, warning, type PluginIssue } from './issues.ts';
+import { warning, type PluginIssue } from './issues.ts';
 import { isRecord } from '../protocol/is-record.ts';
 
 /**
@@ -35,11 +35,15 @@ export const hasAppliedSettings = (read: PluginSettingsRead): boolean =>
 /**
  * Reads one settings object. Judgment (spec/judgments.md): a dropped key and an invalid value for an
  * applied key are warnings (the docs say "dropped" and name no message), and a value that is not an
- * object is an error naming `origin`.
+ * object is a warning naming `origin`: a plugin's defaults never fail the plugin (spec §12.6 item 1,
+ * J12.10).
  */
 export function readPluginSettings(raw: unknown, origin: string): PluginSettingsRead {
   if (!isRecord(raw)) {
-    return { settings: {}, issues: [error(origin, `${origin} must be a JSON object of settings`)] };
+    return {
+      settings: {},
+      issues: [warning(origin, `${origin} must be a JSON object of settings`)],
+    };
   }
   const issues: PluginIssue[] = [];
   const kept: Record<string, unknown> = {};

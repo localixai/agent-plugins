@@ -20,9 +20,9 @@ import {
   type Decision,
   type PluginIssue,
   type PolicyView,
-} from '@rsaryev/llx-plugin';
-import { parseRule } from '@rsaryev/llx-plugin/rules';
-import type { ShellPermission } from '@rsaryev/llx-plugin/skills';
+} from '@localix-ai/agent-plugins';
+import { parseRule } from '@localix-ai/agent-plugins/rules';
+import type { ShellPermission } from '@localix-ai/agent-plugins/skills';
 
 export interface Permissions {
   readonly view: PolicyView;

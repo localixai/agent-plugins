@@ -90,6 +90,18 @@ spec(
 spec(
   'manifest.troubleshooting.claude plugin validate reports errors.Invalid JSON syntax: <parse error>',
   () => {
+    test('a manifest that is not JSON is `Invalid JSON syntax: <parse error>.`, with its period', async () => {
+      const report = await validatePlugin({
+        files: memoryFiles({ '.claude-plugin/plugin.json': '{' }),
+      });
+      expect(report.issues).toContainEqual(
+        expect.objectContaining({
+          severity: 'error',
+          path: 'json',
+          message: expect.stringMatching(/^Invalid JSON syntax: [^\n]+\.$/),
+        }),
+      );
+    });
     test('invalid manifest or hooks JSON is an error, with the parser reason', async () => {
       for (const files of [
         { '.claude-plugin/plugin.json': '{' },

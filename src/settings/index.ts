@@ -22,9 +22,11 @@ export {
   type SettingsEnvContext,
 } from './env/settings-env.ts';
 export {
+  AUTO_MODE_DISABLED_NOTICE,
   AUTO_MODE_LISTS,
   LAUNCH_SURFACES,
   createPermissionsPolicy,
+  type RunningMode,
   type AutoModeList,
   type AutoModeSettings,
   type PermissionsPolicy,

@@ -28,8 +28,9 @@ type DeliveryListener = (delivered: SettledDeliveries, delivery: BackgroundDeliv
  * it settles, so a host that is idle need not poll.
  *
  * Judgments (spec/judgments.md): the queue holds every delivery until the host takes it, so a host
- * that never takes them keeps them all; it is the host's to drain. It hands over every delivery,
- * repeats included: the repeat check Claude Code makes for an async `SessionStart` hook is the host's.
+ * that never takes them keeps them all; it is the host's to drain. The repeat of an async
+ * `SessionStart` hook reaches it emptied (`session-start-repeats.ts`); `HookOutcome.background`
+ * read directly hands over every delivery.
  */
 export interface BackgroundQueue {
   add(background: readonly Promise<BackgroundDelivery>[]): void;

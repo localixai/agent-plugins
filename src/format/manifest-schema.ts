@@ -1,22 +1,27 @@
 import { z } from 'zod';
 import { USER_CONFIG_KEY } from './user-config-refs.ts';
+import { optionValue, optionsProblems } from './user-config-options.ts';
+import { lspSourcesSchema } from './lsp-schema.ts';
+import { monitorSourcesSchema } from './monitor-schema.ts';
 
 /**
  * The top-level keys of `.claude-plugin/plugin.json` and their documented types
  * (plugins/manifest-reference.md, "Fields"). Strict where the docs say so ("Unrecognized fields"):
- * `userConfig` options and `channels` entries. Inline hook, MCP and LSP configs are checked by
- * their own readers, not here.
+ * `userConfig` options, `channels` entries, inline LSP configurations and monitor entries. Inline
+ * hook and MCP configs are checked by their own readers, not here.
  */
 
 const path = z.string();
 const pathOrPaths = z.union([path, z.array(path)]);
 const object = z.record(z.string(), z.unknown());
 const fileOrInline = z.union([path, object, z.array(z.union([path, object]))]);
-const monitors = z.union([path, z.array(z.unknown())]);
+/**
+ * The inline LSP map and monitors array are strict objects of the manifest (spec §2.1 item 4,
+ * §9.1.1 item 3, §9.2.1): an unknown key or a bad value in one keeps the plugin from loading.
+ */
+const monitors = monitorSourcesSchema;
 
 const OPTION_TYPES = ['string', 'number', 'boolean', 'directory', 'file'] as const;
-/** The types `options` applies to: "For `string`, the values the field accepts". */
-const TYPES_WITH_OPTIONS: ReadonlySet<(typeof OPTION_TYPES)[number]> = new Set(['string']);
 
 const userConfigFields = z.strictObject({
   type: z.enum(OPTION_TYPES),
@@ -24,39 +29,18 @@ const userConfigFields = z.strictObject({
   description: z.string(),
   required: z.boolean().optional(),
   default: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]).optional(),
-  options: z.array(z.string().min(1).max(64)).optional(),
+  options: z.array(optionValue).optional(),
   multiple: z.boolean().optional(),
   sensitive: z.boolean().optional(),
   min: z.number().optional(),
   max: z.number().optional(),
 });
-type UserConfigFields = z.infer<typeof userConfigFields>;
 
-/**
- * The `options` rules (manifest-reference.md, "Limit a field to fixed options"): "`options` applies to
- * a `string` field that isn't `multiple` or `sensitive`. Set `default` to one of the listed values,
- * or set `required: true` so the user must pick one." A plugin that breaks them "fails to load".
- * Judgment: "or set `required: true`" is read as a rule, so options with neither fail too
- * (spec/judgments.md).
- */
-function optionsProblem(option: UserConfigFields): string | undefined {
-  const { options, default: fallback } = option;
-  if (options === undefined) return undefined;
-  if (!TYPES_WITH_OPTIONS.has(option.type)) return '"options" applies only to a "string" field';
-  if (option.multiple === true) return '"options" cannot be combined with "multiple"';
-  if (option.sensitive === true) return '"options" cannot be combined with "sensitive"';
-  if (fallback !== undefined && !(typeof fallback === 'string' && options.includes(fallback))) {
-    return '"default" must be one of the listed "options"';
-  }
-  if (fallback === undefined && option.required !== true) {
-    return '"options" needs a "default" from the list, or "required": true';
-  }
-  return undefined;
-}
-
+/** An option with the `options` rules, each problem at its own path (`options`, `default`). */
 export const userConfigOptionSchema = userConfigFields.superRefine((option, context) => {
-  const problem = optionsProblem(option);
-  if (problem !== undefined) context.addIssue({ code: 'custom', message: problem });
+  for (const problem of optionsProblems(option)) {
+    context.addIssue({ code: 'custom', path: [problem.path], message: problem.message });
+  }
 });
 export type UserConfigOption = z.infer<typeof userConfigOptionSchema>;
 
@@ -79,8 +63,16 @@ const commandEntrySchema = z
   });
 export type CommandEntry = z.infer<typeof commandEntrySchema>;
 
+/**
+ * A dependency string has at most one `@`: `"a@b@c"` fails the manifest as `Invalid input`
+ * (spec J16.17, oracle 2.1.325). Shared with the validator's schema.
+ */
+export const dependencyText = z
+  .string()
+  .refine((text) => text.indexOf('@') === text.lastIndexOf('@'));
+
 const dependency = z.union([
-  z.string().min(1),
+  dependencyText.min(1),
   z.object({
     name: z.string().min(1),
     marketplace: z.string().optional(),
@@ -127,7 +119,7 @@ export const MANIFEST_SCHEMAS = {
   agents: pathOrPaths,
   hooks: fileOrInline,
   mcpServers: fileOrInline,
-  lspServers: fileOrInline,
+  lspServers: lspSourcesSchema,
   outputStyles: pathOrPaths,
   workflows: pathOrPaths,
   experimental: z.object({

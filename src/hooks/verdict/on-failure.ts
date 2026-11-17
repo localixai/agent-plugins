@@ -150,7 +150,7 @@ function blockFor(subject: Subject, failure: Failure): BlockInfo | undefined {
     return blockInfo(subject, failure, blockingText(subject, failure), conditional);
   }
   return blocksSwitch(subject, failure)
-    ? blockInfo(subject, failure, timedOutBlocksSwitch(failure.detail), false)
+    ? blockInfo(subject, failure, timedOutBlocksSwitch(handlerLabel(subject.entry.handler)), false)
     : undefined;
 }
 

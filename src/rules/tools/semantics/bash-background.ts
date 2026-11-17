@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../../format/env-flag.ts';
 import { splitCommand } from '../../bash/split.ts';
 import { wordsOf } from '../../bash/words.ts';
 import type { Environment } from '../../../ports/environment.ts';
@@ -20,7 +21,7 @@ export function shouldMoveToBackground(
   env: Pick<Environment, 'get'>,
   session: MoveSession,
 ): boolean {
-  if (session.bare || env.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS')?.trim() === '1') return false;
+  if (session.bare || isTruthyEnv(env.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS'))) return false;
   return wordsOf(command.trimStart()).at(0)?.text !== 'sleep';
 }
 

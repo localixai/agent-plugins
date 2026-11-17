@@ -35,6 +35,10 @@ export function resolveSegments(path: string, platform: PathPlatform): string[] 
 export const leavesFolder = (path: string, platform: PathPlatform): boolean =>
   isAbsolutePath(path) || resolveSegments(path, platform) === undefined;
 
+/** A backslash in a component path, which "on macOS and Linux" is refused even inside the plugin. */
+export const refusedBackslash = (path: string, platform: PathPlatform): boolean =>
+  platform === 'posix' && path.includes('\\');
+
 /**
  * Whether a component path leaves the plugin as written (plugins/loading.md, "Paths that escape the
  * plugin directory"): it climbs with `..`, is absolute, or, "on macOS and Linux, contains a
@@ -43,7 +47,7 @@ export const leavesFolder = (path: string, platform: PathPlatform): boolean =>
  */
 export function escapesAsWritten(path: string, platform: PathPlatform): boolean {
   if (isAbsolutePath(path)) return true;
-  if (platform === 'posix' && path.includes('\\')) return true;
+  if (refusedBackslash(path, platform)) return true;
   return segmentsOf(path, platform).includes('..');
 }
 

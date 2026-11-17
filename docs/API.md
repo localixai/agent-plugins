@@ -1,6 +1,6 @@
 # API
 
-The public API of `@rsaryev/llx-plugin`: what a host (an agent, an IDE, a cloud service)
+The public API of `@localix-ai/agent-plugins`: what a host (an agent, an IDE, a cloud service)
 calls to support Claude Code plugins. Each part says whether it is **done** (exported and tested)
 or **planned** (designed here, not built yet). A planned part changes only through this doc.
 
@@ -33,30 +33,31 @@ The root holds what a host needs to run plugins; every domain has its whole surf
 A name lives in one subpath; the root re-exports the few a host loop calls.
 
 Every export of every entry has a row, its kind and one line in that entry's table under
-`docs/api/`: [`root`](api/root.md), [`loading`](api/loading.md), [`format`](api/format.md), [`sdk`](api/sdk.md), [`skills`](api/skills.md), [`hooks`](api/hooks.md), [`rules`](api/rules.md), [`settings`](api/settings.md), [`marketplace`](api/marketplace.md), [`agents`](api/agents.md), [`mods`](api/mods.md), [`cli`](api/cli.md), [`testing`](api/testing.md), [`elicitation`](api/elicitation.md), [`layout`](api/layout.md), [`mods-elements`](api/mods-elements.md), [`mods-isolate`](api/mods-isolate.md). The docs gate (DOC3) keeps each table equal to what the entry exports.
+`docs/api/`: [`root`](api/root.md), [`loading`](api/loading.md), [`core`](api/core.md), [`format`](api/format.md), [`sdk`](api/sdk.md), [`skills`](api/skills.md), [`hooks`](api/hooks.md), [`rules`](api/rules.md), [`settings`](api/settings.md), [`marketplace`](api/marketplace.md), [`agents`](api/agents.md), [`mods`](api/mods.md), [`cli`](api/cli.md), [`testing`](api/testing.md), [`elicitation`](api/elicitation.md), [`layout`](api/layout.md), [`mods-elements`](api/mods-elements.md), [`mods-isolate`](api/mods-isolate.md). The docs gate (DOC3) keeps each table equal to what the entry exports.
 
-| Import                                    | What it holds                                                                                                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@rsaryev/llx-plugin`              | `createPluginHost` and its sessions (`session.checkTool`), `loadPlugin`, `validatePlugin`, `decide`, the permission policy and `policyContext`, `preToolUseHookOutcome`, `permissionRequestDecision`, the port types, Claude Code's types and closed lists (`src/index.ts`) |
-| `@rsaryev/llx-plugin/loading`      | loading, repository plugins and workspace trust, variable substitution, MCP, LSP and monitors of a plugin (`src/entry/loading.ts`)                  |
-| `@rsaryev/llx-plugin/format`       | the reader of every plugin file (`src/entry/format.ts`)                                                                                            |
-| `@rsaryev/llx-plugin/skills`       | skills and commands (`src/entry/skills.ts`)                                                                                                        |
-| `@rsaryev/llx-plugin/hooks`        | the hook engine (`src/entry/hooks.ts`)                                                                                                             |
-| `@rsaryev/llx-plugin/rules`        | permission rules and modes (`src/entry/rules.ts`)                                                                                                  |
-| `@rsaryev/llx-plugin/settings`     | settings layers, merge and every policy key (`src/entry/settings.ts`)                                                                              |
-| `@rsaryev/llx-plugin/marketplace`  | marketplaces, installs and updates (`src/entry/marketplace.ts`)                                                                                    |
-| `@rsaryev/llx-plugin/agents`       | sub-agents, their catalog and workflows (`src/entry/agents.ts`)                                                                                    |
-| `@rsaryev/llx-plugin/mods`         | mods and their test kit, `modsTesting` (`src/entry/mods.ts`)                                                                                       |
-| `@rsaryev/llx-plugin/cli`          | the `claude plugin` command line (`src/entry/cli.ts`)                                                                                              |
-| `@rsaryev/llx-plugin/sdk`          | a session's plugin hooks as the `hooks` option of a Claude Agent SDK query (`src/entry/sdk.ts`)                                                    |
-| `@rsaryev/llx-plugin/testing`      | fakes of every port (`src/testing/index.ts`)                                                                                                       |
-| `@rsaryev/llx-plugin/layout`       | the standard layout (`STANDARD_LAYOUT`, `COMPONENT_KINDS`, `COMBINE_MODES`, `declaredKey`, `componentsAt` and their types), without the plugin engine; these names are not in `./format` (`src/entry/layout.ts`) |
-| `@rsaryev/llx-plugin/elicitation`  | MCP elicitation shapes, without the plugin engine; these names are not in `./format` (`src/entry/elicitation.ts`) |
-| `@rsaryev/llx-plugin/mods/elements` | the element table of mods and the checks of a drawn tree, and `UI_SURFACES` (the surfaces a mod draws on), for a UI process: a leaf with no host, no port and no `node:` import; the same names are in `./mods` (`src/entry/mod-elements.ts`) |
-| `@rsaryev/llx-plugin/mods/isolate` | what code inside an isolate needs: the `$.state` helpers (`atom`, `read`, `update`, `derive`, `memberOf`), `TIERS`, `INSTRUCTION_FILE_KINDS`, `selects` (the pattern rule of `next.is` and `on`), `STATE_LIBRARY_SOURCE`, every name of `./mods/elements` (the element table and tree checks, `UI_SURFACES`), the element constructors `elementFn(name)` and `elementNameOf(value)`, `h(tag, props, ...children)` and `Fragment` (a column `Box`) for JSX, `matchesEvent(matcher, e)` and `acceptsField` (a hook's matcher as the chain tests it), `isHookBody`, `deepFreeze`, `frozenCopy` and `plainDataProblem`; nothing below it imports a `node:` or `bun` module or any package (a test walks the graph); the same names are in `./mods` (`src/entry/mod-isolate.ts`) |
-| `@rsaryev/llx-plugin/package.json` | the package manifest                                                                                                                              |
+| Import                                    | What it holds |
+| ----------------------------------------- | --- |
+| `@localix-ai/agent-plugins`               | `createPluginHost` and its sessions (`session.checkTool`), `loadPlugin`, `validatePlugin`, `decide`, the permission policy and `policyContext`, `preToolUseHookOutcome`, `permissionRequestDecision`, the port types, Claude Code's types and closed lists (`src/index.ts`) |
+| `@localix-ai/agent-plugins/loading`       | loading, repository plugins and workspace trust, variable substitution, MCP, LSP and monitors of a plugin (`src/entry/loading.ts`) |
+| `@localix-ai/agent-plugins/core`          | the core Agent Plugins form: the form of a plugin root, loading a core package, its readers, its subprocess configuration and the dual-package check (`src/entry/core.ts`) |
+| `@localix-ai/agent-plugins/format`        | the reader of every plugin file (`src/entry/format.ts`) |
+| `@localix-ai/agent-plugins/skills`        | skills and commands (`src/entry/skills.ts`) |
+| `@localix-ai/agent-plugins/hooks`         | the hook engine (`src/entry/hooks.ts`) |
+| `@localix-ai/agent-plugins/rules`         | permission rules and modes (`src/entry/rules.ts`) |
+| `@localix-ai/agent-plugins/settings`      | settings layers, merge and every policy key (`src/entry/settings.ts`) |
+| `@localix-ai/agent-plugins/marketplace`   | marketplaces, installs and updates (`src/entry/marketplace.ts`) |
+| `@localix-ai/agent-plugins/agents`        | sub-agents, their catalog and workflows (`src/entry/agents.ts`) |
+| `@localix-ai/agent-plugins/mods`          | mods and their test kit, `modsTesting` (`src/entry/mods.ts`) |
+| `@localix-ai/agent-plugins/cli`           | the `claude plugin` command line (`src/entry/cli.ts`) |
+| `@localix-ai/agent-plugins/sdk`           | a session's plugin hooks as the `hooks` option of a Claude Agent SDK query (`src/entry/sdk.ts`) |
+| `@localix-ai/agent-plugins/testing`       | fakes of every port (`src/testing/index.ts`) |
+| `@localix-ai/agent-plugins/layout`        | the standard layout (`STANDARD_LAYOUT`, `COMPONENT_KINDS`, `COMBINE_MODES`, `declaredKey`, `componentsAt` and their types), without the plugin engine; these names are not in `./format` (`src/entry/layout.ts`) |
+| `@localix-ai/agent-plugins/elicitation`   | MCP elicitation shapes, without the plugin engine; these names are not in `./format` (`src/entry/elicitation.ts`) |
+| `@localix-ai/agent-plugins/mods/elements` | the element table of mods and the checks of a drawn tree, and `UI_SURFACES` (the surfaces a mod draws on), for a UI process: a leaf with no host, no port and no `node:` import; the same names are in `./mods` (`src/entry/mod-elements.ts`) |
+| `@localix-ai/agent-plugins/mods/isolate`  | what code inside an isolate needs: the `$.state` helpers (`atom`, `read`, `update`, `derive`, `memberOf`), `TIERS`, `INSTRUCTION_FILE_KINDS`, `selects` (the pattern rule of `next.is` and `on`), `STATE_LIBRARY_SOURCE`, every name of `./mods/elements` (the element table and tree checks, `UI_SURFACES`), the element constructors `elementFn(name)` and `elementNameOf(value)`, `h(tag, props, ...children)` and `Fragment` (a column `Box`) for JSX, `matchesEvent(matcher, e)` and `acceptsField` (a hook's matcher as the chain tests it), `isHookBody`, `deepFreeze`, `frozenCopy` and `plainDataProblem`; nothing below it imports a `node:` or `bun` module or any package (a test walks the graph); the same names are in `./mods` (`src/entry/mod-isolate.ts`) |
+| `@localix-ai/agent-plugins/package.json`  | the package manifest |
 
-Every subpath but `./package.json` has the conditions `llx-plugin-source` (the `src` entry, for a
+Every subpath but `./package.json` has the conditions `agent-plugins-source` (the `src` entry, for a
 path-linked host's tsc through `customConditions`), `types`, `bun`, `import` and `default`.
 
 The root also exports, as types, every type its host API names; `docs/api/root.md` lists them.
@@ -64,7 +65,7 @@ The root also exports, as types, every type its host API names; `docs/api/root.m
 
 ## Type dependencies
 
-`@rsaryev/llx-plugin/layout` is the only home of `STANDARD_LAYOUT`, `COMPONENT_KINDS`,
+`@localix-ai/agent-plugins/layout` is the only home of `STANDARD_LAYOUT`, `COMPONENT_KINDS`,
 `COMBINE_MODES`, `declaredKey`, `componentsAt` and the layout types, through a dependency-free runtime entry.
 Use it when a folder classifier needs only the standard paths, not the plugin engine.
 
@@ -78,7 +79,7 @@ type-only; importing the package starts neither Claude Code nor an MCP client.
 Pure functions over parsed JSON and file text. No ports.
 
 ```ts
-import { readManifest, validateManifest } from '@rsaryev/llx-plugin/format';
+import { readManifest, validateManifest } from '@localix-ai/agent-plugins/format';
 
 const { manifest, issues } = readManifest(JSON.parse(text)); // as Claude Code loads it
 const report = validateManifest(JSON.parse(text)); // as `claude plugin validate` reports
@@ -93,7 +94,7 @@ const report = validateManifest(JSON.parse(text)); // as `claude plugin validate
 | `readMemoryRule(path, text, scope)` | done    | a `.claude/rules/**/*.md` file (`scope` `user` or `project`) into a `MemoryRule`: `paths` read as a skill's (a YAML list or a comma-separated string, brace groups whole), every other field ignored silently, the body without the frontmatter; YAML that does not parse gives no `paths` and a warning. Finding the files (recursive, symlinks, `claudeMdExcludes`, `--setting-sources`) stays the host's; `ruleActivatesFor` (`./skills`) matches them |
 | `writeFrontmatter(fields, body)`, `editFrontmatter(text, changes, body?)` | done    | the inverse of `parseFrontmatter`: `---`, the fields as YAML in the order given (quoted where YAML needs it, no line folding, no aliases), `---`, the body exactly as given; reading it back gives the same `fields` and `body` for every JSON-shaped value. `editFrontmatter` sets keys in an existing file (a key it has keeps its place, a new one goes last, `undefined` removes one, comments and other keys stay, the body stays unless given) and refuses a block that does not read (`{ ok: false, state, problem }`) rather than overwrite it |
 | `renderSkillFile(draft)`, `renderCommandFile(draft)`, `renderAgentFile(draft)` | done    | a file from the kit's own types (`SkillDraft` / `CommandDraft`: `InvocableFrontmatter`'s fields; `AgentDraft`: `name`, the official `AgentDefinition` with `prompt` as body, `AgentExtras`, `hooks`), each key in its reference table's order, a skill value equal to its documented default left out (an explicit `shell` kept), the host's own keys (`extra`) last; `readSkill` / `readCommand` / `readAgent` read it back to the same values |
-| `resolveSkillName(layout, declared)` | done    | the command name of a skill: directory or `name`, the plugin prefix (not doubled), the plugin-root fallback, `anthropic-skills:` for a synced skill; a name with a zero-width, control, private-use, unassigned, bidi or blank character or `<` `>` is refused outside a plugin and hyphenated in a plugin skill folder |
+| `resolveSkillName(layout, declared)` | done    | the command name of a skill: directory or `name`, the plugin prefix (not doubled), the plugin-root fallback, `anthropic-skills:` for a synced skill; a folder name with a zero-width, control, private-use, unassigned, bidi or blank character or `<` `>`, or over 256 characters, is refused outside a plugin and hyphenated in a plugin skill folder; such a frontmatter `name` is ignored (the folder names the skill); each refused name's issue is its `[names]` debug-log line |
 | `readCommand(path, text, layout)`   | done    | a flat command file (the older skill format) into a `Command`: the skill frontmatter except `name` and `paths`; the name is the path below `commands/` without the extension, folders joined by `:`, after the plugin prefix; a refused character or (outside a plugin) `anthropic-skills` refuses the file |
 | `readCommandEntry(key, entry, sourceText, ctx)` | done | one entry of the manifest `commands` map: `source` text or inline `content` (the body as written), `description`, `argumentHint`, `model` and `allowedTools` replace the same fields of the file; both or neither of `source` and `content`, and a missing source file, are errors for that entry |
 | `readAgent(text, origin)`           | done (name, description, tools, disallowedTools, model, effort, maxTurns, autoCompactWindow, background, omitClaudeMd, isolation, color, initialPrompt, experimental, hooks) | an agent file → `AgentRecord` (official `AgentDefinition` + scoped name, source, `extras` for `color`, `isolation` and `cacheTtl`; `hooks` in the settings' hook format, never for a plugin agent): a project, user or managed file without a name is documentation and a bad name, no description or unparseable YAML skips it; a plugin agent always loads (file-name fallback, `Agent from <plugin> plugin`) and lists the fields it ignores in `ignored`; a bad value is dropped with a warning; `unrecognized` names up to five unknown fields; the other fields follow |
@@ -111,7 +112,7 @@ const report = validateManifest(JSON.parse(text)); // as `claude plugin validate
 ### Skills (done: `format/skill*`, the field readers; planned: command name, commands, expansion)
 
 ```ts
-import { readSkill } from '@rsaryev/llx-plugin/format';
+import { readSkill } from '@localix-ai/agent-plugins/format';
 
 const { skill, issues } = readSkill('skills/review/SKILL.md', text, {
   origin: { kind: 'plugin', plugin: 'my-plugin' },
@@ -172,7 +173,7 @@ directory and its parents up to the repository root, and the main checkout of a 
 `request.configDir` is `CLAUDE_CONFIG_DIR` (see "The configuration directory").
 
 ```ts
-import { resolveFolderSkills, scanFolders, scanNested } from '@rsaryev/llx-plugin/skills';
+import { resolveFolderSkills, scanFolders, scanNested } from '@localix-ai/agent-plugins/skills';
 
 const context = { folders, request: { home, cwd, addedDirectories: ['../cli'] }, signal };
 const outcome = await scanFolders(context); // { entries, plugins, issues, watch }
@@ -259,7 +260,7 @@ substitutions"). Arguments first, then `${CLAUDE_*}` over the result, so a varia
 argument value is replaced too:
 
 ```ts
-import { buildVariables, substitute } from '@rsaryev/llx-plugin/skills';
+import { buildVariables, substitute } from '@localix-ai/agent-plugins/skills';
 
 const vars = buildVariables(skill, { sessionId, effort: 'high' }, { locations, environment });
 const { text, issues } = await substitute(skill.body, {
@@ -298,7 +299,7 @@ uses `session.expandSkill` and `session.expandMessage` instead, which pass the t
 sessions").
 
 ```ts
-import { checkInvocation, modelListing, menuEntries, resolveExecution } from '@rsaryev/llx-plugin/skills';
+import { checkInvocation, modelListing, menuEntries, resolveExecution } from '@localix-ai/agent-plugins/skills';
 
 checkInvocation(skill, 'model', settings.skillOverrides); // { allowed: false, reason, message } for `disable-model-invocation`
 modelListing(skills, { overrides, budget: { contextWindow: 200_000 }, usage, activated });
@@ -332,7 +333,7 @@ are found in the original text, arguments and `${CLAUDE_*}` are substituted, the
 through the `CommandRunner` port, and their output is never scanned again.
 
 ```ts
-import { expandSkill } from '@rsaryev/llx-plugin/skills';
+import { expandSkill } from '@localix-ai/agent-plugins/skills';
 
 const out = await expandSkill(skill, {
   arguments: '123', sessionId, effort: 'high', permissionMode, disableShellExecution: false,
@@ -371,7 +372,7 @@ background task, and keeping `EndConversation` out of `disallowed` while another
 ### Skill visibility, access, stacking, lifecycle and forks (done: `skills/visibility`, `skill-rule`, `stack`, `lifecycle`, `fork`, `portable`)
 
 ```ts
-import { stackSkills, skillNamesOf, invokeSkill, reattachAfterCompaction, launchFork } from '@rsaryev/llx-plugin/skills';
+import { stackSkills, skillNamesOf, invokeSkill, reattachAfterCompaction, launchFork } from '@localix-ai/agent-plugins/skills';
 ```
 
 | Name                                          | Does                                                                                                   |
@@ -380,7 +381,7 @@ import { stackSkills, skillNamesOf, invokeSkill, reattachAfterCompaction, launch
 | `skillNamesOf(skill, aliases?)`               | every name a skill goes by (command, nested unqualified name, synced forms, the host's aliases) for `PreparedCall.skillNames`, which a `Skill(...)` deny rule reads |
 | `stackSkills(message, lookup, options?)`     | `{ skills, arguments, mentions }`: the first skill plus up to five stacked after it and the argument text they share, read against every name of a `SkillLookup`; a fork, an open-ended command (`StackOptions.takesCommandArguments`), a hidden or unknown name ends the stack; non-interactive loads the first only |
 | `listedAs(skill, { overrides?, activated? }?)`, `isDormant(skill, activated?)` | what the model listing says of one skill before the budget (`description`, `name` for a `name-only` override or a dormant `paths` skill, `hidden`), and whether a `paths` skill is still dormant; `modelListing` and `session.skillCatalog()` both read them |
-| `skillLookup(rows)`, `SkillLookup`, `NamedInvocable` | the one lookup of a catalog by every name a skill answers to (its command, then its other names; a listed command wins over another row's alias): `find(name)` and `names`. `session.expandSkill`, `expandMessage` and `preloadSkills` all use it |
+| `skillLookup(rows)`, `SkillLookup`, `NamedInvocable` | the one lookup of a catalog by every name a skill answers to (its command, then its other names; a listed command wins over another row's alias; a synced skill's `anthropic-skills:<name>` wins over a plugin named `anthropic-skills`): `find(name)` and `names`. `session.expandSkill`, `expandMessage` and `preloadSkills` all use it |
 | `isLeading(mention)`, `LeadingMention` | a direct or stacked mention (it is expanded), as against one `named` after plain text |
 | `invokeSkill`, `startTurn`, `reattachAfterCompaction` | the ledger of skill content in a conversation: a repeated identical rendering gets a note, a different one the full content again, grants clear at the next message, compaction keeps the latest invocation of each skill (5,000 tokens each, 25,000 in all, newest first) |
 | `launchFork(execution, command, text, agents)` | what a `context: fork` skill starts: the agent type, the content as its task, its startup context (Explore and Plan load no CLAUDE.md), waiting or background, the tool set; an unknown agent is an error |
@@ -389,7 +390,7 @@ import { stackSkills, skillNamesOf, invokeSkill, reattachAfterCompaction, launch
 ### Output styles (done: `format/output-style`, `format/output-style-select`, `format/output-style-system`)
 
 ```ts
-import { readOutputStyle, resolveOutputStyle, includeCodingInstructions } from '@rsaryev/llx-plugin/format';
+import { readOutputStyle, resolveOutputStyle, includeCodingInstructions } from '@localix-ai/agent-plugins/format';
 
 const { style } = readOutputStyle('output-styles/terse.md', text, { plugin: 'my-plugin' });
 const active = resolveOutputStyle({ setting: 'Concise', command, styles: [style] });
@@ -414,7 +415,7 @@ import {
   customThemeId,
   copyOfPluginTheme,
   themeColorToHex,
-} from '@rsaryev/llx-plugin/format';
+} from '@localix-ai/agent-plugins/format';
 
 const { theme, issues } = readTheme(themeSlug('themes/dracula.json'), text);
 theme?.name; // `name`, else the slug
@@ -440,7 +441,7 @@ Colour forms are exact: `RGB(...)` and `ANSI256(...)` are not colours. The host 
 ### Workflows (done: `format/workflow-meta`, `workflow-script`, `agents/workflow`)
 
 ```ts
-import { readWorkflowMeta, rewriteWorkflowMeta, inspectWorkflowScript } from '@rsaryev/llx-plugin/agents';
+import { readWorkflowMeta, rewriteWorkflowMeta, inspectWorkflowScript } from '@localix-ai/agent-plugins/agents';
 
 const { meta } = readWorkflowMeta(source); // name, description, phases, phaseEntries, whenToUse, extra
 rewriteWorkflowMeta(source, { phases: ['Scan', 'Fix'] }).source; // every other byte kept
@@ -469,7 +470,7 @@ The runtime is the host's. The decisions its runs need are pure functions over f
 | `checkAgentSchema(schema)`, `afterInvalidOutput(failures, env)`, `structuredOutputAttempts(env)` | a `schema` that provably contradicts itself (a `required` key that `additionalProperties: false` rules out) fails the call before the subagent starts, naming the key; output that fails validation five times (`MAX_STRUCTURED_OUTPUT_RETRIES` changes the count) fails it with the last failure |
 | `usageLimitDecision(facts)` | the run pauses (no new agents start) only in an interactive subscription session with `autoContinueAtUsageLimit` on, a reset within 24 hours, fewer than two waits so far and a release with the wait (v2.1.271); otherwise the agent fails, with every cause listed |
 | `workflowArgs(passed)` | the `args` global: structured data as given, `undefined` when omitted |
-| `planWorkflowSave(request)`, `refuseLinks(plan, linked)`, `resolveSavedWorkflows`, `scanSavedWorkflows(folders, request)` | where a script is saved (`.claude/workflows/` of the closest existing folder up to the repository root, or `~/.claude/workflows/`, or `workflows/` under `CLAUDE_CONFIG_DIR`), the paths that must not be symlinks, and which `/<name>` runs (the closest project folder, then the personal one); the scan reads through `FolderScan`, and each `SavedWorkflow` carries its `meta.description` (`description?`, always set by the scan) for a `/` listing |
+| `planWorkflowSave(request)`, `refuseLinks(plan, linked)`, `resolveSavedWorkflows`, `scanSavedWorkflows(folders, request)` | where a script is saved (`.claude/workflows/` of the closest existing folder up to the repository root, or `~/.claude/workflows/`, or `workflows/` under `CLAUDE_CONFIG_DIR`), the paths that must not be symlinks, and which `/<name>` runs (the closest project folder, then the personal one); the scan reads through `FolderScan`, and each `SavedWorkflow` carries its `meta.description` (`description?`, always set by the scan) for a `/` listing; a workflow named `anthropic-skills` or `anthropic-skills:<name>` is left out with an error |
 
 The size guideline and the off switches are in "Settings" (`createWorkflowSettingsPolicy`). The host
 runs the scripts, measures time, writes the files and checks the links; the kit holds no run state.
@@ -483,7 +484,7 @@ planners and the decisions are written against that one contract. Reading and pl
 engines that download, run a command or hash take their effect through ports.
 
 ```ts
-import { readMarketplace, planPluginFetch } from '@rsaryev/llx-plugin/marketplace';
+import { readMarketplace, planPluginFetch } from '@localix-ai/agent-plugins/marketplace';
 
 const { marketplace, issues } = readMarketplace(JSON.parse(text), { origin }); // bad entries dropped alone
 const { plan } = planPluginFetch(entry.source, { platform: 'posix' }); // data: git, npm, archive, command, local
@@ -561,7 +562,7 @@ of it is pure, in `src/marketplace/`; the only effect is the `PluginStateStore` 
 is used: a path is built with the host's `join` (`Locations.joinPath`).
 
 ```ts
-import { createStoreLayout, loadInstalledPlugins, stageReport } from '@rsaryev/llx-plugin/marketplace';
+import { createStoreLayout, loadInstalledPlugins, stageReport } from '@localix-ai/agent-plugins/marketplace';
 
 const layout = createStoreLayout(root, (base, relative) => locations.joinPath(base, relative));
 const { read } = await loadInstalledPlugins({ store, sha256, clock }, signal); // rebuilds or sets aside on the way
@@ -582,7 +583,7 @@ const report = stageReport({ id, enabled, records: read.records[id] ?? [], exist
 | `decideEnabledFetch(facts)`, `overriddenUserDisable({ user, decidedBy, on })` | done | "enabled in project settings but not installed" (fetch only when user, an untracked local file, `--settings` or managed set `true`; a relative path or a seed needs none; else the Errors tab entry) and "disabled in user settings but still loads" (the row's text and the opt-out) |
 | `pluginNotFound`, `pluginNotFoundAnywhere`, `alreadyInstalledGlobally`, `alreadyAddedFromDifferentSource`, `noMarketplaces`, `failedToInstall`, `notCached`, `enabledNotInstalled`, `pluginDirectoryNotFound`, `pluginDirectoryMissingAtRun`, `installActivation(facts)`, `failureOnce` | done | the texts of "Install a plugin" and "Plugin installed but not working" that the docs quote, verbatim; an Errors tab entry is `{ message, guidance }` |
 | `unreadableRecordsMessage(ids)`, `unknownFormatMessage(version)`, `refuseForUnreadableRecords(command, name, reason)`, `refusalResultLine(command, refusal)`, `recoveryNotes(names, layout)` | done | the `installed_plugins.json` messages: one record or several, a format this version does not know, the refusal of `install`, `uninstall` and `update` with `failureCode: "install_records_unreadable"`, the notes `claude plugin list` prints while a dated copy sits beside the file |
-| `ignoredReason(name, entry, checks)`, `ignoredLine(name, reason, surface)`, `untrustedSource(name, entry)`, `untrustedSourceMessage(name)` | done | `Marketplace "<name>" is added but ignored`: the first failing check (location, git URL, URL, settings declaration, name from `loadNameIssues` with the entry's source) and its line for `claude plugin list` or the Errors tab; a reserved name registered from a source that is not an `anthropics` GitHub repository is `untrustedSource`, with the untrusted-source message |
+| `ignoredReason(name, entry, checks)`, `ignoredLine(name, reason, surface)`, `untrustedSource(name, entry)`, `untrustedSourceMessage(name, source?)` | done | `Marketplace "<name>" is added but ignored`: the first failing check (location, git URL, URL, settings declaration, name from `loadNameIssues` with the entry's source) and its line for `claude plugin list` or the Errors tab; a reserved name registered from a source that is not an `anthropics` GitHub repository is `untrustedSource`, with the untrusted-source message |
 | `scopeReach(scope)`, `mostSpecificScope`, `defaultScope(command, listedIn)`, `collaboratorInstallCommand(id)` | done | the user, project and local scopes: file, audience, reach; local beats project beats user; the scope a command acts on without `--scope` |
 | `pluginActions`, `closePanel`, `uninstallChoice`, `marketplaceCommand` | done | the `/plugin` panel and the marketplace commands as plans: the details menu, closing with pending changes (run, queue while a response streams, or warn), `y`/`u` for a project-enabled plugin, list from a shell or a session. The update and remove plans are `planMarketplaceUpdate` and `planMarketplaceRemove` of `./cli` (`surface: 'session'` gives `✔ Updated N marketplace(s)`); the Marketplaces tab's update is `planUpdate({ kind: 'marketplace-tab', marketplace })` |
 | `winningScope(id, facts)`, `effectiveEnabled(id, facts)`, `isEnabled(id, facts)`, `SCOPES_BY_PRECEDENCE` | done | over `GraphFacts` (`installed`, `enabled`, `catalog`, `allowlists`, `blocked?`): the highest scope whose `enabledPlugins` lists the id (`managed`, `local`, `project`, `user`), the value it writes, and whether an installed plugin is on (that value, else `InstalledRecord.defaultEnabled`, default `true`; no install record is off). `CatalogPlugin.defaultEnabled` carries the catalog's. The install, enable and disable plans are `planInstall`, `planEnable` and `planDisable` of `./cli` |
@@ -610,7 +611,7 @@ const report = stageReport({ id, enabled, records: read.records[id] ?? [], exist
 
 Names: the kit's `MarketplaceSource` is a union on `kind` (`github`, `git`, `url`, `npm`, `file`,
 `directory`, `settings`, ...), and `known_marketplaces.json` writes that kind under `source` as the
-settings key does. A host that stores a local marketplace as `source: 'local'` (Localix) migrates it
+settings key does. A host that stores a local marketplace as `source: 'local'` migrates it
 once to `directory` (a folder) or `file` (a `.json` path); the kit never reads or writes `local`.
 `parseMarketplaceInput(text)` is the one function that reads what is typed after `marketplace add`;
 the source object of a file or a settings key is `parseMarketplaceSource(raw, { policy })`. A host
@@ -620,7 +621,7 @@ does not rename a public export for another host.
 ## Updates (done: `updates`)
 
 ```ts
-import { refreshBeforeInstall, marketplaceAutoUpdate, autoUpdatePassAllowed } from '@rsaryev/llx-plugin/marketplace';
+import { refreshBeforeInstall, marketplaceAutoUpdate, autoUpdatePassAllowed } from '@localix-ai/agent-plugins/marketplace';
 
 const decision = refreshBeforeInstall({ ref: 'formatter@acme', command: 'claude plugin install', marketplaces, lookupMissed: false, env, clock });
 // { outcome: 'refresh', marketplaces: ['acme'] } | { outcome: 'skip', reason } | { outcome: 'refuse', issue }
@@ -637,7 +638,7 @@ command source"), org.md ("Set update policy") and settings-reference.md ("Updat
 | `marketplaceAutoUpdate(facts)`, `autoUpdatePassAllowed(env)` | done | the settings entry's `autoUpdate`, then `known_marketplaces.json`'s, then the default (on for the official names but `knowledge-work-plugins` and `first-party-plugins`, on for claude.ai marketplaces, off otherwise), a seed marketplace off; `DISABLE_UPDATES`, `DISABLE_AUTOUPDATER` and the traffic variable turn the whole pass off unless `FORCE_AUTOUPDATE_PLUGINS` |
 | `toggleDecision({ name, enable, env, declared? })`, `toggleLabel(facts)` | done | the **Enable auto-update** toggle: hidden when the pass is off, refused with `Auto-update for '<name>' is set by` when a managed entry sets the field, otherwise the files to write (`known_marketplaces.json`, and the settings entry that declares the marketplace) |
 | `pluginSkippedByAutoUpdate(candidate)`, `planAutoUpdatePass(marketplaces, env)`, `armFirstPass({ clock, env, random, run })`, `firstPassDelayMs(random)`, `pluginUpdatedNotice(name)` | done | the plugins a pass leaves (a `headersHelper` entry, a `command` source) and the Errors tab; one pass's refreshes and updates; the first pass after a random delay of up to ten minutes on the `Clock`; the `Plugin updated: <name> · Run /reload-plugins to apply` notice. The hourly repeat of a host is its own choice |
-| `backgroundCheckAuthenticates(credentials)`, `backgroundCheckResult(credentials, remote)`, `afterBackgroundCheck(result, env)`, `afterReclone(ok)` | done | the unattended check of a private marketplace: an SSH key in the agent or a stored HTTPS credential authenticates, a helper that must prompt does not; leave an up-to-date checkout, re-clone on new commits or a failed check, keep the checkout when the clone fails or `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE` is on |
+| `backgroundCheckAuthenticates(credentials)`, `backgroundCheckResult(credentials, remote)`, `afterBackgroundCheck(result, env, checkoutHoldsCatalog)`, `afterReclone(ok)` | done | the unattended check of a private marketplace: an SSH key in the agent or a stored HTTPS credential authenticates, a helper that must prompt does not; leave an up-to-date checkout, re-clone on new commits or a failed check, keep the checkout when the clone fails, or without a clone when `CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE` is on and the checkout holds `.claude-plugin/marketplace.json` |
 | `commandSourceRuns(event, plugin, env)`, `runsAfterAnswer(plan, accepted)`, `afterCommandRun(result)` | done | the runs of a `command` source (every install and update; once per session and at startup or `/reload-plugins` for a version missing from the cache, both skipped by the traffic variable only), a changed or switched command stops the background runs and gives an Errors-tab entry with the new command and `claude plugin update <id>`; an install, or an update of a changed command, runs only once the user accepts it; a changed hash installs and reloads (with the reload notice), or asks for `/reload-plugins` when the prompt cache would be invalidated |
 | `planUpdate(request, installed, registered)` | done | `Update plugins now`: one plugin; **Update marketplace** (listing, then the plugins installed from it, and the `command` and `headersHelper` ones left to the user); `claude plugin marketplace update [name]` refreshes listings and updates no plugin |
 | `readVersionPolicy(layers)`, `pickAllowedVersion(policy, versions)`, `startGate(policy, { command, current })`, `channelSwitch({ from, to, currentVersion, answer? })` | done | `autoUpdatesChannel`, `minimumVersion` (never blocks a start), `requiredMinimumVersion` and `requiredMaximumVersion` (managed only): what an update may install, the refusal to start outside the range (`claude update`, `claude install` and `claude doctor` stay available), and what the `/config` channel switch writes (only `latest` to `stable` asks; the same channel is a no-op) |
@@ -645,7 +646,7 @@ command source"), org.md ("Set update policy") and settings-reference.md ("Updat
 ## CLI (in progress: `cli`)
 
 ```ts
-import { startMarketplaceAdd, concludeMarketplaceAdd, startUninstall, concludeUninstall, planSessionFlags, renderCommand } from '@rsaryev/llx-plugin/cli';
+import { startMarketplaceAdd, concludeMarketplaceAdd, startUninstall, concludeUninstall, planSessionFlags, renderCommand } from '@localix-ai/agent-plugins/cli';
 
 const start = startMarketplaceAdd({ source: 'your-org/your-marketplace', scope: 'project', json: true });
 // { kind: 'fetch', source, scope: 'project', json: true } | { kind: 'claudeai', name, json: false } | { kind: 'done', output }
@@ -696,20 +697,27 @@ flag combination, the text of a refused flag value) the choice is in `spec/judgm
 ## Loading (done: `loading`, `format/layout`)
 
 ```ts
-import { loadPlugin } from '@rsaryev/llx-plugin';
+import { loadPlugin } from '@localix-ai/agent-plugins';
 
 const { plugin, issues } = await loadPlugin({ files, fallbackName: 'formatter' });
 ```
 
 `files` is the `PluginFiles` port: read access to one plugin folder, wherever it is (a disk, an
-object store, a sandbox, an archive in memory). `loadPlugin` finds every component in the
+object store, a sandbox, an archive in memory). Its one error channel is `FileStat.checkFailed`: a
+host whose `stat` gets an error other than "not found" (`ELOOP`, `EIO`, `ESTALE`, `EACCES`, on the
+path or a folder above it) answers a `FileStat` with that code, and the path does not load, reported
+as `<component> path could not be checked: <path> (<code>)` while the rest of the plugin loads
+(errors.md, "Path could not be checked"); the testing fake takes `{ checkFailed: '<code>' }` as an
+entry. A host that cannot tell answers `undefined`, and the path is absent. `loadPlugin` finds every component in the
 standard layout and the manifest's paths (plugins/manifest-reference.md, "Standard layout", "How
 each key combines with its default location") and returns a `Plugin`. It never throws but for an
 abort: once `signal` aborts it rejects with the signal's reason and calls the port no more. `plugin` is
 `undefined` only when the plugin does not load at all (a `plugin.json` that is not JSON or fails
 validation, no manifest and no `fallbackName`, a guard hook that cannot be read, or an inline
 `mcpServers` entry of the manifest that cannot be read: spec/judgments.md, "oracle 2.1.319 overrides
-docs"); any other problem is an issue and skips that component while the rest loads.
+docs"; an inline `lspServers` map or monitors array that breaks its strict schema, spec §9.1.1, §9.2.1);
+an issue may carry `guidance`, the advice the Errors tab shows under it (a declared path that is not
+there); any other problem is an issue and skips that component while the rest loads.
 
 ```ts
 interface Plugin {
@@ -756,7 +764,7 @@ plugins", "Check why a repository plugin didn't load"; permissions.md, "What run
 folder"; hooks.md, "Workspace trust"). All pure: the host answers the facts, the kit decides.
 
 ```ts
-import { decideRepositoryPlugin, loadRepositoryPlugin } from '@rsaryev/llx-plugin/loading';
+import { decideRepositoryPlugin, loadRepositoryPlugin } from '@localix-ai/agent-plugins/loading';
 
 const verdict = decideRepositoryPlugin({ origin: 'skills-dir', trust: 'dialog', // a TrustSituation
   primaryDirIsRoot: true, worktree: false });          // { load, reason, from }
@@ -770,6 +778,7 @@ const loaded = await loadRepositoryPlugin({ files }, 'skills-dir');            /
 | `loadRepositoryPlugin(input, origin)`, `repositoryLoadInput`, `limitRepositoryPlugin`, `COMPONENT_LIMITS` | `loadPlugin` for a repository-supplied plugin: MCP servers wait for the per-server approval of a project `.mcp.json` (`approvals`), a bundle (`.mcpb`, `.dxt`, a URL) is skipped with an issue, a server file outside the directory is refused, monitors do not load; one limit per component kind, none for `~/.claude/skills/` |
 | `WorkspaceTrust` (port) | `isFolderTrusted(path, signal?)`: whether the dialog was accepted for the key; the host stores it |
 | `workspaceTrustKey(facts)`, `workspaceTrustState(trust, facts, { nonInteractive?, signal? })`, `manualTrustEntry(key)` | the key (repository root, the main checkout in a worktree, the start directory outside a repository; the home directory is not persisted), the `TrustSituation` (`trusted`, `parent-trusted`, `non-interactive`, `dialog`) that every trust gate and `LocalSettingsFacts.trust` take, and the `~/.claude.json` entry that trusts by hand |
+| `backgroundSessionTrust(facts)` | before a background session starts or restarts: `start`, `dialog` from a terminal in its directory, or `refuse` with `Workspace not trusted. ...`, the home-directory or the not-on-disk message |
 | `settingsHooksMayRun(situation)` | interactive sessions hold hooks of every settings file until the dialog; `-p` and the SDK (`non-interactive`) treat the folder as trusted |
 | `projectEntryApplies(entry, folderTrusted)`, `trustDialogListing(permissions)` | `allow` and `additionalDirectories` of a project file apply only once trusted; `deny` and `ask` always |
 | `trustSituation(facts)`, `contentGate(content, situation)`, `CONTENT_GATES` | the docs' table, one row per kind of repository content: used, held for the dialog, asks per server, never; the stderr line and the static-`headers` fallback; a nested repository follows the dialog (or the `-p` column) |
@@ -784,7 +793,7 @@ What a plugin's `${...}` references become, shared by hooks, skills, MCP, LSP an
 writes placeholder code of its own (plugins/manifest-reference.md, "Environment variables"):
 
 ```ts
-import { substituteSurface, exportedEnvironment } from '@rsaryev/llx-plugin/loading';
+import { substituteSurface, exportedEnvironment } from '@localix-ai/agent-plugins/loading';
 
 const scope = { pluginId: 'fmt@acme', locations, environment, userConfig, windows: false };
 const { text, issues, referenced } = await substituteSurface('hook-exec', '${CLAUDE_PLUGIN_ROOT}/run', scope);
@@ -796,7 +805,7 @@ const env = await exportedEnvironment('hook-command', scope); // what the proces
 | `substituteTemplate(text, scope, policy, path)` | `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `${CLAUDE_PROJECT_DIR}`, `${user_config.KEY}`, `${VAR}`, `${VAR:-default}` in one pass; unresolved references stay as written with a warning |
 | `substituteDeep(value, scope, policyFor, base)` | the same over every string of a JSON value, one policy per path, the host asked once per variable |
 | `substituteSurface(surface, text, scope)`       | `substituteTemplate` with the policy of a `Surface` (`SURFACE_POLICY`)                 |
-| `SURFACE_POLICY`, `SURFACE_COMPONENT`           | per surface (exec/shell/PowerShell hook, monitor, MCP stdio/remote/`headersHelper`, LSP, Markdown content): which `${user_config.*}` values, whether `${VAR}` expands, how paths are written; a bash shell-form hook always keeps the braced reference, as Claude Code does; for the surfaces where Claude Code pastes (monitor `command`, `headersHelper`, a skill's `!` command) the paths follow `scope.shellPaths` (`substituteSurface` applies it) |
+| `SURFACE_POLICY`, `SURFACE_COMPONENT`           | per surface (exec/shell/PowerShell hook, monitor, MCP stdio/remote/`headersHelper`, LSP, Markdown content): which `${user_config.*}` values, whether `${VAR}` expands, how paths are written; a bash shell-form hook always keeps the braced reference, as Claude Code does; for the surfaces where Claude Code pastes (monitor `command`, `headersHelper`, a skill's `!` command) the paths follow `scope.shellPaths` (`substituteSurface` applies it; unset, a monitor is pasted) |
 | `VARIABLE_FIELDS`                               | the table "Where each variable resolves": fields per component, and what it exports   |
 | `exportedEnvironment(component, scope, substitution?)` | the path variables and `CLAUDE_PLUGIN_OPTION_<KEY>` a process receives; `substitution` (`Pick<Substituter, 'variable'>`) answers the variables instead of the scope |
 | `pluginDataId(id)`                              | the `<id>` of the data folder: other characters than letters, digits, `_`, `-` become `-` |
@@ -821,7 +830,7 @@ the caller passes `hook-powershell` there (`resolveHookCommand`, below, takes th
 ### Hook commands and Markdown content (done: `loading/resolve/hook-command`, `content`)
 
 ```ts
-import { resolveHookCommand, substituteContent } from '@rsaryev/llx-plugin/loading';
+import { resolveHookCommand, substituteContent } from '@localix-ai/agent-plugins/loading';
 
 const { resolved, issues } = await resolveHookCommand(handler, scope, { defaultShell: 'bash' });
 // resolved.spec: { form: 'exec', command, args } | { form: 'shell', command, shell }: a CommandRunner `spec`
@@ -847,8 +856,8 @@ that a Windows host without Git Bash runs `powershell`.
 ### MCP servers (done: `format/mcp-*`, `loading/resolve/mcp`)
 
 ```ts
-import { collectMcpServers } from '@rsaryev/llx-plugin/format';
-import { resolveMcpServer } from '@rsaryev/llx-plugin/loading';
+import { collectMcpServers } from '@localix-ai/agent-plugins/format';
+import { resolveMcpServer } from '@localix-ai/agent-plugins/loading';
 
 const { servers, bundles: declared, issues } = await collectMcpServers(files, manifest.mcpServers, { bundles });
 const { resolved, issues: more } = await resolveMcpServer('db', servers.db, scope);
@@ -898,7 +907,7 @@ variable for `claude-code-action`.
 #### MCP `headersHelper` (done: `loading/resolve/headers-helper*`)
 
 ```ts
-import { persistedTrust, planHeadersHelper, runMcpHeadersHelper, connectionHeaders } from '@rsaryev/llx-plugin/loading';
+import { persistedTrust, planHeadersHelper, runMcpHeadersHelper, connectionHeaders } from '@localix-ai/agent-plugins/loading';
 
 const trust = { source: persistedTrust(claudeJson, projectDir), key: projectDir, interactive: false };
 // `expandedVariables`: the environment variables the expansion of `url` substituted
@@ -944,8 +953,8 @@ The knob readers (`mcpTimeouts`, `mcpConnectTimeoutMs`, `mcpDescriptionLimits` a
 of `mcp-startup`) are the one place the `MCP_*` variables are read.
 
 ```ts
-import { readMcpAdd, readMcpAddJson, prepareMcpTool, limitMcpResult, mcpOutputLimits } from '@rsaryev/llx-plugin/format';
-import { answerElicitation } from '@rsaryev/llx-plugin/elicitation';
+import { readMcpAdd, readMcpAddJson, prepareMcpTool, limitMcpResult, mcpOutputLimits } from '@localix-ai/agent-plugins/format';
+import { answerElicitation } from '@localix-ai/agent-plugins/elicitation';
 
 const added = readMcpAdd(['--transport', 'http', 'api', 'https://x.example/mcp', '--client-id', 'abc'], lookup);
 // added.server, added.oauth (callbackPort filled from MCP_OAUTH_CALLBACK_PORT), added.secret, added.issues
@@ -966,7 +975,7 @@ const verdict = limitMcpResult(result, mcpOutputLimits(lookup, hints, countToken
 | `prepareMcpTool(tool, policy)` (a `McpListedTool`: the SDK's `Tool` name and description, an input schema of any type), `excludedToolsNotice`, `refusedSchemaFallback` | a root-level combinator rewritten to an object schema, an invalid input schema excluded with a notice, a schema the API refused sent without parameters |
 | `mcpOutputLimits`, `limitMcpResult`, `persistedResultMessage`, `imageResultNote`, `mcpImageFiles`, `oversizedMcpMessage` | `MAX_MCP_OUTPUT_TOKENS` (default 25,000, warning at 10,000), the 50,000-character persistence, error results cut in the middle, images saved, the 16 MiB WebSocket message and HTTP/SSE response size |
 | `listablePrompts`, `mcpPromptListing`, `mcpPromptCommand`, `readMcpPromptInvocation` | MCP prompts as `/server:prompt (MCP)` commands and the arguments they take |
-| `declaredElicitation`, `elicitationModes`, `elicitationUrlChoices`, `urlArgumentLength`, `answerElicitation`, `elicitationFormFields`, `elicitationHookFacts`, `autoRespondElicitation`, `overrideElicitationResult` | the modes a client declares (with `denyInsteadOfPrompting` a request no `Elicitation` hook answers is cancelled), the form fields a schema defines (with option labels, default, format and bounds) and the answer to a form or link, `elicitationFieldProblems` for a dialog's own per-field check (the `@rsaryev/llx-plugin/elicitation` entry exports the pure part alone for a browser bundle), the 8,000-character URL argument cap, the `Elicitation` and `ElicitationResult` hook input and output |
+| `declaredElicitation`, `elicitationModes`, `elicitationUrlChoices`, `urlArgumentLength`, `answerElicitation`, `elicitationFormFields`, `elicitationHookFacts`, `autoRespondElicitation`, `overrideElicitationResult` | the modes a client declares (with `denyInsteadOfPrompting` a request no `Elicitation` hook answers is cancelled), the form fields a schema defines (with option labels, default, format and bounds) and the answer to a form or link, `elicitationFieldProblems` for a dialog's own per-field check (the `@localix-ai/agent-plugins/elicitation` entry exports the pure part alone for a browser bundle), the 8,000-character URL argument cap, the `Elicitation` and `ElicitationResult` hook input and output |
 | `mcpTimeouts` (with `idleMs`), `mcpConnectTimeoutMs`, `mcpDescriptionLimits`, `cutMcpDescription`, `MCP_ENV_BASELINE`, `mcpStdioEnvironment`, `claudeAiConnectorsFetched` | `MCP_TIMEOUT`, `MCP_TOOL_TIMEOUT`, `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, `MCP_CONNECT_TIMEOUT_MS`, `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`, `CLAUDE_CODE_MCP_ALLOWLIST_ENV`, `ENABLE_CLAUDEAI_MCP_SERVERS` |
 | `mcpConnectionBatches`, `mcpBackgrounding`, `mcpStartupWaitsFor`, `mcpFirstTurnWaitMs`, `mcpDiscoveryCache`, `mcpCacheEntryUse`, `mcpCacheDiscardedAfterFailures`, `mcpClientSettings` | `MCP_SERVER_CONNECTION_BATCH_SIZE`, `MCP_REMOTE_SERVER_CONNECTION_BATCH_SIZE`, `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS`, `CLAUDE_CODE_DISABLE_MCP_TASK_BACKGROUND`, `MCP_CONNECTION_NONBLOCKING`, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS`, `MCP_DISCOVERY_CACHE` with `_TTL_S`, `_MAX_STALE_S` and `_STRIKES`, `MCP_SDK_GENERATION`, `MCP_PROTOCOL_NEGOTIATION` |
 | `planMcpReload`, `skipsStdioConnection`, `MCP_FAILURE_SKIP_MS`, `SKIPPING_CONNECTION` | which servers a `/reload-plugins` stops, starts and keeps; the 15-minute skip of a stdio server that failed |
@@ -981,8 +990,8 @@ the CLI itself is the host's.
 ### LSP servers (done: `format/lsp-config`, `loading/resolve/lsp*`)
 
 ```ts
-import { readLspConfig, mergeLspSources } from '@rsaryev/llx-plugin/format';
-import { resolveLspServer, languageIdFor, lspRestartDecision } from '@rsaryev/llx-plugin/loading';
+import { readLspConfig, mergeLspSources } from '@localix-ai/agent-plugins/format';
+import { resolveLspServer, languageIdFor, lspRestartDecision } from '@localix-ai/agent-plugins/loading';
 
 const root = readLspConfig(JSON.parse(lspJson), '.lsp.json'); // { servers, issues }
 const { servers } = mergeLspSources([root, readLspConfig(manifest.lspServers, 'lspServers')]);
@@ -1013,8 +1022,8 @@ A session runs the whole lifecycle (see "Monitors of a session" below); these ar
 built from.
 
 ```ts
-import { readMonitors } from '@rsaryev/llx-plugin/format';
-import { resolveMonitor, monitorsToStart } from '@rsaryev/llx-plugin/loading';
+import { readMonitors } from '@localix-ai/agent-plugins/format';
+import { resolveMonitor, monitorsToStart } from '@localix-ai/agent-plugins/loading';
 
 const { monitors, issues } = readMonitors(JSON.parse(monitorsJson), 'monitors/monitors.json');
 const { resolved } = await resolveMonitor(monitors[0], scope); // undefined when it must not start
@@ -1025,7 +1034,7 @@ const toStart = monitorsToStart(monitors, { kind: 'session-start' }, started, { 
 | --- | --- |
 | `Monitor`, `MonitorTrigger` | kit-owned types (the SDK has no monitor config type): `name`, `command`, `description`, and `when` as a tagged trigger |
 | `readMonitors(raw, origin)` | the array of one source; a strict entry (an unknown key is an error), `when` absent is `always`, a malformed `when` is an error naming the two forms, a repeated `name` is an error and the first keeps it; valid entries are still returned |
-| `resolveMonitor(monitor, scope)` | `command` gets the three path variables and `${ENV_VAR}`; `${user_config.*}` in it is the errors.md message and `resolved` is `undefined`, with no value needed; no `CLAUDE_PLUGIN_OPTION_<KEY>` is exported. By default (`scope.shellPaths: 'environment-reference'`) `command` holds `${CLAUDE_PLUGIN_ROOT}` (braced, as the template wrote it) instead of the path and `environment` carries the path variables the command references, so a path with shell metacharacters is never parsed as shell and the command line is the same when run with `environment`; with `shellPaths: 'pasted'` the path is written in, as the docs show it, and `environment` is empty |
+| `resolveMonitor(monitor, scope)` | `command` gets the three path variables and `${ENV_VAR}`; `${user_config.*}` in it is the errors.md message and `resolved` is `undefined`, with no value needed; no `CLAUDE_PLUGIN_OPTION_<KEY>` is exported. By default the path is written in, as the docs show it, and `environment` is empty: the path variables are never exported (Agent Plugins Extended §9.2.4, J9.17). With the host's opt-in `scope.shellPaths: 'environment-reference'`, `command` holds `${CLAUDE_PLUGIN_ROOT}` (braced, as the template wrote it) instead of the path and `environment` carries the path variables the command references, so a path with shell metacharacters is never parsed as shell and the command line is the same when run with `environment` |
 | `monitorsToStart(monitors, event, started, mode)` | pure: `always` starts on `session-start` and `plugin-reload`; `on-skill-invoke:<skill>` starts on `skill-invoked` when `event.skill` is exactly the trigger's skill, the first time only; nothing starts when `mode.interactive` is false (`-p`). With `featureFlagsAvailable: false`, a supplied host `version` must be at least `2.1.310` |
 | `skillTriggerNames(pluginId, skill)` | the `event.skill` values a skill that ran gives the monitors of plugin `pluginId` (judgment J-L11): none unless it is that plugin's skill; else each of its names, namespaced (`ops:deploy`) and without the plugin's namespace (`deploy`, as the docs' example writes the trigger) |
 | `monitorsToStop(started, event)` | no running monitor is stopped by `plugin-disabled`; `session-ended` returns all of `started` for the host to stop |
@@ -1065,7 +1074,7 @@ for (const { pluginId, name } of session.monitorsToStop('session-ended')) stop(p
 ## Validating (done: `loading/validate`, `format/validate`)
 
 ```ts
-import { validatePlugin } from '@rsaryev/llx-plugin';
+import { validatePlugin } from '@localix-ai/agent-plugins';
 
 const { target, issues } = await validatePlugin({ files, label: 'my-plugin' });
 for (const { severity, file, path, message } of issues) console.log(severity, file, path, message);
@@ -1098,6 +1107,102 @@ they cannot read and keep the rest, except under `PreToolUse` and `PermissionReq
 that went missing fails the file, and frontmatter that plain YAML refuses is retried with the plain
 value of a line quoted, as Claude Code does. Checks that need the network or the marketplace
 directory service (the `directory` profile) are not made.
+
+## Core packages (done: the loader, `format/core`, `loading/core`, running them in a session, conversion)
+
+```ts
+import { loadPluginPackage } from '@localix-ai/agent-plugins/core';
+
+const loaded = await loadPluginPackage({ files, extensions: ['com.example.client'] });
+// loaded.form is 'claude-code' (loaded.loaded is what loadPlugin returns, loaded.dual says the root
+// also carries a core manifest) or 'core' (loaded.loaded.package is a CorePackage).
+```
+
+Agent Plugins Extended has two plugin forms (Extended §1.2): the Claude Code form, which the rest of
+this document covers, and the **core** Agent Plugins form (Agent Plugins 1.1.0, cited `core §n`): a
+root `plugin.json` with a canonical core `$schema`, skills under `skills/`, `mcp.json` and
+`hooks.json`. The core lives in its own subpath, `./core`, because it is a domain of its own (one
+subpath per domain, "Entry points"): nothing in it changes how a Claude Code plugin loads.
+
+| API | What it does |
+| --- | --- |
+| `detectPluginForm({ files, signal? })` | the form of a root by the table of Extended §1.3: a `.claude-plugin/plugin.json` makes a Claude Code plugin (`dual: true` when a core manifest sits beside it, J1.2); otherwise a root `plugin.json` with a canonical core `$schema` makes a core package; anything else in a root `plugin.json` is an ordinary file (J1.1) |
+| `loadPluginPackage(input)` | the loader of an Extended client: the form first, then `loadPlugin` (unchanged, the same result) or `loadCorePackage`. A dual package loads as a Claude Code plugin only: its `mcp.json` and `hooks.json` are not read. Given the marketplace `entry` of a core package, each of its component fields and `strict: false` is an error in `loaded.issues` and the package loads as the core says (J18.15) |
+| `loadCorePackage({ files, extensions?, transports?, iconFormats?, signal? })` | core §4–§10: the manifest first (missing, outside the root, not JSON or invalid rejects the package); then each fixed location (absent is fine, wrong kind or outside the root invalidates that type); skills one level under `skills/` by Agent Skills; `mcp.json` and `hooks.json` with their failure boundaries; icon candidates and the directories of implemented extension namespaces as data |
+| `readCoreManifest`, `readCoreMcp`, `readCoreServer`, `readCoreHooks`, `checkCoreSkill` | the pure readers of each file, the upstream schemas (`schemas/1.1.0/`) ported to the kit's own checks with the text's extra rules |
+| `coreServerProcess`, `coreHandlerProcess`, `coreEnvironment`, `expandPlaceholders`, `resolveCwd` | what a host launches, given the resolved plugin root and data directory: `./` commands made absolute, `${PLUGIN_ROOT}`/`${PLUGIN_DATA}` expanded in one non-recursive pass, `cwd` contained, `PLUGIN_ROOT`/`PLUGIN_DATA` set last |
+| `checkDualPackage({ files })`, `checkDualManifests(core, claude)` | Extended §18.3.1: what of the shared manifest fields of a dual package loads in one form only, as `ValidationIssue`s; it adds to `validatePlugin`, which validates the Claude Code view alone (J1.1) |
+
+Problems are `PluginIssue`s as for a Claude Code plugin: an error for what is skipped or rejected,
+a warning for what is ignored (an unknown manifest field, a field outside Agent Skills, a transport
+the host does not support). The kit supports Agent Plugins 1.1.0 only; a canonical identifier of
+another release (1.0.0 included: its schemas differ) is recognised as core and rejected as
+unsupported. `readCoreHooks` also says where each kept handler sits in the file (`positions`), so an
+issue found later names the handler it means. Converting between the forms is below ("Converting between the forms").
+
+### Core packages in a session (done: `host/core-*`, `host/session-core-*`, `hooks/core`)
+
+```ts
+const host = createPluginHost({
+  plugins, // Claude Code plugins, as before
+  corePackages: [{ id: 'acme.tools@acme', package: loaded.loaded.package }],
+  ports,
+});
+const outcome = await session.dispatch('PostToolUse', facts, {
+  signal,
+  core: { exitCode: 0 }, // what only the host knows, for the core tool profiles
+});
+```
+
+A host gives core packages beside its plugins (`PluginHostOptions.corePackages`,
+`SessionOptions.corePackages`, `HostUpdate.corePackages`); Agent Plugins Extended §18.1 and §18.2
+decide how both forms share one session:
+
+| Part | What the session does |
+| --- | --- |
+| Identity, settings, policy | A core package is a plugin by its id (§18.1.5, J18.15): `enabledPlugins`, managed settings, name conflicts, duplicate ids and dependencies apply; `plugins` marks it `core: true`. Its `commands/`, `agents/`, `.mcp.json`, `hooks/hooks.json` and other Claude Code locations are ordinary files (§18.1.1 item 3). |
+| Skills | Plugin skills `/<name>:<directory>`, listed and invocable; only the six Agent Skills fields act; the body is never expanded and the arguments are appended as `ARGUMENTS: <arguments>` (§18.1.5 item 5, J18.14). Permission rules match `Skill(<name>:<skill>)`. |
+| MCP servers | `session.mcpServers()` resolves them under `plugin:<name>:<server>` (tools `mcp__plugin_<name>_<server>__<tool>`, J18.10): stdio with its command, `args`, `env` and `cwd` by core §7.2.1 and §9.2, `PLUGIN_ROOT`, `PLUGIN_DATA` and `CLAUDE_PROJECT_DIR` in `environment`, its directory in `core.cwd`; `streamable-http` as `http`, `sse` as `sse` (J18.11). The host starts them as any plugin server, with no `CLAUDE_PLUGIN_*` in the base (J18.12). |
+| Hooks | `session.dispatch` fires each occurrence once for both forms (§18.1.2): core `SessionStart` on `startup`, `clear` and `fork` only (J18.6); `UserPromptSubmit` for external submissions only, by origin (J18.7: `user`, `sdk`, `poll_event` and no `source` fire, `loop_wakeup` and `schedule_wakeup` do not, a `system` turn needs `core.turnOrigin` and the dispatch throws without it); `PostToolUse` also on a `PostToolUseFailure` that is not an interrupt (J18.8); `Stop` with `continuation_active` = `stop_hook_active` (J18.9). Each core handler gets exactly the core input, its tool profile by §18.2.7 (`shell`, `file.read`, `file.modify`, `web.fetch`, `web.search`, `mcp`), and runs as a fresh process through `CommandRunner` in exec form, the plugin root as working directory, the input on stdin, 30 s on `UserPromptSubmit` and 600 s otherwise (J18.5). |
+| Results | `PreToolUse`: Claude Code's handlers run and combine first, their `updatedInput` applies, then the core handlers see that input, even after a denial (J18.1); `deny` > `defer` > `ask` > `allow` > none, a core `allow` is an `allow` with no `updatedInput`, a Claude Code denial keeps its reason. `UserPromptSubmit`: either side's block blocks and drops every context; a core block's message is its reasons and `Original prompt:`. `SessionStart`, `PostToolUse`: every context of both sides, the core's capped and escaped as a hook's (the core sees the tool's own result, J18.2). `Stop`: one continuation if either side asks, unless a Claude Code `continue: false`; it carries every reason and the cap counts it once. A failed core handler (exit 2 and `{}` included) never blocks: a `<hook name> hook error: [<command args>]: <cause>` notice with a Claude Code exec-form hook's cause (J18.4, J18.22); several core reasons join by one newline, empty ones left out. `disableAllHooks` and `allowManagedHooksOnly` apply to core handlers as plugin hooks. |
+
+`SessionDispatchOptions.core` (`CoreCallFacts`) carries what Claude Code's input lacks: a shell
+command's `exitCode`, an MCP call's `mcpToolName` and raw `mcpResult`, the `readText` Claude was
+shown (the call's `tool_result` string), the `turnOrigin` of a prompt. Without a value, the profile
+that needs it is omitted where Claude Code's fields do not determine it (J18.16, J18.21): an MCP
+name only when the text after `mcp__` holds `__` once, an exit code `0` only on `PostToolUse` without
+`returnCodeInterpretation`, `Read` text never rebuilt from `file.content`.
+
+### Converting between the forms (done: `convert`)
+
+```ts
+import { convertPluginPackage } from '@localix-ai/agent-plugins/core';
+
+const converted = await convertPluginPackage({ files });
+// converted.to: the form of the files; converted.files: [{ path, text }] to write beside the
+// source (a dual package); converted.notes: what was not carried over, each with its path;
+// converted.runtime: 'node' when a hook adapter was written; converted.stopped: nothing to write.
+```
+
+Agent Plugins Extended §18.4. The kit writes nothing: every converter returns the files as data and
+a note per field, entry, file or behaviour it could not carry over (`not-converted`), carried over
+with a difference (`reported`) or that stops it (`stopped`, and `files` is then empty). The same
+input gives the same bytes; names, server keys and skill directories are never changed.
+
+| API | What it does |
+| --- | --- |
+| `coreToClaudeCode(pkg, options?)` | §18.4.2, pure over a `CorePackage`: `.claude-plugin/plugin.json` with the nine shared fields (an `author` without `name` and a `homepage` that is no URL left out and reported; a name the validator refuses stops, its warnings are reported); `skills/` shared, a body Claude Code would expand reported; `.mcp.json` by §18.3.3 (`./` commands as `${CLAUDE_PLUGIN_ROOT}/…`, `streamable-http` as `http`, `PLUGIN_ROOT`/`PLUGIN_DATA` added to a stdio `env`, J18.18; `cwd` and `extensions` reported; a server with another `${` not written); `hooks/hooks.json` with one exec-form adapter hook per handler (`SessionStart` with `startup\|clear\|fork`, `PostToolUse` also on `PostToolUseFailure`) and `hooks/run-core-handler.mjs`; extension data and directories reported |
+| `claudeCodeToCore(plugin, options?)` | §18.4.3, pure over a loaded `Plugin`: a name core §5.5 refuses stops; `plugin.json` with the canonical `$schema` and the nine fields, every other manifest field reported; skills convert from `skills/<name>/` only, a skill the core skips, one elsewhere, Claude Code fields and §4.8 body features reported; one `mcp.json` (`http` as `streamable-http`, `${CLAUDE_PLUGIN_ROOT}/x` as `./x`, `CLAUDE_PLUGIN_*` added to a stdio `env`; `ws`, bundles, `headersHelper`, `oauth`, `timeout`, `alwaysLoad`, `${VAR}`, `${user_config.*}` and what the core schema refuses not converted); `hooks.json` with the adapter `hooks/run-claude-code-handler.mjs` for `command` hooks on the five events whose matcher selects one profile or everything (the others, `if`, `async`, `asyncRewake`, `once`, `onFailure` not converted; `statusMessage` dropped and reported); commands, agents, output styles, themes, LSP servers, monitors, workflows, `bin/`, `settings.json` and mods (`options.mods`) reported |
+| `convertPluginPackage({ files, hookAdapter?, signal? })` | the whole conversion through the files port: the form first (a dual package is not converted), the source loaded (a core package with every extension namespace it carries, so each is reported; what the source loader skips reported), the pure converter, then the output judged before it is written: a file already there stops it, `claude plugin validate` errors stop a Claude Code output and a server or handler the core loader would skip stops a core output; Claude Code components a core package carried as ordinary files, which now load, are reported |
+
+`options.hookAdapter: false` reports every hook handler as not converted instead of writing an
+adapter. A hook adapter (§18.4.4) is a self-contained Node.js module the conversion writes; it needs
+`node` on `PATH` (`runtime`). It starts the source handler as its own form does, builds that form's
+input from the target's by the tables of §18.2 (tool profiles derived from Claude Code's call, J18.16),
+and translates results and exit statuses by meaning: a core failure is a Claude Code non-blocking
+error (exit 1), a Claude Code exit 2 the block of its event, and under the core it always exits 0 with
+one valid result or nothing. A converter recognises the adapters it wrote and unwraps them when it
+converts back, so a round trip gives the package it started from (plus the environment bridge).
 
 ## Ports (done)
 
@@ -1187,7 +1292,7 @@ The hook engine picks the handlers an event runs, runs them through ports, and m
 return. The first stage, selection, is pure over data: no port, no I/O.
 
 ```ts
-import { createHookRegistry, ifEvaluatorFor, selectHandlers } from '@rsaryev/llx-plugin/hooks';
+import { createHookRegistry, ifEvaluatorFor, selectHandlers } from '@localix-ai/agent-plugins/hooks';
 
 const registry = createHookRegistry(entries); // RegisteredHandler[]: event, matcher, official handler, source
 const { selected, issues, monitor } = selectHandlers(registry, {
@@ -1340,11 +1445,20 @@ Outcomes that need the host's facts:
   `UserPromptSubmit` hook makes `HookOutcome.interrupted`: the prompt did not go ahead
   (`proceed: false`) and `restoreInput` says whether its text returns to the input (it does not when
   a hook blocked the prompt at the same moment).
-- **The observer.** `HookObserver.finished` reports each run's `status` and, for a command hook whose
-  process ran to the end, its `exitCode` (the debug log's "hook ran with its exit code").
+- **The observer.** `HookObserver.finished` reports each run's `status` and its `RunFacts` (also in
+  `outcome.runs`): the value the matcher was tested against, the handler's label, the plugin, the
+  `ending` (`finished`, `timed-out`, `cancelled`, `background`, `failed-to-start`, `skipped`), the
+  `exitCode` of a command whose process ran to the end, the `timeoutMs` it reached and the
+  `durationMs` by the engine's `clock`. The debug line is the host's to write from them (Agent
+  Plugins Extended §7.4.12). The debug lines the docs quote for reading output (`Hook output does not
+  start with {, treating as plain text`, `Hook JSON output had unrecognized keys`) are warnings in
+  `outcome.issues`; a background delivery's dropped field is a warning in its `issues`.
+- **HIPAA.** `HookEngineOptions.hipaa` (the host's `hipaa` option) removes the Anthropic
+  credentials from every hook's environment, as `subprocessEnvironment({ hipaa })` does for the
+  host's own subprocesses.
 - **A blocked prompt.** The block message of `UserPromptSubmit` ends with `Original prompt:` and the
-  submitted text unless a hook printed `suppressOriginalPrompt: true` (a decision block and an exit 2
-  alike). The host still writes the text wherever it keeps its transcript.
+  submitted text unless a hook that itself blocked printed `suppressOriginalPrompt: true` (a decision
+  block and an exit 2 alike; a hook that let the prompt through has no say). The host still writes the text wherever it keeps its transcript.
 - **The Stop cap.** The engine counts consecutive holds of a `Stop` (and each subagent's
   `SubagentStop`): an exit 2, a `decision: "block"` or an `additionalContext` that keeps Claude
   working. After `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` of them (default 8, `0` for none) the next hold is
@@ -1361,8 +1475,9 @@ Outcomes that need the host's facts:
 
 - **A worktree path.** A `WorktreeCreate` command hook cannot return JSON: its stdout is the path, and
   `HookOutcome.stdout` holds it raw. `resolveWorktreePath(outcome, { ranIn, repositoryRoot?, isSymlink? })`
-  reads it as the docs do (the last non-empty line, ANSI escapes stripped by `stripAnsi`; an HTTP hook's
-  `effects.worktreePath` wins when both answer) and returns `{ path }` or `{ failure }`: a hook that
+  reads it as the docs do (the last non-empty line, ANSI escapes stripped by `stripAnsi`; of several hooks
+  the last answer in handler order, an HTTP hook's `worktreePath` and a command line alike, which
+  the merge puts in `effects.worktreePath`) and returns `{ path }` or `{ failure }`: a hook that
   failed or printed no path, an absolute path with a `.` or `..` segment and a path through a symlink
   below `repositoryRoot` (the host's `isSymlink` probe; the kit reads no file system) fail, naming the
   component; a relative path is resolved against `ranIn` with its `.` and `..` collapsed. That the
@@ -1468,7 +1583,7 @@ plugin with this id was given before: this one is not loaded`. The host reads
 `strictPluginOnlyCustomization` and the hook gates once per state generation (each `host.update`).
 
 ```ts
-import { createPluginHost, loadPlugin } from '@rsaryev/llx-plugin';
+import { createPluginHost, loadPlugin } from '@localix-ai/agent-plugins';
 
 const { plugin } = await loadPlugin({ files });
 const host = createPluginHost({
@@ -1494,7 +1609,8 @@ createPluginHost(options: PluginHostOptions): PluginHost;
 //   windows?: boolean; shells?: { bash; powershell }; envFiles?: EnvFileStore;
 //   extraScopeFolders?: readonly string[]; shellPaths?: 'environment-reference' | 'pasted';
 //   shellArguments?: 'pasted' | 'environment-reference' }
-// shellPaths (default 'environment-reference'): how the path variables are written into a string
+// shellPaths (default 'environment-reference', but 'pasted' for a monitor command, whose paths are
+//   never exported, J9.17): how the path variables are written into a string
 //   a shell parses where Claude Code pastes them (a monitor command, a headersHelper, a skill's
 //   `!` command, where
 //   `${CLAUDE_SKILL_DIR}` counts too): as the braced reference `${CLAUDE_PLUGIN_ROOT}` (PowerShell
@@ -1659,7 +1775,7 @@ The session:
 | `runScoped(turn, run)` | `withTurn` for one run: `run` gets the view of the turn, and the hooks added with `lifetime: 'turn'` through it are dropped when `run` settles (see "Scoped hooks"). |
 | `addHooks(prefix, hooks, source, options?)`, `removeHooks(prefix)` | Hooks of a run, an agent or a skill added to and removed from the session; `addHooks` returns `{ remove() }` (see "Scoped hooks"). |
 | `hasHooks(event)` | Whether a handler that passes this turn's gates would run for the event. |
-| `hookEntries()` | The `RegisteredHandler`s that would run in this turn, in registry order (plugins, settings files, then what `addHooks` and skills added): `id`, `event`, `matcher`, the official `handler`, `source` (`kind`, `label`, `scope`, `pluginName`, `managed`) and `pluginId`. For a read-only `/hooks` view (hooks.md, "The `/hooks` menu"); a handler the gates silence, of a type its event does not support, or a consumed `once` one is not listed, and a handler written in several settings files is listed once. Also `runnableHandlers(entries, session)` over any registry. |
+| `hookEntries()` | The `RegisteredHandler`s that would run in this turn, in registry order (settings files, plugins, then what `addHooks` and skills added): `id`, `event`, `matcher`, the official `handler`, `source` (`kind`, `label`, `scope`, `pluginName`, `managed`) and `pluginId`. For a read-only `/hooks` view (hooks.md, "The `/hooks` menu"); a handler the gates silence, of a type its event does not support, or a consumed `once` one is not listed, and a handler written in several settings files is listed once. Also `runnableHandlers(entries, session)` over any registry. |
 | `fileChangedWatchList()` | The literal names of the `FileChanged` matchers, then the dynamic `watchPaths` of the last SessionStart, CwdChanged or FileChanged output that returned the field. |
 | `takeBackground()` | The background deliveries that settled since the last call, as `{ additionalContext[], systemMessages[], wake? }` (see "Background hooks"). |
 | `onBackground(listener)` | Calls `listener` with each background delivery as it settles (a `wake` included) and returns the function that stops it; it takes nothing from the queue. |
@@ -1779,7 +1895,9 @@ execute"). `wake` is the stderr (stdout when empty) of an `asyncRewake` hook tha
 opens a turn with it, which is why it is apart from the context; several wakes join with a newline.
 `takeBackground()` returns what settled since its last call, in the order it settled, and forgets
 it; it never waits, and a hook that has not ended appears in a later call. A background process the
-runner lost delivers nothing.
+runner lost delivers nothing. An async `SessionStart` hook's text that repeats what the session last
+handed on from it arrives emptied, unless a synchronous `SessionStart` hook added text since; the
+first run after a `compact` or `clear` start delivers again (hooks.md, "Limitations").
 
 `session.onBackground((delivered, source) => ...)` is the push side, for a host that is idle: it calls
 the listener with the `SettledDeliveries` of each hook that delivered something and a `BackgroundSource`
@@ -1914,8 +2032,8 @@ reload adds later run without a new query; `{ events }` narrows the events regis
 
 ```ts
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { createPluginHost } from '@rsaryev/llx-plugin';
-import { sdkHooks } from '@rsaryev/llx-plugin/sdk';
+import { createPluginHost } from '@localix-ai/agent-plugins';
+import { sdkHooks } from '@localix-ai/agent-plugins/sdk';
 
 const session = host.openSession({ sessionId, cwd, permissionMode: 'default', transcriptPath });
 for await (const message of query({ prompt, options: { cwd, hooks: sdkHooks(session) } })) {
@@ -1941,7 +2059,7 @@ Claude Code's rule syntax (permissions.md), used by the `if` field of hooks, `al
 skills and commands, and a host's own permission system. Pure functions over data, no ports.
 
 ```ts
-import { evaluateRules, parseRule, ruleIssues } from '@rsaryev/llx-plugin/rules';
+import { evaluateRules, parseRule, ruleIssues } from '@localix-ai/agent-plugins/rules';
 
 const { rule, issues } = parseRule('Agent(model:opus)', { behavior: 'deny', source: { kind: 'user' } });
 const verdict = evaluateRules(rules, { toolName: 'Agent', input: { model: 'opus' } }, context);
@@ -1956,6 +2074,7 @@ const verdict = evaluateRules(rules, { toolName: 'Agent', input: { model: 'opus'
 | `matchRule(rule, call, context)` | done    | bare rules, tool-name globs and `Tool(param:value)`; other specifiers go to the matcher of the tool's rule format |
 | `evaluateRules(rules, call, context)` | done | deny, then ask, then allow; the first match wins and specificity never reorders |
 | `ruleIssues(rules, knownTools)`  | done    | the matches-no-tool startup warning (typos and labels such as `Stop Task`)   |
+| `ruleWarnings(rules, knownTools)` | done | the same warnings as values (`RuleWarning`: rule as written, behaviour, source, kind `matches no tool` or `never matches`, and for the second the `Edit(<path>)` or `Read(<path>)` to use instead): a `Write`, `NotebookEdit`, `MultiEdit` or `Glob` path rule from any source, except a `Glob` allow rule of `--allowedTools`; `ruleIssues` gives both in the stderr wording of a text run |
 | Bash and PowerShell command matchers | done | `Bash(npm run *)`, `Monitor(...)` and `PowerShell(...)`: wildcards, compound commands, wrappers, exec wrappers and `find` actions |
 | `evaluateIf(ifRule, toolName, input, context)` | done | whether a hook `if` runs: `{ runs, issues }`; the Bash table of hooks.md, "runs when it cannot tell", a `Bash(...)` rule also answering a Monitor call, and issues reported at `hooks.if`. Through the hook engine (`ifEvaluatorFor`, `dispatch`, `session.dispatch`, `session.checkTool`) the issues arrive in `HookOutcome.issues` at `<handler path>.if`, whether the handler runs or not; a host that calls `evaluateIf` itself reports `issues` itself |
 | `splitCommand`, `stripWrappers`, `matchBashPattern`, `requiresPromptDespitePrefixRule` | done | the pieces of the Bash matcher, for a host that reads commands itself; one reading per line (`CommandScan`) covers comments, here-documents, `$'…'`, line continuations, redirections glued to words (`x>/f`, `2>&1>/f`, `{fd}>`) and function definitions |
@@ -2049,7 +2168,10 @@ allow, read-only calls, then the mode's baseline: `default` asks, `acceptEdits` 
 commands, or runs everything in an interactive session with bypass permissions available), `auto`
 approves reads and in-scope edits and returns `classify` for the rest, `dontAsk` turns every prompt
 into a denial, `bypassPermissions` approves what is left. A mod can block, and can approve what its
-reach allows (`ModOutcome.policyEnforced` is managed settings or a Team or Enterprise login).
+reach allows (`ModOutcome.policyEnforced` is managed settings or a Team or Enterprise login;
+`ModOutcome.overridesDenyRules` is `allowModsToOverrideDenyRules`, which under policy lets the
+approval past the rules, the read block and hooks outside managed settings; a hook outcome marked
+`PreToolUseHookOutcome.managed` and the permission callback stay, J14.14).
 
 The tool catalog (`src/rules/tools`) is the one place that says which rule format a tool takes
 (`ruleFormatOf` reads it) and whether it prompts in Manual mode. What the host's model, provider and
@@ -2059,8 +2181,7 @@ surface offer (the task tools by model, `EndConversation`'s surface and provider
 
 What the kit does not decide is the classifier's judgement of an action in auto mode: `decide`
 returns `classify` and the host's `PermissionClassifier` answers. Also not modelled: the PowerShell
-read-only set, the `Remove-Item` and `cmd` removal denies (an `acceptEdits` `Remove-Item` that the
-check would deny is only not approved), the `Monitor` removal check, the mounted-drive `rm` prompt,
+read-only set, the `Monitor` removal check, the mounted-drive `rm` prompt,
 the first read outside
 the working directories in auto mode, the `LSP` tool under the read block, and the time limits of the
 critical-path prompt. `acceptEdits` approves the `Set-Content`, `Add-Content`, `Clear-Content` and
@@ -2078,7 +2199,7 @@ never runs a module's source: the host evaluates it in an isolate it chooses thr
 `ModRuntime` port, and the kit runs the hooks it hands back through one chain per event.
 
 ```ts
-import { createModChain, ENGINE_ORIGIN } from '@rsaryev/llx-plugin/mods';
+import { createModChain, ENGINE_ORIGIN } from '@localix-ai/agent-plugins/mods';
 
 const chain = createModChain({ clock });
 const issues = chain.register({ name: 'my-mod', api }, 'user', hooks); // [] or why the module is refused
@@ -2121,7 +2242,7 @@ const result = await chain.dispatch('tool.call', event, {
 | `engineStackIssue(phase, file, message)`, `StackPhase` | done | the documented reasons a host's runtime returns when its engine runs out of stack: `the engine ran out of stack linking the file and its imports` (`link`) and `the engine ran out of stack loading the file (code nested too deep): <message>` (`load`, which the loader also uses for a runtime that throws a stack overflow) |
 | `HookReport.kind`, `SkipKind`, `DispatchOptions.before` | done | a skipped hook's report carries `throw`, `timeout`, `wrong-shape` or `linger`, host-side only (a mod's `next.error.kind` is `throw` or `timeout`, with `message` absent for a timeout unless its last `next()` rejected, and `budget` the handler's 1000 ms, claude-code/index.d.ts:5447; a hook skipped for re-entry is neither reported nor handed to its `.catch` handler, declarations 2.1.321 and oracle 2.1.322) (a hook still running `HookBudget.lingerMs`, 5000 ms, after its `next.signal` aborted: reported once, `<mod>: <event> hook lingering: still running 5000 ms after next.signal aborted`, the chain having gone on already); a hook that does not catch a rejected `next(e)` is reported `next(e) rejected and the hook did not catch it: <error>`, not as its own throw; `createModsHost` gives `report` the first line of each mod, event and kind until the mod reloads and the debug log every occurrence (the chain itself reports each one). `before(e)` runs ahead of the first mod's hook (a host's `fire` and `fireStream` take it in their options beside `core`): managed `PreToolUse` hooks go there, a result other than `undefined` answers the event with no hook run, and the other settings hooks are the `core` at the end |
 | `decideModLoad`, `orderMods`, `hooksModulesOff`, `parsePluginDirs`, `sideloadRefusal`, `modOptions` | done | policy over plain settings data: `disableAllHooks`, `allowManagedHooksOnly`, `disableSideloadFlags`, `prependPlugins`, `appendPlugins`, `pluginConfigs`, `CLAUDE_CODE_PLUGIN_DIRS` and `_DIR_WATCH`, the built-in guard `sec-default@builtin` and its two options |
-| `scanHooksModule(source, file, options)`, `validateMod(input, options)`, `activeModsLine(mods)` | done | the static scan (events handled, `$` calls, env and state use, the 2,000-scope limit) behind `plugin.register`'s `e.uses` and `claude plugin validate`; the entry exports `register` in any ES form of a top-level function (`export function register`, `export const register`, an export list `export { register }` or `export { draw as register }`, which a bundler emits; a re-export from another file is not read); the `/plugin` line `1 mod active · first-mod`; `ModScan.surfaceModules` lists the surface modules the module's `Client` elements name, written `Client({ ... })` or as JSX, which compiles to `h(Client, { ... })` (claude-code/index.d.ts:16450), as paths from the plugin root, for the host to bundle: `module` must be a string literal (a template without substitution counts), relative and inside the plugin folder, else an error; `validateMod` prints them as `surface modules:` and fails a module that is not there (oracle 2.1.322); `ModScan.surfaceModuleSpans` gives each as `{ module, start, end }`, the offsets of its string literal in the source (quotes included), for a host that rewrites the path where it bundles |
+| `scanHooksModule(source, file, options)`, `validateMod(input, options)`, `activeModsLine(mods)` | done | the static scan (events handled, `$` calls, env and state use, the 2,000-scope limit) behind `plugin.register`'s `e.uses` and `claude plugin validate`; the entry exports `register` in any ES form of a top-level function (`export function register`, `export const register`, an export list `export { register }` or `export { draw as register }`, which a bundler emits; a re-export from another file is not read); the `/plugin` line `1 mod active · first-mod`; `ModScan.surfaceModules` lists the surface modules the module's `Client` elements name, written `Client({ ... })` or as JSX, which compiles to `h(Client, { ... })` (claude-code/index.d.ts:16450), as paths from the plugin root, for the host to bundle: `module` must be a string literal (a template without substitution counts), relative and inside the plugin folder, else an error; `validateMod` prints them as `surface modules:` and fails a module that is not there (oracle 2.1.322); `ModScan.surfaceModuleSpans` gives each as `{ module, start, end }`, the offsets of its string literal in the source (quotes included), for a host that rewrites the path where it bundles; a refusal of the analysis's rules (Agent Plugins Extended §10.4.2) is printed at `modules.<entry>` as `<plugin>: <absolute file>:<line>: <message>; $ is always spelled ...`, `<plugin>` the last segment of `ValidateInput.root` (the plugin directory's absolute path, `target` when absent), and each `ModScanIssue` carries its `rule` text and `line` |
 | `MOD_SCAN_ISSUE_CODES`, `ModScanIssue`, `ModScanIssueCode` | done | every `ModScan.issues` item carries a `code` from this one list (`syntax`, `too-deep`, `no-register`, `dynamic-import`, `require`, `import-outside`, `import-package`, `state-unreadable`, `state-undeclared`, `client-props`, `client-module`, `event-not-literal`, `unknown-event`, `missing-filter`, `hook-unreadable`, `on-shadowed`, `dollar-escapes`, `dollar-as-value`; each described in `src/mods/load/scan/issue-codes.ts`), so a host picks issues by `code` (a `Client` refusal is `client-props` or `client-module`) rather than by matching `message`, whose words may change |
 | `whereModsRun(where)`, `modsVersionProblem(app, version)`, `versionAtLeast`, `ModsPolicyInput.where`, `ModCandidate.reachesCloudSession` | done | overview.md's table of where mods run: for the terminal, the Desktop app, a WSL session, the VS Code chat panel (2.1.299, or 2.1.304 without feature-flag fetching), `claude -p`, Remote Control and a cloud session, whether hooks run and whether the drawing appears; `decideModLoad` refuses an installed plugin in a WSL session and, in the cloud, one that does not reach the session; the first versions that load mods (terminal 2.1.287, Desktop 2.1.286) |
 | `modLineChannel(session, kind)`, `changeNotice(name, outcome)`, `writtenModRefusal(policy, session)`, `createHotReloadGate(state)` | done | where the one line about a mod that did not load is read (transcript, stderr of `claude -p --plugin-dir`, debug log; a refusal by another mod is the debug log of a `claude -p` run, and the transcript of an interactive session that loads a plugin directory or hot-reloads); the transcript line of a mod Claude wrote whose change did not load (`This mod's change didn't load, so the earlier version is still running: <reason>.` or `This mod didn't load, and the earlier version is no longer running: <reason>.`); why a mod Claude wrote cannot load (no one to approve, untrusted workspace, mods disabled); the question of enabling hot reloading, off for good after three questions that end unanswered |
@@ -2287,7 +2408,7 @@ at the first comparison and now:
 | `claude-code/testing`       | all but `describe` | all      |
 | element props               | `Box.flexBasis` extra, `Text.dir` missing | as declared |
 | `$` calls checked           | names only    | 88 of 88: parameters, the op event's input, the result |
-| differences                 | 33 lines      | 33 lines, each judged (D2, D4, D5, D6, D9) |
+| differences                 | 33 lines      | 31 lines, each judged (D2, D5, D9) |
 
 What is compared, for each of the 88 declared calls of `$` that fire an op event
 (`tests/support/mods-kit-calls.ts`): the arguments the kit is called with (`CALL_SAMPLES`) against
@@ -2309,8 +2430,8 @@ a mod of managed settings, tier `prepend` or `append`; default `{ kind: 'none', 
 reference page's table (`MODS_API_REFERENCE`) and the declared members after it
 (`DECLARED_API_MEMBERS`); `ENGINE_EVENT_NAMES` is `MOD_EVENT_NAMES` and `DECLARED_EVENT_NAMES`.
 
-The judged differences: the kit's op event `ui.ask` (D2), the mobile `Client` (D4), five tools of
-the SDK the declarations leave out (D5), `to` on a `telemetry.mark` event (D6) and the facts of an
+The judged differences: the kit's op event `ui.ask` (D2), five tools of the SDK the declarations
+leave out (D5) and the facts of an
 op event the engine fills that a host gives (D9: the window facts of `ui.scroll` and `ui.focus`,
 the messages of `session.compact`, the row's `uuid` of `session.append`, the facts of
 `prompt.compose`, `tool_use_id` of `tool.call`, the facts of `agent.spawn`). The kit now fires the
@@ -2324,8 +2445,8 @@ each source it has; the kit never knows a file path, an MDM profile or a server-
 choosing among managed sources (`managedSourcesBehavior`, `policyHelper`) stays the host's.
 
 ```ts
-import { createPolicyView, readSettingsLayer } from '@rsaryev/llx-plugin';
-import { loadSettingsLayers } from '@rsaryev/llx-plugin/settings';
+import { createPolicyView, readSettingsLayer } from '@localix-ai/agent-plugins';
+import { loadSettingsLayers } from '@localix-ai/agent-plugins/settings';
 
 const { layer, issues } = readSettingsLayer('managed', JSON.parse(text));
 const view = createPolicyView([layer, ...other]);
@@ -2382,10 +2503,10 @@ view.get('hooks') ?? {}; // every file's hooks, managed ones never removable
 | `parentSettingsOf(composition, parent)`, `applyParentRules(view, context)`, `ParentSettingsContext` | done | the host's parent settings dropped when an admin source is present and `parentSettingsBehavior` is not `"merge"`, else cut down by the managed values that block them; `applyParentRules` runs the same rule over a view the host built itself (`hasManagedSettings`, `parentMerge`). A removed key no longer leaves an empty block |
 | `readPolicyHelper(value)`, `helperPathFault(path, flavor)`, `readHelperOutput(stdout, stderr)`, `runPolicyHelper(input)`, `withHelperSettings(composition, emitted)` | done | `policyHelper`: the key's rules, the envelope (1 MiB cap, `managedSettings`), one run over `HelperHost` (`CommandRunner`, `HelperFileProbe`, `Clock`) with its failures and their cost at startup, after a fetch removed server-managed settings, and on refresh |
 | `managedFilePaths(platform)`, `MECHANISM_TRAITS`, `registryPath`, `PLIST_DOMAIN`, `symlinkVerdict`, `cacheAfterFetch`, `editOfManagedSource`, `rereadDue` | done | the delivery mechanisms as data: paths per OS, the plist domain and registry value, when each is read again, a symlinked file, the server-managed cache and what a developer's edit does |
-| `sourcesLoadedBy(surface, settingSources?)`, `reachOfPlace(place, facts)`, `reachesRunningSession(mechanism, key?)`, `serverChangeTiming(change)`, `startupFetchOf(facts)`, `minimumVersionEffect(facts)`, `fetchesRemoteSettings(facts)`, `helperRunsNow(plan, fetch)` | done | where and when a policy applies: surfaces, cloud, Claude Tag and Cowork sessions, running sessions, changes that need approval, the startup fetch |
+| `sourcesLoadedBy(surface, settingSources?)`, `reachOfPlace(place, facts)`, `reachesRunningSession(mechanism, key?)`, `serverChangeTiming(change)`, `startupFetchOf(facts)`, `startupFetchFailure(facts)`, `minimumVersionEffect(facts)`, `fetchesRemoteSettings(facts)`, `helperRunsNow(plan, fetch)` | done | where and when a policy applies: surfaces, cloud, Claude Tag and Cowork sessions, running sessions, changes that need approval, the startup fetch |
 | `SettingsSources.managed(signal)`, `composeManagedReads(reads, options)` | done | a host that says what every managed source holds gets the managed tier composed by `loadSettingsLayers`; `resolvePolicy({ managed })` reads `hasManagedSettings` and `parentMerge` from the composition |
 | `readSettingsLayer(scope, raw)` for a managed source, `PolicyLayer.invalid`, `gatewaySignInRefused(layer)` | done | the managed-only and fail-closed keys (managed-settings.md): the 16 keys beyond the plugin areas have rows (`allowAllClaudeAiMcps`, `allowManagedMcpServersOnly`, `allowedMcpServers`, `allowedProviders`, `availableModelsMatch`, `deniedMcpServers`, `deniedModels`, `disableSideloadFlags`, `forceLoginOrgUUID`, `forceRemoteSettingsRefresh`, `gatewayInternalNetworks`, `managedMcpServers`, `managedSourcesBehavior`, `parentSettingsBehavior`, `policyHelper`, `wslInheritsWindowsSettings`); a managed-only key in a user, project, local or `--settings` file is dropped with a warning; in the policy tier an unreadable value reads as the table's fallback (an empty allowlist, `exact`, `refuse`, `true`) with `"<key>" was present but invalid; it is treated as ...`; a fallback no value expresses (`gatewayInternalNetworks`, an unrecognized `crossSessionInbound` in a file) is recorded in `PolicyLayer.invalid`, and `gatewaySignInRefused` says `/login` refuses every new gateway sign-in; the `sandbox`, `permissions` and `autoMode` blocks are repaired per field, `sandbox.credentials` entry by entry |
-| `sideloadVerdict(view, facts)`, `midSessionMcpUpdates(view, { cloud }, servers)`, `addPluginsRefusal(view)`, `SIDELOAD_FLAGS` | done | `disableSideloadFlags`: the errors startup exits with for `--plugin-dir`, `--plugin-url`, `--agents`, `--mcp-config` (not when all its servers are `type: "sdk"`) and `CLAUDE_CODE_PLUGIN_DIRS`, the servers a cloud session starts without, and the `addPlugins` refusal |
+| `sideloadVerdict(view, facts)`, `midSessionMcpUpdates(view, { cloud }, servers)`, `addPluginsRefusal(view)`, `SIDELOAD_FLAGS` | done | `disableSideloadFlags`: the errors startup exits with for `--plugin-dir`, `--plugin-url`, `--agents`, `--mcp-config` (not when all its servers are `type: "sdk"`), the Agent SDK `plugins` option and `CLAUDE_CODE_PLUGIN_DIRS`, one line each and then the docs' closing line, the servers a cloud session starts without, and the `addPlugins` refusal |
 
 The policy helper is not run by `loadSettingsLayers`: the host wires it, in this order. Compose the
 sources with `composeManagedReads(reads, { parentRestrictive })` and read `composition.helper` (the
@@ -2412,7 +2533,7 @@ import {
   rankMcpServers,
   readProjectToggles,
   applyToggles,
-} from '@rsaryev/llx-plugin/settings';
+} from '@localix-ai/agent-plugins/settings';
 
 const user = claudeJsonServers(claudeJson, '/work/app');          // user + local scope
 const file = projectFileServers(mcpJson);                          // project scope
@@ -2458,9 +2579,9 @@ elsewhere the value or entry is dropped. The aliases `allowedMarketplaces` and
 ### Permission settings (done: `settings/permissions`, `settings/locations`, `host/permission-session`)
 
 ```ts
-import { resolvePolicy } from '@rsaryev/llx-plugin/settings';
-import { startPermissions } from '@rsaryev/llx-plugin';
-import { decide } from '@rsaryev/llx-plugin';
+import { resolvePolicy } from '@localix-ai/agent-plugins/settings';
+import { startPermissions } from '@localix-ai/agent-plugins';
+import { decide } from '@localix-ai/agent-plugins';
 
 const { permissions } = resolvePolicy({ layers, context });
 permissions.rules; // [{ behavior: 'deny', text: 'Read(./.env)', scope: 'managed' }, ...]
@@ -2514,8 +2635,14 @@ the question and plan tools, MCP elicitation and auto mode's fallback through `a
 `organization-ask`) and `preapprovedFetchDomain` (WebFetch's built-in set of documentation domains, which
 the host knows), and `approvalMemory(tool, { rulesLocked })` says what "Yes, and don't ask again" remembers per tool type.
 The cross-session messaging safeguards of the bypass section are not modelled: the kit sends no message.
-The read of another organization's public `Artifact`, which `bypassPermissions` does not approve ("Claude can't
-read one"), is not modelled either: the artifact's organization is not in the call, so `decide` allows it in that mode.
+A `Remove-Item` on a system path or a wildcard, and `cmd` `rd`, `rmdir`, `del` and `erase` on a system
+path, are denied in every mode (reason `powershell-removal`; `powershellCmdRemovalDenyOff` turns off the
+`cmd` case). The read of another organization's public `Artifact` asks in every mode and is denied where
+nobody is asked, `bypassPermissions` included (reason `foreign-artifact`): the host says which artifacts
+those are (`foreignArtifact(url)`). In auto mode a command with per-command allowed domains
+(`PreparedCall.allowedDomains`) goes to the classifier whatever the allow rules say. The write block's
+texts are `writeBlockRefusal` and `writeBlockShortRefusal`, and `permissionUpdatesInEffect` drops a
+hook's `setMode` to `bypassPermissions` that the session cannot take and keeps one it can in memory.
 
 `startPermissions` also takes `interactive` (default: a `terminal` surface) for a host with its own approval
 interface, which is not a terminal and must not claim to be one; it fills `classifyAllShell` (in auto mode every
@@ -2528,7 +2655,7 @@ under `allowManagedPermissionRulesOnly` nothing is offered or saved.
 ### The `env` block (done: `settings/env`)
 
 ```ts
-import { applySettingsEnv, resolveSettingsEnv } from '@rsaryev/llx-plugin/settings';
+import { applySettingsEnv, resolveSettingsEnv } from '@localix-ai/agent-plugins/settings';
 
 const { values, ignored } = resolveSettingsEnv(view.layers, {
   isFolderTrusted: (scope) => trust[scope], // the project and local files wait for trust
@@ -2552,7 +2679,7 @@ variable is dropped. A `launch-only` variable (`CLAUDE_CODE_RESTRICTED`, the `rm
 ## Sub-agents (done: the tools a subagent gets)
 
 ```ts
-import { resolveSubagentTools } from '@rsaryev/llx-plugin/agents';
+import { resolveSubagentTools } from '@localix-ai/agent-plugins/agents';
 
 const outcome = resolveSubagentTools(
   { name: agent.name, tools: agent.definition.tools, disallowedTools: agent.definition.disallowedTools },
@@ -2577,7 +2704,7 @@ host's to put in the pool.
 ### Sub-agents: the permission mode
 
 ```ts
-import { baselineDecision, resolveSubagentPermissionMode } from '@rsaryev/llx-plugin/agents';
+import { baselineDecision, resolveSubagentPermissionMode } from '@localix-ai/agent-plugins/agents';
 
 const { mode, denyInsteadOfAsk } = resolveSubagentPermissionMode({
   main: 'default',                              // the main conversation's mode
@@ -2601,7 +2728,7 @@ function.
 ### Sub-agents: frontmatter hooks
 
 ```ts
-import { selectAgentHooks } from '@rsaryev/llx-plugin/agents';
+import { selectAgentHooks } from '@localix-ai/agent-plugins/agents';
 
 const { groups, skipped } = selectAgentHooks(agent, {
   run: 'subagent',            // or 'main-session' for `--agent` and the `agent` setting
@@ -2635,7 +2762,7 @@ import {
   runsInBackground,
   claudeMdScopes,
   worktreeDisposition,
-} from '@rsaryev/llx-plugin/agents';
+} from '@localix-ai/agent-plugins/agents';
 
 const mainModel = 'claude-opus-5-5[1m]';
 const { model } = resolveSubagentModel({
@@ -2669,7 +2796,7 @@ requests and creating the worktree are the host's.
 ### Sub-agents: skills, MCP servers and memory
 
 ```ts
-import { planPreloadedSkills, resolveAgentMcpServers, planAgentMemory } from '@rsaryev/llx-plugin/agents';
+import { planPreloadedSkills, resolveAgentMcpServers, planAgentMemory } from '@localix-ai/agent-plugins/agents';
 
 const skills = planPreloadedSkills(agent.definition.skills, { has, isModelInvocable });
 // { load: ['api-conventions'], skipped: [{ name: 'verify', reason: 'not-model-invocable' }] }
@@ -2710,8 +2837,8 @@ import {
   agentMentions,
   selectSessionAgent,
   spawnableAgents,
-} from '@rsaryev/llx-plugin/agents';
-import { readFlagAgents } from '@rsaryev/llx-plugin/format';
+} from '@localix-ai/agent-plugins/agents';
+import { readFlagAgents } from '@localix-ai/agent-plugins/format';
 
 const scanned = await scanAgents({ folders, request: { home, cwd, addedDirectories } });
 const catalog = resolveAgents({
@@ -2754,7 +2881,7 @@ launch decisions (model, effort, tools) and the memory of an agent stay in the s
 
 ## Testing kit (done: `testing`)
 
-`@rsaryev/llx-plugin/testing`: one in-memory fake per port, so a host tests its integration
+`@localix-ai/agent-plugins/testing`: one in-memory fake per port, so a host tests its integration
 without a disk, a shell or a network. The scripted ones answer in order, record every call and throw
 when the script is spent, so a test never passes by accident.
 
@@ -2762,7 +2889,7 @@ when the script is spent, so a test never passes by accident.
 import {
   fakeEnvironment, fakeMcp, fakeModel, fixedClock, locations,
   folderScan, memoryFiles, memoryScratch, recordingHttp, scriptedRunner,
-} from '@rsaryev/llx-plugin/testing';
+} from '@localix-ai/agent-plugins/testing';
 
 const files = memoryFiles({ '.claude-plugin/plugin.json': '{"name":"demo"}' }); // PluginFiles
 const runner = scriptedRunner({ stdout: 'ok' }, { exitCode: 2, stderr: 'no' }); // CommandRunner, `calls`
@@ -2788,15 +2915,15 @@ throws.
 `FILE_SCOPES` (`user`, `project`, `local`, `managed`: the settings files a host reads and writes) and
 `isFileScope(scope)`, its guard (`FileScope`), are exported from `./settings`.
 
-resolveEnv resolves settings environment values with scope, trust and launch-environment rules; envChange and envAfterCd model later application without unsetting removed variables. General readers cover agent view, theme, teammate mode, worktree settings, processWrapper argv parsing, command-line hook gates and plugin defaults. The host supplies the startup-safe variable classification and performs process execution.
+`resolveEnv` resolves settings environment values with scope, trust and launch-environment rules; `envChange` and `envAfterCd` model later application without unsetting removed variables. General readers cover agent view, theme, teammate mode, worktree settings, `processWrapper` argv parsing, command-line hook gates and plugin defaults. The host supplies the startup-safe variable classification and performs process execution.
 
 ## Agent runtime policy
 
-Split subagent context by responsibility: persistent memory, preloaded skills and scoped MCP servers; add folder trust diagnostics and model allowlist substitution. The host still owns provider resolution, connections and prompt assembly.
+Subagent context is split by responsibility: persistent memory, preloaded skills and scoped MCP servers, with folder trust diagnostics and model allowlist substitution. The host still owns provider resolution, connections and prompt assembly.
 
 ## Hook classifier annotations and auto-mode rewrites
 
-Hook output exposes classifierContext with its shared 2,000-character cap and classifierTrust; notes for unrecorded read-only lookups are discarded. reviewHookRewrite decides whether a changed call applies, is denied, or drops a further rewrite on a repeat. afterHandbackDenial counts the three retry notices; the host delivers them.
+Hook output exposes `classifierContext` with its shared 2,000-character cap and `classifierTrust`; notes for unrecorded read-only lookups are discarded. `reviewHookRewrite` decides whether a changed call applies, is denied, or drops a further rewrite on a repeat. `afterHandbackDenial` counts the three retry notices; the host delivers them.
 
 ### Live content across turns and updates
 

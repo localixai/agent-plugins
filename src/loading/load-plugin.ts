@@ -16,6 +16,7 @@ import type { LoadedPlugin, Plugin } from './plugin-model.ts';
 import { readJson } from '../format/read-json.ts';
 import type { ComponentValues, ReaderContext } from './reader-types.ts';
 import { commandDirectoryDebug } from './command-debug.ts';
+import { manifestGate } from './manifest-gate.ts';
 
 export interface LoadPluginInput {
   /** Read access to the plugin folder: its root is the plugin root. */
@@ -198,7 +199,8 @@ const mcpOptions = (input: LoadPluginInput): CollectOptions => ({
 /**
  * Loads a plugin folder into a typed `Plugin` (docs/API.md, "Loading"): the optional manifest, every
  * component in the standard layout and the manifest's paths, each reader's issues collected. Never
- * throws. The plugin is `undefined` only when it does not load at all: a manifest that is not valid
+ * throws. The plugin is `undefined` only when it does not load at all: a plugin folder or manifest
+ * that cannot be checked or leads outside (`manifestGate`), a manifest that is not valid
  * JSON or fails validation, no name to load it under, a guard hook that cannot be read or an inline
  * MCP server of the manifest that cannot be read (oracle 2.1.319, spec/judgments.md). Any other problem (a path that is missing or
  * escapes the plugin, a file Claude Code would skip) is an issue and skips that component, as the
@@ -207,6 +209,8 @@ const mcpOptions = (input: LoadPluginInput): CollectOptions => ({
 export async function loadPlugin(input: LoadPluginInput): Promise<LoadedPlugin> {
   const { signal } = input;
   const files = loadFiles(input.files, signal);
+  const gate = await manifestGate(files, discoverOptionsOf(input));
+  if (gate) return { plugin: undefined, issues: [gate] };
   const step = await manifestFor(files, input.entry, signal);
   if ('failed' in step) return { plugin: undefined, issues: step.failed };
   const named = nameOf(step.manifest, input.fallbackName);

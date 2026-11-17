@@ -171,7 +171,7 @@ spec('mods.event.plugin.register', () => {
         tier: 'user',
         uses: {
           events: ['tool.call{tool=Bash}'],
-          calls: ['fs.read', 'env.get'],
+          calls: ['env.get', 'fs.read'],
           envReads: ['HOME'],
           envWrites: [],
           stateReads: [],
@@ -244,6 +244,38 @@ spec('mods.event.plugin.register', () => {
     expect(report.lines).toEqual([
       'runner: refused by acme-guard: Acme policy: mods may not call process.run',
     ]);
+  });
+});
+
+spec('policy.mods.Enforce a policy with a mod of your own.e.uses.calls', () => {
+  test('e.uses.calls names each $ method without `$.`, sorted and each once', async () => {
+    let calls: string[] = [];
+    const spy = registerOf((on) => {
+      on(
+        'plugin.register',
+        async (_$: unknown, e: Event, next: (e: unknown) => Promise<unknown>) => {
+          if (e.plugin === 'busy') calls = e.uses.calls;
+          return next(e);
+        },
+      );
+    });
+    type Busy = {
+      store: { get(k: string): Promise<unknown> };
+      fs: { write(p: string, t: string): Promise<unknown> };
+      process: { run(a: string[]): Promise<unknown> };
+    };
+    const busy = registerOf((on) => {
+      on('tool.call', async ($: Busy) => {
+        await $.store.get('k');
+        await $.process.run(['ls']);
+        await $.fs.write('a', 'b');
+        await $.store.get('j');
+        return { result: 'busy' };
+      });
+    });
+    const s = session({ spy, busy }, { policy: managed({ prependPlugins: ['spy@acme-tools'] }) });
+    await s.host.load([modPlugin(organizations('spy'), spy), modPlugin(installed('busy'), busy)]);
+    expect(calls).toEqual(['fs.write', 'process.run', 'store.get']);
   });
 });
 

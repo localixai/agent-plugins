@@ -84,6 +84,13 @@ export {
 } from './output-style-select.ts';
 export { outputStyleSystem } from './output-style-system.ts';
 export {
+  CUSTOM_STYLES_NOT_SELECTABLE,
+  LOCAL_SETTINGS_NOT_LOADED,
+  outputStyleCommand,
+  type OutputStyleCommand,
+  type OutputStyleReply,
+} from './output-style-command.ts';
+export {
   MCP_TRANSPORTS,
   readMcpConfig,
   readMcpServer,
@@ -131,9 +138,10 @@ export {
   type McpExpansionOptions,
 } from './mcp-env.ts';
 export { mcpEndpointKey } from './mcp-endpoint.ts';
+export { RESERVED_MCP_SERVER_NAMES } from './mcp-reserved.ts';
+export { LSP_TRANSPORTS } from './lsp-schema.ts';
 export {
   LSP_FIELDS,
-  LSP_TRANSPORTS,
   mergeLspSources,
   readLspConfig,
   readLspServer,

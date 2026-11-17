@@ -72,6 +72,8 @@ export interface RunContext {
   readonly processId?: number;
   /** The effort level of the input's `effort` (hooks.md: "`$CLAUDE_EFFORT` holds the same level"). */
   readonly effort?: string;
+  /** The HIPAA configuration applies: no Anthropic credential reaches a hook (`subprocessEnvironment`). */
+  readonly hipaa?: boolean;
   /**
    * The variables of the settings files' `env` blocks (`resolveSettingsEnv`), which every hook process
    * inherits in place of what the shell exported (env-vars.md, "Precedence").
@@ -122,6 +124,11 @@ export type ForegroundRun =
 export interface SkippedRun {
   readonly kind: 'skipped';
   readonly reason: string;
+  /**
+   * The line the conversation view shows for a hook that did not run, when the docs give one
+   * (errors.md, "Hook needs quotes around a path with a space").
+   */
+  readonly notice?: string;
 }
 
 /** What a background hook reports once its process ends. */

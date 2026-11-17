@@ -105,5 +105,6 @@ export function subprocessFor(core: SessionCore, options: SessionOptions, kind: 
     sessionId: options.sessionId,
     processId: state.options.processId,
     effort: options.effort?.level,
+    hipaa: state.options.hipaa,
   });
 }

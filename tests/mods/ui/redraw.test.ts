@@ -137,21 +137,30 @@ spec('mods.api.$.state', () => {
     expect(redraws()).toBe(2);
   });
 
-  // Judgment (spec/judgments.md): a ui.render hook "can read state and can't write it"; the kit does not refuse the write, it only asks for no redraw for a value the drawing in progress read.
-  test('judgment: a ui.render hook that writes a value it read does not redraw its own site in a loop', async () => {
+  // Declarations, `state.set`: "Refused while a `ui.render` hook draws" (Agent Plugins Extended J10.112): not written, nothing redrawn.
+  test('a $.state.set made while a ui.render hook draws is refused: the value is not written and nothing is redrawn', async () => {
     const { iface, calls } = fakeInterface();
     const h = await apiHarness({ rules: uiRules, ui: uiOver(iface) });
     const key = { plugin: 'counter', key: 'count' };
+    const refusals: string[] = [];
     await h.mod('counter', 'user', [
       fn('ui.render', async ($) => {
         const count = await read($, key);
-        await $.state.set(key, Number(count ?? 0) + 1);
+        await $.state.set(key, Number(count ?? 0) + 1).catch((error: Error) => {
+          refusals.push(error.message);
+        });
         return node('Text', { children: [`Count: ${String(count)}`] });
       }),
     ]);
     await h.ui?.draw({ site: 'Pane', surface: 'terminal', requestId: 'counter' });
     h.clock.advance(1000);
+    expect(refusals).toEqual([
+      'counter: $.state.set is refused while a ui.render hook draws: write from onPress or another event',
+    ]);
     expect(calls.filter((c) => c.name === 'redraw')).toHaveLength(0);
+    expect(await read(h.api, key)).toBeUndefined();
+    // Once the drawing is done, a write from another event goes through.
+    await h.api.state.set(key, 1);
     expect(await read(h.api, key)).toBe(1);
   });
 

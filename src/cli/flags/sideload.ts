@@ -1,3 +1,4 @@
+import { SIDELOAD_CLOSING } from '../../settings/managed/sideload.ts';
 import type { FlagFacts, FlagName } from './types.ts';
 
 /**
@@ -23,10 +24,21 @@ export const sideloadMessage = (name: string): string =>
 export const sideloadRefusal = (flag: FlagName, facts: FlagFacts): string | undefined =>
   facts.sideloadDisabled && SIDELOAD_FLAGS.includes(flag) ? sideloadMessage(flag) : undefined;
 
-/** The refusal for the folders `CLAUDE_CODE_PLUGIN_DIRS` names, when it names any. */
+/** The refusal for the folders `CLAUDE_CODE_PLUGIN_DIRS` names, when it names any: it says to unset it (J14.8). */
 export function pluginDirsVariableRefusal(facts: FlagFacts): string | undefined {
   const named = (facts.env.CLAUDE_CODE_PLUGIN_DIRS ?? '').trim();
   return facts.sideloadDisabled && named !== ''
-    ? sideloadMessage('CLAUDE_CODE_PLUGIN_DIRS')
+    ? `${sideloadMessage('CLAUDE_CODE_PLUGIN_DIRS')}: unset the variable`
     : undefined;
+}
+
+const SIDELOAD_MARK = '(disableSideloadFlags)';
+
+/**
+ * The refusals with the docs' closing line after the rejected flags, once, when any was rejected
+ * (plugins/troubleshooting.md, "`--plugin-dir is disabled …`"), as `sideloadVerdict` words it.
+ */
+export function withSideloadClosing(refusals: readonly string[]): readonly string[] {
+  const sideloaded = refusals.some((line) => line.includes(SIDELOAD_MARK));
+  return sideloaded ? [...refusals, SIDELOAD_CLOSING] : refusals;
 }

@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../format/env-flag.ts';
 import { warning } from '../../format/issues.ts';
 import { refuse, type Contribution, type FlagContext, type FlagFacts } from './types.ts';
 
@@ -38,7 +39,7 @@ const streamsJson = ({ print, outputFormat }: FlagFacts): boolean =>
 
 /** The variable alone: ignored, without a warning, outside `--print` with `stream-json`. */
 export const forwardSubagentTextVariable = (facts: FlagFacts): Contribution =>
-  facts.env.CLAUDE_CODE_FORWARD_SUBAGENT_TEXT === '1' && streamsJson(facts)
+  isTruthyEnv(facts.env.CLAUDE_CODE_FORWARD_SUBAGENT_TEXT) && streamsJson(facts)
     ? { forwardSubagentText: true }
     : {};
 

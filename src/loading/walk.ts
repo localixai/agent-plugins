@@ -206,6 +206,25 @@ const nested =
     return done(scan, await scanNested({ ...scan, extension }, path, ''));
   };
 
+/**
+ * Output styles: the `.md` files of the folder and of its subfolders, each named by its own file
+ * name, the subfolder no part of it (spec J6.4, oracle 2.1.325: `output-styles/sub/deep.md` is
+ * `<plugin>:deep`). The frontmatter `name` decides the rest (format/output-style.ts).
+ */
+const deep =
+  (kind: ListedKind, extension: string | undefined): Walker =>
+  async (context, path, stat) => {
+    if (!stat.isDirectory) return single(path);
+    const scan = startScan(context, kind);
+    const found = await scanNested({ ...scan, extension }, path, '');
+    return done(
+      scan,
+      found.map((file) =>
+        file.path === undefined ? file : { ...file, name: stem(baseName(file.path)) },
+      ),
+    );
+  };
+
 const flat =
   (extension: string | undefined): Walker =>
   (context, path, stat) =>
@@ -213,8 +232,9 @@ const flat =
 
 /**
  * Commands and agents nest (components.md: `commands/db/migrate.md` is `/my-plugin:db:migrate`, "agents
- * ... loads recursively"); output styles, workflows and themes are one folder of files (judgment: the
- * docs name `output-styles/<name>.md`, `workflows/` `.js` files and `themes/<slug>.json`, no nesting).
+ * ... loads recursively"); output styles read their subfolders without naming them (`deep`); workflows
+ * and themes are one folder of files (judgment: the docs name `workflows/` `.js` files and
+ * `themes/<slug>.json`, no nesting).
  * A declared agent file loads without subfolder names ("a file you list there loads without subfolder
  * names"): its name is its file name.
  */
@@ -239,7 +259,7 @@ export const WALKERS: { readonly [K in ListedKind]: Walker } = {
   skills,
   commands,
   agents: nested('agents', STANDARD_LAYOUT.agents.extension),
-  outputStyles: flat(STANDARD_LAYOUT.outputStyles.extension),
+  outputStyles: deep('outputStyles', STANDARD_LAYOUT.outputStyles.extension),
   workflows: flat(STANDARD_LAYOUT.workflows.extension),
   themes: flat(STANDARD_LAYOUT.themes.extension),
 };

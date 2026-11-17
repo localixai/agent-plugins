@@ -41,6 +41,17 @@ function adapt<T>(path: string, read: FieldRead<T>): AgentFieldRead<T> {
 export const textField: AgentCoercer<string> = (path, key, raw) => adapt(path, readText(key, raw));
 
 /**
+ * `model`: any non-empty text (spec §5.4.3, J5.5). An empty or blank value is dropped like any bad
+ * value, with the warning the client logs, and the default applies.
+ */
+export const modelField: AgentCoercer<string> = (path, key, raw) => {
+  const blank = raw === '' || (typeof raw === 'string' && raw.trim() === '');
+  return blank
+    ? { value: undefined, issues: ignored(path, key, 'is empty') }
+    : textField(path, key, raw);
+};
+
+/**
  * `background`, `omitClaudeMd`: sub-agents.md says "Set to `true`", so only a YAML boolean or the
  * text `true` or `false` is a flag here; `yes`, `on`, `1` and `0` belong to skills and commands
  * (judgment, spec/judgments.md).

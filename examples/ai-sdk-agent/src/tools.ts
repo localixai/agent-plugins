@@ -6,7 +6,7 @@
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
-import type { Decision, PluginSession } from '@rsaryev/llx-plugin';
+import type { Decision, PluginSession } from '@localix-ai/agent-plugins';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import type { TurnPermissions } from './permissions.ts';

@@ -1,7 +1,8 @@
 import type { PathContext } from '../types.ts';
 import { foldPath, relativeWithin } from '../path/posix.ts';
 import type { DecideContext } from './context.ts';
-import { configDirectoryOf, isOwnFile } from './protected-paths.ts';
+import { configDirectoryOf, isOwnFile, isStoredRemoteSettings } from './protected-paths.ts';
+import type { WriteBlockReason } from './write-block-messages.ts';
 import { inScope, posixOf } from './scope.ts';
 
 /**
@@ -16,13 +17,8 @@ const SETTINGS_NAMES: ReadonlySet<string> = new Set([
   'managed-settings.json',
 ]);
 
-/**
- * "Claude Code settings files": `settings.json` and `settings.local.json` in a `.claude` directory
- * (project, local and user scope), in the configuration directory, and the managed settings file.
- * The write block refuses these "inside the working directories too, because a settings file can
- * lift the block". The list is the kit's reading (spec/judgments.md).
- */
-function isSettingsFile(path: string, paths: PathContext, ctx: DecideContext): boolean {
+/** `settings.json` and `settings.local.json` in a `.claude` directory or the configuration directory, and `managed-settings.json`. */
+function isNamedSettingsFile(path: string, paths: PathContext, ctx: DecideContext): boolean {
   const segments = foldPath(path, paths.platform)
     .split('/')
     .filter((segment) => segment !== '');
@@ -34,6 +30,28 @@ function isSettingsFile(path: string, paths: PathContext, ctx: DecideContext): b
     parent === '.claude' ||
     name === 'managed-settings.json' ||
     relativeWithin(`${configured}/${name}`, path, paths.platform) === ''
+  );
+}
+
+/**
+ * "Claude Code settings files": the named ones, the files the session was started with
+ * (`--settings`, `--agents`, `--mcp-config`), the stored server-managed settings and the files kept
+ * with it, and "any `.json` file, while Claude Code can't work out where the `managed-settings.d/`
+ * folder leads" (errors.md, "Writes to Claude Code settings files are blocked"). The write block
+ * refuses these "inside the working directories too, because a settings file can lift the block".
+ * The list is the kit's reading (spec/judgments.md, J13.28 of the specification).
+ */
+function isSettingsFile(path: string, paths: PathContext, ctx: DecideContext): boolean {
+  const options = ctx.protectedPaths ?? {};
+  const launched = (options.files ?? []).some(
+    (file) => relativeWithin(posixOf(file, paths), path, paths.platform) === '',
+  );
+  const anyJson = ctx.managedSettingsFolderUnresolved === true && path.endsWith('.json');
+  return (
+    isNamedSettingsFile(path, paths, ctx) ||
+    launched ||
+    isStoredRemoteSettings(path, paths, options) ||
+    anyJson
   );
 }
 
@@ -88,7 +106,7 @@ export function blockPaths(ctx: DecideContext): PathContext {
 export function writeBlockReason(
   paths: readonly string[],
   ctx: DecideContext,
-): 'settings-file' | 'outside-working-directory' | undefined {
+): WriteBlockReason | undefined {
   if (ctx.blockWritesOutsideWorkingDirectories !== true) return undefined;
   if (paths.some((path) => isSettingsFile(path, ctx.match.paths, ctx))) return 'settings-file';
   const counted = blockPaths(ctx);

@@ -1,5 +1,4 @@
 import { error, type PluginIssue } from '../issues.ts';
-import { isPluginIdPart } from './ids.ts';
 
 /**
  * The `renames` map of `marketplace.json` (plugins/host-marketplace.md, "Migrate users with a
@@ -44,29 +43,31 @@ export function followRenames(
 
 const UNRESOLVED_TARGET = 'target must be a name in plugins[], a key in renames, or null';
 
-/** The reason an unresolved chain gives (judgment: the docs leave the text in the parentheses open). */
-function reasonOf(chain: Extract<Chain, { end: 'dangling' | 'cycle' }>): string {
-  return chain.end === 'cycle'
-    ? `cycle: ${chain.path.join(' -> ')}`
-    : `ends at "${chain.name}", which is not in plugins[]`;
-}
+/** The reason in the parentheses: `cycle`, or `target-missing` for a chain that ends at no plugin and no key (spec J15.11). */
+const REASON: { readonly [E in 'dangling' | 'cycle']: string } = {
+  dangling: 'target-missing',
+  cycle: 'cycle',
+};
 
 /**
- * What `claude plugin validate` reports about `renames`, on `renames.<old>`: a target that is not a
- * valid plugin name, and a chain that cycles or ends at a name that is neither a plugin nor a key.
+ * What `claude plugin validate` reports about `renames`, on `renames.<old>`: a chain that cycles or
+ * ends at a name that is neither a plugin nor a key. A target is held to the id grammar only when it
+ * names neither an entry nor a key, and such a target already ends the chain as `target-missing`,
+ * so `"bad name"` draws that reason and a target that is itself a key (`"bad key"`) is followed
+ * (spec J15.11, oracle 2.1.325): the docs' PluginIdSchema row is never the one printed.
  */
 export function validateRenames(renames: Renames, pluginNames: readonly string[]): PluginIssue[] {
   const plugins = new Set(pluginNames);
   const found: PluginIssue[] = [];
-  for (const [old, target] of Object.entries(renames)) {
-    const path = `renames.${old}`;
-    if (target !== null && !isPluginIdPart(target)) {
-      found.push(error(path, `target "${target}" is not a valid plugin name (PluginIdSchema)`));
-      continue;
-    }
+  for (const old of Object.keys(renames)) {
     const chain = followRenames(renames, old, plugins);
     if (chain.end === 'cycle' || chain.end === 'dangling') {
-      found.push(error(path, `chain does not resolve (${reasonOf(chain)}) — ${UNRESOLVED_TARGET}`));
+      found.push(
+        error(
+          `renames.${old}`,
+          `chain does not resolve (${REASON[chain.end]}) — ${UNRESOLVED_TARGET}`,
+        ),
+      );
     }
   }
   return found;

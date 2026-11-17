@@ -1,3 +1,5 @@
+import { positiveWholeEnv } from '../format/env-number.ts';
+import { isTruthyEnv } from '../format/env-flag.ts';
 import type { Environment } from '../ports/environment.ts';
 
 /**
@@ -7,11 +9,12 @@ import type { Environment } from '../ports/environment.ts';
  */
 
 const text = (env: Environment, name: string): string => (env.get(name) ?? '').trim();
-const isOne = (env: Environment, name: string): boolean => text(env, name) === '1';
+/** An on/off variable: `1`, `true`, `yes` or `on` in any casing (env-vars.md; spec §3.6.1, J3.16). */
+const isOn = (env: Environment, name: string): boolean => isTruthyEnv(env.get(name));
 
 /** `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL=1`: "skips the registration permanently". */
 export const officialMarketplaceAutoinstallEnabled = (env: Environment): boolean =>
-  !isOne(env, 'CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL');
+  !isOn(env, 'CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL');
 
 /**
  * `CLAUDE_CODE_DISABLE_PERMISSION_PROMPT_NOTIFY_HOOKS=1` stops `Notification` hooks for unanswered
@@ -22,11 +25,11 @@ export const permissionPromptNotifyHooksEnabled = (
   env: Environment,
   session: { readonly usesCanUseTool: boolean },
 ): boolean =>
-  !(session.usesCanUseTool && isOne(env, 'CLAUDE_CODE_DISABLE_PERMISSION_PROMPT_NOTIFY_HOOKS'));
+  !(session.usesCanUseTool && isOn(env, 'CLAUDE_CODE_DISABLE_PERMISSION_PROMPT_NOTIFY_HOOKS'));
 
 /** `CLAUDE_CODE_DISABLE_POLICY_SKILLS=1`: skip "the system-wide managed skills directory". */
 export const policySkillsEnabled = (env: Environment): boolean =>
-  !isOne(env, 'CLAUDE_CODE_DISABLE_POLICY_SKILLS');
+  !isOn(env, 'CLAUDE_CODE_DISABLE_POLICY_SKILLS');
 
 /**
  * `CLAUDE_CODE_ENABLE_BACKGROUND_PLUGIN_REFRESH=1` refreshes plugin state at turn boundaries "in
@@ -35,7 +38,7 @@ export const policySkillsEnabled = (env: Environment): boolean =>
 export const backgroundPluginRefreshEnabled = (
   env: Environment,
   session: { readonly interactive: boolean },
-): boolean => !session.interactive && isOne(env, 'CLAUDE_CODE_ENABLE_BACKGROUND_PLUGIN_REFRESH');
+): boolean => !session.interactive && isOn(env, 'CLAUDE_CODE_ENABLE_BACKGROUND_PLUGIN_REFRESH');
 
 /** "Accepts a positive whole number in plain digits; anything else is ignored" (default 20). */
 export const DEFAULT_MAX_CONCURRENT_SUBAGENTS = 20;
@@ -47,19 +50,19 @@ export function maxConcurrentSubagents(env: Environment): number {
 
 /**
  * `CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS`: "Timeout in milliseconds for cloning or refreshing a plugin
- * marketplace (default: 120000)". Judgment (spec/judgments.md): a value that is not a positive whole
- * number leaves the default.
+ * marketplace (default: 120000)". A value that is not a positive whole number (digits, `2e3`,
+ * `64_000`: spec §3.6.1 item 2, J3.17) leaves the default.
  */
 export const DEFAULT_PLUGIN_GIT_TIMEOUT_MS = 120_000;
 export function pluginGitTimeoutMs(env: Environment): number {
-  const value = text(env, 'CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS');
-  const number = /^[0-9]+$/.test(value) ? Number(value) : 0;
-  return number > 0 && Number.isSafeInteger(number) ? number : DEFAULT_PLUGIN_GIT_TIMEOUT_MS;
+  return (
+    positiveWholeEnv(env.get('CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS')) ?? DEFAULT_PLUGIN_GIT_TIMEOUT_MS
+  );
 }
 
 /** `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1`: clone GitHub `owner/repo` shorthand over HTTPS, not SSH. */
 export const preferHttps = (env: Environment): boolean =>
-  isOne(env, 'CLAUDE_CODE_PLUGIN_PREFER_HTTPS');
+  isOn(env, 'CLAUDE_CODE_PLUGIN_PREFER_HTTPS');
 
 /** The wait before the first query in a non-interactive run. */
 export interface SyncInstallWait {
@@ -76,10 +79,9 @@ export function syncPluginInstall(
   env: Environment,
   session: { readonly interactive: boolean },
 ): SyncInstallWait {
-  if (session.interactive || !isOne(env, 'CLAUDE_CODE_SYNC_PLUGIN_INSTALL')) return { wait: false };
-  const value = text(env, 'CLAUDE_CODE_SYNC_PLUGIN_INSTALL_TIMEOUT_MS');
-  const number = /^[0-9]+$/.test(value) ? Number(value) : 0;
-  return number > 0 ? { wait: true, timeoutMs: number } : { wait: true };
+  if (session.interactive || !isOn(env, 'CLAUDE_CODE_SYNC_PLUGIN_INSTALL')) return { wait: false };
+  const timeoutMs = positiveWholeEnv(env.get('CLAUDE_CODE_SYNC_PLUGIN_INSTALL_TIMEOUT_MS'));
+  return timeoutMs === undefined ? { wait: true } : { wait: true, timeoutMs };
 }
 
 /**
@@ -88,7 +90,7 @@ export function syncPluginInstall(
  */
 export function telemetryOptedOut(env: Environment): boolean {
   if ((env.get('DISABLE_TELEMETRY') ?? '') !== '') return true;
-  return ['1', 'true'].includes(text(env, 'DO_NOT_TRACK').toLowerCase());
+  return isOn(env, 'DO_NOT_TRACK');
 }
 
 /**

@@ -11,7 +11,9 @@
  * marketplace" (line 382): "Claude Code uninstalls every plugin you installed from it and removes
  * their `enabledPlugins` entries from your settings files. The **Marketplaces** tab names those
  * plugins before it asks you to confirm." "You installed" and "your settings files" leave `managed`
- * out: the uninstall and the entries dropped are user, project and local only.
+ * out: the uninstall and the entries dropped are user, project and local only. plugins/org.md § Seed
+ * containers and CI: "`remove` without `--scope` on a seed marketplace fail[s] with a message that
+ * names the seed directory".
  */
 import { describe, expect, test } from 'bun:test';
 import {
@@ -137,6 +139,26 @@ spec(
   },
 );
 
+spec('policy.org.Seed containers and CI.Update and remove fail', () => {
+  const SEED = '/opt/claude-seed';
+
+  test('without --scope a seed marketplace is not removed, and the message names the seed directory', () => {
+    const found = plan({}, { seeded: SEED });
+    expect(found.removeFrom).toEqual([]);
+    expect(found.deleteCache).toBe(false);
+    expect(found.uninstall).toEqual([]);
+    const out = human(found);
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr.join('\n')).toContain(SEED);
+  });
+
+  test('with --scope the declaration in that scope is removed', () => {
+    const found = plan({ scope: 'user' }, { seeded: SEED });
+    expect(found.removeFrom).toEqual(['user']);
+    expect(human(found).exitCode).toBe(0);
+  });
+});
+
 spec('cli.plugin.JSON result for marketplace commands', () => {
   test('remove --json prints the docs example, field for field', () => {
     const found = plan({ json: true });
@@ -167,6 +189,15 @@ spec('cli.plugin.JSON result for marketplace commands', () => {
 });
 
 describe('what the docs leave open', () => {
+  test('a seed marketplace removed without --scope: seed_managed and the update wording', () => {
+    const found = plan({ json: true }, { seeded: '/opt/claude-seed' });
+    const json = JSON.parse(renderCommand(found.output, { json: true }).stdout.at(-1) ?? '{}');
+    expect(json).toMatchObject({
+      failureCode: 'seed_managed',
+      message: `Marketplace '${NAME}' is seed-managed (/opt/claude-seed). Ask your administrator to remove it from the seed directory, or remove it from one scope with --scope`,
+    });
+  });
+
   test('--scope on a settings file that does not declare it carries failureCode not_declared_in_scope', () => {
     const rendered = renderCommand(plan({ scope: 'project' }).output, { json: true });
     expect(JSON.parse(rendered.stdout.at(-1) ?? '')).toMatchObject({

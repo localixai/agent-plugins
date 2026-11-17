@@ -248,6 +248,12 @@ spec(`${E}Sandbox allow entries are ignored under a managed lock`, () => {
       'only allowed domains (and WebFetch domain rules) from managed settings are honored',
     );
   });
+
+  test('the count keeps the one form the docs give: "The <N> entries in <file>"', () => {
+    expect(sandboxAllowIgnored({ lock: 'read', count: 1, file: 'a.json' })).toContain(
+      'The 1 entries in a.json will NOT apply',
+    );
+  });
 });
 
 spec(`${E}Skill or command name refused`, () => {

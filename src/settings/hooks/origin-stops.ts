@@ -69,15 +69,27 @@ type FromRegistry = {
   readonly [F in From]: (origin: FromMembers[F], forceEnabled: ForceEnabled) => Stops;
 };
 
-/** A skill, command or agent of the managed policy directory or bundled with Claude Code. */
+/** A skill, command or agent bundled with Claude Code. */
 const OUR_OWN: Stops = { ...NEVER, managedDisable: true, managedOnly: true };
+
+/**
+ * A skill, command or agent of the managed policy directory. Judgment: its frontmatter hooks are the
+ * organization's, so under `allowManagedHooksOnly` ("managed hooks run") a skill's and a command's
+ * keep running, as the plugin-only lock keeps "a skill in the managed settings directory" (hooks.md,
+ * "Limits on skill hooks"); an agent's are blocked whatever the source.
+ */
+const MANAGED_DIRECTORY = (origin: Frontmatter): Stops => ({
+  ...NEVER,
+  managedDisable: true,
+  managedOnly: AGENT_BLOCKED[origin.owner],
+});
 
 const FROM: FromRegistry = {
   user: () => OWN,
   project: () => OWN,
   addDir: () => OWN,
   synced: () => OWN,
-  managed: () => OUR_OWN,
+  managed: MANAGED_DIRECTORY,
   bundled: () => OUR_OWN,
   plugin: (origin, forceEnabled) => {
     const stops = pluginStops(origin.plugin, forceEnabled);

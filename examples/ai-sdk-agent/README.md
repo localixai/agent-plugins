@@ -1,7 +1,7 @@
 # A plugin-running agent on the AI SDK
 
 A small coding agent built with the [AI SDK](https://ai-sdk.dev) (`ai` 7, `@ai-sdk/anthropic`) that
-runs Claude Code plugins through `@rsaryev/llx-plugin`. It is about 600 lines: the kit does
+runs Claude Code plugins through `@localix-ai/agent-plugins`. It is about 600 lines: the kit does
 the plugin work, the agent only supplies ports and a tool loop.
 
 | Part           | File                              | What it does                                                                                                                        |
@@ -30,7 +30,8 @@ The agent runs like `claude -p`: there is no one to answer a prompt, so a call t
 about does not run (`prompt-unavailable`). A skill's `` !`command` `` placeholder is decided by the
 same rules, with the skill's `allowed-tools` added as allow rules.
 
-The Anthropic key comes from `ANTHROPIC_API_KEY`, else from `~/.config/llx/key-anthropic`. The model
+The Anthropic key comes from `ANTHROPIC_API_KEY`, else from `~/.config/llx/key-anthropic` (the file
+the Localix CLI keeps it in). The model
 is `claude-haiku-5-5`.
 
 ## Smoke

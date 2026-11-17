@@ -1,4 +1,9 @@
-import { createHookEngine, ifEvaluatorFor, type HookEngine } from '../hooks/index.ts';
+import {
+  createHookEngine,
+  ifEvaluatorFor,
+  type HookEngine,
+  type StopBlockCap,
+} from '../hooks/index.ts';
 import { currentOf, type EngineInputs, type SessionCore } from './session-core.ts';
 import { environmentFor, portsOf } from './session-environment.ts';
 import type { SessionOptions } from './session-types.ts';
@@ -26,7 +31,10 @@ const sameInputs = (a: EngineInputs, b: EngineInputs): boolean =>
   a.additionalDirectories === b.additionalDirectories &&
   a.trusted === b.trusted;
 
-function built(core: SessionCore, options: SessionOptions): HookEngine {
+/** A cap that counts nothing: the session applies its own to an outcome it combined first. */
+const UNCOUNTED: StopBlockCap = { apply: (outcome) => outcome, reset: () => undefined };
+
+function built(core: SessionCore, options: SessionOptions, stopCap = core.stopCap): HookEngine {
   const { state, gates } = currentOf(core);
   const ports = portsOf(state, options);
   const environment = environmentFor(core, options);
@@ -34,11 +42,12 @@ function built(core: SessionCore, options: SessionOptions): HookEngine {
   return createHookEngine(ports, {
     ...state.options.hookExecution,
     windows,
-    stopCap: core.stopCap,
+    stopCap,
     onceClaims: core.onceClaims,
     settingsEnv: environment.settings.values,
     ...(environment.files === undefined ? {} : { envFiles: environment.files }),
     ...(state.options.processId === undefined ? {} : { processId: state.options.processId }),
+    ...(state.options.hipaa === true ? { hipaa: true } : {}),
     ifEvaluator: ifEvaluatorFor({
       paths: {
         cwd: options.cwd,
@@ -62,3 +71,11 @@ export function engineFor(core: SessionCore, options: SessionOptions): HookEngin
   core.engine.set({ inputs, engine });
   return engine;
 }
+
+/**
+ * The session's engine without the Stop cap, for a `Stop` that core handlers share: the session
+ * counts the combined continuation in `core.stopCap` once (Agent Plugins Extended §18.1.2, J18.9).
+ * Built for that dispatch alone; the `once` claims are the session's as always.
+ */
+export const uncappedEngineFor = (core: SessionCore, options: SessionOptions): HookEngine =>
+  built(core, options, UNCOUNTED);

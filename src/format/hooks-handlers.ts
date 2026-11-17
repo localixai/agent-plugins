@@ -93,29 +93,6 @@ const isHandlerType = (value: unknown): value is HookHandlerType =>
 
 const quoted = (names: readonly string[]): string => names.map((name) => `"${name}"`).join(', ');
 
-/** Every field some handler type has, so a stray field can be told from another type's. */
-const KNOWN_FIELDS: ReadonlySet<string> = new Set(
-  Object.values(HANDLER_SCHEMAS).flatMap((schema) => Object.keys(schema.shape)),
-);
-
-function strayFieldIssues(
-  raw: Record<string, unknown>,
-  type: HookHandlerType,
-  path: string,
-): PluginIssue[] {
-  const own = Object.keys(HANDLER_SCHEMAS[type].shape);
-  return Object.keys(raw)
-    .filter((key) => !own.includes(key))
-    .map((key) =>
-      warning(
-        `${path}.${key}`,
-        KNOWN_FIELDS.has(key)
-          ? `"${key}" is not a field of a ${type} hook and is ignored`
-          : `Unknown field "${key}" is ignored`,
-      ),
-    );
-}
-
 /** Exec form (hooks.md, "Exec form and shell form"): `command` is an executable name or path only. */
 function execFormIssues(handler: HookHandler, path: string): PluginIssue[] {
   if (!('command' in handler) || handler.args === undefined) return [];
@@ -153,13 +130,14 @@ export function readHandler(raw: unknown, path: string): HandlerRead {
     const message = `Invalid "type": expected one of ${quoted(HOOK_HANDLER_TYPES)}`;
     return { handler: undefined, issues: [error(`${path}.type`, message)] };
   }
+  // A field no handler type has, or one only another type has, is dropped without a warning
+  // (Agent Plugins Extended §7.2.3, Judgment J7.10; oracle 2.1.325 reports nothing for it).
   const parsed = HANDLER_SCHEMAS[raw.type].safeParse(raw);
-  const stray = strayFieldIssues(raw, raw.type, path);
   if (!parsed.success) {
     return {
       handler: undefined,
-      issues: [...parsed.error.issues.map((issue) => fieldProblem(path, issue)), ...stray],
+      issues: parsed.error.issues.map((issue) => fieldProblem(path, issue)),
     };
   }
-  return { handler: parsed.data, issues: [...stray, ...execFormIssues(parsed.data, path)] };
+  return { handler: parsed.data, issues: execFormIssues(parsed.data, path) };
 }

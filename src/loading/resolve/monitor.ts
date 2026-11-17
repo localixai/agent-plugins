@@ -29,9 +29,10 @@ export interface ResolvedMonitor {
   /**
    * What the process receives besides the host's own environment. The table says "Not exported"
    * and components.md adds that monitor processes get no `CLAUDE_PLUGIN_OPTION_<KEY>`: no option and
-   * no variable `command` does not name. With the default `SubstitutionScope.shellPaths`
-   * (`environment-reference`) it holds the path variables `command` references, as the host reports
-   * them, so the references have a value; with `pasted` it is empty (judgment, spec/judgments.md).
+   * no variable `command` does not name. By default (`pasted`, Agent Plugins Extended §9.2.4,
+   * J9.17) it is empty: the paths are written into `command`. With the host's opt-in
+   * `SubstitutionScope.shellPaths: 'environment-reference'` it holds the path variables `command`
+   * references, so the references have a value (judgment, spec/judgments.md).
    */
   readonly environment: Readonly<Record<string, string>>;
 }
@@ -61,7 +62,7 @@ export async function resolveMonitor(
   if (refused) return { resolved: undefined, issues: [refused] };
   const run = substituter(scope);
   const done = await run.run(monitor.command, surfacePolicy('monitor-command', scope), path);
-  const environment = await shellExports(done.referenced, scope, run.variable);
+  const environment = await shellExports('monitor-command', done.referenced, scope, run.variable);
   return {
     resolved: {
       name: monitor.name,

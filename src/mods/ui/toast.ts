@@ -34,6 +34,10 @@ export const RENDERERS = {
 } as const;
 export type Renderer = keyof typeof RENDERERS;
 
+/** How many toasts wait behind a hold; past it the oldest leaves (Agent Plugins Extended J10.107). */
+const MAX_HELD_TOASTS = 50;
+const HELD_TOO_MANY = `left the stack: more than ${String(MAX_HELD_TOASTS)} toasts wait behind a hold`;
+
 export interface Toast {
   readonly plugin: string;
   readonly text: string;
@@ -70,7 +74,8 @@ export interface ToastBoard {
  * toast doesn't appear"). A hold shows none, "and a toast raised in that time waits until the hold
  * ends" (interface.md, "Hold toasts behind a dialog"). Judgment: a toast's time runs from when it
  * is raised, except that it stands still while a hold lasts, so a hold longer than a toast's
- * timeout does not use the toast up.
+ * timeout does not use the toast up; past 50 toasts waiting behind a hold, the oldest leaves
+ * (Agent Plugins Extended §10.25.2, Judgment J10.107; the debug line's wording ours).
  */
 export function createToastBoard(options: ToastBoardOptions): ToastBoard {
   let queue: Entry[] = [];
@@ -119,6 +124,10 @@ export function createToastBoard(options: ToastBoardOptions): ToastBoard {
       };
       if (!isPaused) run(entry);
       queue.push(entry);
+      if (isPaused && queue.length > MAX_HELD_TOASTS) {
+        const oldest = queue.shift();
+        if (oldest !== undefined) options.debug(`${label(oldest)} ${HELD_TOO_MANY}`);
+      }
     },
     visible() {
       syncHold();

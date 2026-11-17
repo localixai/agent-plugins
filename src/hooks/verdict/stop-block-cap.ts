@@ -1,3 +1,4 @@
+import { wholeEnv } from '../../format/env-number.ts';
 import { warning } from '../../format/issues.ts';
 import type { Environment } from '../../ports/index.ts';
 import type { HookEvent } from '../../protocol/official.ts';
@@ -32,8 +33,8 @@ const GUARDED: ReadonlySet<HookEvent> = new Set<HookEvent>(['Stop', 'SubagentSto
 
 /** The cap in force: `0` is "no cap". */
 function stopBlockCap(environment: Environment): number {
-  const text = environment.get(VARIABLE)?.trim();
-  return text !== undefined && /^\d+$/.test(text) ? Number(text) : DEFAULT_STOP_BLOCK_CAP;
+  // J3.17: a whole number as every numeric variable reads it (`2e0`, `1_0`); `0` stays "no cap".
+  return wholeEnv(environment.get(VARIABLE)) ?? DEFAULT_STOP_BLOCK_CAP;
 }
 
 /** The events after which a Stop starts counting again: "each time Claude calls a tool". */

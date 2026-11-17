@@ -27,8 +27,13 @@ export interface ManifestResult {
 /** Keys moved under `experimental` that still load at the top level ("Fields"). */
 const MOVED = new Set(['themes', 'monitors']);
 
+/** Each problem with the path below the key it is at (`go: Unrecognized key: "foo"`). */
 const describe = (failure: z.ZodError): string =>
-  failure.issues.map((found) => found.message).join('; ') || 'invalid value';
+  failure.issues
+    .map((found) =>
+      found.path.length > 0 ? `${found.path.join('.')}: ${found.message}` : found.message,
+    )
+    .join('; ') || 'invalid value';
 
 /** `userConfig` reported per option, so the issue names the option at fault. */
 function userConfigIssues(value: unknown): PluginIssue[] {

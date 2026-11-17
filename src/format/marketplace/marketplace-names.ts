@@ -86,20 +86,31 @@ export function spellingOf(name: string): string | undefined {
 const NON_ASCII = /[^\p{ASCII}]/u;
 
 /** Names such as `official-claude-plugins` or `claude-plugins-v2`, and any non-ASCII name (even one that spells a reserved name). */
-function impersonates(name: string): boolean {
+export function impersonates(name: string): boolean {
   if (NON_ASCII.test(name)) return true;
   if (RESERVED_SPELLINGS.has(name) || spellingOf(name) !== undefined) return false;
   const words = wordsOf(name);
   return besideOfficial(words) || leadsWithBrand(words);
 }
 
+const reservedIssue = (name: string): PluginIssue =>
+  error(PATH, `Marketplace name "${name}" is reserved`);
+
 function reservedVariantIssues(name: string): PluginIssue[] {
   const reason = NON_MARKETPLACE_NAMES.get(name);
   if (reason !== undefined) return [error(PATH, `Marketplace name "${name}" ${reason}`)];
-  if (ANY_CASING_NAMES.has(name.toLowerCase())) {
-    return [error(PATH, `Marketplace name "${name}" is reserved`)];
-  }
-  return [];
+  return ANY_CASING_NAMES.has(name) ? [reservedIssue(name)] : [];
+}
+
+/**
+ * The six package-manager names are reserved in any letter case, but a validator reports only the
+ * lower case; adding or loading refuses the other casings (spec J15.3: the 2.1.321 table for the
+ * verdict, oracle 2.1.325 passes `NPM`).
+ */
+function otherCasingIssues(name: string): PluginIssue[] {
+  return name !== name.toLowerCase() && ANY_CASING_NAMES.has(name.toLowerCase())
+    ? [reservedIssue(name)]
+    : [];
 }
 
 /** What `claude plugin validate` reports about a marketplace's name beyond the id grammar. */
@@ -205,6 +216,7 @@ export interface NameOrigin {
 /** What adding or loading a marketplace refuses about its name, on top of `validationNameIssues`. */
 export function loadNameIssues(name: string, where: NameOrigin = {}): PluginIssue[] {
   return [
+    ...otherCasingIssues(name),
     ...officialNameIssues(name, where.origin),
     ...spellingIssues(name),
     ...memberIssues(name),

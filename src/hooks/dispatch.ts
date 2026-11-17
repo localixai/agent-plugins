@@ -1,7 +1,7 @@
 import { type PluginIssue } from '../format/issues.ts';
 import type { ScratchFiles, ShellKind } from '../ports/index.ts';
 import type { HookEvent } from '../protocol/official.ts';
-import { assemble, idleOutcome } from './assemble.ts';
+import { assemble, idleOutcome, runFactsOfVerdict } from './assemble.ts';
 import type { HookRegistry, ModelCatalog, RegisteredHandler, Selection } from './contracts.ts';
 import type { HandlerResult, RunContext, RunPorts } from './handlers/context.ts';
 import { observe } from './handlers/status.ts';
@@ -13,6 +13,7 @@ import type { selectHandlers } from './select/select.ts';
 import type { IfEvaluator } from './select/if-guard.ts';
 import type { OnceClaims } from './select/once.ts';
 import { interruptPlan, withInterrupt } from './interrupt.ts';
+import { withResolvedWatchPaths } from './output/watch-paths.ts';
 import { withOriginalPrompt } from './verdict/blocked-prompt.ts';
 import { isToolCall, type StopBlockCap } from './verdict/stop-block-cap.ts';
 import type { HandlerVerdict, HookObserver, OutputStage, TaggedOutput } from './verdict/types.ts';
@@ -45,6 +46,8 @@ export interface DispatchConfig {
   readonly httpPolicy?: RunContext['httpPolicy'];
   /** The host process's id: `CLAUDE_PID` in every command hook. */
   readonly processId?: number;
+  /** The HIPAA configuration applies to the session: command hooks get no Anthropic credentials. */
+  readonly hipaa?: boolean;
   /** The `env` of the settings files (`resolveSettingsEnv`), written over the host's environment for every hook. */
   readonly settingsEnv?: RunContext['settingsEnv'];
   /** `CLAUDE_ENV_FILE`: the files, and the clearing a `CwdChanged` event does. */
@@ -64,6 +67,8 @@ const tagged = (verdict: HandlerVerdict): TaggedOutput => ({
   ...(verdict.output === undefined ? {} : { output: verdict.output }),
   ...(verdict.plainText === undefined ? {} : { plainText: verdict.plainText }),
   ...(verdict.effectsIgnored === true ? { effectsIgnored: true } : {}),
+  ...(verdict.block === undefined ? {} : { blocked: true }),
+  ...(verdict.stdout === undefined ? {} : { stdout: verdict.stdout }),
 });
 
 function report(
@@ -74,6 +79,7 @@ function report(
   for (const verdict of verdicts) {
     observe(() =>
       observer?.finished?.({
+        ...runFactsOfVerdict(verdict),
         event,
         handlerId: verdict.handler.id,
         status: verdict.status,
@@ -121,7 +127,10 @@ function finished<E extends HookEvent>(
   request: DispatchRequest<E>,
   config: DispatchConfig,
 ): HookOutcome<E> {
-  const outcome = withTaskTrigger(withTerminal(outcomeOfRun, request.session), request);
+  const outcome = withResolvedWatchPaths(
+    withTaskTrigger(withTerminal(outcomeOfRun, request.session), request),
+    request.session.cwd,
+  );
   const quoted = withOriginalPrompt(outcome, request.facts);
   const interrupted = withInterrupt(quoted, request.signal.aborted);
   const where = { sessionId: request.session.sessionId, facts: request.facts };

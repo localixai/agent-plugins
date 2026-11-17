@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../format/env-flag.ts';
 import type { InvocableFrontmatter, SkillShell } from '../format/skill-types.ts';
 import type { Environment } from '../ports/index.ts';
 import { EFFORT_LEVELS } from '../protocol/effort.ts';
@@ -118,7 +119,7 @@ export function readExecutionEnvironment(environment: Environment): ExecutionEnv
   const value = environment.get('CLAUDE_CODE_EFFORT_LEVEL');
   const effort = value === undefined ? undefined : readEffortValue(value);
   return {
-    backgroundTasksDisabled: environment.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS') === '1',
+    backgroundTasksDisabled: isTruthyEnv(environment.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS')),
     ...(effort === undefined ? {} : { effort }),
   };
 }

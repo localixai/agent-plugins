@@ -1,10 +1,11 @@
 /**
  * plugins/cli-reference.md § plugin list: the groups of the text listing, "JSON output" (every field
  * the table names, "`id`, `version`, `scope`, `enabled`, and `installPath` are always present, and
- * the others appear only when they apply"), `--available`, `--data-size [plugin]`. The layout of a
+ * the others appear only when they apply"; spec §17.8: `installPath` is absent for a plugin loaded
+ * in place, which carries `readFromFolder`), `--available`, `--data-size [plugin]`. The layout of a
  * plugin's text lines is outside `spec(...)` and in spec/judgments.md.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { planPluginList, type ListedPlugin } from '../../src/cli/index.ts';
 import { spec } from '../support/spec.ts';
 import { availableJson, installedJson, listText } from '../../src/cli/plugin-list.ts';
@@ -33,7 +34,7 @@ const full: ListedPlugin = {
   projectEnabled: true,
 };
 
-const ALWAYS = ['id', 'version', 'scope', 'enabled', 'installPath'] as const;
+const ALWAYS = ['id', 'version', 'scope', 'enabled'] as const;
 const WHEN_APPLIES = [
   'readFromFolder',
   'folderVersion',
@@ -57,6 +58,41 @@ for (const field of ALWAYS) {
     });
   });
 }
+
+spec('cli.plugin.JSON output.installPath', () => {
+  test('is present for a plugin that loads from its own directory', () => {
+    expect(installedJson(base)['installPath']).toBe(base.installPath);
+  });
+
+  test('is absent for a plugin loaded in place from its marketplace folder, which has readFromFolder', () => {
+    const { installPath: _none, ...inPlace } = { ...base, readFromFolder: '/m/plugins/formatter' };
+    expect(Object.keys(installedJson(inPlace))).not.toContain('installPath');
+    expect(installedJson(inPlace)['readFromFolder']).toBe('/m/plugins/formatter');
+    const both = { ...base, readFromFolder: '/m/plugins/formatter' };
+    expect(Object.keys(installedJson(both))).not.toContain('installPath');
+  });
+});
+
+describe('plugin list: the text lines of one plugin (judgment, J17.9)', () => {
+  test('an install shows its scope and whether it is enabled', () => {
+    expect(listText([base]).slice(1, 5)).toEqual([
+      '  ❯ formatter@acme',
+      '    Version: 1.2.0',
+      '    Scope: user',
+      '    Status: ✔ enabled',
+    ]);
+  });
+
+  test('a session-only plugin shows its path instead of a scope, and loaded', () => {
+    const inline = { ...base, id: 'p@inline', scope: 'session', installPath: '/work/p' };
+    expect(listText([inline]).slice(1, 5)).toEqual([
+      '  ❯ p@inline',
+      '    Version: 1.2.0',
+      '    Path: /work/p',
+      '    Status: ✔ loaded',
+    ]);
+  });
+});
 
 for (const field of WHEN_APPLIES) {
   spec(`cli.plugin.JSON output.${field}`, () => {

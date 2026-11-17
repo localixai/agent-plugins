@@ -1,9 +1,5 @@
 import type { UserConfigOption } from '../format/index.ts';
-import {
-  userConfigValue,
-  type ResolvedUserConfig,
-  type UserConfigValue,
-} from '../loading/resolve/user-config.ts';
+import type { ResolvedUserConfig, UserConfigValue } from '../loading/resolve/user-config.ts';
 import { validateUserConfigValues } from '../loading/resolve/user-config-values.ts';
 
 /**
@@ -99,11 +95,11 @@ export function checkGiven(
 }
 
 /**
- * The options with no value: neither saved nor a declared `default` (judgment: "set" is the value
- * `${user_config.KEY}` stands for, as `userConfigValue` reads it).
+ * The options that are not set: no saved value. A `default` gives an option a value but does not set
+ * it, so the dialog, `plugin configure` and the install line still count it (spec §3.4.4, §3.4.6).
  */
 export const unsetKeys = (config: ResolvedUserConfig): readonly string[] =>
-  Object.keys(config.declared).filter((key) => userConfigValue(config, key) === undefined);
+  Object.keys(config.declared).filter((key) => !Object.hasOwn(config.values, key));
 
 /** The saved values merged with `accepted`: what a config reads once the values are stored. */
 export const withValues = (

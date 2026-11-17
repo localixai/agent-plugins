@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { errorAt, warningAt, type Finding } from './finding.ts';
+import { errorAt, type Finding } from './finding.ts';
+import { remoteFindings } from './mcp-remote-checks.ts';
+import { mcpOAuthSchema } from '../mcp-oauth-schema.ts';
 import { kindOf } from './received.ts';
 import { dotted } from './zod-findings.ts';
 import { isRecord } from '../../protocol/is-record.ts';
@@ -18,13 +20,7 @@ const remote = {
   url: text,
   headers: z.record(text, text).optional(),
   headersHelper: text.optional(),
-  oauth: z
-    .object({
-      clientId: text.optional(),
-      callbackPort: z.number().optional(),
-      scopes: text.optional(),
-    })
-    .optional(),
+  oauth: mcpOAuthSchema.optional(),
   ...common,
 };
 
@@ -54,17 +50,6 @@ const NO_TYPE =
   'server has a "url" but no "type". Remote servers must set "type" to "http" (or "sse" / "ws"); without it the entry is parsed as a stdio server, fails for lacking "command", and is silently dropped at load.';
 const HOST_ONLY =
   'type "sdk" servers are registered by the host application at runtime and cannot be declared by a plugin. The plugin loader drops this server at load.';
-const CLEARTEXT =
-  'url uses http:// to a non-loopback host — requests, headers and any credentials travel in cleartext. Use https://; plugin directories may reject insecure remote server urls.';
-
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
-
-function insecureUrl(url: unknown): boolean {
-  if (typeof url !== 'string' || !URL.canParse(url)) return false;
-  const parsed = new URL(url);
-  return parsed.protocol === 'http:' && !LOOPBACK.has(parsed.hostname);
-}
-
 /** How the oracle names the declared type of a server it cannot place. */
 const shownType = (type: unknown): string =>
   typeof type === 'string' ? `"${type}"` : kindOf(type);
@@ -133,8 +118,11 @@ function serverFindings(path: string, server: unknown, declared: ReadonlySet<str
     : parsed.error.issues.map((found) =>
         errorAt(dotted(path, found.path), `${found.message}.${DROPPED}`),
       );
-  const cleartext = insecureUrl(server.url) ? [warningAt(`${path}.url`, CLEARTEXT)] : [];
-  return [...schema, ...undeclaredReferences(path, server, declared), ...cleartext];
+  return [
+    ...schema,
+    ...undeclaredReferences(path, server, declared),
+    ...remoteFindings(path, server),
+  ];
 }
 
 function serverLoads(server: unknown): boolean {
@@ -147,13 +135,13 @@ function serverLoads(server: unknown): boolean {
 export const inlineServersValid = (servers: Readonly<Record<string, unknown>>): boolean =>
   Object.values(servers).every(serverLoads);
 
-/** Only what the manifest's own schema leaves to the MCP check: undeclared references and cleartext URLs. */
+/** Only what the manifest's own schema leaves to the MCP check: undeclared references, urls and headers. */
 function inlineFindings(servers: Readonly<Record<string, unknown>>, declared: ReadonlySet<string>) {
   return Object.entries(servers).flatMap(([name, server]) =>
     isRecord(server)
       ? [
           ...undeclaredReferences(`mcpServers.${name}`, server, declared),
-          ...(insecureUrl(server.url) ? [warningAt(`mcpServers.${name}.url`, CLEARTEXT)] : []),
+          ...remoteFindings(`mcpServers.${name}`, server),
         ]
       : [],
   );

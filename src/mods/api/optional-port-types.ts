@@ -24,8 +24,14 @@ export interface SessionBackdrop {
   readonly plugin: string;
   /** Whether the drawing is light or dark. */
   readonly colorScheme?: 'light' | 'dark';
-  /** Judgment: the docs point to the generated types for `glass`, so its value is carried as given. */
-  readonly glass?: unknown;
+  /**
+   * How the surface frosts its panels over the drawing, defaults filled in (`blur` 16, `opacity`
+   * 0.6), or `false` where they stay as they are (`RenderPropsOf` `Backdrop`, claude-code/index.d.ts:11396).
+   * `$.theme.set` always fills it; a backdrop a host builds without it draws with the default glass.
+   */
+  readonly glass?:
+    | { readonly blur: number; readonly tint?: string; readonly opacity: number }
+    | false;
 }
 
 /** What `$.theme.set` resolves to (interface.md, "Put a backdrop behind the conversation"). */

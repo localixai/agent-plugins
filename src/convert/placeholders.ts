@@ -1,0 +1,87 @@
+import type { PluginForm } from '../loading/core/form.ts';
+
+/**
+ * The two forms' path placeholders (Agent Plugins Extended §18.3.3, §18.4.2 item 3, §18.4.3 item
+ * 3): the core's `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` (core §9.2) and Claude Code's
+ * `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}`, which name the same directories (J18.13).
+ * A rename is one pass over the original text, so a renamed placeholder is never renamed again.
+ */
+
+const TO_CLAUDE_CODE: Readonly<Record<string, string>> = {
+  '${PLUGIN_ROOT}': '${CLAUDE_PLUGIN_ROOT}',
+  '${PLUGIN_DATA}': '${CLAUDE_PLUGIN_DATA}',
+};
+
+const TO_CORE: Readonly<Record<string, string>> = {
+  '${CLAUDE_PLUGIN_ROOT}': '${PLUGIN_ROOT}',
+  '${CLAUDE_PLUGIN_DATA}': '${PLUGIN_DATA}',
+};
+
+const CORE_PLACEHOLDERS = /\$\{PLUGIN_(?:ROOT|DATA)\}/g;
+const CLAUDE_PLACEHOLDERS = /\$\{CLAUDE_PLUGIN_(?:ROOT|DATA)\}/g;
+
+const renamed = (table: Readonly<Record<string, string>>) => (match: string) =>
+  table[match] ?? match;
+
+/** `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` written as Claude Code's names. */
+export const toClaudeCodePlaceholders = (text: string): string =>
+  text.replace(CORE_PLACEHOLDERS, renamed(TO_CLAUDE_CODE));
+
+/** `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}` written as the core's names. */
+export const toCorePlaceholders = (text: string): string =>
+  text.replace(CLAUDE_PLACEHOLDERS, renamed(TO_CORE));
+
+/** Whether text holds a `${`, which the other form would expand or keep literally. */
+export const holdsReference = (text: string): boolean => text.includes('${');
+
+const OWN_PLACEHOLDERS: { readonly [F in PluginForm]: RegExp } = {
+  core: CORE_PLACEHOLDERS,
+  'claude-code': CLAUDE_PLACEHOLDERS,
+};
+
+/** Whether text written for `form` holds a `${` other than that form's two path placeholders. */
+export const holdsOtherReference = (text: string, form: PluginForm): boolean =>
+  holdsReference(text.replace(OWN_PLACEHOLDERS[form], ''));
+
+/** Whether text holds the core's own placeholders, which a core client expands in `args`. */
+export const holdsCorePlaceholder = (text: string): boolean =>
+  /\$\{PLUGIN_(?:ROOT|DATA)\}/.test(text);
+
+/**
+ * The `env` entries that bridge the environment in configuration (J18.18), by the form whose
+ * configuration holds them: a Claude Code stdio server gets the core's two variables, a core stdio
+ * server Claude Code's two.
+ */
+const BRIDGES = {
+  'claude-code': { PLUGIN_ROOT: '${CLAUDE_PLUGIN_ROOT}', PLUGIN_DATA: '${CLAUDE_PLUGIN_DATA}' },
+  core: { CLAUDE_PLUGIN_ROOT: '${PLUGIN_ROOT}', CLAUDE_PLUGIN_DATA: '${PLUGIN_DATA}' },
+} as const satisfies Record<PluginForm, Readonly<Record<string, string>>>;
+
+/** The form a conversion from each form writes. */
+const OTHER_FORM: { readonly [F in PluginForm]: PluginForm } = {
+  'claude-code': 'core',
+  core: 'claude-code',
+};
+
+const isBridge = (form: PluginForm, key: string, value: string): boolean =>
+  Object.entries(BRIDGES[form]).some(([name, bridged]) => name === key && bridged === value);
+
+/**
+ * A stdio server's `env` moved from one form to the other: the source's own bridge entries left out,
+ * since the target sets those variables itself to the same directories (J18.13; judgment, so that a
+ * converted package converts back to what it was), the values renamed by `rename`, then the
+ * target's bridge added where the server sets no such variable.
+ */
+export function bridgedEnvironment(
+  env: Readonly<Record<string, string>> | undefined,
+  from: PluginForm,
+  rename: (text: string) => string,
+): Readonly<Record<string, string>> {
+  const kept = Object.entries(env ?? {})
+    .filter(([key, value]) => !isBridge(from, key, value))
+    .map(([key, value]): [string, string] => [key, rename(value)]);
+  const added = Object.entries(BRIDGES[OTHER_FORM[from]]).filter(
+    ([key]) => !kept.some(([name]) => name === key),
+  );
+  return Object.fromEntries([...kept, ...added]);
+}

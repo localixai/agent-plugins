@@ -4,6 +4,7 @@ import { COMMAND_ENTRY_ONE_OF, type CommandEntry } from './manifest-schema.ts';
 import { readInvocable } from './skill-fields.ts';
 import { pluginPrefix, refusedCharacters, reservedNamespace } from './skill-name.ts';
 import type { Command, InvocableFrontmatter, SkillOrigin } from './skill-types.ts';
+import { codePointLength } from './code-points.ts';
 
 /**
  * Commands, "the older format" (plugins/components.md, "Commands"; skills.md, "Where skills
@@ -45,6 +46,9 @@ const SEGMENT = ':';
  * is reserved for synced skills; "a plugin named `anthropic-skills`: it loads", so a plugin command
  * is not refused for it.
  */
+/** The longest command name, in characters (code points), joined segments included. */
+const MAX_NAME = 256;
+
 export function commandNameIssues(
   at: string,
   segments: readonly string[],
@@ -61,6 +65,12 @@ export function commandNameIssues(
         at,
         `command name has a character a command name can't hold (${found.join(', ')}); the command is refused, rename it`,
       ),
+    ];
+  }
+  // errors.md, "Skill or command name refused": a name "over 256 characters" is refused (spec §4.2).
+  if (codePointLength(name) > MAX_NAME) {
+    return [
+      error(at, `command name is over ${MAX_NAME} characters; the command is refused, rename it`),
     ];
   }
   const reserved = 'plugin' in origin ? undefined : reservedNamespace(name);

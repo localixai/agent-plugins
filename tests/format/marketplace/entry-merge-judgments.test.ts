@@ -156,3 +156,18 @@ describe('judgment: a plugin.json metadata object', () => {
     expect(result.manifest?.metadata).toEqual({ team: 'manifest' });
   });
 });
+
+describe('judgment: entry themes beside a plugin.json that reads experimental.themes (spec §6.2.2 item 3, J6.10)', () => {
+  test("the entry's themes join experimental.themes, the key that is read; the top-level key stays as written", () => {
+    const manifest = manifestOf({ experimental: { themes: './looks/' }, themes: './old/' });
+    const result = merge({ themes: ['./extra/'] }, manifest);
+    expect(result.manifest?.experimental).toEqual({ themes: ['./looks/', './extra/'] });
+    expect(result.manifest?.themes).toBe('./old/');
+  });
+
+  test('without experimental.themes they join the top-level key, as before', () => {
+    const result = merge({ themes: ['./extra/'] }, manifestOf({ themes: './old/' }));
+    expect(result.manifest?.themes).toEqual(['./old/', './extra/']);
+    expect(result.manifest?.experimental).toBeUndefined();
+  });
+});

@@ -1,6 +1,6 @@
 import type { ShellPaths, SubstitutionScope } from './scope.ts';
 import type { TokenReference } from './substitute.ts';
-import { shellPathsOf } from './surfaces.ts';
+import { shellPathsOf, type SubstitutionSurface } from './surfaces.ts';
 import { isPluginVariable, type PluginVariable } from './variables.ts';
 
 type Ask = (name: PluginVariable) => Promise<string>;
@@ -58,7 +58,9 @@ const EXPORTED: { readonly [M in ShellPaths]: Exported } = {
  * folder is asked for once.
  */
 export const shellExports = (
+  surface: SubstitutionSurface,
   referenced: readonly TokenReference[],
   scope: ExportScope,
   ask: Ask,
-): Promise<Record<string, string>> => EXPORTED[shellPathsOf(scope)](referenced, scope, ask);
+): Promise<Record<string, string>> =>
+  EXPORTED[shellPathsOf(scope, surface)](referenced, scope, ask);

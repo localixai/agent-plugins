@@ -64,13 +64,18 @@ export function createTurnScope(): TurnScope {
  * What a dispatch leaves in the core: `watchPaths` of a SessionStart, CwdChanged or FileChanged
  * output replaces the dynamic watch list (no other event's output carries the field), the `once`
  * registrations its runs spent go (a background run's when its process ends), and the background
- * promises join the queue `takeBackground` reads.
+ * promises join the queue `takeBackground` reads, an async `SessionStart` hook's repeat emptied
+ * (`source` is the `SessionStart` input's).
  */
-export function recordOutcome(core: SessionCore, outcome: HookOutcome<HookEvent>): void {
+export function recordOutcome(
+  core: SessionCore,
+  outcome: HookOutcome<HookEvent>,
+  source?: unknown,
+): void {
   core.watchPaths.set(mergeWatchPaths(core.watchPaths.get(), outcome.effects.watchPaths));
   dropSpent(core);
   core.background.add(
-    outcome.background.map((delivery) =>
+    core.sessionStarts.watch(outcome, source).map((delivery) =>
       delivery.finally(() => {
         dropSpent(core);
       }),
@@ -113,8 +118,9 @@ export interface HookScope {
   /** Whether a handler that passes this turn's gates would run for the event (matchers are not read). */
   hasHooks(event: HookEvent): boolean;
   /**
-   * The handlers that would run in this turn, in registry order (plugins, settings files, then what
-   * was added): each with its event, matcher, official handler object, id and `source` (kind, label,
+   * The handlers that would run in this turn, in registry order (Judgment J7.2: the settings files,
+   * highest precedence first; then the plugins in load order; then frontmatter and session hooks as
+   * they registered): each with its event, matcher, official handler object, id and `source` (kind, label,
    * scope, plugin name), for a read-only `/hooks` view (hooks.md, "The `/hooks` menu"). A handler the
    * gates silence (`disableAllHooks`, trust, a disabled plugin, a managed lock) or of a type its
    * event does not support is not listed; a `once` handler that was consumed is gone.

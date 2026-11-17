@@ -247,6 +247,9 @@ describe('combine rules and path checks', () => {
       'commands path not found: ./nope.md',
       'hooks path not found: ./nope/hooks.json',
     ]);
+    // troubleshooting.md, "commands path not found": the Errors tab adds this guidance.
+    const guidance = 'Check that the path in your manifest or marketplace config is correct';
+    expect(found.issues.every((one) => one.guidance === guidance)).toBe(true);
     expect((await discover({}, {})).issues).toEqual([]);
   });
 

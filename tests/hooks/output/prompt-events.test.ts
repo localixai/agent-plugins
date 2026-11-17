@@ -102,15 +102,27 @@ spec('hooks.output.UserPromptSubmit.suppressOriginalPrompt', () => {
     expect(outcome.block).toBeDefined();
   });
 
-  test('false and absent leave it in; one hook that asks is enough', () => {
+  test('false and absent leave it in; one blocking hook that asks is enough', () => {
+    const block = { decision: 'block', reason: 'r' };
     expect(
-      merged('UserPromptSubmit', [prompt({ suppressOriginalPrompt: false })]).effects
+      merged('UserPromptSubmit', [prompt({ suppressOriginalPrompt: false }, block)]).effects
         .suppressOriginalPrompt,
     ).toBeUndefined();
     expect(
-      merged('UserPromptSubmit', [prompt({}), prompt({ suppressOriginalPrompt: true })]).effects
-        .suppressOriginalPrompt,
+      merged('UserPromptSubmit', [
+        prompt({}, block),
+        prompt({ suppressOriginalPrompt: true }, block),
+      ]).effects.suppressOriginalPrompt,
     ).toBe(true);
+  });
+
+  test('a hook that does not block has no say, even when another hook blocks (Agent Plugins Extended §7.5.8, J7.144)', () => {
+    const outcome = merged('UserPromptSubmit', [
+      prompt({ suppressOriginalPrompt: true }),
+      { decision: 'block', reason: 'r' },
+    ]);
+    expect(outcome.block).toBeDefined();
+    expect(outcome.effects.suppressOriginalPrompt).toBeUndefined();
   });
 
   test('a value that is not a boolean fails validation', () => {

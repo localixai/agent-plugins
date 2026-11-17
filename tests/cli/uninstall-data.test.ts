@@ -46,6 +46,13 @@ spec('cli.plugin.What an uninstall deletes and keeps', () => {
     });
   });
 
+  test('on a case-sensitive file system a case twin has a folder of its own (J3.19)', () => {
+    const facts = { remaining: [record('Formatter@M')], caseInsensitiveFileSystem: false };
+    expect(retention(facts).data).toBe('delete');
+    const twin = { remaining: [record('formatter.m')], caseInsensitiveFileSystem: false };
+    expect(retention(twin).dataKeptBecause).toBe('shared-folder');
+  });
+
   test('ids that sanitize to the same folder share it', () => {
     const found = retention({ remaining: [record('formatter.m')] });
     expect(found.dataKeptBecause).toBe('shared-folder');

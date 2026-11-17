@@ -7,6 +7,7 @@ import { noProgramIssue } from './powershell-no-program.ts';
 import type { FieldPolicy, SubstitutionScope } from './scope.ts';
 import { rejectUserConfigInShell } from './shell-guard.ts';
 import { HOOK_GUARD } from './shell-guard-hook.ts';
+import { hookNeedsQuotes, unquotedSpacePath } from './hook-space-path.ts';
 import { substituter, type Substituter } from './substituter.ts';
 import { surfacePolicy, type SubstitutionSurface } from './surfaces.ts';
 
@@ -29,6 +30,8 @@ export interface HookCommandOptions {
    * `CLAUDE_PROJECT_DIR`. Default true.
    */
   readonly ofPlugin?: boolean;
+  /** The hook's event, which the path-with-a-space notification names (`Stop hook needs quotes ...`). */
+  readonly event?: string;
 }
 
 /**
@@ -54,14 +57,42 @@ export interface HookCommandResolution {
    * start, with this message. Undefined for a hook that resolved or was refused.
    */
   readonly notStarted?: string;
+  /**
+   * Set when an `asyncRewake` shell-form hook does not run because an unquoted path placeholder
+   * resolves to a path with a space: the notification for the conversation view (errors.md, "Hook
+   * needs quotes around a path with a space").
+   */
+  readonly notice?: string;
   readonly issues: readonly PluginIssue[];
 }
 
 interface Plan {
   readonly spec?: CommandSpec;
   readonly notStarted?: string;
+  readonly notice?: string;
   readonly issues: PluginIssue[];
 }
+
+/**
+ * What each shell does to the exported path variables on a Windows host: a Git Bash hook gets them
+ * with forward slashes, as its command text has them; PowerShell keeps the native paths (spec
+ * §3.2.4, J3.6; plugins/troubleshooting.md: a Git Bash hook "receives `${CLAUDE_PLUGIN_ROOT}`" with
+ * forward slashes). Option values are never touched.
+ */
+const PATH_VARIABLES = ['CLAUDE_PLUGIN_ROOT', 'CLAUDE_PLUGIN_DATA', 'CLAUDE_PROJECT_DIR'] as const;
+const forwardSlashes = (environment: Record<string, string>): Record<string, string> => {
+  const paths = PATH_VARIABLES.flatMap((name) => {
+    const value = environment[name];
+    return value === undefined ? [] : [[name, value.replaceAll('\\', '/')] as const];
+  });
+  return { ...environment, ...Object.fromEntries(paths) };
+};
+const SHELL_ENVIRONMENT: {
+  readonly [S in ShellKind]: (environment: Record<string, string>) => Record<string, string>;
+} = {
+  bash: forwardSlashes,
+  powershell: (environment) => environment,
+};
 
 /** The surface of each shell: PowerShell rewrites the placeholders, bash gets forward slashes. */
 const SHELL_SURFACES: { readonly [S in ShellKind]: SubstitutionSurface } = {
@@ -175,6 +206,14 @@ async function shellForm(handler: HookCommandHandler, run: Run): Promise<Plan> {
   const shell = handler.shell ?? options.defaultShell ?? 'bash';
   const none = noProgramIssue(shell, handler.shell, path, handler.command);
   if (none) return { notStarted: none.message, issues: [none] };
+  const script =
+    handler.asyncRewake === true
+      ? await unquotedSpacePath(handler.command, substitution)
+      : undefined;
+  if (script !== undefined) {
+    const notice = hookNeedsQuotes(options.event, script);
+    return { notice, issues: [warning(path, notice)] };
+  }
   const policy = policyOf(SHELL_SURFACES[shell], run);
   const command = await substitution.run(handler.command, policy, path);
   return {
@@ -217,5 +256,8 @@ export async function resolveHookCommand(
       ? await shellForm(handler, run)
       : await execForm(handler, handler.args, run);
   if (spec === undefined) return { resolved: undefined, ...rest };
-  return { resolved: { spec, environment: await environmentOf(run) }, issues: rest.issues };
+  const exported = await environmentOf(run);
+  const shell = 'shell' in spec && scope.windows ? spec.shell : undefined;
+  const environment = shell === undefined ? exported : SHELL_ENVIRONMENT[shell](exported);
+  return { resolved: { spec, environment }, issues: rest.issues };
 }

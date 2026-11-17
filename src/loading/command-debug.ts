@@ -11,7 +11,11 @@ const canonical = (path: string): string =>
 const inside = (path: string, directory: string): boolean =>
   directory === '' || directory === '.' || isWithin(directory, canonical(path));
 
-/** troubleshooting.md: this diagnostic belongs in the debug log, not the Plugin Errors tab. */
+/**
+ * troubleshooting.md: this diagnostic belongs in the debug log, not the Plugin Errors tab, with the
+ * directory and the advice after the colon. The path is the manifest's, as written: Claude Code
+ * prints the absolute one, which is the host's (`Locations.pluginRoot`), not the loader's.
+ */
 export async function commandDirectoryDebug(
   context: ReaderContext,
   commands: readonly PluginTextFile[],
@@ -27,7 +31,9 @@ export async function commandDirectoryDebug(
         (command) => command.path !== undefined && inside(command.path, directory),
       );
       return stat?.isDirectory && empty
-        ? [`Warning: No commands found in plugin ${context.pluginName} custom directory`]
+        ? [
+            `Warning: No commands found in plugin ${context.pluginName} custom directory: ${path}. Expected .md files or SKILL.md in subdirectories.`,
+          ]
         : [];
     }),
   );

@@ -35,17 +35,24 @@ export interface McpConnection {
   readonly protocolRevision: string;
   /** A stdio, sse, http or ws server of the user's Claude Code MCP configuration (not a claude.ai connector). */
   readonly userConfigured: boolean;
+  /**
+   * The server entry sets `"bareElicitationCapability": true` (errors.md, "MCP server rejected the
+   * elicitation capability"): it is offered the bare `{}`, form mode only, on any revision.
+   */
+  readonly bareElicitationCapability?: boolean;
 }
 
 /** "Connections that use protocol revision 2026-07-28". */
-const NEW_REVISION = '2026-07-28';
+export const NEW_REVISION = '2026-07-28';
 
 /**
  * What `elicitation` is declared on a connection: `{form: {}, url: {}}` on revision 2026-07-28 and
  * later, and on earlier revisions to the servers of a user's configuration; the bare `{}` on other
- * connections of the earlier revisions. Revisions are dates, so they compare as text.
+ * connections of the earlier revisions, and to a server entry with `bareElicitationCapability: true`
+ * (spec §17, "Elicitation capability rejected"). Revisions are dates, so they compare as text.
  */
 export function declaredElicitation(connection: McpConnection): ElicitationCapability {
+  if (connection.bareElicitationCapability === true) return {};
   const both = connection.protocolRevision >= NEW_REVISION || connection.userConfigured;
   return both ? { form: {}, url: {} } : {};
 }

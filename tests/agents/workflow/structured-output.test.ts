@@ -99,8 +99,14 @@ describe('the schema check and the attempt count (judgments)', () => {
   });
 
   test('an attempt count that is not a positive whole number is no value: the default of five applies', () => {
-    for (const value of ['0', '-1', '2.5', 'many', '', '1e3']) {
+    for (const value of ['0', '-1', '2.5', 'many', '', '1e-3']) {
       expect(structuredOutputAttempts({ MAX_STRUCTURED_OUTPUT_RETRIES: value })).toBe(5);
     }
+  });
+
+  // J3.17 (spec/judgments.md): a numeric variable reads scientific notation and digit separators.
+  test('the attempt count reads 2e3 and 64_000 (J3.17)', () => {
+    expect(structuredOutputAttempts({ MAX_STRUCTURED_OUTPUT_RETRIES: '2e3' })).toBe(2000);
+    expect(structuredOutputAttempts({ MAX_STRUCTURED_OUTPUT_RETRIES: '64_000' })).toBe(64_000);
   });
 });

@@ -74,7 +74,7 @@ function labelsOf(config: ResolvedUserConfig, key: string): readonly string[] {
   return [
     option?.required === true ? 'required' : 'optional',
     ...(option?.sensitive === true ? ['sensitive'] : []),
-    userConfigValue(config, key) === undefined ? 'not set' : 'set',
+    unsetKeys(config).includes(key) ? 'not set' : 'set',
   ];
 }
 

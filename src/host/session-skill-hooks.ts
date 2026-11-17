@@ -1,5 +1,6 @@
 import { warning, type PluginIssue } from '../format/issues.ts';
-import { type RegisteredHandler } from '../hooks/index.ts';
+import { type HookSource, type RegisteredHandler } from '../hooks/index.ts';
+import type { SkillOriginKind } from '../format/skill-types.ts';
 import { admitSkillHooks, hookSourceOf, type Expansion } from '../skills/index.ts';
 import type { SkillHookLedger } from './session-core.ts';
 import type { SkillHooksRegistrar } from './session-hooks.ts';
@@ -46,13 +47,35 @@ export function skillHookRegistration(registrar: SkillHooksRegistrar, ledger: Sk
     });
     const entries: readonly RegisteredHandler[] = registerHooks(hooks, {
       idPrefix: prefix,
-      source: { kind: 'skill', label: '[skill]' },
+      source: {
+        kind: 'skill',
+        label: '[skill]',
+        ...SKILL_HOOK_SOURCE[entry.invocable.origin.kind],
+      },
       ...(entry.plugin === undefined ? {} : { pluginId: entry.plugin.id }),
     });
     registrar.registerSkillHooks(prefix, entries);
     return [];
   };
 }
+
+/**
+ * The trust and lock facts a skill's frontmatter hooks carry, per origin (hooks.md, "Hooks in skills
+ * and agents": a project skill's hooks "follow the same workspace trust rule as hooks in settings
+ * files"; "Limits on skill hooks": a plugin-only lock keeps those of "a plugin skill, a bundled
+ * skill, or a skill in the managed settings directory"). A skill synced from claude.ai counts as
+ * the user's own (settings-reference.md, `strictPluginOnlyCustomization`).
+ */
+const SKILL_HOOK_SOURCE: {
+  readonly [K in SkillOriginKind]: Pick<HookSource, 'scope' | 'managed'>;
+} = {
+  plugin: {},
+  managed: { managed: true },
+  user: { scope: 'user' },
+  project: { scope: 'project' },
+  synced: { scope: 'user' },
+  bundled: {},
+};
 
 /** The expansion with the warnings of registering its hooks, when it has hooks to register. */
 export function withHooks(

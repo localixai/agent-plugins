@@ -6,7 +6,7 @@ import { anchorPattern, readPathSpecifier, type PathSpecifier } from './anchor.t
 import { DEPTH } from './depth.ts';
 import { compileGlobs, gitignoreMatches, isUsablePattern, type GlobEntry } from './glob.ts';
 import { absolutePath, relativeWithin, resolvePath } from './posix.ts';
-import { COVERAGE, PATHLESS_CALLS, requestedPath, searchesDirectory } from './tools.ts';
+import { COVERAGE, PATHLESS_CALLS, pathText, requestedPath, searchesDirectory } from './tools.ts';
 
 /** The text pattern of a path rule, or `undefined` for a bare or parameter rule. */
 export function pathSpecifierOf(rule: PermissionRule): PathSpecifier | undefined {
@@ -120,9 +120,9 @@ export function matchPathRule(
  * against `Edit(path)` and `Read(path)` rules. It accepts a rule with a path other than `*` for one of
  * the tools below but doesn't match a read, search, or edit against it" (permissions.md; it lists the
  * legacy MultiEdit with Write and NotebookEdit). `Tool(*)`
- * is read as every use of the tool, because the docs ask for the bare name for that. LSP is in the
- * Read format of tools-reference.md but its input has no path field the docs name: a deny or ask rule
- * on it covers every call and an allow rule none, the safe side (spec/judgments.md).
+ * is read as every use of the tool, because the docs ask for the bare name for that. An `LSP(path)`
+ * rule is in the Read format of tools-reference.md: a deny or ask rule on it covers every call and an
+ * allow rule none, the safe side (spec/judgments.md).
  */
 const UNMATCHED_FORMS: ReadonlySet<string> = new Set([
   'Write',
@@ -142,7 +142,9 @@ export const matchFileRule: SpecifierMatcher = (rule, call, ctx) => {
       : RESTRICTS[rule.behavior];
   }
   if (!covered.includes(call.toolName)) return false;
-  return PATHLESS_CALLS.has(call.toolName) || matchPathRule(rule, call, ctx, []);
+  // An LSP call is matched at its `filePath`; one without a path is covered, the safe side (J7.210).
+  if (PATHLESS_CALLS.has(call.toolName) && pathText(call) === undefined) return true;
+  return matchPathRule(rule, call, ctx, []);
 };
 
 /**

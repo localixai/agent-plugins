@@ -57,23 +57,35 @@ function tell(options: GuardOptions, line: string, mod: string): void {
   options.notice?.(line);
 }
 
+/** What the guard makes of an approval the rules' verdict keeps in place: the rule's own outcome. */
+const KEPT: {
+  readonly [V in 'deny' | 'ask']: (options: GuardOptions, approvers: readonly string[]) => unknown;
+} = {
+  deny: (options, approvers) => {
+    for (const mod of approvers) tell(options, `${mod} ${LIFT_ATTEMPT}`, mod);
+    return { decision: 'deny', reason: `${approvers.join(', ')} ${LIFT_ATTEMPT}` };
+  },
+  // "A call that an ask rule would prompt for still prompts you" (permissions.md, "Precedence
+  // among rules, hooks, and mods"): the approval becomes the prompt, not a refusal.
+  ask: () => ({ decision: 'ask' }),
+};
+
 /**
- * A call a user's mod approved, judged against the deny rules (admin.md: "a user's mod can't
- * approve a call that a `deny` rule refuses or an `ask` rule prompts for"; with
- * `allowModsToOverrideDenyRules` a `deny` rule yields, an `ask` rule does not). "If it can't check
- * the deny rules for a call that a user's mod approved, it refuses the call."
+ * A call a user's mod approved, judged against the permission rules (admin.md: "a user's mod can't
+ * approve a call that a `deny` rule refuses or an `ask` rule prompts for"): a `deny` rule refuses
+ * and an `ask` rule prompts. `allowModsToOverrideDenyRules` lets the approval past "most of the
+ * outcomes that stay in place by default, including a `deny` rule", the `ask` rule's prompt among
+ * them. "If it can't check the deny rules for a call that a user's mod approved, it refuses the call."
  */
 async function checkApproval(options: GuardOptions, e: unknown, result: unknown): Promise<unknown> {
   const approvers = options.ledger.approvers;
   if (approvers.length === 0 || !isRecord(e)) return result;
   const verdict = await options.deny.verdict(String(e.tool), e.input);
-  const lifts =
-    verdict === 'ask' ||
-    (verdict === 'deny' && !guardOption(options.policy, 'allowModsToOverrideDenyRules'));
   if (verdict === 'unknown') return { decision: 'deny', reason: CHECK_FAILED };
-  if (!lifts) return result;
-  for (const mod of approvers) tell(options, `${mod} ${LIFT_ATTEMPT}`, mod);
-  return { decision: 'deny', reason: `${approvers.join(', ')} ${LIFT_ATTEMPT}` };
+  if (verdict === 'none' || guardOption(options.policy, 'allowModsToOverrideDenyRules')) {
+    return result;
+  }
+  return KEPT[verdict](options, approvers);
 }
 
 async function guardToolCheck(options: GuardOptions, e: unknown, next: Next): Promise<unknown> {

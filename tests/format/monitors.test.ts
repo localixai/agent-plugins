@@ -146,7 +146,7 @@ spec('monitors.field.when', () => {
     expect(monitor?.when).toEqual({ kind: 'on-skill-invoke', skill: 'deploy' });
   });
 
-  test('any other value is an error naming the two documented forms', () => {
+  test("any other value is an error in the validator's words (oracle 2.1.325, spec §9.2.2)", () => {
     for (const when of [
       'never',
       'on-skill-invoke',
@@ -158,8 +158,11 @@ spec('monitors.field.when', () => {
       const read = readMonitors([{ ...deploy, when }], FILE);
       expect(read.monitors).toEqual([]);
       expect(read.issues).toHaveLength(1);
-      expect(read.issues[0]?.message).toContain('"always"');
-      expect(read.issues[0]?.message).toContain('"on-skill-invoke:<skill>"');
+      expect(read.issues[0]?.message).toContain('when: on-skill-invoke: must specify a skill name');
+      const prefixed = when.startsWith('on-skill-invoke:');
+      expect(
+        read.issues[0]?.message.includes('Invalid string: must start with "on-skill-invoke:"'),
+      ).toBe(!prefixed);
       expect(blocksLoading(read.issues)).toBe(true);
     }
   });
@@ -181,13 +184,13 @@ describe('judgments (spec/judgments.md)', () => {
     });
   });
 
-  test('valid entries are returned beside the issues of the invalid ones', () => {
+  test('one invalid entry skips the whole source (J9.7); the issue names that entry', () => {
     const read = readMonitors(
       [errorLog, { name: 'bad' }, { ...errorLog, name: 'access-log' }],
       FILE,
     );
-    expect(read.monitors.map((each) => each.name)).toEqual(['error-log', 'access-log']);
-    expect(read.issues).toHaveLength(1);
+    expect(read.monitors).toEqual([]);
+    expect(read.issues.map((found) => found.path)).toEqual([`${FILE}[1]`]);
   });
 
   test('an empty name, command or description counts as missing', () => {

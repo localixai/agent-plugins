@@ -88,7 +88,7 @@ export function publicEntries(): PublicEntry[] {
     readonly exports: Readonly<Record<string, string | Readonly<Record<string, string>>>>;
   };
   return Object.entries(manifest.exports).flatMap(([subpath, target]) => {
-    const source = typeof target === 'string' ? undefined : target['llx-plugin-source'];
+    const source = typeof target === 'string' ? undefined : target['agent-plugins-source'];
     return source === undefined ? [] : [{ subpath, file: join(ROOT, source) }];
   });
 }

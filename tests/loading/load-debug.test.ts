@@ -19,7 +19,9 @@ spec(
         }),
       });
       expect(result.plugin?.skills).toHaveLength(1);
-      expect(result.debug).toEqual(['Warning: No commands found in plugin tool custom directory']);
+      expect(result.debug).toEqual([
+        'Warning: No commands found in plugin tool custom directory: ./custom. Expected .md files or SKILL.md in subdirectories.',
+      ]);
       expect(result.issues).toEqual([]);
     });
 

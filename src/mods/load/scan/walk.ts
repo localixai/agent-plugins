@@ -1,5 +1,5 @@
 import type { Node } from 'acorn';
-import { isBlock } from './ast.ts';
+import { isBlock, isFunction } from './ast.ts';
 
 /**
  * A walk over a syntax tree that keeps no recursion: a hooks module may nest code deeply
@@ -66,4 +66,24 @@ export function maxScopeDepth(program: Node): number {
     }
   }
   return deepest;
+}
+
+/** Children the walk follows: a function's parameters are declarations, so only its body is read. */
+const readable = (node: Node): readonly Node[] =>
+  isFunction(node) ? [node.body] : childrenOf(node);
+
+/** A walk with a context handed down: the visitor returns the context for the children, or `false` to stop. */
+export function walk<C>(
+  root: Node,
+  context: C,
+  visit: (node: Node, context: C) => C | false,
+): void {
+  const stack: { readonly node: Node; readonly context: C }[] = [{ node: root, context }];
+  for (let frame = stack.pop(); frame; frame = stack.pop()) {
+    const next = visit(frame.node, frame.context);
+    if (next === false) continue;
+    for (const child of readable(frame.node).toReversed()) {
+      stack.push({ node: child, context: next });
+    }
+  }
 }

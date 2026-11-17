@@ -126,6 +126,8 @@ function readOf(event: HookEvent, tagged: TaggedOutput): Read {
     specific: OUTPUT_CAPS[event].accepts.has('specific') ? checked?.hookSpecificOutput : undefined,
     plainText: tagged.plainText,
     effectsIgnored: tagged.effectsIgnored === true,
+    blocks: tagged.blocked === true || checked?.decision === 'block',
+    stdout: tagged.stdout,
   };
 }
 

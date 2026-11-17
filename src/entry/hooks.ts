@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/hooks`: The hook engine: selection, input, handlers, verdicts, dispatch and output (docs/API.md, "Hooks"). */
+/** `@localix-ai/agent-plugins/hooks`: The hook engine: selection, input, handlers, verdicts, dispatch and output (docs/API.md, "Hooks"). */
 export { HOOK_EVENTS } from '../protocol/hook-events.ts';
 export type {
   EventWithSpecificOutput,

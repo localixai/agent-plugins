@@ -25,7 +25,13 @@ export type SkillShellsMatchShellKind = Assert<Equal<SkillShell, ShellKind>>;
  * gives it to the session (`SessionOptions.hostSkills`).
  */
 export type SkillOrigin =
-  | { readonly kind: 'plugin'; readonly plugin: string; readonly rootSkill?: boolean }
+  | {
+      readonly kind: 'plugin';
+      readonly plugin: string;
+      readonly rootSkill?: boolean;
+      /** A core package's skill (Agent Plugins Extended §18.1.5 item 5): its body is never expanded. */
+      readonly core?: true;
+    }
   | { readonly kind: 'managed' }
   | { readonly kind: 'user' }
   | { readonly kind: 'project' }

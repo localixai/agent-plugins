@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/layout`
+# `@localix-ai/agent-plugins/layout`
 
 The standard layout of a plugin, without the plugin engine; these names are not in `./format`.
 

@@ -6,7 +6,7 @@ import { RULE_FORMATS, type RuleFormatId } from './tools/rule-formats.ts';
 
 export { RULE_FORMATS, type RuleFormatId };
 
-/** The tools the SDK no longer lists but a rule may still name: the legacy `MultiEdit` edits files like `Edit` (spec/judgments.md). */
+/** The tools the SDK no longer lists but a rule may still name: the legacy `MultiEdit` edits files like `Edit` (spec/judgments.md); it is still not a known tool, so its rules draw `matches no tool` (J13.34). */
 const LEGACY_FORMAT_OF_TOOL: ReadonlyMap<string, RuleFormatId> = new Map<string, RuleFormatId>([
   ['MultiEdit', 'edit-path'],
 ]);

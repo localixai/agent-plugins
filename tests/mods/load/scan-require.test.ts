@@ -37,7 +37,7 @@ describe('require() is refused where Claude Code 2.1.321 loads it', () => {
     const source =
       "export function register(on) { on('tool.call', async ($, e, next) => { await import('./x.js'); return next(e) }) }";
     expect(problemsOf(source)).toEqual([
-      'register.js: a dynamic import(); a hooks module imports its own files with an import declaration',
+      'register.js: a dynamic import(); a hooks module imports its own files with an import declaration, as in import { name } from "./file.js"',
     ]);
   });
 });

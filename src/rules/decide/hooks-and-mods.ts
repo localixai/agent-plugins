@@ -60,6 +60,14 @@ export function hookSkipsPrompt(
   return hookAllowed(ctx) && strategy.hookMayAllow(facts, ctx);
 }
 
+/**
+ * "With neither managed settings nor a Team or Enterprise /login ... the mod can approve a call that
+ * a deny rule refuses or a PreToolUse hook blocked", and is not prompted for an ask rule or a hook
+ * ask; under policy, `allowModsToOverrideDenyRules` lets it past the same outcomes (J14.14).
+ */
+const unenforced = (mod: ModOutcome): boolean =>
+  !mod.policyEnforced || mod.overridesDenyRules === true;
+
 /** How far a mod's approval reaches, as a test on the mod and the session. */
 const REACH: {
   readonly [R in ModReach]: (mod: ModOutcome, ctx: DecideContext) => boolean;
@@ -67,9 +75,9 @@ const REACH: {
   any: () => true,
   // "except where the mod can't bypass your permission prompt tool or Agent SDK permission callback"
   unbypassable: (mod, ctx) => !(mod.policyEnforced && ctx.permissionCallback === true),
-  // "With neither managed settings nor a Team or Enterprise /login ... the mod can approve a call that a
-  // deny rule refuses or a PreToolUse hook blocked", and is not prompted for an ask rule or a hook ask.
-  unenforced: (mod) => !mod.policyEnforced,
+  unenforced,
+  // A managed hook's block or prompt stays whatever the option says (Agent Plugins Extended J14.14).
+  hook: (mod, ctx) => ctx.hook?.managed !== true && unenforced(mod),
   never: () => false,
 };
 

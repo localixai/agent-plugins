@@ -24,6 +24,7 @@ import type { Subject } from './subject.ts';
 import { readStdout, type StdoutReading } from './stdout-kind.ts';
 import { routedBlock, shownWith } from './route.ts';
 import { suspectCapture } from './suspect-capture.ts';
+import { plainTextNote, unrecognizedKeysNote, withNotes } from './debug-lines.ts';
 import type { HandlerVerdict, ParsedOutput, ParseResult } from './types.ts';
 
 /**
@@ -227,7 +228,24 @@ function readOutput(subject: Subject, stdout: string) {
   const reading: StdoutReading = readsPath(subject) ? { text: stdout.trim() } : readStdout(stdout);
   const checked =
     reading.json === undefined ? undefined : subject.parse(subject.event, reading.json);
-  return { reading, ...classify(reading, checked) };
+  return { reading, ...classify(reading, checked), unrecognized: checked?.unrecognizedKeys };
+}
+
+/**
+ * The debug lines of the reading: stdout of an exit 0 read as plain text (a `WorktreeCreate`
+ * command hook's stdout is a path, never JSON, so it gets none), and keys a valid output had that
+ * the schema does not name.
+ */
+function notesOf(
+  subject: Subject,
+  exitClass: ExitClass,
+  read: { readonly reading: StdoutReading; readonly unrecognized?: readonly string[] | undefined },
+) {
+  const plain =
+    exitClass === 'zero' && !readsPath(subject) && read.reading.json === undefined
+      ? plainTextNote(subject, read.reading.text)
+      : [];
+  return [...plain, ...unrecognizedKeysNote(subject, read.unrecognized)];
 }
 
 export function interpretExited(
@@ -238,8 +256,15 @@ export function interpretExited(
   if (run.outputHeldOpen === true && exitClassOf(run.exitCode) !== 'two') {
     return suspectCapture(subject);
   }
-  const { stdoutClass, ...rest } = readOutput(subject, run.stdout);
+  const { stdoutClass, unrecognized, ...rest } = readOutput(subject, run.stdout);
   const exitClass = exitClassOf(run.exitCode);
   const cell = EXIT_TABLE[exitClass][stdoutClass];
-  return EXIT_READERS[exitClass]({ subject, run, cell, rule: EXIT2_RULES[subject.event], ...rest });
+  const verdict = EXIT_READERS[exitClass]({
+    subject,
+    run,
+    cell,
+    rule: EXIT2_RULES[subject.event],
+    ...rest,
+  });
+  return withNotes(verdict, notesOf(subject, exitClass, { reading: rest.reading, unrecognized }));
 }

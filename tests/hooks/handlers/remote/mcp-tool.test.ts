@@ -25,6 +25,7 @@ const INPUT = JSON.stringify({
   tool_name: 'Write',
   tool_input: { file_path: '/work/app/src/a.ts', content: 'x' },
   count: 3,
+  extra: { none: null, ok: true },
 });
 
 interface Waited {
@@ -151,6 +152,11 @@ spec('hooks.handler.mcp_tool.input', () => {
       list: [1, 'a'],
     });
     expect(sent).toEqual({ mode: 'full', depth: 2, deep: true, none: null, list: [1, 'a'] });
+  });
+
+  test('Agent Plugins Extended J7.57: a reference to null is empty, a number or boolean its JSON text', async () => {
+    const { sent } = await argsOf({ a: '${extra.none}', b: 'n=${count} ok=${extra.ok}' });
+    expect(sent).toEqual({ a: '', b: 'n=3 ok=true' });
   });
 
   test('a hook with no input calls the tool with no arguments', async () => {

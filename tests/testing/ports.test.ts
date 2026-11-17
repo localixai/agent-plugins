@@ -1,5 +1,5 @@
 /**
- * The published testing entry (docs/API.md, "Testing kit"): `@rsaryev/llx-plugin/testing`
+ * The published testing entry (docs/API.md, "Testing kit"): `@localix-ai/agent-plugins/testing`
  * holds one in-memory fake per port, and the scripted ones refuse to guess. These are integration
  * tests of the entry, outside `spec()`: the docs name the kit, not its behaviour.
  */
@@ -42,7 +42,7 @@ describe('the testing entry', () => {
 
   test('package.json publishes it as ./testing, built to dist/testing', () => {
     expect(pkg.exports['./testing']).toEqual({
-      'llx-plugin-source': './src/testing/index.ts',
+      'agent-plugins-source': './src/testing/index.ts',
       types: './dist/testing/index.d.ts',
       bun: './src/testing/index.ts',
       import: './dist/testing/index.js',

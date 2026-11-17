@@ -55,14 +55,26 @@ spec(
       }
     });
 
-    test('on macOS and Linux a backslash anywhere after the leading "./" is refused with the judged wording', () => {
+    test('on macOS and Linux a backslash anywhere after the leading "./" is refused at load as a path that does not stay inside', () => {
       for (const raw of ['./plugins\\formatter', './a\\', './\\a']) {
         expect(messages(raw, undefined, 'posix')).toEqual([
-          ['error', PATH, `Path contains a backslash: ${raw}. Write the path with forward slashes`],
+          [
+            'error',
+            PATH,
+            `Plugin source path refused: ${raw} does not stay inside its marketplace directory. Check that the marketplace entry has a plain relative path.`,
+          ],
         ]);
         expect(parse(raw, undefined, 'posix').source).toBeUndefined();
       }
       expect(parse('./plugins\\formatter').source).toBeUndefined();
+    });
+
+    test('validation does not report a backslash: the entry is read with the path as written', () => {
+      const result = parsePluginSource('./plugins\\formatter', { ...slotAt(0), mode: 'validate' });
+      expect(result).toEqual({
+        source: { kind: 'relative', path: 'plugins\\formatter', bare: false },
+        issues: [],
+      });
     });
 
     test('on Windows a backslash is accepted and the path is kept with "/" separators', () => {
@@ -118,7 +130,8 @@ spec(
         expect(result.issues).toHaveLength(1);
         expect(result.issues[0]?.severity).toBe('error');
         expect(result.issues[0]?.path).toBe(PATH);
-        expect(result.issues[0]?.message).toContain('metadata.pluginRoot');
+        // The wording is oracle 2.1.325 (spec J15.6): the bare name reads as one without "./".
+        expect(result.issues[0]?.message).toBe('Invalid string: must start with "./"');
       }
     });
 

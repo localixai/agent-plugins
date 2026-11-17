@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../format/env-flag.ts';
 import type { SpawnTypes } from '../tool-resolution.ts';
 import { FALLBACK_AGENT } from './builtin.ts';
 import { resolveSubagentType, type AgentCatalog } from './resolve.ts';
@@ -119,3 +120,10 @@ export function namedSubagent(input: NamedSubagentInput): NamedSubagent {
     !input.isolationOnCall;
   return { addressable: named, launchesAs: teammate ? 'teammate' : 'subagent' };
 }
+
+/**
+ * Whether agent teams are on: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` set to an on spelling, in the
+ * environment or a settings `env` (the host passes the merged value); off by default (env-vars.md;
+ * spec §5.12.5). The value `NamedSubagentInput.agentTeams` takes.
+ */
+export const agentTeamsOn = (value: string | undefined): boolean => isTruthyEnv(value);

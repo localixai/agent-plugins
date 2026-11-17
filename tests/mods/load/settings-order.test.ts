@@ -54,16 +54,22 @@ spec('mods.setting.CLAUDE_CODE_PLUGIN_DIRS', () => {
 });
 
 spec('mods.setting.CLAUDE_CODE_PLUGIN_DIR_WATCH', () => {
-  test('`1` makes a long-running non-interactive session reload --plugin-dir mods on save; other values do not', () => {
-    expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: '1' } }), false)).toBe(true);
-    for (const value of [undefined, '0', 'true', '']) {
+  // env-vars.md: "on by default in interactive sessions. Set to `1` to turn it on in non-interactive
+  // sessions as well, or `0` to turn it off in every session"; read as an on/off variable (J3.16).
+  test('`1` makes a non-interactive session reload --plugin-dir mods on save; unset or another value does not', () => {
+    for (const value of ['1', 'true', 'On']) {
+      expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), false)).toBe(true);
+    }
+    for (const value of [undefined, '0', 'maybe', '']) {
       expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), false)).toBe(false);
     }
   });
 
-  test('an interactive session watches a --plugin-dir directory without it (create.md: it hot-reloads when you save)', () => {
+  test('an interactive session watches by default; `0` turns watching off in every session', () => {
     expect(watches(policy(), true)).toBe(true);
-    expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: '0' } }), true)).toBe(true);
+    for (const value of ['0', 'false', 'OFF']) {
+      expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), true)).toBe(false);
+    }
   });
 });
 
@@ -166,9 +172,15 @@ spec(
       expect(decideModLoad(managed(), copied).tier).toBe('user');
       expect(decideModLoad(managed(), relative).tier).toBe('user');
       expect(decideModLoad(managed(), disabled).tier).toBe('user');
+      // The debug log has a line starting with its id and `is enabled by managed settings, but`.
+      const notes = orderMods(managed(), [copied, relative, disabled]).notes;
+      expect(notes.map((note) => note.split(' but ')[0])).toEqual([
+        `${copied.id} is enabled by managed settings,`,
+        `${relative.id} is enabled by managed settings,`,
+      ]);
     });
 
-    test('a user may list their own mods only on a machine with no managed settings and no Team or Enterprise login', () => {
+    test('a user may list their own mods only on a machine with no managed settings, no managed-mcp.json and no Team or Enterprise login', () => {
       const lists = { prependPlugins: ['b@market'], appendPlugins: ['a@market'] };
       const plugins = [installed('a'), installed('c'), installed('b')];
       const alone = orderMods(policy({ user: lists }), plugins);
@@ -177,6 +189,7 @@ spec(
       expect(names(oauth)).toEqual(['b:prepend', 'c:user', 'a:append']);
       for (const guarded of [
         policy({ user: lists, managed: {} }),
+        policy({ user: lists, managedMcp: true }),
         policy({ user: lists, credential: 'team-or-enterprise-login' }),
       ]) {
         const order = orderMods(guarded, plugins);
@@ -247,11 +260,19 @@ spec(
   },
 );
 
-test('judgment: the variable is trimmed, empty pieces and repeats dropped, relative paths kept, flags first, the process environment before `env` of settings', () => {
+test('judgment: the variable is trimmed, empty pieces and repeats dropped, flags first, the process environment before `env` of settings', () => {
   const both = policy({
-    env: { CLAUDE_CODE_PLUGIN_DIRS: ' ./rel : :/abs/one:/flag/one ' },
+    env: { CLAUDE_CODE_PLUGIN_DIRS: ' ~/home : :/abs/one:/flag/one ' },
     user: { env: { CLAUDE_CODE_PLUGIN_DIRS: '/settings/ignored' } },
     flags: { pluginDirs: ['/flag/one'] },
   });
-  expect(dirsOf(both)).toEqual(['/flag/one', './rel', '/abs/one']);
+  expect(dirsOf(both)).toEqual(['/flag/one', '~/home', '/abs/one']);
+});
+
+spec('environment.host.CLAUDE_CODE_PLUGIN_DIRS', () => {
+  // env-vars.md: "Give each path as an absolute path or start it with `~`, because Claude Code skips relative paths."
+  test('a relative entry is skipped; an absolute one or one starting with ~ loads', () => {
+    const dirs = policy({ env: { CLAUDE_CODE_PLUGIN_DIRS: './rel:plugins/x:~/p:/abs' } });
+    expect(dirsOf(dirs)).toEqual(['~/p', '/abs']);
+  });
 });

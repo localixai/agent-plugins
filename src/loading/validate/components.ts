@@ -2,6 +2,7 @@ import {
   COMPONENT_KINDS,
   frontmatterFindings,
   type ComponentKind,
+  type ComponentPlace,
 } from '../../format/validate/component-frontmatter.ts';
 import { inFile, type ValidationIssue } from '../../format/validate/finding.ts';
 import type { PluginFiles } from '../../ports/index.ts';
@@ -108,12 +109,15 @@ export async function frontmatterIssues(
   kind: ComponentKind,
   files: PluginFiles,
   paths: readonly string[],
-  { signal }: { readonly signal?: AbortSignal | undefined } = {},
+  {
+    signal,
+    place = 'plugin',
+  }: { readonly signal?: AbortSignal | undefined; readonly place?: ComponentPlace } = {},
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   for (const path of paths) {
     const text = await files.readText(path, signal);
-    if (text !== undefined) issues.push(...inFile(path, frontmatterFindings(kind, text)));
+    if (text !== undefined) issues.push(...inFile(path, frontmatterFindings(kind, text, place)));
   }
   return issues;
 }

@@ -111,7 +111,10 @@ const TRUST: { readonly [S in PolicyScope]: (context: PolicyContext) => boolean 
   local: (context) => context.localSettingsTracked !== true || context.isFolderTrusted('local'),
 };
 
-/** Whether a file is the repository's, not yours: the shared file, or the local file git tracks. */
+/**
+ * Whether a file is the repository's, not yours: the shared file, or a local file git tracks or that
+ * lies outside a git repository; only a local file git reports as untracked is yours.
+ */
 const REPOSITORY_FILE: { readonly [S in PolicyScope]: (context: PolicyContext) => boolean } = {
   managed: () => false,
   parent: () => false,
@@ -119,7 +122,8 @@ const REPOSITORY_FILE: { readonly [S in PolicyScope]: (context: PolicyContext) =
   user: () => false,
   addDir: () => false,
   project: () => true,
-  local: (context) => context.localSettingsTracked === true,
+  local: (context) =>
+    context.localSettingsTracked === true || context.localSettingsInRepository !== true,
 };
 
 export interface PermissionLists {

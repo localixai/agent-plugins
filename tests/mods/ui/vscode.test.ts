@@ -69,7 +69,7 @@ spec(`${V}Keyboard focus`, () => {
   const panel = { hasFocus: true, isIdle: true, questionWaiting: false };
   const base = {
     requested: true,
-    fromUserAction: false,
+    fromUserAction: true,
     surface: 'vscode',
     isPromptEmpty: true,
     otherHasFocus: false,
@@ -81,6 +81,10 @@ spec(`${V}Keyboard focus`, () => {
     expect(grantsFocus({ ...base, panel: { ...panel, isIdle: false } })).toBe(false);
     expect(grantsFocus({ ...base, panel: { ...panel, questionWaiting: true } })).toBe(false);
     expect(grantsFocus({ ...base, isPromptEmpty: false })).toBe(false);
+  });
+  test("the panel's conditions add to the terminal's: a command or a press, and nothing else focused", () => {
+    expect(grantsFocus({ ...base, fromUserAction: false })).toBe(false);
+    expect(grantsFocus({ ...base, otherHasFocus: true })).toBe(false);
   });
 });
 

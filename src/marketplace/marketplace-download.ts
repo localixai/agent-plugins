@@ -1,6 +1,6 @@
 import { error, type PluginIssue } from '../format/issues.ts';
 import type { HttpClient } from '../ports/http-client.ts';
-import { isBlockedHost } from './blocked-hosts.ts';
+import { isBlockedHost } from '../format/marketplace/blocked-hosts.ts';
 import { downloadFollowing, originOf } from './http-download.ts';
 import type { HeaderMap, MarketplaceFetchPlan } from './types.ts';
 

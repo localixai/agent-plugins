@@ -103,6 +103,8 @@ export type FetchPlanKind = FetchPlan['kind'];
 /** What planning a plugin fetch needs to know about the host and the marketplace it reads. */
 export interface FetchPlanContext {
   readonly marketplaceOrigin?: MarketplaceSource;
+  /** The `<plugin>@<marketplace>` being installed, named by a refusal (`Cannot install <id>: …`). */
+  readonly pluginId?: string;
   readonly platform: 'posix' | 'windows';
   /** The registry the user's own npm configuration names; the only `http://` or non-default one allowed. */
   readonly defaultNpmRegistry?: string;

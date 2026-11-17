@@ -8,6 +8,7 @@ import { MARKETPLACE_SOURCE_KINDS } from '../../protocol/settings-keys.ts';
 import type { PolicyScope } from '../layers.ts';
 import { byKind, type ByKind, type SourceOf } from './source-kinds.ts';
 import { isRecord } from '../../protocol/is-record.ts';
+import { isRoutingHeader } from '../../format/marketplace/header-names.ts';
 
 type Plugin = SourceOf<'settings'>['plugins'][number];
 
@@ -54,16 +55,6 @@ const WITHOUT_INSECURE_HELPER: ByKind<SdkMarketplaceSource> = {
   'skills-dir': same,
 };
 
-/**
- * The request-routing and client-identity header names Claude Code drops: the docs name `Host`,
- * `Cookie` and `X-Forwarded-*` "such as", and keep authentication names such as `Authorization`
- * (spec/judgments.md: these three, matched without regard to case).
- */
-const isRoutingOrIdentity = (name: string): boolean => {
-  const lower = name.toLowerCase();
-  return lower === 'host' || lower === 'cookie' || lower.startsWith('x-forwarded-');
-};
-
 /** The header filter, which applies to an inline plugin entry's `headers` only. */
 const WITHOUT_ROUTING_HEADERS: ByKind<SdkMarketplaceSource> = {
   github: same,
@@ -77,7 +68,7 @@ const WITHOUT_ROUTING_HEADERS: ByKind<SdkMarketplaceSource> = {
       ? {
           ...plugin,
           headers: Object.fromEntries(
-            Object.entries(plugin.headers).filter(([name]) => !isRoutingOrIdentity(name)),
+            Object.entries(plugin.headers).filter(([name]) => !isRoutingHeader(name)),
           ),
         }
       : plugin,

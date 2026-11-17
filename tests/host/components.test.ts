@@ -118,8 +118,8 @@ describe('session.lspServers() and session.monitors()', () => {
     expect(resolved).toHaveLength(1);
     expect(resolved[0]).toMatchObject({
       name: 'deploy-log',
-      command: 'tail -f ${CLAUDE_PLUGIN_ROOT}/deploy.log',
-      environment: { CLAUDE_PLUGIN_ROOT: '/plugins/formatter@acme-tools' },
+      command: 'tail -f /plugins/formatter@acme-tools/deploy.log',
+      environment: {},
       when: { kind: 'always' },
     });
   });

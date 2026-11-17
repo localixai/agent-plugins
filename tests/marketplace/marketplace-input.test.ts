@@ -173,6 +173,17 @@ describe('what is not a source', () => {
       );
     }
   });
+  test('an empty #ref is refused as an unrecognized format (spec J15.9)', () => {
+    for (const text of [
+      'https://host.example/r.git#',
+      'git@host.example:o/r.git#',
+      'owner/repo#',
+    ]) {
+      expect(issueOf(text).message).toBe(
+        'Invalid marketplace source format. Try: owner/repo, https://..., or ./path',
+      );
+    }
+  });
 });
 
 describe('--sparse', () => {

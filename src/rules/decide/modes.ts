@@ -31,6 +31,8 @@ export interface ModeStrategy {
   criticalRemoval(ctx: DecideContext): Decision;
   /** A read from a network path (permissions.md, "Network paths"). */
   networkRead(ctx: DecideContext): Decision;
+  /** A read of another organization's public artifact: always the user's approval, never the classifier's. */
+  foreignArtifact(): Decision;
   /** What a call gets when no rule, hook or read-only status settles it. */
   baseline(facts: CallFacts, ctx: DecideContext): Decision;
   /** Whether a mod's `tool.check` approval can lift an outcome for this call. */
@@ -39,6 +41,8 @@ export interface ModeStrategy {
   hookMayAllow(facts: CallFacts, ctx: DecideContext): boolean;
   /** Whether a redirect target outside what the rules and directories cover prompts (`bypassPermissions` checks none). */
   readonly checksRedirects: boolean;
+  /** Whether a command carrying per-command allowed domains goes to the classifier whatever the allow rules say. */
+  readonly reviewsCommandHosts: boolean;
   /** Whether a redirect that writes in the working directories passes as an edit there, not a prompt. */
   acceptsInScopeWrite(ctx: DecideContext): boolean;
   /** The rules in force in this mode. */
@@ -52,10 +56,12 @@ const PROMPTING: ModeStrategy = {
   protectedWrite: () => ask('protected-path'),
   criticalRemoval: () => ask('critical-path'),
   networkRead: () => ask('network-path'),
+  foreignArtifact: () => ask('foreign-artifact'),
   baseline: () => ask('default-prompt'),
   modMayApprove: () => true,
   hookMayAllow: () => true,
   checksRedirects: true,
+  reviewsCommandHosts: false,
   acceptsInScopeWrite: () => false,
   rules: (rules) => rules,
 };
@@ -136,6 +142,8 @@ export const MODES: { readonly [M in PermissionMode]: ModeStrategy } = {
   auto: {
     ...PROMPTING,
     hookAsk: autoHookAsk,
+    // "a rule approves the command, not its hosts" (permission-modes.md, "How the classifier evaluates actions").
+    reviewsCommandHosts: true,
     // The classifier judges the command: the write in the working directories is no prompt of its own.
     acceptsInScopeWrite: () => true,
     protectedWrite: classifiedProtectedWrite,
@@ -154,6 +162,7 @@ export const MODES: { readonly [M in PermissionMode]: ModeStrategy } = {
     protectedWrite: () => deny('protected-path'),
     criticalRemoval: () => deny('critical-path'),
     networkRead: () => deny('network-path'),
+    foreignArtifact: () => deny('foreign-artifact'),
     baseline: () => deny('mode-dontask'),
   },
   bypassPermissions: {
@@ -162,6 +171,8 @@ export const MODES: { readonly [M in PermissionMode]: ModeStrategy } = {
     criticalRemoval: (ctx) =>
       ctx.criticalPathPromptOff === true ? allow('mode-bypass') : ask('critical-path'),
     networkRead: () => allow('mode-bypass'),
+    // "Where Claude Code can't ask you, such as in `bypassPermissions` mode, Claude can't read the artifact."
+    foreignArtifact: () => deny('foreign-artifact'),
     baseline: () => allow('mode-bypass'),
     checksRedirects: false,
     // "Allow rules have no effect in `bypassPermissions`": everything runs without them.

@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/elicitation`: MCP elicitation, a form or a URL a server asks the user for, and its hooks (docs/API.md, "Format"). Imports nothing but types and the form check. */
+/** `@localix-ai/agent-plugins/elicitation`: MCP elicitation, a form or a URL a server asks the user for, and its hooks (docs/API.md, "Format"). Imports nothing but types and the form check. */
 export {
   elicitationFieldProblems,
   elicitationFormFields,

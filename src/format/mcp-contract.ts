@@ -108,6 +108,7 @@ export {
   mcpDiscoveryCache,
   mcpFirstTurnWaitMs,
   mcpStartupWaitsFor,
+  registersAsChannel,
   type McpBackgrounding,
   type McpCacheUse,
   type McpClientRuntime,

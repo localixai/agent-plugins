@@ -14,6 +14,8 @@ import type { SubstitutionScope } from './scope.ts';
 import { shellExports } from './shell-exports.ts';
 import { HEADERS_HELPER_GUARD, rejectUserConfigInShell } from './shell-guard.ts';
 import { substituter } from './substituter.ts';
+import { mcpStdioStart } from './shell-prefix.ts';
+import type { CommandSpec } from '../../ports/index.ts';
 import { environmentNames } from './substitute.ts';
 
 /**
@@ -42,13 +44,35 @@ export interface ResolvedMcpServer {
    * plan gives the helper's environment and directory. Absent when the server has no helper.
    */
   readonly headersHelper?: HelperServer;
+  /**
+   * How a stdio server's process starts (`mcpStdioStart`): an exec of `command` and `args`, or under
+   * `CLAUDE_CODE_SHELL_PREFIX` the prefix with the quoted command line (spec §8.2.1, J8.26). Absent
+   * for a remote server.
+   */
+  readonly start?: CommandSpec;
+  /**
+   * A core package's server (Agent Plugins Extended §18.1.4): its stdio process runs in this working
+   * directory (`cwd`, the plugin root by default), receives `PLUGIN_ROOT` and `PLUGIN_DATA` in
+   * `environment` and none of the `CLAUDE_PLUGIN_*` variables: the host leaves those out of the base
+   * environment it starts the process with (§18.1.3 item 1, J18.12).
+   */
+  readonly core?: { readonly cwd?: string };
 }
 
 export interface McpResolution {
   /** Undefined when the server does not start. */
   readonly resolved: ResolvedMcpServer | undefined;
   readonly issues: readonly PluginIssue[];
+  /**
+   * A remote server whose `url` is written empty: a placeholder for a connector the user configures
+   * later. It is listed as `not configured`, not connected, and not an error (mcp.md, "not
+   * configured"; spec §8.8 item 6). Its detail view reads `No URL configured for this server`.
+   */
+  readonly notConfigured?: true;
 }
+
+/** A remote entry with an empty `url`, as written: a placeholder, before any substitution. */
+const PLACEHOLDER: McpResolution = { resolved: undefined, issues: [], notConfigured: true };
 
 /** `plugin:<plugin>:<server>` (components.md, "Server names, tool names, and reloads"). */
 export const mcpServerKey = (plugin: string, server: string): string =>
@@ -116,6 +140,7 @@ async function resolveStdio(
         ...fieldOf(env, 'env'),
       },
       environment,
+      start: mcpStdioStart({ command: command.value, args: args?.value ?? [] }, scope.environment),
     },
     issues,
   };
@@ -154,6 +179,7 @@ async function resolveRemote(
   server: RemoteMcpServer,
   scope: SubstitutionScope,
 ): Promise<McpResolution> {
+  if (server.url === '') return PLACEHOLDER;
   const refused = helperRefusal(name, server);
   if (refused) return { resolved: undefined, issues: [refused] };
   const substitution = substituter(scope);
@@ -176,7 +202,9 @@ async function resolveRemote(
     };
   }
   const key = mcpServerKey(pluginName(scope.pluginId), name);
-  const paths = helper && (await shellExports(helper.referenced, scope, substitution.variable));
+  const paths =
+    helper &&
+    (await shellExports('mcp-headers-helper', helper.referenced, scope, substitution.variable));
   return {
     resolved: {
       name,

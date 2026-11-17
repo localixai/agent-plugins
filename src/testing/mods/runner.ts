@@ -27,6 +27,8 @@ export interface RunOptions {
   readonly clock: Clock;
   /** The settings of the shell the command runs in; absent when nothing turns mods off. */
   readonly policy?: ModsPolicyInput;
+  /** The directory as the command was given it, named in its lines; `.` when absent. */
+  readonly directory?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -168,6 +170,10 @@ async function runFile(options: RunOptions, file: string): Promise<FileOutcome> 
   return { lines, passed, failed };
 }
 
+/** Claude Code 2.1.325's line for a directory with no mod (Agent Plugins Extended §10.42.1). */
+const noHooksModule = (directory: string): string =>
+  `${PREFIX} ${directory}: no hooks module to load; there is no hooks/hooks.json naming one in "modules"`;
+
 export async function runModTests(options: RunOptions): Promise<TestRun> {
   const off = options.policy ? hooksModulesOff(options.policy) : undefined;
   if (off !== undefined) {
@@ -182,7 +188,7 @@ export async function runModTests(options: RunOptions): Promise<TestRun> {
           passed: 0,
           failed: 0,
         }
-      : { lines: [`${PREFIX} no hooks module to load`], exitCode: 0, passed: 0, failed: 0 };
+      : { lines: [noHooksModule(options.directory ?? '.')], exitCode: 0, passed: 0, failed: 0 };
   }
   const began = options.clock.now();
   const lines: string[] = [];

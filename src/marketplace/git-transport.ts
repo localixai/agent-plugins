@@ -46,7 +46,21 @@ export interface ClonePlan {
   readonly environment: Readonly<Record<string, string>>;
   /** Runs the program the user's git setup names; otherwise `ssh` with `BatchMode`, which never asks for a passphrase. */
   readonly sshProgram: 'user-configured' | 'ssh-batch-mode';
+  /**
+   * The options the client's own `ssh` runs with: `BatchMode=yes` and `StrictHostKeyChecking=yes`,
+   * so a host not already in `known_hosts` is refused, never accepted (plugins/troubleshooting.md,
+   * "SSH host key is not in your known_hosts file"). Empty for a user-named program, whose command
+   * line is not rewritten (J15.14).
+   */
+  readonly sshOptions: readonly string[];
 }
+
+const OWN_SSH_OPTIONS: readonly string[] = [
+  '-o',
+  'BatchMode=yes',
+  '-o',
+  'StrictHostKeyChecking=yes',
+];
 
 const named = (value: string | undefined): boolean => (value ?? '') !== '';
 
@@ -60,6 +74,7 @@ export function clonePlan(ssh: SshProgramFacts = {}): ClonePlan {
   return {
     environment: NO_PROMPT_ENVIRONMENT,
     sshProgram: configured ? 'user-configured' : 'ssh-batch-mode',
+    sshOptions: configured ? [] : OWN_SSH_OPTIONS,
   };
 }
 

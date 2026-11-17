@@ -90,7 +90,8 @@ export interface WorktreeAnswer {
 }
 
 const WINDOWS_DRIVE = /^[A-Za-z]:[\\/]/;
-const isAbsolute = (path: string): boolean => path.startsWith('/') || WINDOWS_DRIVE.test(path);
+export const isAbsolute = (path: string): boolean =>
+  path.startsWith('/') || WINDOWS_DRIVE.test(path);
 const segmentsOf = (path: string): string[] => path.split(/[\\/]/).filter((part) => part !== '');
 const joinWith = (separator: string, root: string, parts: readonly string[]): string =>
   `${root}${parts.join(separator)}`;
@@ -101,7 +102,7 @@ const separatorOf = (path: string): string =>
   path.includes('\\') && !path.includes('/') ? '\\' : '/';
 
 /** `relative` resolved against `base`, the `.` and `..` segments collapsed (`..` stops at the root). */
-function resolveRelative(base: string, relative: string): string {
+export function resolveRelative(base: string, relative: string): string {
   const parts = segmentsOf(isAbsolute(base) ? base.slice(rootOf(base).length) : base);
   for (const segment of segmentsOf(relative)) {
     if (segment === '..') parts.pop();
@@ -129,10 +130,14 @@ async function firstSymlinkBelow(
   return undefined;
 }
 
-/** The candidate text of the hooks' answers: an HTTP hook's path, else a command hook's last line. */
+/**
+ * The candidate text of the hooks' answers. The merge has already picked the last answer in handler
+ * order, an HTTP hook's `worktreePath` and a command hook's last line alike (Judgment J7.143), into
+ * `effects.worktreePath`; an answer built without the merge falls back to the last command line.
+ */
 export function worktreeCandidate(answer: WorktreeAnswer): string | undefined {
-  const http = answer.effects.worktreePath;
-  if (http !== undefined && http.trim() !== '') return http.trim();
+  const merged = answer.effects.worktreePath;
+  if (merged !== undefined && merged.trim() !== '') return merged.trim();
   return answer.stdout.map(lastPathLine).findLast((line) => line !== undefined);
 }
 
@@ -140,8 +145,7 @@ export function worktreeCandidate(answer: WorktreeAnswer): string | undefined {
  * The worktree path a `WorktreeCreate` outcome asks the session to use, or why creation fails.
  *
  * Judgment (spec/judgments.md): the docs name the refusals and say the error names the rejected
- * component, not the words; and when an HTTP hook and a command hook both answer, the HTTP
- * hook's `worktreePath` is the one used.
+ * component, not the words.
  */
 export async function resolveWorktreePath(
   answer: WorktreeAnswer,

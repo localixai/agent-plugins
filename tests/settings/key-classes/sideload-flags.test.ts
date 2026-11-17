@@ -26,6 +26,8 @@ const on = viewOf(['managed', { disableSideloadFlags: true }]);
 const off = viewOf(['managed', { disableSideloadFlags: false }]);
 const message = (flag: string) =>
   `${flag} is disabled by your organization's managed settings (disableSideloadFlags)`;
+const CLOSING =
+  'Plugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.';
 
 spec('policy.key.disableSideloadFlags', () => {
   describe('Scope: Managed', () => {
@@ -41,24 +43,40 @@ spec('policy.key.disableSideloadFlags', () => {
     test('--plugin-dir with the message of the docs', () => {
       expect(sideloadVerdict(on, { ...NONE, pluginDirs: ['./p'] }).refusals).toEqual([
         message('--plugin-dir'),
+        CLOSING,
       ]);
     });
 
     test('--plugin-url, --agents and --mcp-config', () => {
       expect(sideloadVerdict(on, { ...NONE, pluginUrls: ['https://x/p.zip'] }).refusals).toEqual([
         message('--plugin-url'),
+        CLOSING,
       ]);
       expect(sideloadVerdict(on, { ...NONE, agents: true }).refusals).toEqual([
         message('--agents'),
+        CLOSING,
       ]);
       expect(
         sideloadVerdict(on, { ...NONE, mcpServers: [{ name: 'a', type: 'stdio' }] }).refusals,
-      ).toEqual([message('--mcp-config')]);
+      ).toEqual([message('--mcp-config'), CLOSING]);
     });
 
     test('the error names every rejected flag', () => {
       const verdict = sideloadVerdict(on, { ...NONE, pluginDirs: ['./p'], agents: true });
-      expect(verdict.refusals).toEqual([message('--plugin-dir'), message('--agents')]);
+      expect(verdict.refusals).toEqual([message('--plugin-dir'), message('--agents'), CLOSING]);
+    });
+
+    test('each rejected flag on its own line, then the closing line of the docs', () => {
+      const verdict = sideloadVerdict(on, { ...NONE, pluginUrls: ['https://x/p.zip'] });
+      expect(verdict.refusals.at(-1)).toBe(CLOSING);
+    });
+
+    test('the Agent SDK plugins option is rejected too', () => {
+      const verdict = sideloadVerdict(on, { ...NONE, sdkPlugins: true });
+      expect(verdict.refusals).toHaveLength(2);
+      expect(verdict.refusals[0]).toContain('plugins option');
+      expect(verdict.refusals[0]).toContain('(disableSideloadFlags)');
+      expect(sideloadVerdict(off, { ...NONE, sdkPlugins: true }).refusals).toEqual([]);
     });
 
     test('a session with none of the flags starts', () => {
@@ -74,7 +92,7 @@ spec('policy.key.disableSideloadFlags', () => {
       expect(
         sideloadVerdict(on, { ...NONE, mcpServers: [...mcpServers, { name: 'c', type: 'http' }] })
           .refusals,
-      ).toEqual([message('--mcp-config')]);
+      ).toEqual([message('--mcp-config'), CLOSING]);
     });
   });
 
@@ -113,6 +131,7 @@ spec('policy.key.disableSideloadFlags', () => {
     test('a cloud session still rejects a plugin folder flag', () => {
       expect(sideloadVerdict(on, { ...NONE, cloud: true, pluginDirs: ['./p'] }).refusals).toEqual([
         message('--plugin-dir'),
+        CLOSING,
       ]);
     });
 

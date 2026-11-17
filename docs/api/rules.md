@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/rules`
+# `@localix-ai/agent-plugins/rules`
 
 Permission rules and modes: parsing, matching and the decision on a tool call.
 
@@ -121,6 +121,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `PERMISSION_MODES` | constant | The permission modes of permissions.md ("Permission modes"), tied to the official `PermissionMode` union |
 | `PermissionClassifier` | type | The host's reviewer for auto mode: "a second model, the classifier, reviews actions instead of you" |
 | `PermissionRule` | type | One permission rule, parsed |
+| `permissionUpdatesInEffect` | function | A hook's `updatedPermissions` as they take effect: a `setMode` to `bypassPermissions` is a no-op without bypass mode available and is never persisted |
 | `pluginMcpServerName` | function | The server name of a plugin's MCP server: the plugin name and the server key under one prefix, normalised as a whole |
 | `prepareCall` | function | A call with the real location of its path, ready for the path rules |
 | `PreparedCall` | type | A call after the host's own preparation: the real paths a symlink in the call resolves to, which the path rules need, and the names of a called skill |
@@ -153,6 +154,9 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RuleParse` | type | What `parseRule` returns |
 | `RuleSource` | type | Where a rule was written |
 | `RuleVerdict` | type | What the rules alone say about a call: the first behaviour that matched, with the rule |
+| `RuleWarning` | type | One startup warning of a rule as a value: the rule as written, behaviour, source, kind and, for `never matches`, the rule to use instead |
+| `RuleWarningKind` | type | `matches no tool` or `never matches` |
+| `ruleWarnings` | function | The startup warnings of each rule, in rule order, as values the caller formats and routes |
 | `sandboxDomainEntry` | function | What a rule changes about the hosts sandboxed commands reach |
 | `SandboxDomainEntry` | type | The host a `WebFetch(domain:...)` rule adds to a sandbox list |
 | `sandboxDomainLists` | function | The two sandbox lists the `WebFetch(domain:...)` rules in `rules` contribute to |
@@ -188,4 +192,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `windowBashOutput` | function | What Claude receives of a command's output |
 | `windowGrepContent` | function | The lines Grep returns in `content` mode, within its `offset` and `head_limit` window |
 | `windowGrepCounts` | function | The per-file entries of `count` mode after `offset` and `head_limit`, with the whole total |
+| `writeBlockRefusal` | function | The text a write `permissions.blockWritesOutsideWorkingDirectories` refuses fails with, verbatim from errors.md |
+| `WriteBlockReason` | type | What a write the block refuses is refused for: outside the working directories, or a settings file |
+| `WriteBlockRefusalInput` | type | The path written and the working directories `writeBlockRefusal` names |
+| `writeBlockShortRefusal` | function | The other wording of the outside-the-working-directories refusal: "The refusal can also read" |
 | `writeEncodingIssue` | function | The refusal of a Write that would replace such a file with text holding `U+FFFD` (tools-reference.md, "Non-UTF-8 files" |

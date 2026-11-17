@@ -1,4 +1,5 @@
-import type { PluginIssue } from '../../format/issues.ts';
+import { error, type PluginIssue } from '../../format/issues.ts';
+import { reservedNamespace } from '../../format/skill-name.ts';
 import { readWorkflowMeta } from '../../format/workflow-meta.ts';
 import { configFolderOf } from '../../format/config-directory.ts';
 import {
@@ -21,7 +22,9 @@ import {
  * repository root ("Project workflows also load from every `.claude/workflows/` along that path"), and
  * the personal `~/.claude/workflows/` (the `workflows/` folder under `CLAUDE_CONFIG_DIR` when set).
  * A workflow runs as `/<meta.name>`; a script without a readable `meta` is left out ("Claude Code
- * drops `/<name>` from `/` autocomplete"), with the issues of its `meta` at the file's path.
+ * drops `/<name>` from `/` autocomplete"), with the issues of its `meta` at the file's path. A
+ * workflow named `anthropic-skills` or `anthropic-skills:<name>` does not load (skills.md, "Names
+ * reserved for synced skills"), with an error at its path.
  */
 
 export interface SavedScanRequest extends ScopeRequest {
@@ -40,6 +43,10 @@ interface Place {
   readonly distance: number;
 }
 
+/** skills.md, "Names reserved for synced skills": a saved workflow of that name "doesn't load". */
+const reservedWorkflow =
+  'name uses "anthropic-skills", a name reserved for skills synced from claude.ai; the workflow does not load, rename it';
+
 async function readPlace(folders: FolderScan, place: Place, signal?: AbortSignal) {
   const opened = await folders.open(place.base, signal);
   if (opened === undefined) return { found: [], issues: [] };
@@ -52,23 +59,24 @@ async function readPlace(folders: FolderScan, place: Place, signal?: AbortSignal
     path: file.hostPath,
     read: readWorkflowMeta(file.text),
   }));
+  const loaded = metas.flatMap(({ path, read: { meta } }) =>
+    meta === undefined ? [] : [{ path, meta }],
+  );
+  const reserved = loaded.filter(({ meta }) => reservedNamespace(meta.name) !== undefined);
   return {
-    found: metas.flatMap(({ path, read: { meta } }): SavedWorkflow[] =>
-      meta === undefined
-        ? []
-        : [
-            {
-              name: meta.name,
-              description: meta.description,
-              scope: place.scope,
-              distance: place.distance,
-              path,
-            },
-          ],
-    ),
+    found: loaded
+      .filter((each) => !reserved.includes(each))
+      .map(({ path, meta }): SavedWorkflow => ({
+        name: meta.name,
+        description: meta.description,
+        scope: place.scope,
+        distance: place.distance,
+        path,
+      })),
     issues: [
       ...read.issues,
       ...metas.flatMap(({ path, read: { issues } }) => issues.map((issue) => ({ ...issue, path }))),
+      ...reserved.map(({ path }) => error(path, reservedWorkflow)),
     ],
   };
 }

@@ -22,7 +22,12 @@ spec(
   () => {
     test('interactive installs and enable show only unset options; explicit configuration shows all', () => {
       for (const event of ['session-install', 'session-enable', 'vscode-install'] as const) {
-        expect(configurationDialog(event, config)).toMatchObject({ open: true, keys: ['api_url'] });
+        // An option with only a default is not set: the dialog opens for it too (spec §3.4.6).
+        expect(configurationDialog(event, config)).toMatchObject({
+          open: true,
+          keys: ['api_url', 'tone'],
+          inputs: { tone: 'neutral' },
+        });
       }
       for (const event of ['session-configure', 'vscode-configure'] as const) {
         expect(configurationDialog(event, config)).toMatchObject({
@@ -35,7 +40,7 @@ spec(
       expect(
         configurationDialog('session-install', {
           ...config,
-          values: { api_url: 'https://api.example', api_token: 'secret' },
+          values: { api_url: 'https://api.example', api_token: 'secret', tone: 'warm' },
         }).open,
       ).toBe(false);
     });
@@ -43,10 +48,10 @@ spec(
       expect(configurationDialog('shell-install', config)).toMatchObject({ open: false, keys: [] });
       const incomplete = applyConfig({}, { declared: config.declared });
       expect(notYetSetLine('example@acme', incomplete)).toBe(
-        '2 userConfig options not yet set (1 required) — run /plugin configure example@acme in Claude Code, or pass --config KEY=VALUE.',
+        '3 userConfig options not yet set (1 required) — run /plugin configure example@acme in Claude Code, or pass --config KEY=VALUE.',
       );
       const complete = applyConfig(
-        { api_url: 'https://api.example', api_token: 'token' },
+        { api_url: 'https://api.example', api_token: 'token', tone: 'neutral' },
         { declared: config.declared },
       );
       expect(notYetSetLine('example@acme', complete)).toBeUndefined();

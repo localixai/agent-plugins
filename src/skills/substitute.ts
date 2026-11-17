@@ -152,6 +152,13 @@ function scan(content: string, typed: Typed, insert: Insert = pasteValue): Scann
 const APPENDED = (rawArguments: string): string => `\n\nARGUMENTS: ${rawArguments}`;
 
 /**
+ * `text` with the `ARGUMENTS:` line a body that receives no argument gets, when arguments were
+ * passed: a core package's skill, whose body is never scanned (Agent Plugins Extended §18.1.5 item 5).
+ */
+export const appendArguments = (text: string, rawArguments: string): string =>
+  rawArguments.trim() === '' ? text : text + APPENDED(rawArguments);
+
+/**
  * `substituteArguments` over the pieces of one text, for a text cut at its `` !`command` ``
  * placeholders (`skills/expand`): a placeholder in any piece counts as receiving the arguments, and
  * the `ARGUMENTS:` line, when none did, ends the last piece. Each piece is scanned alone, so an

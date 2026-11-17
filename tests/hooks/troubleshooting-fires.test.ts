@@ -11,7 +11,13 @@ import { entry, FACTS, pluginSource, session } from '../support/hooks-select.ts'
 import { file, warningsOf } from '../support/hooks-read.ts';
 import { engineSession } from '../support/hooks-session.ts';
 import { exited, verdictOf } from '../support/hooks-verdict.ts';
-import { fakeEnvironment, locations, scriptedRunner, type RunnerReply } from '../support/ports.ts';
+import {
+  fakeEnvironment,
+  fixedClock,
+  locations,
+  scriptedRunner,
+  type RunnerReply,
+} from '../support/ports.ts';
 import { spec } from '../support/spec.ts';
 import { registerHooks } from '../../src/hooks/register.ts';
 
@@ -192,5 +198,42 @@ describe('Hook loads but never fires', () => {
       }
       expect(finished).toEqual([2, undefined]);
     });
+  });
+
+  test('judgment J7.67 (Agent Plugins Extended §7.4.12 item 2): every finished run carries the facts of the debug line', async () => {
+    const seen: object[] = [];
+    const clock = fixedClock(1_000);
+    const engineOver = (reply: RunnerReply) =>
+      createHookEngine({
+        commands: scriptedRunner(reply),
+        locations: locations(),
+        environment: fakeEnvironment({}),
+        clock,
+        observer: { finished: (info) => seen.push(info) },
+      });
+    const dispatch = (reply: RunnerReply) =>
+      engineOver(reply).dispatch(createHookRegistry(afterEdit('PostToolUse', 'Write')), {
+        event: 'PostToolUse',
+        facts: { ...FACTS.PostToolUse, tool_name: 'Write' },
+        session: session(),
+        signal: new AbortController().signal,
+      });
+    const outcome = await dispatch(() => {
+      clock.advance(31);
+      return { exitCode: 0 };
+    });
+    const facts = {
+      matchedValue: 'Write',
+      handler: './fmt.sh',
+      plugin: 'formatter',
+      ending: 'finished',
+      exitCode: 0,
+      durationMs: 31,
+    };
+    expect(seen[0]).toMatchObject({ ...facts, event: 'PostToolUse' });
+    expect(outcome.runs[0]).toMatchObject(facts);
+    await dispatch({ exitCode: null, timedOut: true });
+    expect(seen[1]).toMatchObject({ ending: 'timed-out', timeoutMs: 600_000 });
+    expect(seen[1]).not.toHaveProperty('exitCode');
   });
 });

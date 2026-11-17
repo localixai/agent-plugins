@@ -86,7 +86,7 @@ describe('a dependency at load (oracle 2.1.322)', () => {
     expect(await runs([a, b])).toEqual({ on: ['a@mk', 'b@inline'], issues: [] });
     const off = await pluginOf('b@inline', { name: 'b' }, false);
     expect((await runs([a, off])).issues).toEqual([
-      'a@mk: Dependency "b@inline" is disabled — enable it or remove the dependency',
+      'a@mk: Dependency "b@mk" is disabled — enable it or remove the dependency',
     ]);
   });
 });

@@ -13,6 +13,11 @@ export interface PreToolUseHookOutcome {
   readonly blocked?: boolean;
   /** "`AskUserQuestion` and `ExitPlanMode` need `updatedInput` paired with `\"allow\"`." */
   readonly hasUpdatedInput?: boolean;
+  /**
+   * The block or `ask` comes from a hook in managed settings: no mod's approval lifts it, with or
+   * without `allowModsToOverrideDenyRules` (Agent Plugins Extended J14.14).
+   */
+  readonly managed?: boolean;
 }
 
 /**
@@ -25,6 +30,13 @@ export interface ModOutcome {
   readonly approved: boolean;
   readonly policyEnforced: boolean;
   readonly blocked?: boolean;
+  /**
+   * `allowModsToOverrideDenyRules` is on for this mod: under `policyEnforced` its approval still
+   * lifts what permission rules, the read block and hooks outside managed settings decided, while a
+   * managed hook's decision and the prompt put to the permission callback stay (Agent Plugins
+   * Extended §14.9.6, J14.14).
+   */
+  readonly overridesDenyRules?: boolean;
 }
 
 /**
@@ -59,6 +71,12 @@ export interface DecideContext {
   readonly repositoryDirectories?: readonly string[];
   readonly blockReadsOutsideWorkingDirectories?: boolean;
   readonly blockWritesOutsideWorkingDirectories?: boolean;
+  /**
+   * Claude Code cannot work out where the `managed-settings.d/` folder leads: while the write block
+   * is on, "any .json file counts as" a settings file (errors.md, "Writes to Claude Code settings
+   * files are blocked").
+   */
+  readonly managedSettingsFolderUnresolved?: boolean;
   /**
    * The command runs in a sandbox that enforces the read block: "This prompt doesn't apply when the
    * command runs in the sandbox and the sandbox enforces the block" (permissions.md, settings-reference.md).
@@ -106,6 +124,19 @@ export interface DecideContext {
   readonly permissionCallback?: boolean;
   /** `CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS`: critical-path removals run in bypass mode. */
   readonly criticalPathPromptOff?: boolean;
+  /**
+   * `CLAUDE_CODE_DISABLE_POWERSHELL_CMD_RM_DENY=1` in the launch environment: the `cmd` removal
+   * built-ins lose their system-path denial; `Remove-Item` keeps its own (permission-modes.md,
+   * "Remove-Item in PowerShell").
+   */
+  readonly powershellCmdRemovalDenyOff?: boolean;
+  /**
+   * Whether the artifact at `url` is "another organization's public artifact" (artifacts.md, "Read
+   * an artifact shared with you"): Claude Code "asks you first, even in auto mode", and where it
+   * "can't ask you, such as in `bypassPermissions` mode, Claude can't read the artifact". Only the
+   * host knows an artifact's owner.
+   */
+  readonly foreignArtifact?: (url: string) => boolean;
   readonly protectedPaths?: ProtectedPathOptions;
 }
 
@@ -124,16 +155,23 @@ export interface ProtectedPathOptions {
   readonly directories?: readonly string[];
   /** The `plansDirectory` setting. */
   readonly plansDirectory?: string;
+  /**
+   * The signature, sync and consent files the host keeps beside `remote-settings.json`, by path.
+   * The docs name them by role only, so the kit protects these and guesses no name (Agent Plugins
+   * Extended J13.35).
+   */
+  readonly remoteSettingsFiles?: readonly string[];
   /** A session started with `--restricted`. */
   readonly restricted?: boolean;
 }
 
 /**
  * How far a mod's approval reaches over an outcome: over anything (`any`), unless a permission
- * callback cannot be bypassed (`unbypassable`), only where no managed policy applies (`unenforced`),
- * or never.
+ * callback cannot be bypassed (`unbypassable`), only where no managed policy applies or the guard
+ * option lifts it (`unenforced`), as that and only for a hook outside managed settings (`hook`), or
+ * never.
  */
-export type ModReach = 'any' | 'unbypassable' | 'unenforced' | 'never';
+export type ModReach = 'any' | 'unbypassable' | 'unenforced' | 'hook' | 'never';
 
 /** An outcome and how far a mod's approval reaches over it. */
 export interface Pending {

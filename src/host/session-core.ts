@@ -10,6 +10,7 @@ import type { InvokedSkill } from '../loading/index.ts';
 
 import { type HookUsage } from '../skills/index.ts';
 import { createBackgroundQueue, type BackgroundQueue } from './background-queue.ts';
+import { createSessionStartRepeats, type SessionStartRepeats } from './session-start-repeats.ts';
 import { initialRegistry, refreshRegistry } from './session-registry.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState, HostStateSource } from './state.ts';
@@ -91,6 +92,8 @@ export interface SessionCore {
   readonly watchPaths: Cell<readonly string[]>;
   /** The background deliveries of every dispatch of the session, for `takeBackground`. */
   readonly background: BackgroundQueue;
+  /** What each async `SessionStart` hook last gave, so a repeat is not handed on again. */
+  readonly sessionStarts: SessionStartRepeats;
   /** The session's engine, built again only when the state or the turn's ports or paths change. */
   readonly engine: Cell<BuiltEngine | undefined>;
   /** The consecutive Stop blocks of the session: every engine it builds counts in this one. */
@@ -163,6 +166,7 @@ export function createSessionCore(cell: HostStateSource, monitors: MonitorLedger
     registrations: new Map(),
     watchPaths: cellOf<readonly string[]>([]),
     background: createBackgroundQueue(),
+    sessionStarts: createSessionStartRepeats(),
     engine: cellOf<BuiltEngine | undefined>(undefined),
     stopCap: createStopBlockCap(),
     onceClaims: createOnceClaims(),

@@ -39,6 +39,7 @@ export {
 } from './permission-rules.ts';
 export type { HookEnvironment } from './session-environment.ts';
 export type { SessionDispatchOptions } from './session-hooks.ts';
+export type { CoreCallFacts } from '../hooks/core/types.ts';
 export type { ExpandOptions, SkillInvoker } from './session-skill-expand.ts';
 export type { PreloadedSkills, PreloadOptions } from './session-skill-preload.ts';
 export type { SkillContent, SkillsListing, SkillsOptions, TouchedFile } from './session-skills.ts';
@@ -54,6 +55,7 @@ export type {
   SessionPluginDefaults,
 } from './session-agents.ts';
 export type {
+  HostCorePackage,
   HostedPlugin,
   HostPlugin,
   HostPorts,

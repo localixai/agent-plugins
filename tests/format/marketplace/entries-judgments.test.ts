@@ -94,8 +94,11 @@ describe('judgment: the version warning', () => {
 });
 
 describe('judgment: relevance beyond the quoted limits', () => {
-  test('a host with capitals is not rejected: only a scheme, port or path is', () => {
-    expect(relevance({ hosts: ['Registry.Terraform.IO'] }).issues).toEqual([]);
+  test('a host with capitals, a space, an underscore or a non-ASCII letter invalidates the entry (oracle 2.1.325, J15.10)', () => {
+    for (const host of ['Registry.Terraform.IO', 'a b', 'x_y.com', 'ä.com']) {
+      expect(relevance({ hosts: [host] }).entry).toBeUndefined();
+    }
+    expect(relevance({ hosts: ['-a.com', 'a.', 'xn--d.com'] }).issues).toEqual([]);
   });
 
   test("a manifestDeps pattern is not compiled: an invalid expression is the host's to report", () => {

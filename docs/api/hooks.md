@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/hooks`
+# `@localix-ai/agent-plugins/hooks`
 
 The hook engine: selection, running the handlers, reading their output and the verdict.
 
@@ -19,6 +19,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `BuiltHookInput` | type | The input of an event: the official shape, plus the documented `scratchpad_dir` |
 | `BuiltInput` | type | What `buildHookInput` returns |
 | `Cadence` | type | Per session, per turn, and on every tool call |
+| `cannotAskReason` | function | `confirmation required, and this session cannot ask`, with the `-p` suffix for `/model` |
 | `canonicalMatcherModel` | function | The canonical name of the model a switch goes to, which `PreModelSwitch` and `PostModelSwitch` matchers compare against |
 | `CAPPED_FIELDS` | constant | The groups of fields an event can discard |
 | `CappedField` | type | One of `CAPPED_FIELDS` |
@@ -69,7 +70,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ForegroundRun` | type | A run that ended another way |
 | `groupDeliveries` | function | The deliveries as one value, in the order given; pure |
 | `HandlerResult` | type | The raw run and the issues the run itself found (warnings, a refusal) |
-| `HandlerRun` | type | A short record of one handler's run for the host's log |
+| `HandlerRun` | type | A record of one handler's run for the host's log: what it came to, and its `RunFacts` |
 | `HandlerStatus` | type | What a hook's run came to |
 | `handlerTimeoutMs` | function | The limit in milliseconds the port enforces on this handler, or `undefined` for none (an `async` command hook) |
 | `HandlerVerdict` | type | The reading of one handler's run |
@@ -109,6 +110,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `InterruptKey` | type | One of `INTERRUPT_KEYS` |
 | `isPromptEvent` | function | Whether an event takes a prompt or agent hook's `ok: false` |
 | `limitDelivery` | function | What a background hook delivers, under the same cap and escape as a foreground hook's text |
+| `managedHooksUncheckedReason` | function | What failed, then `so organization-managed PreModelSwitch hooks could not be checked` |
 | `MATCHER_TARGETS` | constant | What each hook event's matcher is tested against |
 | `MATCHER_VALUES` | constant | The documented matcher values of the events that have a fixed set of them |
 | `MatcherTarget` | type | What one event's matcher is tested against |
@@ -119,9 +121,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `mergeOutputs` | function | `facts` carry what a rule needs from the event (`source`, `tool_name`) |
 | `mergeWatchPaths` | function | Hooks.md, "CwdChanged" and "FileChanged" output: `watchPaths` |
 | `MessageFrom` | type | What the message of the outcome is made of |
+| `MODEL_SWITCH_REASONS` | constant | The reasons of a model switch whose hook run ended without a verdict |
 | `ModelCatalog` | type | The canonical name of a model; the host knows its models |
 | `ModelFailedRun` | type | The model did not answer, or answered something that is not the response schema |
 | `ModelRun` | type | The model's verdict, validated against the response schema |
+| `modelSwitchBlocked` | function | `Model switch to <model> was blocked by a PreModelSwitch hook: <reason>`, or without the model |
 | `MonitorTreatment` | type | How a Monitor call reached a hook through a `Bash` matcher or its own |
 | `okFalseEffect` | function | What the verdict of a prompt or agent hook does on `event` |
 | `OkFalseEffect` | type | What `okFalseEffect` returns |
@@ -156,6 +160,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `restoredNote` | function | A host that stores a note and gives it back to the classifier after a resume passes it through this |
 | `Result` | type | The `result` field of `Cell` |
 | `RunContext` | type | The `context` argument of `runHandler` |
+| `RunEnding` | type | How a run ended, the words of the debug line aside: `finished`, `timed-out`, `cancelled`, `background`, `failed-to-start` or `skipped` |
+| `RunFacts` | type | The facts of a finished run the host writes its debug line from: matched value, handler, plugin, ending, exit code, timeout and duration |
 | `runHandler` | function | Runs one handler: tells the host it started (`statusMessage`), then hands it to the runner of its type |
 | `runLimited` | function | Runs `run` for every handler at once, except that at most `limit` prompt or agent handlers are running at any moment; the rest start, in order, as running ones finish |
 | `runnableHandlers` | function | The handlers of `entries` that would run in the session, in order |
@@ -167,7 +173,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SessionEndLimits` | type | The limits `SessionEnd` hooks share: one budget for the event, and the default of each hook |
 | `SettledDeliveries` | type | What a host takes from the deliveries of background hooks |
 | `settleDeliveries` | function | Waits for the promises of `HookOutcome.background` and groups what they delivered, in the order of the promises |
-| `SkippedRun` | type | A hook that did not run, and why (a refused shell-form `${user_config.*}`) |
+| `SkippedRun` | type | A hook that did not run, and why (a refused shell-form `${user_config.*}`), with the notice the conversation view shows when the docs give one |
 | `SOURCE_POLICY` | constant | One row per kind: a registry over the union, so a new kind is a compile error here |
 | `SourcePolicy` | type | What a kind of declaration site decides about its handlers, wherever the hooks read it |
 | `StartObserver` | type | The part of the host's hook observer the run stage drives; the other callbacks are the engine's |

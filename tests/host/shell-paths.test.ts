@@ -76,8 +76,8 @@ async function hostWith(options: Partial<PluginHostOptions> = {}) {
 }
 
 describe('a hostile project or plugin folder name never runs as shell (judgment)', () => {
-  test('a monitor command, run with the environment the session gives it', async () => {
-    const { session } = await hostWith();
+  test("a monitor command under shellPaths 'environment-reference', run with the environment the session gives it", async () => {
+    const { session } = await hostWith({ shellPaths: 'environment-reference' });
     const { resolved, issues } = await session.monitorsToStart();
     expect(issues).toEqual([]);
     const [start] = resolved;
@@ -113,8 +113,8 @@ describe('a hostile project or plugin folder name never runs as shell (judgment)
     expect(await readdir(dir)).toEqual([]);
   });
 
-  test("shellPaths 'pasted' is the docs' text: the host that asks for it gets the path written in", async () => {
-    const { session } = await hostWith({ shellPaths: 'pasted' });
+  test("a monitor is pasted by default, the docs' text: the path written in, nothing exported (J9.17)", async () => {
+    const { session } = await hostWith();
     const { resolved } = await session.monitorsToStart();
     expect(resolved[0]?.monitor.command).toBe(`printf "[%s]" "${root()}"/run.sh "${project()}"`);
     expect(resolved[0]?.monitor.environment).toEqual({});

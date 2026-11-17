@@ -23,8 +23,8 @@ const EXPORTERS: { readonly [E in ExportedVariable]: Exporter } = {
 /**
  * The environment variables a component's process receives (the "Exported to the process" column):
  * the host adds them to the process it starts. Paths are as the host reports them, native: a
- * Windows process reads backslashes (judgment: the docs state the forward-slash rule for text, not
- * for the environment). The data folder is asked for only by a component that exports it; pass the
+ * Windows process reads backslashes, except a Git Bash hook, which `resolveHookCommand` gives the
+ * forward-slash form (spec J3.6). The data folder is asked for only by a component that exports it; pass the
  * `substituter` of the component's strings so it is asked once for both.
  */
 export async function exportedEnvironment(

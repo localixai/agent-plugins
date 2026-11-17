@@ -3,8 +3,8 @@
  * `${user_config.*}`, the process environment it gets); this host starts them with the official MCP
  * client and offers their tools under Claude Code's names, `mcp__plugin_<plugin>_<server>__<tool>`.
  */
-import type { McpCaller, PluginSession } from '@rsaryev/llx-plugin';
-import type { ResolvedMcpServer } from '@rsaryev/llx-plugin/loading';
+import type { McpCaller, PluginSession } from '@localix-ai/agent-plugins';
+import type { ResolvedMcpServer } from '@localix-ai/agent-plugins/loading';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';

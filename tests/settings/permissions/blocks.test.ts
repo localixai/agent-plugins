@@ -90,7 +90,7 @@ describe('the read and write blocks', () => {
             ['local', { permissions: { additionalDirectories: ['/work/mine'] } }],
             ['user', blocked],
           ],
-          { localSettingsTracked: false },
+          { localSettingsTracked: false, localSettingsInRepository: true },
         );
         const tracked = permissionsOf(
           [
@@ -103,6 +103,27 @@ describe('the read and write blocks', () => {
           decide(call('Read', { file_path: '/work/mine/a.ts' }), sessionOf(policy).context);
         expect(run(local).outcome).toBe('allow');
         expect(run(tracked)).toEqual(deny('outside-working-directory'));
+      });
+
+      test('a .claude/settings.local.json outside a git repository is repository settings', () => {
+        const outside = permissionsOf(
+          [
+            ['local', { permissions: { additionalDirectories: ['/work/mine'] } }],
+            ['user', blocked],
+          ],
+          { localSettingsTracked: false, localSettingsInRepository: false },
+        );
+        const unsaid = permissionsOf(
+          [
+            ['local', { permissions: { additionalDirectories: ['/work/mine'] } }],
+            ['user', blocked],
+          ],
+          { localSettingsTracked: false },
+        );
+        const run = (policy: typeof outside) =>
+          decide(call('Read', { file_path: '/work/mine/a.ts' }), sessionOf(policy).context);
+        expect(run(outside)).toEqual(deny('outside-working-directory'));
+        expect(run(unsaid)).toEqual(deny('outside-working-directory'));
       });
 
       test('unreadable in managed settings it reads as true; a quoted Boolean reads as that Boolean with a notice', () => {

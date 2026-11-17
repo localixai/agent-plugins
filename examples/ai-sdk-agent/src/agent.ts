@@ -20,8 +20,8 @@ import {
   type HostPlugin,
   type Plugin,
   type PluginSession,
-} from '@rsaryev/llx-plugin';
-import { pluginDirDependencyIssues } from '@rsaryev/llx-plugin/marketplace';
+} from '@localix-ai/agent-plugins';
+import { pluginDirDependencyIssues } from '@localix-ai/agent-plugins/marketplace';
 import { tool, type LanguageModel, type ModelMessage, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { PluginMcp } from './mcp.ts';

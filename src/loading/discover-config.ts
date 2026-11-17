@@ -1,10 +1,9 @@
-import { error, type PluginIssue } from '../format/issues.ts';
+import type { PluginIssue } from '../format/issues.ts';
 import { STANDARD_LAYOUT, declaredKey } from '../format/layout.ts';
-import { pathNotFound } from '../format/messages.ts';
 import { COMBINE } from './combine.ts';
 import type { ConfigInput, DiscoverContext, Discovered, Found } from './discovered.ts';
 import { ignoredFolderIssues } from './ignored-folder.ts';
-import { locate } from '../format/locate.ts';
+import { locate, missingAt } from '../format/locate.ts';
 import { childPath, rootRelative, type PathPlatform } from '../format/path-text.ts';
 import { listSorted } from '../format/listing.ts';
 
@@ -55,7 +54,7 @@ async function resolveItem(
   const located = await locate(context, kind, item.written, !declared);
   if (located.issue) return { found: [], issues: [located.issue] };
   if (!located.stat) {
-    const missing: PluginIssue[] = declared ? [error(kind, pathNotFound(kind, item.written))] : [];
+    const missing: PluginIssue[] = declared ? [missingAt(context, kind, item.written)] : [];
     return { found: [], issues: missing };
   }
   return { found: [{ file: item.path, written: item.written }], issues: [] };

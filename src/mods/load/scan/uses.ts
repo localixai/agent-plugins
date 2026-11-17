@@ -1,4 +1,5 @@
 import type { SurfaceModuleSpan } from './client-modules.ts';
+import type { EngineFold } from './engine-fold.ts';
 import type { ModScanIssue } from './issue-codes.ts';
 
 /**
@@ -41,6 +42,11 @@ export interface ModScan {
   readonly surfaceModuleSpans: readonly SurfaceModuleSpan[];
   /** Each with its `code` (`MOD_SCAN_ISSUE_CODES`). */
   readonly issues: readonly ModScanIssue[];
+  /**
+   * What its `engine.create` hooks add to and withhold from `$`, when one is in the form the scan
+   * reads (`engineFold`); absent otherwise.
+   */
+  readonly engine?: EngineFold;
 }
 
 /** What a policy mod reads in `e.uses` of `plugin.register`: calls without the `$.` prefix. */
@@ -55,6 +61,10 @@ export interface ModUses {
 
 const unique = <T>(items: readonly T[]): T[] => [...new Set(items)];
 
+/** Each name once, in code-point order (`PluginRegisterUses.calls`: "sorted and each once"). */
+const sortedUnique = (items: readonly string[]): string[] =>
+  unique(items).toSorted((a, b) => (a < b ? -1 : Number(a > b)));
+
 /** The hooks line entry: `ui.render{component=Spinner}`. */
 export const hookLabel = (hook: ScannedHook): string =>
   hook.matcher === undefined ? hook.event : `${hook.event}{${hook.matcher}}`;
@@ -67,7 +77,7 @@ export const callLabel = (call: ScannedCall): string =>
 export function combineScans(scans: readonly ModScan[]): ModUses {
   return {
     events: unique(scans.flatMap((scan) => scan.hooks.map(hookLabel))),
-    calls: unique(scans.flatMap((scan) => scan.calls.map((call) => call.name))),
+    calls: sortedUnique(scans.flatMap((scan) => scan.calls.map((call) => call.name))),
     envReads: unique(scans.flatMap((scan) => scan.envReads)),
     envWrites: unique(scans.flatMap((scan) => scan.envWrites)),
     stateReads: unique(scans.flatMap((scan) => scan.stateReads)),

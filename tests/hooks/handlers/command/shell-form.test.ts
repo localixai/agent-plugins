@@ -144,7 +144,8 @@ describe('Git Bash on Windows', () => {
       shell: 'bash',
       command: '"${CLAUDE_PLUGIN_ROOT}/bin/run" "${CLAUDE_PROJECT_DIR}"',
     });
-    expect(calls[0]?.env['CLAUDE_PROJECT_DIR']).toBe('C:\\Users\\you\\app');
+    // The Git Bash hook reads the forward-slash form from its environment (spec §3.2.4, J3.6).
+    expect(calls[0]?.env['CLAUDE_PROJECT_DIR']).toBe('C:/Users/you/app');
   });
 });
 

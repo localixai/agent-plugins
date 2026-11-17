@@ -3,8 +3,15 @@ import type { DirectoryEntry, FileStat, PluginFiles } from '../../ports/index.ts
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-/** A file's text or bytes, or a symbolic link to another path of the folder (or outside it). */
-export type MemoryEntry = string | Uint8Array | { readonly symlink: string };
+/**
+ * A file's text or bytes, a symbolic link to another path of the folder (or outside it), or a path
+ * whose check fails with an error code (`{ checkFailed: 'ELOOP' }`).
+ */
+export type MemoryEntry =
+  | string
+  | Uint8Array
+  | { readonly symlink: string }
+  | { readonly checkFailed: string };
 
 type Content = string | Uint8Array;
 type Operation = 'readText' | 'readBytes' | 'list' | 'stat' | 'exists';
@@ -13,7 +20,19 @@ const bytesOf = (data: Content): Uint8Array =>
   typeof data === 'string' ? encoder.encode(data) : data;
 
 const isLink = (entry: MemoryEntry | undefined): entry is { readonly symlink: string } =>
-  typeof entry === 'object' && !(entry instanceof Uint8Array);
+  typeof entry === 'object' && !(entry instanceof Uint8Array) && 'symlink' in entry;
+
+const isFailure = (entry: MemoryEntry | undefined): entry is { readonly checkFailed: string } =>
+  typeof entry === 'object' && !(entry instanceof Uint8Array) && 'checkFailed' in entry;
+
+/** What `stat` answers for a path whose check fails: nothing is there to read. */
+const failedStat = (code: string): FileStat => ({
+  isFile: false,
+  isDirectory: false,
+  isSymlink: false,
+  size: 0,
+  checkFailed: code,
+});
 
 const clean = (path: string): string =>
   path
@@ -61,13 +80,11 @@ function tree(files: Readonly<Record<string, MemoryEntry>>) {
   const contentOf = (path: string): Content | undefined => {
     const final = follow(clean(path));
     const entry = final === undefined ? undefined : entries.get(final);
-    return isLink(entry) ? undefined : entry;
+    return isLink(entry) || isFailure(entry) ? undefined : entry;
   };
   const isDirectoryAt = (key: string): boolean => key === '' || children(key).size > 0;
-  const stat = (path: string): FileStat | undefined => {
-    const key = parentFollowed(clean(path));
-    if (key === undefined) return undefined;
-    const entry = entries.get(key);
+  /** What `stat` answers for an entry whose check does not fail. */
+  const found = (key: string, entry: MemoryEntry | undefined): FileStat | undefined => {
     const final = follow(key);
     const data = contentOf(key);
     const isLinked = isLink(entry);
@@ -80,6 +97,12 @@ function tree(files: Readonly<Record<string, MemoryEntry>>) {
       size: data === undefined ? 0 : bytesOf(data).length,
       ...(isLinked && { realPath: final ?? clean(entry.symlink) }),
     };
+  };
+  const stat = (path: string): FileStat | undefined => {
+    const key = parentFollowed(clean(path));
+    if (key === undefined) return undefined;
+    const entry = entries.get(key);
+    return isFailure(entry) ? failedStat(entry.checkFailed) : found(key, entry);
   };
   const list = (path: string): readonly DirectoryEntry[] | undefined => {
     const key = follow(clean(path));
@@ -104,7 +127,8 @@ function tree(files: Readonly<Record<string, MemoryEntry>>) {
  * outside it (`../x`, `/x`: the link dangles for reads, `realPath` names the target). Directories
  * exist as the prefixes of the keys; a path below a symlinked directory inside the folder is
  * followed through it, and `stat` reports the link on the entry it is asked about only, as a host
- * does (`FileStat.realPath`).
+ * does (`FileStat.realPath`). `{ checkFailed: '<code>' }` makes `stat` answer that error code
+ * (`FileStat.checkFailed`) and every read miss.
  * `accesses` records every call in order, `reads` only the paths of `readText` and `readBytes`,
  * for tests that assert what was (not) touched.
  */
@@ -143,7 +167,8 @@ export function memoryFiles(files: Readonly<Record<string, MemoryEntry>> = {}): 
     },
     exists: (path) => {
       touch('exists', path);
-      return Promise.resolve(stat(path) !== undefined);
+      const found = stat(path);
+      return Promise.resolve(found !== undefined && found.checkFailed === undefined);
     },
   };
 }

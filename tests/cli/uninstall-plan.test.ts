@@ -5,12 +5,13 @@
  * uninstalled:` with `settings_still_on`; `--json` "in the same format as `plugin install --json`",
  * which "can't be combined with `--prune`"; `-y` "Skip the `--prune` confirmation prompt. Required
  * with `--prune` when stdin or stdout isn't a TTY"), "What an uninstall deletes and keeps" (`keptData`,
- * `savedKept`, `· data preserved`). The wording of the refusals the docs do not quote is outside
+ * `savedKept`, `· data preserved`); errors.md § Plugin was not uninstalled (the message and the
+ * four causes its middle names). The wording of the refusals the docs do not quote is outside
  * `spec(...)` and in spec/judgments.md.
  */
 import { describe, expect, test } from 'bun:test';
 import { renderCommand } from '../../src/cli/result.ts';
-import { dataPreservedMark } from '../../src/cli/uninstall-plan.ts';
+import { dataPreservedMark, type AfterRemoval } from '../../src/cli/uninstall-plan.ts';
 import {
   ID,
   conclude,
@@ -23,6 +24,11 @@ import {
   world,
 } from '../support/uninstall.ts';
 import { spec } from '../support/spec.ts';
+
+const FILE = '/home/user/project/.claude/settings.local.json';
+
+const middle = (settingsStillOn: NonNullable<AfterRemoval['settingsStillOn']>): string =>
+  lines(conclude({}, { remaining: [], settingsStillOn })).stderr[0] ?? '';
 
 spec(
   ['cli.plugin.plugin uninstall.-s, --scope <scope>', 'cli.errors.Plugin was not uninstalled'],
@@ -78,15 +84,29 @@ describe('plugin uninstall: the command', () => {
   });
 
   test('settings that still switch the plugin on keep the plugin installed with everything it saved', () => {
-    const found = conclude({}, { remaining: [], settingsStillOn: '.claude/settings.json' });
+    const found = conclude(
+      {},
+      { remaining: [], settingsStillOn: { file: FILE, cause: 'still-on' } },
+    );
     expect(found.removeRecord).toBe(false);
     expect(found.cleanup).toEqual([]);
     const out = lines(found);
     expect(out.exitCode).toBe(1);
-    expect(out.stderr[0]).toStartWith(
-      `Failed to uninstall plugin "${ID}": "formatter" was not uninstalled:`,
+    expect(out.stderr[0]).toBe(
+      `Failed to uninstall plugin "${ID}": "formatter" was not uninstalled: it is still switched on in ${FILE}, although the settings change reported no error. It is still installed. Take it out of "enabledPlugins" in that file yourself, then uninstall it again.`,
     );
-    expect(out.stderr[0]).toContain('.claude/settings.json');
+  });
+
+  test('the middle of the message names the file and the cause', () => {
+    expect(middle({ file: FILE, cause: 'change-failed', error: 'EACCES' })).toContain(
+      `"formatter" was not uninstalled: it is still switched on in ${FILE}, and the settings change failed (EACCES).`,
+    );
+    expect(middle({ file: FILE, cause: 'unreadable' })).toContain(
+      `"formatter" was not uninstalled: ${FILE} is there and could not be read.`,
+    );
+    expect(middle({ file: FILE, cause: 'not-read' })).toContain(
+      `"formatter" was not uninstalled: ${FILE} (not read: it is on a network path or is a link to one, or could not be checked).`,
+    );
   });
 });
 
@@ -104,7 +124,10 @@ spec('cli.plugin.plugin uninstall.--json', () => {
 
   test('settings_still_on is the failure code when the scope settings still switch it on', () => {
     const json = lastJson(
-      conclude({ json: true }, { remaining: [], settingsStillOn: '.claude/settings.json' }),
+      conclude(
+        { json: true },
+        { remaining: [], settingsStillOn: { file: FILE, cause: 'still-on' } },
+      ),
     );
     expect(json).toMatchObject({
       outcome: 'failed',

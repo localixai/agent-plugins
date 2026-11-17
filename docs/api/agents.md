@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/agents`
+# `@localix-ai/agent-plugins/agents`
 
 Subagents, their catalog, and workflows.
 
@@ -33,6 +33,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `AgentScanOutcome` | type | What `scanAgents` returns |
 | `AgentSetting` | type | The `agent` setting as the settings resolved it: the name, and the plugin when it is a plugin default |
 | `AgentSources` | type | Which definition a name means and which subagents the settings switch off ("Disable specific subagents": `Agent(name)` deny rules, or the `Agent` tool itself) |
+| `agentTeamsOn` | function | Whether agent teams are on: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` set to an on spelling (off by default) |
 | `AgentToolFields` | type | An agent as far as its tools go: the two frontmatter fields of the SDK's `AgentDefinition` |
 | `agentTypeahead` | function | The subagents to offer after `@` |
 | `ATTEMPT_ENDINGS` | constant | How an attempt ended without finishing: the whole stall window without output, a response stream that went silent, or a restart asked for |
@@ -65,11 +66,13 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ClaudeMdScopes` | type | What `claudeMdScopes` returns |
 | `Connection` | type | One of `CONNECTIONS` |
 | `CONNECTIONS` | constant | How the session reaches Claude, as far as the Explore rule tells the ways apart |
+| `DEFINITION_NOT_RESTORED` | constant | The notice a stopped teammate brought back without its definition adds to the sender's tool result |
 | `effectiveAutoCompactWindow` | function | The auto-compact window a subagent compacts at |
 | `effectiveCacheTtl` | function | The `cacheTtl` the frontmatter contributes to a subagent's requests: it "ignores `1h` while your Claude subscription is using usage credits" |
 | `FAILURE_CAUSES` | constant | Why the `agent()` call failed, and the error whose start says why |
 | `FAN_OUT_CALLS` | constant | The calls that take a list of work |
 | `FanOutCall` | type | One of `FAN_OUT_CALLS` |
+| `forkModeOn` | function | Fork mode: on by default, an off spelling of `CLAUDE_CODE_FORK_SUBAGENT` turns it off |
 | `GrantEnvironment` | type | What decides whether a subagent may be set to a mode when the main conversation allows it |
 | `HandbackAfterDenial` | type | What `afterHandbackDenial` returns |
 | `hasStalled` | function | "Time the agent spends waiting on its own tool calls or on a usage-limit reset doesn't count toward the stall window." |
@@ -147,6 +150,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `resolveSubagentTools` | function | The tools a subagent gets, or the refusal Claude Code gives when the `tools` list resolves to nothing |
 | `resolveSubagentType` | function | The subagent an Agent tool call runs |
 | `Restart` | type | A workflow agent attempt that starts again: its number (from 2) and labels |
+| `restoreTeammate` | function | Whether a stopped in-process teammate gets its definition again: not from an untrusted project folder |
 | `ResumedSessionAgent` | type | What `resumeSessionAgent` returns |
 | `resumeSessionAgent` | function | The agent of a resumed session |
 | `rewriteWorkflowMeta` | function | Sets fields of the `meta` literal and keeps every other byte of the script |
@@ -199,6 +203,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SubagentPromptSurface` | type | Where a subagent's permission prompts appear |
 | `SubagentRun` | type | How a subagent is started, as far as its tools are concerned |
 | `SubagentTypeOutcome` | type | What `resolveSubagentType` returns |
+| `TeammateDisplay` | type | In process (the default) or in its own split pane |
+| `TeammateInput` | type | The argument of `teammateSetup` |
+| `TeammateRestore` | type | The argument of `restoreTeammate` |
+| `teammateSetup` | function | The parts of an agent definition a teammate gets, by display mode |
+| `TeammateSetup` | type | What `teammateSetup` returns |
 | `ToolEntry` | type | One entry of the `tools` or `disallowedTools` field: a tool name, with the specifier it was written with, or `Agent(type,...)` |
 | `toolEntryMatches` | function | Whether `entry` names the tool `toolName` |
 | `ToolPool` | type | The tools the main conversation offers: what a subagent inherits from (a host passes it) |

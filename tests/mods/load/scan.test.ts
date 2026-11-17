@@ -97,8 +97,12 @@ export function register(on) {
 test('assigning, destructuring or indexing `$` fails; `const ui = $.ui` is `$.ui is used as a value`', () => {
   const wrap = (body: string): string =>
     `export function register(on) { on('tool.call', async ($, e, next) => { ${body}; return next(e) }) }`;
-  expect(messages(wrap('const ui = $.ui'))).toEqual(['register.js: $.ui is used as a value']);
-  expect(messages(wrap('const { ui } = $'))).toEqual(['register.js: $ is used as a value']);
+  expect(messages(wrap('const ui = $.ui'))).toEqual([
+    'register.js: $.ui is used as a value (a noun of $ bound, passed or read)',
+  ]);
+  expect(messages(wrap('const { ui } = $'))).toEqual([
+    'register.js: $ itself is bound to a name (bound, passed, spread, returned or read)',
+  ]);
   expect(messages(wrap("$['ui'].log('x')"))).toHaveLength(1);
   expect(messages(wrap("const n = 'ui'; $[n].log('x')"))).toHaveLength(1);
   // the values of $.plugin are values, not calls
@@ -141,14 +145,17 @@ spec('mods.file.hooks/register.js', () => {
     expect(
       messages(head("import { atom } from 'claude-code'\nimport { f } from './f.js'")),
     ).toEqual([]);
-    expect(messages(head("import fs from 'node:fs'"))[0]).toContain('imports "node:fs"');
-    expect(messages(head("import x from 'left-pad'"))[0]).toContain('imports "left-pad"');
+    expect(messages(head("import fs from 'node:fs'"))[0]).toContain('cannot import "node:fs"');
+    // Claude Code 2.1.325's wording (Agent Plugins Extended §10.4.1 item 2, J10.2).
+    expect(messages(head("import x from 'left-pad'"))).toEqual([
+      'register.js: cannot import "left-pad" (from register.js): a hooks module imports its own files by relative path and "claude-code", nothing else',
+    ]);
     expect(
       messages(
         "export function register(on) { on('tool.call', async ($, e, next) => { await import('./x.js'); return next(e) }) }",
       ),
     ).toEqual([
-      'register.js: a dynamic import(); a hooks module imports its own files with an import declaration',
+      'register.js: a dynamic import(); a hooks module imports its own files with an import declaration, as in import { name } from "./file.js"',
     ]);
     expect(messages(head("const fs = require('fs')"))[0]).toContain('require()');
     expect(
@@ -218,7 +225,7 @@ export function register(on) {
     const n = await read($, count)
     await update($, count, (v) => v + 1)
     $.env.get('HOME'); $.env.set('CI', '1'); $.env.get(name)
-    $.state.get('tab'); $.state.set('tab', 'two')
+    $.state.get({ plugin: 'hello-tabs', key: 'count' }); $.state.set(ref, 'two')
     return next(e)
   })
 }`;
@@ -229,8 +236,9 @@ export function register(on) {
   expect(scan.issues).toEqual([]);
   expect(scan.envReads).toEqual(['HOME', '(computed)']);
   expect(scan.envWrites).toEqual(['CI']);
-  expect(scan.stateReads).toEqual(['hello-tabs.count', 'tab']);
-  expect(scan.stateWrites).toEqual(['hello-tabs.count', 'tab']);
+  // A `$.state` ref is named as `plugin.key` when written as a literal, else `(computed)`.
+  expect(scan.stateReads).toEqual(['hello-tabs.count']);
+  expect(scan.stateWrites).toEqual(['hello-tabs.count', '(computed)']);
 });
 
 test('an atom held in `let`, or not declared in the types file, fails', () => {
@@ -240,10 +248,14 @@ ${keyword} count = atom({ plugin: 'hello-tabs', key: 'count' }, 0)
 export function register(on) {}`;
   expect(messages(source('let'))[0]).toContain('takes a source the scan can read');
   expect(messages(source('const'), { declaredState: new Set() })).toEqual([
-    'register.js: hello-tabs.count is not declared',
+    "register.js: hello-tabs.count is not declared: the manifest's types contract must name it in interface PluginState { hello-tabs: { count: ... } }",
   ]);
   expect(messages(source('const'), { declaredState: new Set(['hello-tabs.count']) })).toEqual([]);
 });
+
+/** Claude Code 2.1.325's refusal of a telemetry hook without the collector (J10.2). */
+const TELEMETRY_STREAM =
+  'its hooks stand on the telemetry stream "anthropic" (a matcher names it, or a telemetry hook names no "to" and so stands on every stream), which is for the plugins built into the CLI; name the collector on each telemetry hook: on("telemetry.log", { to: "collector" }, hook)';
 
 spec('mods.file.hooks/register.js', () => {
   test('a module with no register, or code that does not parse, is an issue, never a throw', () => {
@@ -258,7 +270,7 @@ spec('mods.file.hooks/register.js', () => {
 test('a telemetry hook without { to: "collector" } fails the scan', () => {
   const on = (args: string): string => `export function register(on) { ${args} }`;
   expect(messages(on("on('telemetry.log', async ($, e, next) => next(e))"))).toEqual([
-    "register.js: telemetry.log needs the filter { to: 'collector' }",
+    `register.js: ${TELEMETRY_STREAM}`,
   ]);
   expect(
     messages(on("on('telemetry.log', { to: 'collector' }, async ($, e, next) => next(e))")),
@@ -276,8 +288,6 @@ test('the scan applies the chain\'s telemetry rule: any `to` that lets "collecto
     expect(messages(on(fits))).toEqual([]);
   }
   for (const misses of ["{ to: 'other' }", '{ to: someName }', "{ name: 'collector' }"]) {
-    expect(messages(on(misses))).toEqual([
-      "register.js: telemetry.log needs the filter { to: 'collector' }",
-    ]);
+    expect(messages(on(misses))).toEqual([`register.js: ${TELEMETRY_STREAM}`]);
   }
 });

@@ -48,6 +48,9 @@ const VIA_LINK: { readonly [O in Decision['outcome']]: (decision: Decision) => D
 
 const DENIED: Decision = { outcome: 'deny', reason: 'deny-rule' };
 
+/** The tools whose sandboxed command can carry its own allowed domains (sandboxing.md). */
+const HOSTED_COMMANDS: ReadonlySet<string> = new Set(['Bash', 'PowerShell', 'Monitor']);
+
 /**
  * A file the command names or redirects to needs approval, or a redirect writes in the working
  * directories in a mode that does not accept it. A tool-wide `Bash` allow in force lifts it, as
@@ -85,10 +88,14 @@ const GATES: readonly Gate[] = [
       ? undefined
       : pending({ outcome: 'deny', reason: facts.blockedBy }, 'never'),
   // "A hook that exits with code 2 stops the tool call before permission rules are evaluated."
-  ({ ctx }) =>
-    hookVetoes(ctx) ? pending({ outcome: 'deny', reason: 'hook' }, 'unenforced') : undefined,
+  ({ ctx }) => (hookVetoes(ctx) ? pending({ outcome: 'deny', reason: 'hook' }, 'hook') : undefined),
   // "Deny rules block in every mode, including bypassPermissions."
   ({ verdict }) => (verdict === 'deny' ? pending(DENIED, 'unenforced') : undefined),
+  // "Remove-Item in PowerShell": a system path or a wildcard is denied "in every mode, without asking you".
+  ({ facts }) =>
+    facts.removalDenied
+      ? pending({ outcome: 'deny', reason: 'powershell-removal' }, 'never')
+      : undefined,
   // A redirect target an `Edit` or `Read` deny rule covers: "as if Claude wrote or read that file directly".
   ({ facts }) => (facts.redirects.denied ? pending(DENIED, 'unenforced') : undefined),
   // "Tools matched by an explicit ask rule" are never auto-approved; dontAsk denies them.
@@ -96,7 +103,7 @@ const GATES: readonly Gate[] = [
     verdict === 'ask' ? pending(strategy.prompt('ask-rule'), 'unenforced') : undefined,
   // A hook ask prompts, and auto mode "still shows you those prompts" (with its own paths for a few calls).
   ({ ctx, facts, strategy }) =>
-    hookAsks(ctx) ? pending(strategy.hookAsk(facts), 'unenforced') : undefined,
+    hookAsks(ctx) ? pending(strategy.hookAsk(facts), 'hook') : undefined,
   // "Recognized `rm` and `rmdir` critical-path removals, which no allow rule or PreToolUse hook allow approves".
   ({ facts, ctx, strategy }) =>
     facts.criticalRemoval ? pending(strategy.criticalRemoval(ctx), 'never') : undefined,
@@ -114,6 +121,9 @@ const GATES: readonly Gate[] = [
   // "Connector tools your organization set to `ask`": no mode, hook or mod approves them.
   ({ facts, strategy }) =>
     facts.connectorAsk ? pending(strategy.prompt('organization-ask'), 'never') : undefined,
+  // Another organization's public artifact: "Claude Code asks you first, even in auto mode".
+  ({ facts, strategy }) =>
+    facts.foreignArtifact ? pending(strategy.foreignArtifact(), 'never') : undefined,
   // "A read from a network path prompts you even when an allow rule matches."
   ({ facts, ctx, strategy }) =>
     facts.network ? pending(strategy.networkRead(ctx), 'never') : undefined,
@@ -135,6 +145,13 @@ const GATES: readonly Gate[] = [
   (step) =>
     redirectPrompts(step)
       ? pending(step.strategy.baseline({ ...step.facts, ...UNAPPROVED }, step.ctx), 'unenforced')
+      : undefined,
+  // "A command that carries hosts goes to the classifier instead of being approved by a permission rule."
+  ({ call, strategy }) =>
+    strategy.reviewsCommandHosts &&
+    HOSTED_COMMANDS.has(call.toolName) &&
+    (call.allowedDomains?.length ?? 0) > 0
+      ? pending({ outcome: 'classify', reason: 'mode-auto' }, 'unbypassable')
       : undefined,
   ({ verdict }) =>
     verdict === 'allow' ? pending({ outcome: 'allow', reason: 'allow-rule' }, 'any') : undefined,

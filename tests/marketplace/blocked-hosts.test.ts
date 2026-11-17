@@ -1,5 +1,5 @@
 /**
- * Judgment (spec/judgments.md, `src/marketplace/blocked-hosts.ts`): the docs name the categories
+ * Judgment (spec/judgments.md, `src/format/marketplace/blocked-hosts.ts`): the docs name the categories
  * "loopback, link-local, or cloud-metadata host" (plugins/marketplace-reference.md, "archive plugin
  * source"), not the addresses in them, so the list is the kit's and is tested outside `spec(...)`.
  */

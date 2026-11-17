@@ -157,7 +157,7 @@ spec('environment.component.Hook commands', () => {
       expect(resolved.environment.CLAUDE_PROJECT_DIR).toBe('C:\\Users\\you\\app');
     });
 
-    test('a shell-form hook through bash keeps the reference; its environment has the native path', async () => {
+    test('a shell-form hook through bash keeps the reference; its environment has the forward-slash path (J3.6)', async () => {
       const resolved = await resolve(
         hook({ command: '"${CLAUDE_PROJECT_DIR}"/run.sh', shell: 'bash' }),
         windows,
@@ -167,7 +167,7 @@ spec('environment.component.Hook commands', () => {
         shell: 'bash',
         command: '"${CLAUDE_PROJECT_DIR}"/run.sh',
       });
-      expect(resolved.environment.CLAUDE_PROJECT_DIR).toBe('C:\\Users\\you\\app');
+      expect(resolved.environment.CLAUDE_PROJECT_DIR).toBe('C:/Users/you/app');
     });
 
     test('a PowerShell hook gets the placeholders rewritten to ${env:NAME}, in double-quoted strings too', async () => {

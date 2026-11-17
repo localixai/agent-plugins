@@ -1,6 +1,6 @@
 import { error, type PluginIssue } from '../format/issues.ts';
 import type { GitRepository } from '../ports/marketplace.ts';
-import { isBlockedHost } from './blocked-hosts.ts';
+import { isBlockedHost } from '../format/marketplace/blocked-hosts.ts';
 import { npmRefusalMessage } from './install-failures.ts';
 import { isDefaultRegistry, packageValueRefusal } from './node-deps-spec.ts';
 import { isValidRange } from './semver.ts';

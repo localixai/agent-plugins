@@ -1,5 +1,5 @@
 /**
- * The readers of a `SessionSkill` row and the fixtures `@rsaryev/llx-plugin/testing` builds rows
+ * The readers of a `SessionSkill` row and the fixtures `@localix-ai/agent-plugins/testing` builds rows
  * with (docs/API.md, "Testing kit"). A fixture row is the row a session lists for the same file;
  * the readers read the row's source and frontmatter. `keywords` is no frontmatter field Claude Code
  * knows (skills.md, "Frontmatter reference": a field it doesn't recognize is ignored), so the

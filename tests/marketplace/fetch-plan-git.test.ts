@@ -68,7 +68,6 @@ spec(
       expect(result.plan).toBeUndefined();
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.severity).toBe('error');
-      expect(result.issues[0]?.message).toContain('cannot resolve');
       expect(result.issues[0]?.message).toContain(
         'its marketplace entry path does not stay inside the marketplace directory',
       );

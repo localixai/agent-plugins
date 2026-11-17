@@ -3,13 +3,15 @@ import type { CommandEntry } from '../format/manifest-schema.ts';
 import type { AgentRecord } from '../format/agent-record.ts';
 import { readCommand, readCommandEntry } from '../format/command.ts';
 import type { PluginIssue } from '../format/issues.ts';
-import { readOutputStyle, type OutputStyle } from '../format/output-style.ts';
+import { lastPerName, readOutputStyle, type OutputStyle } from '../format/output-style.ts';
 import { readSkill } from '../format/skill.ts';
 import { selfNamedCommand } from '../format/skill-name.ts';
 import type { Command, Skill, SkillOrigin } from '../format/skill-types.ts';
 import type { Plugin, PluginTextFile } from '../loading/index.ts';
 
 import { commandEntryGrants } from '../skills/command-entries.ts';
+import { coreOf } from './core-view.ts';
+import { coreSkillOf } from './core-skills.ts';
 
 /** What one plugin's Markdown components read to: the formats' own readers, once, at load. */
 export interface PluginCatalog {
@@ -48,6 +50,9 @@ const originOf = (plugin: Plugin, rootSkill = false): SkillOrigin =>
     : { kind: 'plugin', plugin: plugin.name };
 
 function readSkills(plugin: Plugin) {
+  if (coreOf(plugin) !== undefined) {
+    return { skills: plugin.skills.map((file) => coreSkillOf(plugin.name, file)), issues: [] };
+  }
   const reads = plugin.skills.map((file) =>
     readSkill(pathOf(file, 'skills'), file.text, {
       origin: originOf(plugin, file.directory === '.'),
@@ -123,7 +128,7 @@ function readStyles(plugin: Plugin) {
     readOutputStyle(pathOf(file, 'output-styles'), file.text, { plugin: plugin.name }),
   );
   return {
-    outputStyles: reads.map((read) => read.style),
+    outputStyles: lastPerName(reads.map((read) => read.style)),
     issues: reads.flatMap((read) => read.issues),
   };
 }

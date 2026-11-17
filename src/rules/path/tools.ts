@@ -38,6 +38,11 @@ const NOTEBOOK_FIELD = 'notebook_path' as const satisfies keyof NotebookEditInpu
  * like Edit and takes the same `file_path` (spec/judgments.md).
  */
 const MULTI_EDIT_FIELD = 'file_path';
+/**
+ * The SDK has no type for the LSP input; `filePath` ("The absolute or relative path to the file") is
+ * the one path its declarations give, and a Read rule is matched against it (spec §7.6.6, J7.210).
+ */
+const LSP_FIELD = 'filePath';
 
 /** @public A compile-time drift guard: the SDK's path fields are strings (Glob and Grep optional). */
 export type PathFieldsAreText = Assert<
@@ -62,6 +67,7 @@ export const PATH_TOOLS: ReadonlyMap<string, PathTool> = new Map<string, PathToo
   ['NotebookEdit', { field: NOTEBOOK_FIELD, searches: false, reads: false }],
   ['Glob', { field: GLOB_FIELD, searches: true, reads: true, pattern: GLOB_PATTERN_FIELD }],
   ['Grep', { field: GREP_FIELD, searches: true, reads: true }],
+  ['LSP', { field: LSP_FIELD, searches: false, reads: false }],
 ]);
 
 /** An absolute path, a drive path or a `~` path. */
@@ -116,8 +122,7 @@ export const searchesDirectory = (toolName: string): boolean =>
  * Which call tools a path rule of `ruleTool` and `behavior` covers (the tool itself is always one):
  * "`Edit` rules apply to all built-in tools that edit files" (Write, NotebookEdit, the legacy
  * MultiEdit), Read rules reach Grep and Glob, a Read deny or ask rule also LSP ("Read, Grep, Glob,
- * LSP", tools-reference.md; the path an LSP call names is not a field the docs give, so `file-rules.ts`
- * covers every LSP call), "An `Edit(...)` allow rule also grants read access to the same path", and "A
+ * LSP", tools-reference.md; matched against its `filePath`, J7.210), "An `Edit(...)` allow rule also grants read access to the same path", and "A
  * `Read(...)` deny rule also blocks the Edit and Write tools" but not NotebookEdit (permissions.md,
  * "What `Read` and `Edit` rules cover"; tools-reference.md).
  */
@@ -127,7 +132,7 @@ const EDITS = ['Edit', 'Write', 'NotebookEdit', 'MultiEdit'];
 const READS = ['Read', 'Glob', 'Grep'];
 const READS_AND_LSP = [...READS, 'LSP'];
 
-/** The call tools whose path no field of the docs names: a rule that reaches them covers every call. */
+/** The call tools whose path field may be absent: a rule that reaches such a call covers it (J7.210). */
 export const PATHLESS_CALLS: ReadonlySet<string> = new Set(['LSP']);
 
 export const COVERAGE: ReadonlyMap<string, Coverage> = new Map<string, Coverage>([

@@ -7,7 +7,7 @@
  */
 import type { SdkMarketplaceSource } from '../../protocol/official.ts';
 import { sameRepo } from './git-url.ts';
-import { factsOf, type Facts } from './facts.ts';
+import { CLAUDE_AI_FACTS, factsOf, type Facts } from './facts.ts';
 import { byKindWith, type Registry, type SourceKind, type SourceOf } from './source-kinds.ts';
 
 /** Which list an entry is read as. */
@@ -181,3 +181,11 @@ export function matchMarketplaceSource(
 ): boolean {
   return byKindWith(LISTS[list], entry, [factsOf(entry), factsOf(source)]);
 }
+
+/**
+ * Whether a list entry matches a marketplace hosted on claude.ai, by its host `claude.ai`: only a
+ * `hostPattern` entry can (plugins/org.md, "Marketplaces hosted on claude.ai"). Whose the marketplace
+ * is decides the allowlist's admission (`MarketplaceGate.checkClaudeAi`), not the match.
+ */
+export const matchClaudeAiMarketplace = (list: ListKind, entry: SdkMarketplaceSource): boolean =>
+  byKindWith(LISTS[list], entry, [factsOf(entry), CLAUDE_AI_FACTS]);

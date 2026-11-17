@@ -1,5 +1,6 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 import { error, type PluginIssue } from './issues.ts';
+import { ALWAYS, monitorEntrySchema, skillOf, UNIQUE_NAMES, WHEN_SKILL } from './monitor-schema.ts';
 import { isRecord } from '../protocol/is-record.ts';
 
 /**
@@ -29,33 +30,16 @@ export interface Monitor {
 /** What a monitor without `when` starts on: "`\"always\"`, the default". */
 const ALWAYS_TRIGGER: MonitorTrigger = { kind: 'always' };
 
-const ALWAYS = 'always';
-const ON_SKILL_INVOKE = 'on-skill-invoke:';
-
-/** The documented forms of `when`, for the message of a malformed one. */
-const WHEN_FORMS = `"${ALWAYS}" or "${ON_SKILL_INVOKE}<skill>"`;
-
 /**
- * `"always"` or `"on-skill-invoke:<skill>"`. Judgment: the skill after the colon must not be empty
- * (the docs write `<skill>` as a placeholder and a trigger with no skill could never fire), and the
- * value is read as written, with no trimming or case folding.
+ * `"always"` or `"on-skill-invoke:<skill>"`. The skill after the colon must not be empty (oracle
+ * 2.1.325: `on-skill-invoke: must specify a skill name`), and the value is read as written, with no
+ * trimming or case folding (spec J9.8).
  */
 export function parseMonitorTrigger(when: string): MonitorTrigger | undefined {
   if (when === ALWAYS) return ALWAYS_TRIGGER;
-  const skill = when.startsWith(ON_SKILL_INVOKE) ? when.slice(ON_SKILL_INVOKE.length) : '';
+  const skill = skillOf(when);
   return skill.length > 0 ? { kind: 'on-skill-invoke', skill } : undefined;
 }
-
-/** Judgment: `name`, `command` and `description` are required, so an empty string counts as missing. */
-const text = (what: string) =>
-  z.string({ error: 'expected a string' }).min(1, { error: `${what} must not be empty` });
-
-const entrySchema = z.strictObject({
-  name: text('name'),
-  command: text('command'),
-  description: text('description'),
-  when: z.string({ error: `expected ${WHEN_FORMS}` }).exactOptional(),
-});
 
 const reason = (failure: z.ZodError): string =>
   failure.issues
@@ -78,16 +62,14 @@ export function readMonitor(raw: unknown, origin: string, index: number): Monito
   if (!isRecord(raw)) {
     return { monitor: undefined, issues: [invalid(origin, index, 'expected an object')] };
   }
-  const parsed = entrySchema.safeParse(raw);
+  const parsed = monitorEntrySchema.safeParse(raw);
   if (!parsed.success) {
     return { monitor: undefined, issues: [invalid(origin, index, reason(parsed.error))] };
   }
   const { name, command, description, when } = parsed.data;
   const trigger = when === undefined ? ALWAYS_TRIGGER : parseMonitorTrigger(when);
-  if (!trigger) {
-    const why = `when: expected ${WHEN_FORMS}, got "${when}"`;
-    return { monitor: undefined, issues: [invalid(origin, index, why)] };
-  }
+  // The schema refused every other `when`; this narrows the type.
+  if (!trigger) return { monitor: undefined, issues: [invalid(origin, index, WHEN_SKILL)] };
   return { monitor: { name, command, description, when: trigger }, issues: [] };
 }
 
@@ -101,31 +83,29 @@ export interface MonitorsRead {
  * or its inline array (components.md: "The `experimental.monitors` manifest key takes the same array
  * inline or a path to a JSON file"; manifest-reference: "a `.json` file holding the monitors array").
  *
- * Every problem is an error issue, which keeps the plugin from loading. Judgment: an invalid entry
- * is left out and a later entry of a name already taken is left out too (the first keeps the name),
- * while the valid entries are still returned, so a caller that reports and carries on has the rest;
- * the docs say only "Identifier unique within the plugin" for `name` (the error and the first-wins rule
- * are the kit's), and give no partial result.
+ * An inline array is part of the manifest's schema, so an invalid one never gets here: the plugin
+ * does not load (spec §9.2.1, J9.7). A file with an invalid entry is skipped whole and reported, and
+ * the plugin's other components load (J9.7). A later entry of a name already taken is left out, the
+ * first keeping the name (J9.7, "at runtime a repeated name keeps the first entry").
  */
 export function readMonitors(raw: unknown, origin: string): MonitorsRead {
   if (!Array.isArray(raw)) {
     const why = 'expected an array of monitors';
     return { monitors: [], issues: [error(origin, `Invalid monitors in ${origin}: ${why}`)] };
   }
+  const reads = raw.map((entry: unknown, index) => readMonitor(entry, origin, index));
+  const failures = reads.flatMap((read) => [...read.issues]);
+  if (failures.length > 0) return { monitors: [], issues: failures };
   const monitors: Monitor[] = [];
   const issues: PluginIssue[] = [];
-  const names = new Set<string>();
-  raw.forEach((entry: unknown, index) => {
-    const read = readMonitor(entry, origin, index);
-    issues.push(...read.issues);
-    const { monitor } = read;
+  reads.forEach(({ monitor }, index) => {
     if (!monitor) return;
-    if (names.has(monitor.name)) {
-      const why = `name "${monitor.name}" is already used by an earlier monitor; names must be unique within the plugin`;
-      issues.push(invalid(origin, index, why));
+    if (monitors.some((kept) => kept.name === monitor.name)) {
+      issues.push(
+        invalid(origin, index, `${UNIQUE_NAMES}; "${monitor.name}" is kept from the first entry`),
+      );
       return;
     }
-    names.add(monitor.name);
     monitors.push(monitor);
   });
   return { monitors, issues };

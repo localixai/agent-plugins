@@ -1,7 +1,6 @@
 import {
-  ELEMENT_COLUMN_OF,
+  drawsElement,
   ELEMENT_NAMES,
-  ELEMENT_SURFACES,
   type ElementName,
   type UiSurface,
 } from '../../../protocol/mods-ui-names.ts';
@@ -71,8 +70,9 @@ export const elementNameOf = (value: unknown): ElementName | undefined => NAMES.
  */
 export function defaultElementTable(surface: UiSurface): ElementTable {
   return Object.fromEntries(
-    ELEMENT_NAMES.filter((name) => ELEMENT_SURFACES[name].includes(ELEMENT_COLUMN_OF[surface])).map(
-      (name) => [name, CONSTRUCTORS[name]],
-    ),
+    ELEMENT_NAMES.filter((name) => drawsElement(name, surface)).map((name) => [
+      name,
+      CONSTRUCTORS[name],
+    ]),
   );
 }

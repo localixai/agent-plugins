@@ -1,6 +1,5 @@
 import {
-  ELEMENT_COLUMN_OF,
-  ELEMENT_SURFACES,
+  drawsElement,
   type ElementName,
   type RenderSite,
   type UiSurface,
@@ -16,7 +15,7 @@ const NEEDS_KEY: ReadonlySet<ElementName> = new Set(['Input', 'Select']);
 /** Why one element is not valid for `surface`, or `undefined`: its type, its props, its children. */
 function nodeProblem(node: ElementNode, surface: UiSurface): string | undefined {
   const def = ELEMENT_DEFS[node.type];
-  if (!ELEMENT_SURFACES[node.type].includes(ELEMENT_COLUMN_OF[surface])) {
+  if (!drawsElement(node.type, surface)) {
     return `${node.type} is not drawn by the ${surface} app`;
   }
   const stray = Object.keys(node.props).find((prop) => !def.props.includes(prop));

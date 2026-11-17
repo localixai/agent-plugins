@@ -48,13 +48,18 @@ const settingsEntries = (gates: HookSessionGates): readonly RegisteredHandler[] 
     registerHooks(hooks, { idPrefix: `settings:${scope}`, source: SETTINGS_SOURCE[scope] }),
   );
 
-/** The hooks the state declares itself: every enabled plugin's, then the settings files'. */
+/**
+ * The hooks the state declares itself, in registry order (Agent Plugins Extended §7.1, Judgment
+ * J7.2): the settings files' first, highest precedence first (§12.3), then every enabled
+ * plugin's in load order; skill and agent frontmatter hooks follow as they register. The order
+ * fixes the merge of several hooks' scalar fields and the order of their messages.
+ */
 const declaredEntries = (
   state: HostState,
   gates: HookSessionGates,
 ): readonly RegisteredHandler[] => [
-  ...state.active.flatMap(pluginEntries),
   ...settingsEntries(gates),
+  ...state.active.flatMap(pluginEntries),
 ];
 
 export const initialRegistry = (state: HostState, gates: HookSessionGates): HookRegistry =>

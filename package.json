@@ -1,5 +1,5 @@
 {
-  "name": "@rsaryev/llx-plugin",
+  "name": "@localix-ai/agent-plugins",
   "version": "0.1.1",
   "description": "Add Claude Code plugin support to any agent: load plugins and run their skills, commands, agents and hooks through ports your host implements.",
   "keywords": [
@@ -23,15 +23,15 @@
     "subagents",
     "typescript"
   ],
-  "homepage": "https://github.com/rsaryev/llx-plugin#readme",
+  "homepage": "https://github.com/localixai/agent-plugins#readme",
   "bugs": {
-    "url": "https://github.com/rsaryev/llx-plugin/issues"
+    "url": "https://github.com/localixai/agent-plugins/issues"
   },
   "license": "MIT",
-  "author": "rsaryev (https://github.com/rsaryev)",
+  "author": "Localix Lab (https://localix.ai)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rsaryev/llx-plugin.git"
+    "url": "git+https://github.com/localixai/agent-plugins.git"
   },
   "files": [
     "dist",
@@ -42,119 +42,126 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "llx-plugin-source": "./src/index.ts",
+      "agent-plugins-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "bun": "./src/index.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./loading": {
-      "llx-plugin-source": "./src/entry/loading.ts",
+      "agent-plugins-source": "./src/entry/loading.ts",
       "types": "./dist/entry/loading.d.ts",
       "bun": "./src/entry/loading.ts",
       "import": "./dist/entry/loading.js",
       "default": "./dist/entry/loading.js"
     },
     "./format": {
-      "llx-plugin-source": "./src/entry/format.ts",
+      "agent-plugins-source": "./src/entry/format.ts",
       "types": "./dist/entry/format.d.ts",
       "bun": "./src/entry/format.ts",
       "import": "./dist/entry/format.js",
       "default": "./dist/entry/format.js"
     },
     "./sdk": {
-      "llx-plugin-source": "./src/entry/sdk.ts",
+      "agent-plugins-source": "./src/entry/sdk.ts",
       "types": "./dist/entry/sdk.d.ts",
       "bun": "./src/entry/sdk.ts",
       "import": "./dist/entry/sdk.js",
       "default": "./dist/entry/sdk.js"
     },
     "./skills": {
-      "llx-plugin-source": "./src/entry/skills.ts",
+      "agent-plugins-source": "./src/entry/skills.ts",
       "types": "./dist/entry/skills.d.ts",
       "bun": "./src/entry/skills.ts",
       "import": "./dist/entry/skills.js",
       "default": "./dist/entry/skills.js"
     },
     "./hooks": {
-      "llx-plugin-source": "./src/entry/hooks.ts",
+      "agent-plugins-source": "./src/entry/hooks.ts",
       "types": "./dist/entry/hooks.d.ts",
       "bun": "./src/entry/hooks.ts",
       "import": "./dist/entry/hooks.js",
       "default": "./dist/entry/hooks.js"
     },
     "./rules": {
-      "llx-plugin-source": "./src/entry/rules.ts",
+      "agent-plugins-source": "./src/entry/rules.ts",
       "types": "./dist/entry/rules.d.ts",
       "bun": "./src/entry/rules.ts",
       "import": "./dist/entry/rules.js",
       "default": "./dist/entry/rules.js"
     },
     "./settings": {
-      "llx-plugin-source": "./src/entry/settings.ts",
+      "agent-plugins-source": "./src/entry/settings.ts",
       "types": "./dist/entry/settings.d.ts",
       "bun": "./src/entry/settings.ts",
       "import": "./dist/entry/settings.js",
       "default": "./dist/entry/settings.js"
     },
     "./marketplace": {
-      "llx-plugin-source": "./src/entry/marketplace.ts",
+      "agent-plugins-source": "./src/entry/marketplace.ts",
       "types": "./dist/entry/marketplace.d.ts",
       "bun": "./src/entry/marketplace.ts",
       "import": "./dist/entry/marketplace.js",
       "default": "./dist/entry/marketplace.js"
     },
     "./agents": {
-      "llx-plugin-source": "./src/entry/agents.ts",
+      "agent-plugins-source": "./src/entry/agents.ts",
       "types": "./dist/entry/agents.d.ts",
       "bun": "./src/entry/agents.ts",
       "import": "./dist/entry/agents.js",
       "default": "./dist/entry/agents.js"
     },
     "./mods": {
-      "llx-plugin-source": "./src/entry/mods.ts",
+      "agent-plugins-source": "./src/entry/mods.ts",
       "types": "./dist/entry/mods.d.ts",
       "bun": "./src/entry/mods.ts",
       "import": "./dist/entry/mods.js",
       "default": "./dist/entry/mods.js"
     },
     "./cli": {
-      "llx-plugin-source": "./src/entry/cli.ts",
+      "agent-plugins-source": "./src/entry/cli.ts",
       "types": "./dist/entry/cli.d.ts",
       "bun": "./src/entry/cli.ts",
       "import": "./dist/entry/cli.js",
       "default": "./dist/entry/cli.js"
     },
     "./testing": {
-      "llx-plugin-source": "./src/testing/index.ts",
+      "agent-plugins-source": "./src/testing/index.ts",
       "types": "./dist/testing/index.d.ts",
       "bun": "./src/testing/index.ts",
       "import": "./dist/testing/index.js",
       "default": "./dist/testing/index.js"
     },
     "./elicitation": {
-      "llx-plugin-source": "./src/entry/elicitation.ts",
+      "agent-plugins-source": "./src/entry/elicitation.ts",
       "types": "./dist/entry/elicitation.d.ts",
       "bun": "./src/entry/elicitation.ts",
       "import": "./dist/entry/elicitation.js",
       "default": "./dist/entry/elicitation.js"
     },
+    "./core": {
+      "agent-plugins-source": "./src/entry/core.ts",
+      "types": "./dist/entry/core.d.ts",
+      "bun": "./src/entry/core.ts",
+      "import": "./dist/entry/core.js",
+      "default": "./dist/entry/core.js"
+    },
     "./layout": {
-      "llx-plugin-source": "./src/entry/layout.ts",
+      "agent-plugins-source": "./src/entry/layout.ts",
       "types": "./dist/entry/layout.d.ts",
       "bun": "./src/entry/layout.ts",
       "import": "./dist/entry/layout.js",
       "default": "./dist/entry/layout.js"
     },
     "./mods/elements": {
-      "llx-plugin-source": "./src/entry/mod-elements.ts",
+      "agent-plugins-source": "./src/entry/mod-elements.ts",
       "types": "./dist/entry/mod-elements.d.ts",
       "bun": "./src/entry/mod-elements.ts",
       "import": "./dist/entry/mod-elements.js",
       "default": "./dist/entry/mod-elements.js"
     },
     "./mods/isolate": {
-      "llx-plugin-source": "./src/entry/mod-isolate.ts",
+      "agent-plugins-source": "./src/entry/mod-isolate.ts",
       "types": "./dist/entry/mod-isolate.d.ts",
       "bun": "./src/entry/mod-isolate.ts",
       "import": "./dist/entry/mod-isolate.js",

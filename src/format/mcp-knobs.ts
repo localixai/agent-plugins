@@ -1,5 +1,6 @@
 import type { McpTransport } from './mcp-config.ts';
 import type { EnvLookup } from './mcp-env.ts';
+import { plainPositiveWholeEnv, positiveWholeEnv, wholeEnv } from './env-number.ts';
 
 /**
  * The environment variables that tune MCP servers and what each decides (env-vars.md, "Variables";
@@ -9,12 +10,8 @@ import type { EnvLookup } from './mcp-env.ts';
  * module; these are the semantics of the MCP rows.
  */
 
-/** A positive whole number in plain digits; anything else is `undefined` (judgment, spec/judgments.md, for the timeouts). */
-export function positiveWhole(text: string | undefined): number | undefined {
-  if (text === undefined || !/^\d+$/.test(text)) return undefined;
-  const value = Number(text);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
+/** A positive whole number of a numeric variable (spec §3.6.1 item 2, J3.17); anything else is `undefined`. */
+export const positiveWhole = positiveWholeEnv;
 
 /** "Timeout in milliseconds for MCP server startup (default: 30000, or 30 seconds)". */
 const DEFAULT_STARTUP_MS = 30_000;
@@ -89,7 +86,7 @@ function idleWindow(
   const fallback = DEFAULT_IDLE_MS[transport];
   if (fallback === undefined) return undefined;
   const text = lookup('CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT');
-  const written = /^\d+$/.test(text ?? '') ? Number(text) : undefined;
+  const written = wholeEnv(text);
   if (written === 0) return undefined;
   const set =
     written === undefined ? fallback : Math.min(Math.max(written, MIN_TOOL_MS), limits.toolMs);
@@ -105,7 +102,8 @@ function idleWindow(
 export function mcpTimeouts(lookup: EnvLookup, server: McpTimeoutServer): McpTimeouts {
   const startupMs = positiveWhole(lookup('MCP_TIMEOUT')) ?? DEFAULT_STARTUP_MS;
   const text = lookup('MCP_TOOL_TIMEOUT');
-  const fromVariable = /^\d+$/.test(text ?? '') ? Math.max(Number(text), MIN_TOOL_MS) : undefined;
+  const read = wholeEnv(text);
+  const fromVariable = read === undefined ? undefined : Math.max(read, MIN_TOOL_MS);
   const own =
     typeof server.timeout === 'number' && server.timeout >= MIN_TOOL_MS
       ? server.timeout
@@ -142,7 +140,7 @@ const DEFAULT_DESCRIPTION_LIMITS: McpDescriptionLimits = {
 
 /** `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`: "Claude Code uses that number for both limits"; anything but plain digits is ignored. */
 export function mcpDescriptionLimits(lookup: EnvLookup): McpDescriptionLimits {
-  const value = positiveWhole(lookup('CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH'));
+  const value = plainPositiveWholeEnv(lookup('CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH'));
   return value === undefined
     ? DEFAULT_DESCRIPTION_LIMITS
     : { upfront: value, deferred: value, instructions: value };
@@ -203,6 +201,12 @@ export interface McpStdioEnvironmentInput {
   readonly configured: Readonly<Record<string, string>>;
   /** "The project root": set as `CLAUDE_PROJECT_DIR` in the server's environment only. */
   readonly projectDir?: string;
+  /**
+   * What the plugin exports to its server: `ResolvedMcpServer.environment`, the path variables
+   * `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` among them. Kept under the allowlist too: they are
+   * the client's own per-plugin values, not the inherited shell environment it withholds (spec J3.22).
+   */
+  readonly exported?: Readonly<Record<string, string>>;
   readonly baseline?: readonly string[];
 }
 
@@ -220,6 +224,7 @@ export function mcpStdioEnvironment(input: McpStdioEnvironmentInput): Record<str
     : Object.entries(input.snapshot);
   return {
     ...Object.fromEntries(inherited),
+    ...input.exported,
     ...(input.projectDir === undefined ? {} : { CLAUDE_PROJECT_DIR: input.projectDir }),
     ...input.configured,
   };

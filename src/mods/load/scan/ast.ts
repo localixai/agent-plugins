@@ -1,6 +1,7 @@
 import type {
   ArrayExpression,
   ArrowFunctionExpression,
+  AwaitExpression,
   BlockStatement,
   CallExpression,
   ClassDeclaration,
@@ -18,8 +19,11 @@ import type {
   MemberExpression,
   Node,
   ObjectExpression,
+  ObjectPattern,
   Program,
   Property,
+  RestElement,
+  ReturnStatement,
   VariableDeclaration,
   VariableDeclarator,
   TemplateLiteral,
@@ -56,6 +60,10 @@ export const isBlock = typed<BlockStatement>('BlockStatement');
 export const isProgram = typed<Program>('Program');
 export const isLiteral = typed<Literal>('Literal');
 export const isTemplate = typed<TemplateLiteral>('TemplateLiteral');
+export const isAwait = typed<AwaitExpression>('AwaitExpression');
+export const isReturn = typed<ReturnStatement>('ReturnStatement');
+export const isObjectPattern = typed<ObjectPattern>('ObjectPattern');
+export const isRestElement = typed<RestElement>('RestElement');
 const isFunctionExpression = typed<FunctionExpression>('FunctionExpression');
 const isArrow = typed<ArrowFunctionExpression>('ArrowFunctionExpression');
 

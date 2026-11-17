@@ -103,6 +103,12 @@ export interface McpExpansion {
   readonly missing: readonly string[];
   /** Debug-log lines for covered credentials the user set and a remote `url` or `headers` named. */
   readonly debug: readonly string[];
+  /**
+   * A remote server whose `url` is written empty: `not configured`, not connected and not an error
+   * (mcp.md: "Claude Code doesn't attempt to connect to it"; spec §8.8 item 6). A `url` that becomes
+   * empty or unusable only after expansion is still `'url' is not a valid URL`.
+   */
+  readonly notConfigured?: true;
 }
 
 /** Collects what the fields of one server raise, in the order they are expanded. */
@@ -179,7 +185,8 @@ const expandRemote = (server: RemoteMcpServer, fields: Fields): RemoteMcpServer 
  * credential reads as empty in a remote server only.
  *
  * Judgment (spec/judgments.md): a `url` that does not parse after expansion drops the server, whatever
- * the cause, with the docs' `'url' is not a valid URL`; the docs show it for an empty string.
+ * the cause, with the docs' `'url' is not a valid URL` (the docs show it for one that expands to
+ * `/mcp`); a `url` written empty is a placeholder (`notConfigured`), not an error.
  */
 export function expandMcpServer(
   name: string,
@@ -187,6 +194,9 @@ export function expandMcpServer(
   lookup: EnvLookup,
   options: McpExpansionOptions = {},
 ): McpExpansion {
+  if (isRemoteMcpServer(server) && server.url === '') {
+    return { server: undefined, issues: [], missing: [], debug: [], notConfigured: true };
+  }
   const fields = fieldExpander(name, lookup, isRemoteMcpServer(server), options);
   const expanded = isRemoteMcpServer(server)
     ? expandRemote(server, fields)

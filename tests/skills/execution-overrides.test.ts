@@ -266,13 +266,13 @@ describe('execution details (judgments: spec/judgments.md)', () => {
     expect(environment.effort).toBeUndefined();
   });
 
-  test('`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` is on only for `1`', () => {
-    for (const value of ['0', 'true', '', 'yes']) {
-      const environment = readExecutionEnvironment(
-        fakeEnvironment({ CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: value }),
-      );
-      expect(environment.backgroundTasksDisabled).toBe(false);
-    }
+  test('`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` is an on/off variable (spec §3.6.1, J3.16)', () => {
+    const disabled = (value: string) =>
+      readExecutionEnvironment(fakeEnvironment({ CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: value }))
+        .backgroundTasksDisabled;
+    for (const value of ['1', 'true', 'yes', 'on', ' TRUE ']) expect(disabled(value)).toBe(true);
+    for (const value of ['0', 'false', 'no', 'off', '', 'maybe'])
+      expect(disabled(value)).toBe(false);
   });
 
   test('the auto-mode rule does not apply to a forked skill: only the allowlist does', () => {

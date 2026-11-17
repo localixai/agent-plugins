@@ -23,12 +23,14 @@ All three cases below are governed by one host option, `PluginHostOptions.shellP
 into no hook, so the option does not apply to one (next section). The values go into the process environment through one
 function, `shellExports` in `src/loading/resolve/shell-exports.ts`.
 
-- `'environment-reference'` (the default) writes `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`,
+- `'environment-reference'` (the default for a `!` block and a `headersHelper`; for a monitor an
+  explicit opt-in, see below) writes `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`,
   `${CLAUDE_PROJECT_DIR}` and `${CLAUDE_SKILL_DIR}` as the braced reference. The process gets each
   referenced path as an environment variable, so the shell reads it after parsing and never parses
   it. PowerShell gets `${env:NAME}`.
 - `'pasted'` writes the path into the text where Claude Code pastes it: a `!` block, a plugin's
-  `headersHelper` and a monitor `command`, as the docs show it. Nothing is exported for those.
+  `headersHelper` and a monitor `command`, as the docs show it. Nothing is exported for those. It is
+  the default for a monitor `command`.
 
 Why the default is not quoting. The docs' advice, "wrap the variable in double quotes so a path with
 spaces stays one word" (plugins/manifest-reference.md, "Quoting and path separators"), keeps spaces
@@ -97,13 +99,18 @@ the variables are "Not exported". Not observed: monitors do not start under `-p`
 
 Why it is unsafe. The same as for a hook: the command is a shell string.
 
-The kit's default. `ResolvedMonitor.command` keeps the references, and `ResolvedMonitor.environment`
-(and `MonitorStart.env`) carries the paths it references. `tests/host/shell-paths.test.ts` proves it.
+Not a deviation by default. Agent Plugins Extended §9.2.4 (Judgment J9.17) settles that a monitor's
+path variables are pasted into `command` and never exported, referenced or not, and allows the
+reference only as an option off by default: an exported reference changes what a plugin observes
+(a single-quoted `'${CLAUDE_PLUGIN_ROOT}'` stays unexpanded, and the variable appears in the
+process environment). So the kit pastes, as Claude Code does, and the hole above stays open for a
+monitor unless the host opts in.
 
-The cost. 4 of the 6 `monitors.json` files name a path variable. The one written in single quotes
-passes the text to an inner `bash -c`, which reads it from the environment, so 0 of 4 change.
-
-The option. `shellPaths: 'pasted'`.
+The option. `shellPaths: 'environment-reference'`: `ResolvedMonitor.command` keeps the references,
+and `ResolvedMonitor.environment` (and `MonitorStart.env`) carries the paths it references.
+`tests/host/shell-paths.test.ts` proves it. Its cost: 4 of the 6 `monitors.json` files of the corpus
+name a path variable; the one written in single quotes passes the text to an inner `bash -c`, which
+reads it from the environment, so 0 of 4 change.
 
 ### `require()` in a hooks module
 
@@ -187,6 +194,10 @@ These security changes in CHANGELOG.md follow Claude Code or its docs, so they a
 
 The kit decides; the host's ports act. These are the risks no kit default removes.
 
+- **A core package's data directory.** `loadCorePackage` holds a `./` or `${PLUGIN_ROOT}` `cwd`
+  and every `./` command to the plugin root through any link (core §4.1). A `${PLUGIN_DATA}` `cwd`
+  is checked as text only (`resolveCwd`): the data directory is the host's, so a link inside it
+  that leads elsewhere is the host's to refuse when it creates and resolves the directory.
 - **Running hook commands at all.** A `command` hook is code from the plugin. The kit plans the run
   (shell, environment, scrubbed credentials, timeout) and checks workspace trust from the facts the
   host reports. `CommandRunner` then runs whatever it is handed, with the host's privileges. Sandboxing
@@ -212,6 +223,12 @@ The kit decides; the host's ports act. These are the risks no kit default remove
   `require()`, dynamic `import()` and imports outside the plugin, but a module that runs can still
   reach `import.meta.require`, `Bun`, `process` and the globals of its runtime. Running it in an
   isolate or a worker without them is the host's job.
+- **Worktree isolation of commands.** The kit reads `isolation: worktree` and leaves the checks on
+  each command to the host: a Bash, PowerShell or Monitor command of an isolated session or subagent
+  whose working directory resolves to the main checkout, a Bash or Monitor command that redirects
+  git into it, or one whose git it cannot prove stays in the worktree (worktrees.md, "How Claude
+  Code enforces isolation"). The scope (`spec/out-of-scope.json`, errors.md "Command blocked by the
+  worktree isolation checks") gives them to the runtime, so `decide` does not make them.
 - **The ports.**
   - `CommandRunner` runs `!` commands, hooks and status lines.
   - `HttpClient` fetches `http` hooks, archives and marketplaces. Egress policy is the host's.

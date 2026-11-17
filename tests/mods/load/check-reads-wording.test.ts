@@ -44,17 +44,19 @@ test('`$` passed to a method, an inner function and an imported function name wh
   );
 });
 
-test('destructuring `$` is `$ is used as a value`, and a computed name is `$ is indexed with a computed name`', async () => {
-  expect(await reason(wrap('const { ui } = $'))).toEndWith('./register.js: $ is used as a value');
-  expect(await reason(wrap("const n = 'ui'; $[n].log('x')"))).toEndWith(
-    './register.js: $ is indexed with a computed name',
+test('destructuring `$` and a computed name on it take the words of 2.1.325 (Agent Plugins Extended J10.2)', async () => {
+  expect(await reason(wrap('const { ui } = $'))).toContain(
+    ':1: $ itself is bound to a name (bound, passed, spread, returned or read); $ is always spelled',
+  );
+  expect(await reason(wrap("const n = 'ui'; $[n].log('x')"))).toContain(
+    ':1: a computed or optional member access on $; $ is always spelled',
   );
 });
 
 test('a bare import and an import that leaves the plugin directory each name the specifier', async () => {
   const head = (line: string): string => `${line}\nexport function register(on) {}`;
   expect(await reason(head("import x from 'left-pad'"))).toContain(
-    'imports "left-pad": a hooks module imports only files inside the plugin directory, by relative path, and claude-code',
+    'cannot import "left-pad" (from hooks/register.js): a hooks module imports its own files by relative path and "claude-code", nothing else',
   );
   expect(await reason(head("import x from '../../outside.js'"))).toContain(
     'imports "../../outside.js", outside the plugin directory: a hooks module imports only files',

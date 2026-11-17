@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PluginSession } from '@rsaryev/llx-plugin';
+import type { PluginSession } from '@localix-ai/agent-plugins';
 import { generateText, isStepCount, tool, type LanguageModel } from 'ai';
 import { z } from 'zod';
 import { builtinTools, type ToolContext } from './tools.ts';

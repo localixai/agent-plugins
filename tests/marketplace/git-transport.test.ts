@@ -1,6 +1,7 @@
 /**
  * plugins/install.md § Add a private marketplace (HTTPS, SSH, GitHub `owner/repo` shorthand), § Add a
- * marketplace (the sources table); env-vars.md § `CLAUDE_CODE_PLUGIN_PREFER_HTTPS`. The names of the
+ * marketplace (the sources table); env-vars.md § `CLAUDE_CODE_PLUGIN_PREFER_HTTPS`;
+ * plugins/troubleshooting.md § SSH host key is not in your known_hosts file (`StrictHostKeyChecking=yes`). The names of the
  * variables that switch prompts off are a judgment, tested outside `spec(...)`.
  */
 import { describe, expect, test } from 'bun:test';
@@ -112,6 +113,20 @@ spec([`${HOST}https://example.com/repo.git`, `${HOST}HTTPS`, `${HOST}SSH`], () =
   });
   test('SSH needs a key that works without a prompt', () => {
     expect(clonePlan().sshProgram).toBe('ssh-batch-mode');
+  });
+  test('SSH runs in batch mode with StrictHostKeyChecking=yes, so a host key is never accepted on its own', () => {
+    expect(clonePlan().sshOptions).toEqual([
+      '-o',
+      'BatchMode=yes',
+      '-o',
+      'StrictHostKeyChecking=yes',
+    ]);
+  });
+});
+
+describe('a user-named SSH program, what the docs leave open (spec/judgments.md, J15.14)', () => {
+  test('gets no option of the client added to its command line', () => {
+    expect(clonePlan({ gitSsh: '/bin/s' }).sshOptions).toEqual([]);
   });
 });
 

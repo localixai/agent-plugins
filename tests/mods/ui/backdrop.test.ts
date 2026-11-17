@@ -19,19 +19,26 @@ const core = (e: unknown) => Promise.resolve({ type: 'engine', ref: e });
 
 spec('mods.site.Backdrop', () => {
   test("the event holds the backdrop's fields as e.props and backdrop as e.requestId", () => {
-    expect(backdropRender({ ...NIGHT_SKY, glass: true }, 'desktop')).toEqual({
+    const glass = { blur: 14, opacity: 0.55 };
+    expect(backdropRender({ ...NIGHT_SKY, glass }, 'desktop')).toEqual({
       event: {
         component: 'Backdrop',
         surface: 'desktop',
-        props: { ...NIGHT_SKY, glass: true },
+        props: { ...NIGHT_SKY, glass },
         requestId: 'backdrop',
       },
     });
   });
 
   test('the mobile app raises the site too, and e.surface names it', () => {
+    // e.props always carries glass: the default glass when the backdrop names none (RenderPropsOf Backdrop).
     expect(backdropRender(NIGHT_SKY, 'mobile')).toEqual({
-      event: { component: 'Backdrop', surface: 'mobile', props: NIGHT_SKY, requestId: 'backdrop' },
+      event: {
+        component: 'Backdrop',
+        surface: 'mobile',
+        props: { ...NIGHT_SKY, glass: { blur: 16, opacity: 0.6 } },
+        requestId: 'backdrop',
+      },
     });
   });
 

@@ -114,3 +114,22 @@ describe('judgments the docs leave open (spec/judgments.md)', () => {
     expect(agent).toMatchObject({ extras: {}, hooks: undefined, ignored: [], unrecognized: [] });
   });
 });
+
+describe('an empty model (spec §5.4.3, J5.5)', () => {
+  test('is dropped with a warning, and the agent loads without it', () => {
+    for (const model of ['""', "'  '"]) {
+      const result = readAgent(
+        file(`name: helper\ndescription: d\nmodel: ${model}`),
+        at('project'),
+      );
+      const agent = loaded(result);
+      expect(agent.definition.model).toBeUndefined();
+      expect(result.issues).toEqual([
+        expect.objectContaining({
+          severity: 'warning',
+          message: expect.stringContaining('"model"'),
+        }),
+      ]);
+    }
+  });
+});

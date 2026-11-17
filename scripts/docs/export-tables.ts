@@ -8,9 +8,10 @@ import { join } from 'node:path';
 import { exportsOf, publicEntries, type PublicEntry } from '../lib/public-exports.ts';
 import { ROOT } from './location.ts';
 
-const PACKAGE = '@rsaryev/llx-plugin';
+const PACKAGE = '@localix-ai/agent-plugins';
 const ROW = /^\| `([^`]+)` \| (\w+) \| (.*) \|$/;
-const IMPORT = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'(@rsaryev\/llx-plugin(?:\/[\w/-]+)?)'/g;
+const IMPORT =
+  /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'(@rsaryev\/agent-plugins(?:\/[\w/-]+)?)'/g;
 
 /** The table file of an entry, relative to the repository. */
 const tableFile = (subpath: string): string =>

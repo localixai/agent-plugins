@@ -57,6 +57,7 @@ export async function processEnvironment(
       sessionId: context.sessionId,
       processId: context.processId,
       effort: context.effort,
+      hipaa: context.hipaa,
     }),
     ...exported,
     ...(await envFileVariable(entry, context)),

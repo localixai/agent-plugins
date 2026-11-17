@@ -243,3 +243,15 @@ describe('readCommand: a flat command file (skills.md, "How a skill gets its com
     });
   });
 });
+
+describe('a command name over 256 characters is refused (errors.md, "Skill or command name refused")', () => {
+  test('256 loads, 257 does not; characters are code points', () => {
+    const read = (stem: string) =>
+      readCommand(`.claude/commands/${stem}.md`, 'x', project(`${stem}.md`));
+    expect(read('a'.repeat(256)).command).toBeDefined();
+    const over = read('a'.repeat(257));
+    expect(over.command).toBeUndefined();
+    expect(over.issues[0]?.message).toContain('over 256 characters');
+    expect(read('😀'.repeat(256)).command).toBeDefined();
+  });
+});

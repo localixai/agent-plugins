@@ -26,6 +26,7 @@ const CASES: {
   require: { source: `${inRegister('')}\nrequire('fs')` },
   'import-outside': { source: `import { a } from '../../outside.js'\n${inRegister('')}` },
   'import-package': { source: `import fs from 'node:fs'\n${inRegister('')}` },
+  'import-not-code': { source: `import data from './data.json'\n${inRegister('')}` },
   'state-unreadable': {
     source: `import { atom } from 'claude-code'\nlet count = atom({ plugin: 'p', key: 'k' }, 0)\n${inRegister('')}`,
   },
@@ -40,6 +41,12 @@ const CASES: {
   'missing-filter': { source: inRegister("on('telemetry.log', async ($, e, next) => next(e))") },
   'hook-unreadable': { source: inRegister("on('session.start', handler)") },
   'on-shadowed': { source: inRegister('{ const on = 1 }') },
+  'on-twice': {
+    source: inRegister(
+      "on('session.start', async ($, e, next) => next(e))\non('session.start', async ($, e, next) => next(e))",
+    ),
+  },
+  'not-generator': { source: inRegister("on('turn.step', async ($, e, next) => next(e))") },
   'dollar-escapes': { source: hook('helper.run($)') },
   'dollar-as-value': { source: hook('const x = $') },
 };

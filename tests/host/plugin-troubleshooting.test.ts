@@ -30,9 +30,14 @@ const menu = (session: Awaited<ReturnType<typeof sessionOf>>) =>
     .toSorted();
 
 /** The "not found" message the loader gives for a manifest key that names a path with nothing there. */
-async function messageOf(component: string, path: string): Promise<string | undefined> {
+async function messageOf(
+  component: string,
+  path: string,
+  pluginRoot?: string,
+): Promise<string | undefined> {
   const { issues } = await loadPlugin({
     files: memoryFiles({ '.claude-plugin/plugin.json': manifest({ [component]: path }) }),
+    ...(pluginRoot !== undefined && { roots: { pluginRoot } }),
   });
   return issues.map((issue) => issue.message).find((text) => text.includes('not found'));
 }
@@ -135,23 +140,17 @@ describe('troubleshooting a plugin whose skills do not show', () => {
       hooks: './missing.json',
     };
     spec('manifest.troubleshooting.commands path not found: <path>', () => {
-      test('is "<component> path not found: <path>" for commands, skills, agents and hooks; the host puts its plugin root before the path', async () => {
-        const paths = locations();
-        const root = paths.pluginRoot('my-plugin@acme');
+      test('is "<component> path not found: <absolute path>" for commands, skills, agents and hooks when the host gives the plugin root', async () => {
+        const root = locations().pluginRoot('my-plugin@acme');
         for (const [component, path] of Object.entries(written)) {
-          const message = await messageOf(component, path);
-          const prefix = `${component} path not found: `;
-          expect(message?.startsWith(prefix)).toBe(true);
-          const shown = message?.slice(prefix.length) ?? '';
-          expect(shown.endsWith(path)).toBe(true);
-          const absolute = paths.joinPath(root, shown);
-          expect(absolute.startsWith(root)).toBe(true);
-          expect(absolute.endsWith(path.slice(2))).toBe(true);
+          expect(await messageOf(component, path, root)).toBe(
+            `${component} path not found: ${root}/${path.slice(2)}`,
+          );
         }
       });
     });
 
-    test('the loader names the path as the manifest wrote it, where troubleshooting.md shows the absolute path (spec/judgments.md)', async () => {
+    test('without the plugin root the loader names the path as the manifest wrote it (spec/judgments.md)', async () => {
       for (const [component, path] of Object.entries(written)) {
         expect(await messageOf(component, path)).toBe(`${component} path not found: ${path}`);
       }

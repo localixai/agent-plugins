@@ -8,7 +8,8 @@ import type { InstallScope } from '../marketplace/install-scopes.ts';
  * options and secrets and its data directory `~/.claude/plugins/data/<id>/` go, except: `--keep-data`
  * keeps the directory; another installed plugin that uses the same folder keeps it (the folder is
  * `pluginDataId`, and "an ID [that] differs from this one only in letter case" names the same
- * folder, so folders are compared without regard to case); and installed plugins that cannot be read
+ * folder on a case-insensitive file system, so there folders are compared without regard to case,
+ * J3.19); and installed plugins that cannot be read
  * back after the removal keep the options, the secrets and the directory ("the plugin may still be
  * installed at another scope"). Pure over what the host read back.
  */
@@ -30,6 +31,12 @@ export interface RetentionFacts {
   readonly keepData?: boolean;
   /** The installed plugins read back after the removal from `scope`; `'unreadable'` when the list could not be read. */
   readonly remaining: readonly InstalledRecord[] | 'unreadable';
+  /**
+   * Whether the plugins root's file system ignores letter case (spec §3.1.2 item 4, J3.19): two ids
+   * that differ only in case share one data directory exactly then. Default true, so a host that
+   * cannot tell keeps a folder rather than deleting one another plugin may use.
+   */
+  readonly caseInsensitiveFileSystem?: boolean;
 }
 
 export interface Retention {
@@ -44,8 +51,11 @@ export interface Retention {
   readonly dataFolder: string;
 }
 
-const sameFolder = (a: string, b: string): boolean =>
-  pluginDataId(a).toLowerCase() === pluginDataId(b).toLowerCase();
+const folded = (id: string, fold: boolean): string =>
+  fold ? pluginDataId(id).toLowerCase() : pluginDataId(id);
+
+const sameFolder = (a: string, b: string, fold: boolean): boolean =>
+  folded(a, fold) === folded(b, fold);
 
 /** Why the data directory stays, in the order the docs list the exceptions; `undefined` when it goes. */
 function keptBecause(
@@ -54,7 +64,10 @@ function keptBecause(
 ): DataKeptBecause | undefined {
   if (others.some((record) => record.id === facts.id)) return 'other-scope';
   if (facts.keepData === true) return 'keep-data';
-  return others.some((record) => sameFolder(record.id, facts.id)) ? 'shared-folder' : undefined;
+  const fold = facts.caseInsensitiveFileSystem ?? true;
+  return others.some((record) => sameFolder(record.id, facts.id, fold))
+    ? 'shared-folder'
+    : undefined;
 }
 
 /** What the uninstall of `facts.id` from `facts.scope` deletes and keeps. */

@@ -75,7 +75,12 @@ const READERS: { readonly [K in RawRun['kind']]: Reader } = {
     failureVerdict(subject, { cause: 'cannot-start', text: run.message, detail: run.message }),
   ),
   cancelled: readerOf('cancelled', inactive('cancelled')),
-  skipped: readerOf('skipped', inactive('skipped')),
+  skipped: readerOf('skipped', (subject, run) => ({
+    ...inactive('skipped')(subject),
+    ...(run.notice === undefined
+      ? {}
+      : { notice: { handlerId: subject.entry.id, message: run.notice } }),
+  })),
   background: readerOf('background', (subject, run) => ({
     handler: subject.entry,
     status: 'background',

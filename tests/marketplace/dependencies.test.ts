@@ -42,11 +42,11 @@ spec('dependencies.field.name', () => {
   });
 
   test('`name` is required: an object without one, or with an empty or non-string one, is an error', () => {
-    for (const bad of [{ version: '^1.0' }, { name: '' }, { name: 5 }, { name: ['a'] }]) {
+    for (const bad of [{ name: '' }, { name: 5 }, { name: ['a'] }]) {
       const found = normalized(bad);
       expect(found).toMatchObject({ severity: 'error', path: `${PATH}.name` });
     }
-    expect(errorOf({ version: '^1.0' })).toContain('"name"');
+    expect(normalized({ version: '^1.0' })).toMatchObject({ severity: 'error', path: PATH });
   });
 
   test('an entry that is neither a string nor an object, or an empty string, is an error', () => {
@@ -258,8 +258,10 @@ describe('judgments (outside spec)', () => {
     expect(normalized({ name: 'a', extra: 1 })).toEqual({ name: 'a', marketplace: MARKETPLACE });
   });
 
-  test('the first @ splits `name@marketplace`, so a second one is part of the marketplace and refused by the id grammar', () => {
+  test('a string with a second @, and an object without `name`, are `Invalid input` on the item, as the manifest reports them (J16.17)', () => {
     expect(normalized('a@b@c')).toMatchObject({ severity: 'error', path: PATH });
-    expect(errorOf('a@b@c')).toContain('"b@c"');
+    expect(errorOf('a@b@c')).toBe('Invalid input');
+    expect(normalized({ version: '^1' })).toMatchObject({ severity: 'error', path: PATH });
+    expect(errorOf({ version: '^1' })).toBe('Invalid input');
   });
 });

@@ -4,7 +4,8 @@
  * it yet"); plugins/install.md § Add and install from your shell ("declared in your user settings even
  * when you pass `--scope project`", "A marketplace you've already added from that source is reused",
  * "A new one is added under the same organization policy checks as `claude plugin marketplace add`",
- * `Successfully added marketplace: <name> (declared in user settings)`). The refusal of a name, its
+ * `Successfully added marketplace: <name> (declared in user settings)`); spec §17.20.2 (the same name
+ * from a different source keeps the existing marketplace and installs nothing). The refusal of a name, its
  * `invalid_name` code and the wording are outside `spec(...)` and in spec/judgments.md.
  */
 import { expect, test } from 'bun:test';
@@ -111,6 +112,54 @@ spec('cli.plugin.plugin install.--marketplace <source>', () => {
       }),
     );
     expect(lastJson(found)['failureCode']).toBeUndefined();
+  });
+
+  test('a catalog named after a marketplace added from another source installs nothing and keeps it', async () => {
+    const existingSource = {
+      kind: 'github' as const,
+      repo: 'acme/plugins',
+      path: '.claude-plugin/marketplace.json',
+    };
+    const found = await run(
+      marketSetup({
+        found: {
+          addedMarketplace: {
+            name: 'deploy-market',
+            alreadyKnown: true,
+            registered: [],
+            existingSource,
+          },
+        },
+      }),
+    );
+    expect(printed(found).exitCode).toBe(1);
+    expect(printed(found).stdout).toEqual([]);
+    expect(printed(found).stderr).toEqual([
+      'Marketplace "deploy-market" is already added from a different source (github:acme/plugins). To use this source instead, remove that marketplace first with /plugin marketplace remove deploy-market.',
+    ]);
+    expect(effectsOf(found)).toBeUndefined();
+  });
+
+  test('the same source added before is reused', async () => {
+    const existingSource = {
+      kind: 'github' as const,
+      repo: 'your-org/plugins',
+      path: '.claude-plugin/marketplace.json',
+    };
+    const found = await run(
+      marketSetup({
+        found: {
+          addedMarketplace: {
+            name: 'deploy-market',
+            alreadyKnown: true,
+            registered: [],
+            existingSource,
+          },
+        },
+      }),
+    );
+    expect(printed(found).stderr).toEqual([]);
+    expect(printed(found).exitCode).toBe(0);
   });
 
   test('a source that is none of the forms ends the command with a failed result', () => {

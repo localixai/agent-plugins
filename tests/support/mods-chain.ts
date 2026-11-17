@@ -136,6 +136,7 @@ export interface FireOptions {
   readonly before?: (e: unknown) => unknown;
   readonly only?: DispatchOptions['only'];
   readonly trace?: DispatchOptions['trace'];
+  readonly debug?: DispatchOptions['debug'];
 }
 
 type Raw = {
@@ -191,6 +192,7 @@ export function harness(
     ...(given.groupMs === undefined ? {} : { groupMs: given.groupMs }),
     ...(given.only === undefined ? {} : { only: given.only }),
     ...(given.trace ? { trace: given.trace } : {}),
+    ...(given.debug ? { debug: given.debug } : {}),
   });
   const fire = (name: string, input: Ev = {}, given: FireOptions = {}): Promise<unknown> =>
     raw.dispatch(name, input, options(given));

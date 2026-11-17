@@ -236,9 +236,9 @@ const modeOf = (
 ): PermissionMode =>
   ignored && wanted === BYPASS ? MANUAL : restrict(wanted, locks, input.autoAvailable);
 
-/** The mode cycle and the dialog of a session that started in `mode`. */
+/** The mode cycle and the dialog of a session that started in `mode`; `--restricted` refuses bypass. */
 function cycleOf(mode: PermissionMode, ignored: boolean, { locks, input }: Launch) {
-  const asked = input.allowDangerouslySkipPermissions === true;
+  const asked = input.allowDangerouslySkipPermissions === true && input.restricted !== true;
   return {
     bypassAvailable: !locks.noBypass && !ignored && (mode === BYPASS || asked),
     autoAvailable: input.autoAvailable && !locks.noAuto,

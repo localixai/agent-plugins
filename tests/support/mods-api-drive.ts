@@ -138,7 +138,9 @@ export async function drive(
     return hookAnswer(event, answer === 'deny' ? 'deny' : 'value');
   };
   if (answer !== 'none') {
-    await h.mod('hook', 'prepend', [
+    // A mark has no `to`, so only a built-in mod's unfiltered hook sees it (J10.20).
+    const isMark = event === 'telemetry.mark';
+    await h.mod('hook', isMark ? 'builtin' : 'prepend', [
       event === 'process.spawn'
         ? gen(event, async function* (_$, e, next) {
             if (answer === 'next') return yield* ((seen.push(e), next(e)));
@@ -148,7 +150,7 @@ export async function drive(
             event,
             (_$, e, next) => (answer === 'next' ? (seen.push(e), next(e)) : answered(e)),
             // A telemetry hook names the collector (reference.md, "Telemetry").
-            event.startsWith('telemetry.') ? { matcher: { to: 'collector' } } : {},
+            event.startsWith('telemetry.') && !isMark ? { matcher: { to: 'collector' } } : {},
           ),
     ]);
   }

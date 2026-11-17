@@ -123,6 +123,12 @@ export {
   type StartupFetchFacts,
   type PolicySurface,
 } from './applicability.ts';
+export {
+  GATEWAY_SESSION_EXPIRED,
+  startupFetchFailure,
+  type StartupFailure,
+  type StartupFailureFacts,
+} from './startup-failure.ts';
 export { approvalItems, type ApprovalItem, type ApprovalKind } from './approval.ts';
 export {
   type ManagedActor,

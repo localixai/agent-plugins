@@ -161,17 +161,22 @@ spec(
       expect(missing.entry).toBeUndefined();
     });
 
-    test('a hosts entry with a scheme, a port or a path is rejected; a bare hostname is not', () => {
+    test('a hosts entry with a scheme, a port, a path or an upper-case letter is rejected; a bare lowercase hostname is not', () => {
       for (const host of [
         'https://registry.terraform.io',
         'registry.terraform.io:443',
         'registry.terraform.io/v1',
         'http://a',
+        'Registry.terraform.io',
       ]) {
         const { entry, issues } = signals({ hosts: [host] });
         expect(entry).toBeUndefined();
-        expect(errorsOf(issues).map((found) => found.path)).toEqual([
-          'plugins[0].relevance.signals.hosts[0]',
+        expect(errorsOf(issues)).toEqual([
+          {
+            severity: 'error',
+            path: 'plugins[0].relevance.signals.hosts[0]',
+            message: 'must be a lowercase bare hostname (no scheme, port, or path)',
+          },
         ]);
       }
       expect(signals({ hosts: ['registry.terraform.io', 'localhost'] }).issues).toEqual([]);

@@ -61,6 +61,8 @@ spec('cli.plugin.Advice on the README', () => {
     '/plugin install other@acme-tools',
     '/plugin install deploy-helper --marketplace',
     'plugin installs deploy-helper@acme-tools',
+    '/plugin install deploy-helper --marketplace <owner>/<repo>',
+    'Run `claude plugin install deploy-helper --marketplace <owner>/<repo>`',
   ])('a line that does not count: %s', (line) => {
     expect(readmeInstallsPlugin(line, 'deploy-helper')).toBe(false);
   });
@@ -69,6 +71,8 @@ spec('cli.plugin.Advice on the README', () => {
     const advice = readmeAdvice({ file: 'README.md', plugin: 'p', readme: '' });
     expect(advice?.installLine).toBe('/plugin install p --marketplace <owner>/<repo>');
     expect(advice && adviceNeedsSource(advice)).toBe(true);
+    const pasted = `# p\n\n${advice?.installLine ?? ''}\n`;
+    expect(readmeAdvice({ file: 'README.md', plugin: 'p', readme: pasted })).toEqual(advice);
     expect(sourceFromOrigin('https://github.com/acme/tools.git')).toBe('acme/tools');
     expect(sourceFromOrigin('git@github.com:acme/tools.git')).toBe('acme/tools');
     expect(sourceFromOrigin('https://example.com/acme/tools.git')).toBeUndefined();

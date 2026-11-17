@@ -60,6 +60,8 @@ export interface HookEngineOptions {
   readonly httpPolicy?: DispatchConfig['httpPolicy'];
   /** The host process's id, exported as `CLAUDE_PID` to command hooks. */
   readonly processId?: DispatchConfig['processId'];
+  /** The HIPAA configuration applies to the session (hipaa-setup.md): hooks get no Anthropic credentials. */
+  readonly hipaa?: DispatchConfig['hipaa'];
   /** The `env` blocks of the settings files, resolved (`resolveSettingsEnv`). */
   readonly settingsEnv?: DispatchConfig['settingsEnv'];
   /** `CLAUDE_ENV_FILE` for the events that have one (`createEnvFiles`). */
@@ -110,6 +112,7 @@ const hostOf = (options: HookEngineOptions) => ({
   ...(options.userConfigOf === undefined ? {} : { userConfigOf: options.userConfigOf }),
   ...(options.httpPolicy === undefined ? {} : { httpPolicy: options.httpPolicy }),
   ...(options.processId === undefined ? {} : { processId: options.processId }),
+  ...(options.hipaa === true ? { hipaa: true } : {}),
   ...(options.settingsEnv === undefined ? {} : { settingsEnv: options.settingsEnv }),
   ...(options.envFiles === undefined ? {} : { envFiles: options.envFiles }),
   ...(options.checkPluginDirectories === false ? {} : { checkPluginDirectories: true }),

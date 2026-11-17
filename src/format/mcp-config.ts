@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mcpOAuthSchema } from './mcp-oauth-schema.ts';
 import type {
   McpHttpServerConfig,
   McpSSEServerConfig,
@@ -43,6 +44,7 @@ const remote = {
   url: text,
   headers: z.record(text, text).exactOptional(),
   headersHelper: text.exactOptional(),
+  oauth: mcpOAuthSchema.exactOptional(),
   ...common,
 };
 

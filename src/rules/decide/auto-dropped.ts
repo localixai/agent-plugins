@@ -13,8 +13,21 @@ import { isAllowRule } from './behavior.ts';
 /** A bare rule (`Bash(*)` reads as bare; `PowerShell(*)` is the pattern `*`, handled below) on one of the tools whose every use runs code. */
 const BARE_TOOLS: ReadonlySet<string> = new Set(['Bash', 'PowerShell', 'Agent', 'Monitor']);
 
-/** The docs name `python`; the others are the same kind of interpreter (spec/judgments.md). */
-const INTERPRETERS: ReadonlySet<string> = new Set(['python', 'python3', 'node', 'ruby', 'perl']);
+/**
+ * The docs name `python`; the others are the same kind of interpreter, and the shell wrappers
+ * `bash`, `sh` and `zsh` (with their `-c` forms) are the "shell-wrapper prefixes" of
+ * settings-reference.md, `autoMode.classifyAllShell` (spec/judgments.md).
+ */
+const INTERPRETERS: ReadonlySet<string> = new Set([
+  'python',
+  'python3',
+  'node',
+  'ruby',
+  'perl',
+  'bash',
+  'sh',
+  'zsh',
+]);
 
 /** The docs say "package-manager run commands" without naming the managers (spec/judgments.md). */
 const PACKAGE_RUN = /^(?:npm|yarn|pnpm|bun) run\b/;
@@ -22,7 +35,7 @@ const PACKAGE_RUN = /^(?:npm|yarn|pnpm|bun) run\b/;
 const SHELL_TOOLS: ReadonlySet<string> = new Set(['Bash', 'PowerShell']);
 
 function wildcardedInterpreter(pattern: string): boolean {
-  const program = pattern.split(' ')[0]?.replace(/\*+$/, '') ?? '';
+  const program = pattern.split(' ')[0]?.replace(/:?\*+$/, '') ?? '';
   return pattern.includes('*') && INTERPRETERS.has(program);
 }
 

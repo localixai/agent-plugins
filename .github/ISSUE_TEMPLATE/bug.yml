@@ -20,8 +20,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: llx-plugin version and runtime
-      placeholder: '@rsaryev/llx-plugin 0.1.0, Bun 1.4 or Node 22'
+      label: agent-plugins version and runtime
+      placeholder: '@localix-ai/agent-plugins 0.1.1, Bun 1.4 or Node 22'
     validations:
       required: true
   - type: dropdown

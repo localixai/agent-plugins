@@ -18,7 +18,8 @@ export interface ListedPlugin {
   /** `user`, `project`, `local`, `managed`, `session` or `synced`. */
   readonly scope: string;
   readonly enabled: boolean;
-  readonly installPath: string;
+  /** The directory it loads from; absent for a plugin loaded in place, which has `readFromFolder`. */
+  readonly installPath?: string;
   readonly readFromFolder?: string;
   readonly folderVersion?: string;
   readonly installedAt?: string;
@@ -84,11 +85,24 @@ const OTHER_SUFFIXES = new Set(
 const inGroup = (plugin: ListedPlugin, suffix: string | undefined): boolean =>
   suffix === undefined ? !OTHER_SUFFIXES.has(suffixOf(plugin.id)) : suffixOf(plugin.id) === suffix;
 
+const isSessionOnly = (plugin: ListedPlugin): boolean => suffixOf(plugin.id) === 'inline';
+
+/** J17.9: a session-only plugin shows its path instead of a scope, and `loaded` (oracle 2.1.325). */
+const whereLine = (plugin: ListedPlugin): string =>
+  isSessionOnly(plugin)
+    ? `    Path: ${plugin.installPath ?? plugin.readFromFolder ?? ''}`
+    : `    Scope: ${plugin.scope}`;
+
+const statusOf = (plugin: ListedPlugin): string => {
+  if (!plugin.enabled) return '✘ disabled';
+  return isSessionOnly(plugin) ? '✔ loaded' : '✔ enabled';
+};
+
 const lines = (plugin: ListedPlugin): readonly string[] => [
   `  ❯ ${plugin.id}`,
   `    Version: ${plugin.version}`,
-  `    Scope: ${plugin.scope}`,
-  `    Status: ${plugin.enabled ? '✔ enabled' : '✘ disabled'}`,
+  whereLine(plugin),
+  `    Status: ${statusOf(plugin)}`,
   ...(plugin.errors ?? []).map((message) => `    Error: ${message}`),
   ...(plugin.notes ?? []).map((message) => `    Note: ${message}`),
 ];
@@ -150,7 +164,7 @@ export function installedJson(
     version: plugin.version,
     scope: plugin.scope,
     enabled: plugin.enabled,
-    installPath: plugin.installPath,
+    installPath: plugin.readFromFolder === undefined ? plugin.installPath : undefined,
     readFromFolder: plugin.readFromFolder,
     folderVersion: plugin.folderVersion,
     installedAt: plugin.installedAt,

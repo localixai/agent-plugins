@@ -1,4 +1,4 @@
-/** `@rsaryev/llx-plugin/format`: The readers of every plugin file: manifest, skills, commands, agents, output styles, themes, MCP and LSP configs, monitors, the layout (docs/API.md, "Format"). */
+/** `@localix-ai/agent-plugins/format`: The readers of every plugin file: manifest, skills, commands, agents, output styles, themes, MCP and LSP configs, monitors, the layout (docs/API.md, "Format"). */
 export * from '../format/index.ts';
 export {
   type ThemeColor,

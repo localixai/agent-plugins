@@ -5,16 +5,49 @@ import type { EventEffects } from '../output/effects.ts';
 import type { CheckedOutput } from '../output/schemas.ts';
 import type { StartObserver } from '../handlers/status.ts';
 
+/**
+ * How a run ended, the words of the debug line aside (hooks.md, "Debug hooks"; Agent Plugins
+ * Extended §7.4.12): `finished` (with its exit code, for a command), `timed-out`, `cancelled`,
+ * `background` (moved to the background), `failed-to-start`, or `skipped` (it never ran).
+ */
+export type RunEnding =
+  | 'finished'
+  | 'timed-out'
+  | 'cancelled'
+  | 'background'
+  | 'failed-to-start'
+  | 'skipped';
+
+/**
+ * The facts of a finished run the host writes its debug line from (Agent Plugins Extended §7.4.12
+ * item 2, Judgment J7.67): the line's text, timestamp and level are the host's.
+ */
+export interface RunFacts {
+  /** The value the matcher was tested against (`Write`, `startup`); absent on an event without one. */
+  readonly matchedValue?: string;
+  /** The handler as the docs name it: a command and its arguments, a URL, `server:tool`, or the type. */
+  readonly handler: string;
+  /** The plugin the hook came from, when it came from one. */
+  readonly plugin?: string;
+  readonly ending: RunEnding;
+  /** The exit code of a command hook whose process ran to the end. */
+  readonly exitCode?: number;
+  /** `timed-out`: the limit it reached, in milliseconds. */
+  readonly timeoutMs?: number;
+  /** From the start of the run to its end, by the engine's `clock`; absent without one. */
+  readonly durationMs?: number;
+}
+
 /** The host's window onto a dispatch: `started` is the run stage's, the others the engine's. */
 export interface HookObserver extends StartObserver {
-  /** A handler's run was read: what it came to, and whether it blocked. */
-  finished?(info: {
-    readonly event: HookEvent;
-    readonly handlerId: string;
-    readonly status: HandlerStatus;
-    /** The exit code of a command hook whose process ran to the end; absent for the other runs. */
-    readonly exitCode?: number;
-  }): void;
+  /** A handler's run was read: what it came to, whether it blocked, and how it ended. */
+  finished?(
+    info: RunFacts & {
+      readonly event: HookEvent;
+      readonly handlerId: string;
+      readonly status: HandlerStatus;
+    },
+  ): void;
   /** A `<hook name> hook error` notice for the transcript. */
   notice?(notice: HookNotice): void;
 }
@@ -32,6 +65,8 @@ export type ParsedOutput = CheckedOutput;
 export interface ParseResult {
   readonly output?: ParsedOutput;
   readonly failure?: string;
+  /** Keys of a valid output the schema does not name, ignored (`hookSpecificOutput.<key>` inside it). */
+  readonly unrecognizedKeys?: readonly string[];
 }
 export type ParseOutput = (event: HookEvent, json: unknown) => ParseResult;
 
@@ -104,6 +139,8 @@ export interface BackgroundDelivery {
   readonly systemMessage?: string;
   /** `asyncRewake` after exit 2: wakes Claude with this text. */
   readonly wake?: string;
+  /** The debug warnings of the response: each field of the wrong type that was dropped. */
+  readonly issues?: readonly PluginIssue[];
 }
 
 /** The reading of one handler's run. */
@@ -114,6 +151,8 @@ export interface HandlerVerdict {
   readonly succeeded: boolean;
   /** The exit code of a run that ended with one (a `command` hook's process). */
   readonly exitCode?: number;
+  /** How the run ended and how long it took (`RunFacts`); the run stage adds it. */
+  readonly ran?: RunFacts;
   readonly block?: BlockInfo;
   /** The turn ends with this reason (`ok: false` of a prompt or agent hook that ends the turn). */
   readonly stop?: { readonly reason: string };
@@ -140,6 +179,10 @@ export interface TaggedOutput {
   readonly output?: ParsedOutput;
   readonly plainText?: HandlerVerdict['plainText'];
   readonly effectsIgnored?: boolean;
+  /** The run held the action back by itself (exit 2, a failure that blocks), JSON aside. */
+  readonly blocked?: boolean;
+  /** Raw stdout of a `WorktreeCreate` command hook (`HandlerVerdict.stdout`). */
+  readonly stdout?: string;
 }
 
 export type { EventEffects };

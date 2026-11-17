@@ -1,8 +1,10 @@
+import type { PermissionMode } from '../../protocol/official.ts';
 import type { PolicyContext } from '../context.ts';
 import type { PolicyView } from '../view.ts';
 import { autoModeSettings, type AutoModeSettings } from './auto-mode.ts';
 import { startingMode, type StartInput, type StartingMode } from './default-mode.ts';
 import { permissionLists, type SettingsDirectory, type SettingsRule } from './managed-only.ts';
+import { runningModeOf, type RunningMode } from './running-mode.ts';
 
 /** The permission keys of the settings as one object over a view (docs/API.md, "Settings"). */
 export interface PermissionsPolicy {
@@ -30,6 +32,11 @@ export interface PermissionsPolicy {
   readonly autoMode: AutoModeSettings;
   /** The mode a new session starts in. */
   startingMode(input: StartInput): StartingMode;
+  /**
+   * What a session running in `current` changes to once these settings reach it: an auto session
+   * leaves auto under a managed `disableAutoMode`, with `auto mode disabled by settings`.
+   */
+  runningMode(current: PermissionMode): RunningMode;
 }
 
 export function createPermissionsPolicy(
@@ -64,5 +71,6 @@ export function createPermissionsPolicy(
         },
         input,
       ),
+    runningMode: (current) => runningModeOf(view, current),
   };
 }

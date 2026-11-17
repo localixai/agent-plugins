@@ -21,6 +21,9 @@ import type { AgentOverrides, AgentPart } from './session-agents.ts';
 import type { ActivePlugin } from './state.ts';
 import type { Resolved } from './types.ts';
 import { isBuiltinAgent } from '../agents/catalog/types.ts';
+import { coreOf } from './core-view.ts';
+import { coreServers } from './core-servers.ts';
+import { portsOf } from './session-environment.ts';
 
 /** A subagent as a host registers it: the official definition under the name a call uses. */
 export interface SessionAgent {
@@ -138,7 +141,21 @@ const processesOf =
     return { resolved: listOf(done.resolved), issues: done.issues };
   };
 
-const mcpOf = processesOf(resolveMcpServers, (servers) => Object.values(servers));
+const claudeMcpOf = processesOf(resolveMcpServers, (servers) => Object.values(servers));
+
+/** A plugin's servers: a Claude Code plugin's by its `.mcp.json`, a core package's by its `mcp.json`. */
+const mcpOf =
+  (signal?: AbortSignal) =>
+  (plugin: ActivePlugin, use: ScopeUse): Promise<Piece<ResolvedMcpServer>> => {
+    const core = coreOf(plugin.plugin);
+    if (core === undefined) return claudeMcpOf(signal)(plugin, use);
+    const { locations, environment } = portsOf(use.state, use.options);
+    return coreServers(plugin, core, {
+      locations,
+      environment,
+      ...(signal === undefined ? {} : { signal }),
+    });
+  };
 const lspOf = processesOf(resolveLspServers, (servers) => Object.values(servers));
 const monitorsOf = processesOf(resolveMonitors, (monitors) => monitors);
 

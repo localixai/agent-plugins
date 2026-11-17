@@ -1,5 +1,5 @@
 /**
- * `@rsaryev/llx-plugin/mods/elements`: the element table of mods and the checks of a drawn tree
+ * `@localix-ai/agent-plugins/mods/elements`: the element table of mods and the checks of a drawn tree
  * (plugins/mods/interface.md), for a UI process. A leaf: no host, no port, no `node:` import. The
  * same names are in `./mods` with the rest of the mods interface.
  */

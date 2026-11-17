@@ -1,12 +1,13 @@
 /** The marketplace keys of the settings: the allowlist and the blocklist as verdicts over a view. */
 export {
   createMarketplaceGate,
+  type ClaudeAiMarketplaceScope,
   type MarketplaceGate,
   type RegisteredVerdict,
   type SkillsDirVerdict,
   type SourceVerdict,
 } from './gate.ts';
-export { matchMarketplaceSource, type ListKind } from './match-source.ts';
+export { matchClaudeAiMarketplace, matchMarketplaceSource, type ListKind } from './match-source.ts';
 export {
   createCommandSourcePolicy,
   type CommandBlocker,
@@ -27,3 +28,9 @@ export {
   skillsDirectoryBlockedMessage,
   type PluginBlock,
 } from './refusal-messages.ts';
+export {
+  officialMarketplaceRegistration,
+  type OfficialRegistration,
+  type OfficialRegistrationFacts,
+  type OfficialRegistrationLaunch,
+} from './official-registration.ts';

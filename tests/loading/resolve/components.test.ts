@@ -99,8 +99,12 @@ describe('path separators per surface on Windows', () => {
       expect(await text(surface, '${CLAUDE_PROJECT_DIR}', windows)).toBe('C:/Users/you/app');
     }
     const pasted: SubstitutionScope = { ...windows, shellPaths: 'pasted' };
+    const optIn: SubstitutionScope = { ...windows, shellPaths: 'environment-reference' };
     expect(await text('monitor-command', '${CLAUDE_PROJECT_DIR}', pasted)).toBe('C:/Users/you/app');
     expect(await text('monitor-command', '${CLAUDE_PROJECT_DIR}', windows)).toBe(
+      'C:/Users/you/app',
+    );
+    expect(await text('monitor-command', '${CLAUDE_PROJECT_DIR}', optIn)).toBe(
       '${CLAUDE_PROJECT_DIR}',
     );
     // oracle 2.1.322: Claude Code pastes into no hook, so `pasted` leaves a bash hook's reference.

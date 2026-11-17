@@ -230,8 +230,15 @@ describe('the stall window (judgments)', () => {
     for (const stallMs of [0, -5, 1.5, Number.NaN]) {
       expect(stallWindowMs({ stallMs, env: {} })).toBe(600_000);
     }
-    for (const value of ['0', '-1', '10.5', 'ten', '', '1e6']) {
+    for (const value of ['0', '-1', '10.5', 'ten', '', '1e-6']) {
       expect(stallWindowMs({ env: { CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS: value } })).toBe(600_000);
     }
+  });
+
+  // J3.17 (spec/judgments.md): a numeric variable reads scientific notation and digit separators.
+  test('the variable reads 2e3 and 64_000 (J3.17)', () => {
+    const read = (value: string) =>
+      stallWindowMs({ env: { CLAUDE_ASYNC_AGENT_STALL_TIMEOUT_MS: value } });
+    expect([read('2e3'), read('64_000')]).toEqual([2000, 64_000]);
   });
 });

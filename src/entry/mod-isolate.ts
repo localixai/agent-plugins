@@ -1,5 +1,5 @@
 /**
- * `@rsaryev/llx-plugin/mods/isolate`: what code running inside an isolate needs of mods, with no
+ * `@localix-ai/agent-plugins/mods/isolate`: what code running inside an isolate needs of mods, with no
  * `node:` or `bun` import anywhere below it (`tests/entry/mod-isolate.test.ts` walks the graph): the
  * `$.state` helpers a module imports from `claude-code` (`atom`, `read`, `update`, `derive`,
  * `memberOf`), the same helpers as `STATE_LIBRARY_SOURCE` for a bundler, and the element table and

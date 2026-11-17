@@ -50,12 +50,16 @@ export const windowsBlocking = (detail: string): string =>
     detail,
   );
 
-/**
- * `PreModelSwitch`: "A PreModelSwitch hook that doesn't respond before its timeout blocks the
- * switch." Judgment (spec/judgments.md): the docs give this block no message of its own.
- */
 export const TIMED_OUT = 'timed out';
-export const timedOutBlocksSwitch = (detail: string): string => withDetail(TIMED_OUT, detail);
+
+/**
+ * `PreModelSwitch`: a hook that doesn't respond before its timeout blocks the switch, with the
+ * reason `PreModelSwitch hook <name> did not respond before its timeout` (errors.md, "Model switch
+ * was blocked by a PreModelSwitch hook"; Agent Plugins Extended §7.5.33). The hook is named by its
+ * handler label, as the hook error line names it.
+ */
+export const timedOutBlocksSwitch = (name: string): string =>
+  `PreModelSwitch hook ${name} did not respond before its timeout`;
 
 /**
  * "The transcript shows a notice naming the hook, the timeout that fired, and that the output was

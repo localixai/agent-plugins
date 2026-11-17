@@ -175,11 +175,40 @@ spec('hooks.guide.Shell profile output before the JSON', () => {
     expect(outcome.runs[0]?.status).not.toBe('blocking-error');
   });
 
+  test('the client records "Hook output does not start with {, treating as plain text" (Agent Plugins Extended §7.4.1.1 item 5)', async () => {
+    const stdout = 'Shell ready on arm64\n{"decision": "block", "reason": "Not allowed"}';
+    const hook = entry('Stop', { handler: cmd() });
+    const { outcome } = await fire('Stop', [hook], [{ exitCode: 0, stdout }], { output: stage });
+    expect(outcome.issues.map((found) => found.message)).toEqual([
+      'Hook output does not start with {, treating as plain text',
+    ]);
+    const json = await fire('Stop', [hook], [{ exitCode: 0, stdout: '{}' }], { output: stage });
+    expect(json.outcome.issues).toEqual([]);
+    const silent = await fire('Stop', [hook], [{ exitCode: 0, stdout: '' }], { output: stage });
+    expect(silent.outcome.issues).toEqual([]);
+  });
+
   test('the same JSON alone is read', async () => {
     const stdout = '{"decision": "block", "reason": "Not allowed"}';
     const hook = entry('Stop', { handler: cmd() });
     const { outcome } = await fire('Stop', [hook], [{ exitCode: 0, stdout }], { output: stage });
     expect(outcome.block).toMatchObject({ reason: 'Not allowed' });
+  });
+});
+
+spec('hooks.guide.Structured JSON output', () => {
+  test('a key the schema does not name is ignored, with "Hook JSON output had unrecognized keys" (Agent Plugins Extended §7.4.5.1, J7.30)', async () => {
+    const outcome = await viaEngine('PreToolUse', [
+      {
+        permissionDecision: 'deny',
+        ...specific('PreToolUse', { permissionDecision: 'ask', extra: 1 }),
+      },
+    ]);
+    expect(outcome.effects.permissionDecision).toBe('ask');
+    expect(outcome.issues.map((found) => found.message)).toEqual([
+      'Hook JSON output had unrecognized keys: permissionDecision, hookSpecificOutput.extra',
+    ]);
+    expect((await viaEngine('PreToolUse', [{ continue: true }])).issues).toEqual([]);
   });
 });
 

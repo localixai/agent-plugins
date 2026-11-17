@@ -56,9 +56,13 @@ const checkParts = (parts: Parts, namePath: string, marketplacePath: string): Pa
   idIssue('marketplace', parts.marketplace, marketplacePath) ??
   parts;
 
-/** `name@marketplace` splits at the first `@`; a second `@` is left in the marketplace, which the id grammar then refuses. */
+/** What the manifest reports for a string with two `@` or an object without `name` (spec J16.17, oracle 2.1.325). */
+const INVALID_INPUT = 'Invalid input';
+
+/** `name@marketplace` splits at the `@`; a string with a second `@` is invalid input (J16.17). */
 const fromString = (text: string, path: string): Parts | PluginIssue => {
   const at = text.indexOf('@');
+  if (at !== text.lastIndexOf('@')) return error(path, INVALID_INPUT);
   if (at < 0) {
     return text === ''
       ? error(path, 'A dependency name must not be empty')
@@ -80,7 +84,7 @@ const fromObject = (raw: Record<string, unknown>, path: string): Parts | PluginI
   const [name, marketplace, version] = fields;
   const failed = fields.find(isIssue);
   if (failed !== undefined) return failed;
-  if (name === undefined) return error(`${path}.name`, 'A dependency needs a "name"');
+  if (name === undefined) return error(path, INVALID_INPUT);
   if (isIssue(name)) return name;
   return checkParts(
     {
@@ -103,7 +107,8 @@ const readParts = (value: unknown, path: string): Parts | PluginIssue => {
  * Reads one `dependencies` item. Judgments (spec/judgments.md): an empty or blank `version` is no
  * constraint (node-semver reads "" as any version); a key other than the three is ignored. The
  * `name` and the marketplace must each satisfy the plugin id grammar, as a marketplace entry's name
- * must, or they could never resolve; `a@b@c` is refused for that reason.
+ * must, or they could never resolve. A string with two `@` and an object without `name` are
+ * `Invalid input` on the item, as the manifest reports them (spec J16.17).
  * `declaringMarketplace` is the marketplace of the plugin that declares it, or `undefined` for a
  * plugin that has none (loaded from claude.ai), whose bare names then have no marketplace.
  */
@@ -147,8 +152,6 @@ export interface InstalledDependency {
   readonly enabled: boolean;
   /** A copy loaded with `--plugin-dir`: it satisfies the entry and no range is checked against it. */
   readonly local?: boolean;
-  /** What the host calls the copy in messages (`my-dependency@inline`); the dependency's id when absent. */
-  readonly id?: string;
 }
 
 /**
@@ -216,7 +219,8 @@ const rangeIssue = (
  * Whether a declared dependency is met by its installed copy (plugins/troubleshooting.md,
  * "Dependency errors"): `Dependency "<dep>" is not installed`, `... is disabled`, and
  * `Requires "<dep>" <range>, installed <version>`. A `--plugin-dir` copy meets the entry whatever
- * its version.
+ * its version. The dependency is named as the entry declares it, a disabled `--plugin-dir` copy too:
+ * not `<name>@inline` (spec J16.24, oracle 2.1.325).
  */
 export function checkInstalledDependency(
   dep: NormalizedDependency,
@@ -229,7 +233,7 @@ export function checkInstalledDependency(
     return issueFor(
       dep,
       'disabled',
-      `Dependency "${installed.id ?? dependencyId(dep)}" is disabled — enable it or remove the dependency`,
+      `Dependency "${dependencyId(dep)}" is disabled — enable it or remove the dependency`,
     );
   }
   return rangeIssue(dep, installed);

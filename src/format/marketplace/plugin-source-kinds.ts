@@ -1,11 +1,15 @@
 import { error, type PluginIssue } from '../issues.ts';
 import { defined } from '../defined.ts';
+import { archiveUrlIssues } from './archive-url.ts';
 import {
+  type Checked,
+  fieldError,
   invalidInput,
   isText,
   optionalDigest,
   optionalText,
   readGitPin,
+  refined,
   required,
   type RawSource,
   type SourceSite,
@@ -24,24 +28,24 @@ export type ObjectParser = (raw: RawSource, site: SourceSite) => Parsed;
 
 function github(raw: RawSource, site: SourceSite): Parsed {
   const repo = required(raw, 'repo');
-  const pin = readGitPin(raw);
+  const pin = readGitPin(raw, site);
   if (repo === undefined || pin === undefined) return invalidInput(site);
-  return { kind: 'github', repo, ...defined(pin) };
+  return refined({ kind: 'github', repo, ...defined(pin.value) }, pin.issues);
 }
 
 function url(raw: RawSource, site: SourceSite): Parsed {
   const address = required(raw, 'url');
-  const pin = readGitPin(raw);
+  const pin = readGitPin(raw, site);
   if (address === undefined || pin === undefined) return invalidInput(site);
-  return { kind: 'url', url: address, ...defined(pin) };
+  return refined({ kind: 'url', url: address, ...defined(pin.value) }, pin.issues);
 }
 
 function gitSubdir(raw: RawSource, site: SourceSite): Parsed {
   const address = required(raw, 'url');
   const path = required(raw, 'path');
-  const pin = readGitPin(raw);
+  const pin = readGitPin(raw, site);
   if (address === undefined || path === undefined || pin === undefined) return invalidInput(site);
-  return { kind: 'git-subdir', url: address, path, ...defined(pin) };
+  return refined({ kind: 'git-subdir', url: address, path, ...defined(pin.value) }, pin.issues);
 }
 
 /** "An `npm` `package` containing `..`" is `Invalid input` ("Invalid input on a source"). */
@@ -62,43 +66,51 @@ function npm(raw: RawSource, site: SourceSite): Parsed {
 
 function archive(raw: RawSource, site: SourceSite): Parsed {
   const address = required(raw, 'url');
-  const sha256 = optionalDigest(raw);
+  const sha256 = optionalDigest(raw, site);
   if (address === undefined || sha256 === undefined) return invalidInput(site);
-  return { kind: 'archive', url: address, ...defined({ sha256: sha256.value }) };
+  return refined({ kind: 'archive', url: address, ...defined({ sha256: sha256.value }) }, [
+    ...archiveUrlIssues(address, site),
+    ...sha256.issues,
+  ]);
 }
 
 const MAX_COMMAND_LENGTH = 500;
 const PRINTABLE_ASCII = /^[\x20-\x7E]*$/;
 const FOUR_SPACES = / {4}/;
+const COMMAND_TEXT =
+  'command must be printable ASCII (letters, digits, punctuation, single spaces) with no runs of 4 or more spaces';
+const COMMAND_LENGTH = 'command must not be longer than the install consent UI can display';
 
 /**
  * The rules for a command string ("command plugin source": "Write it as printable ASCII, at most
- * 500 characters, with no run of four or more spaces"), one report per rule broken. The docs give
- * the rules, not the wording of the refusal: the messages are the kit's (spec/judgments.md).
+ * 500 characters, with no run of four or more spaces"), with the two messages of spec §15.6.6 and
+ * J15.8 (oracle 2.1.325): over 500 characters the length message; a character outside U+0020 to
+ * U+007E, or a run of four spaces, the text message; both, length first, when both break.
  */
 export function commandTextIssues(command: string, path: string): PluginIssue[] {
   const found: PluginIssue[] = [];
-  if (!PRINTABLE_ASCII.test(command)) {
-    found.push(error(path, 'The command must be printable ASCII, so users can review all of it'));
-  }
-  if (command.length > MAX_COMMAND_LENGTH) {
-    found.push(error(path, `The command may have at most ${MAX_COMMAND_LENGTH} characters`));
-  }
-  if (FOUR_SPACES.test(command)) {
-    found.push(error(path, 'The command may not contain a run of four or more spaces'));
+  if (command.length > MAX_COMMAND_LENGTH) found.push(error(path, COMMAND_LENGTH));
+  if (!PRINTABLE_ASCII.test(command) || FOUR_SPACES.test(command)) {
+    found.push(error(path, COMMAND_TEXT));
   }
   return found;
 }
 
 const DEFAULT_TIMEOUT_SECONDS = 60;
-const MIN_TIMEOUT_SECONDS = 1;
 const MAX_TIMEOUT_SECONDS = 600;
 
-/** `timeout`: a whole number of seconds from 1 to 600, 60 when absent. */
-function readTimeout(value: unknown): number | undefined {
-  if (value === undefined) return DEFAULT_TIMEOUT_SECONDS;
-  const whole = typeof value === 'number' && Number.isInteger(value);
-  return whole && value >= MIN_TIMEOUT_SECONDS && value <= MAX_TIMEOUT_SECONDS ? value : undefined;
+function timeoutRangeIssues(value: number, site: SourceSite): PluginIssue[] {
+  if (value <= 0) return [fieldError(site, 'timeout', 'Too small: expected number to be >0')];
+  if (value <= MAX_TIMEOUT_SECONDS) return [];
+  return [fieldError(site, 'timeout', `Too big: expected number to be <=${MAX_TIMEOUT_SECONDS}`)];
+}
+
+/** `timeout`: a whole number of seconds from 1 to 600, 60 when absent; not a whole number is no value at all. */
+function readTimeout(raw: RawSource, site: SourceSite): Checked<number> | undefined {
+  const value = raw.timeout;
+  if (value === undefined) return { value: DEFAULT_TIMEOUT_SECONDS, issues: [] };
+  if (typeof value !== 'number' || !Number.isInteger(value)) return undefined;
+  return { value, issues: timeoutRangeIssues(value, site) };
 }
 
 /** `mode`: `copy` (the default) or `link` ("Copy mode and link mode"). */
@@ -109,13 +121,13 @@ const readMode = (value: unknown): 'copy' | 'link' | undefined => {
 
 function readCommand(raw: RawSource, site: SourceSite): Parsed {
   const text = raw.command;
-  const timeoutSeconds = readTimeout(raw.timeout);
+  const timeout = readTimeout(raw, site);
   const mode = readMode(raw.mode);
-  if (!isText(text) || timeoutSeconds === undefined || mode === undefined) {
+  if (!isText(text) || timeout === undefined || mode === undefined) {
     return invalidInput(site);
   }
-  const broken = commandTextIssues(text, `${site.path}.command`);
-  return broken.length > 0 ? broken : { kind: 'command', command: text, timeoutSeconds, mode };
+  const broken = [...commandTextIssues(text, `${site.path}.command`), ...timeout.issues];
+  return refined({ kind: 'command', command: text, timeoutSeconds: timeout.value, mode }, broken);
 }
 
 /** One parser per object kind: a new `PluginSourceKind` fails the typecheck until it has one. */

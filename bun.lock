@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@rsaryev/llx-plugin",
+      "name": "@localix-ai/agent-plugins",
       "dependencies": {
         "acorn": "8.19.0",
         "ignore": "7.0.14",

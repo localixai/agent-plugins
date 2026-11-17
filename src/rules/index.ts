@@ -20,6 +20,7 @@ export { stripWrappers } from './bash/wrappers.ts';
 export { evaluateRules, matchRule } from './evaluate.ts';
 export { matchesMatcher } from './hook-matcher.ts';
 export { ruleIssues } from './issues.ts';
+export { ruleWarnings, type RuleWarning, type RuleWarningKind } from './rule-warnings.ts';
 export type { SpecifierMatcher, SpecifierMatchers } from './matchers.ts';
 export { formatRule, parseRule, type RuleOrigin, type RuleParse } from './parse.ts';
 export { RULE_FORMATS, type RuleFormatId } from './specifier-formats.ts';
@@ -53,6 +54,13 @@ export {
   type ApprovalOptions,
 } from './decide/approval-memory.ts';
 export { decide } from './decide/decide.ts';
+export { permissionUpdatesInEffect } from './decide/hook-permission-updates.ts';
+export {
+  writeBlockRefusal,
+  writeBlockShortRefusal,
+  type WriteBlockReason,
+  type WriteBlockRefusalInput,
+} from './decide/write-block-messages.ts';
 
 export {
   createRefusalStreak,

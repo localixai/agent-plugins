@@ -68,6 +68,24 @@ export function countsAsOrganizations(
   );
 }
 
+/**
+ * The debug line of a plugin managed settings enable whose mod still counts as a user's: it starts
+ * with the plugin's id and `is enabled by managed settings, but` (Agent Plugins Extended §14.9.5
+ * item 1); the words after `but` are ours (judgment). `undefined` for any other plugin.
+ */
+export function managedButUsers(
+  candidate: ModCandidate,
+  platform: 'posix' | 'windows',
+): string | undefined {
+  const { managed } = candidate;
+  if (candidate.isBuiltin || managed?.isEnabled !== true) return undefined;
+  if (countsAsOrganizations(candidate, platform)) return undefined;
+  const why = managed.isLoadedInPlace
+    ? 'managed settings name no marketplace directory for it by absolute path'
+    : 'it is copied into the plugin cache, not loaded in place';
+  return `${candidate.id} is enabled by managed settings, but ${why}, so its mod counts as a user's`;
+}
+
 /** The guard's id in either form `prependPlugins` accepts. */
 export const isGuardId = (id: string): boolean => id === GUARD_ID || id === GUARD_CONFIG_ID;
 
@@ -182,18 +200,21 @@ const ROLLOUT_REASONS = {
     'hooks modules are turned off in this process: the rollout switch was saved off by an earlier session',
 } as const;
 
+const TURNED_OFF_HERE =
+  'hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)';
+
 /**
  * Why a shell command that loads the tester's own mods cannot: `disableAllHooks` in the user's or
- * the organization's settings ("here"), or the rollout switch ("in this process"). `undefined` when
- * mods can load. `allowManagedModsOnly` is not reported ("which this command doesn't report").
+ * the organization's settings, or managed `allowManagedHooksOnly` ("here"), or the rollout switch
+ * ("in this process"). `undefined` when mods can load. `allowManagedModsOnly` is not reported ("which
+ * this command doesn't report"). The line is Claude Code 2.1.325's, which names no one setting
+ * (Agent Plugins Extended §10.42.1).
  */
 export function hooksModulesOff(policy: ModsPolicyInput): string | undefined {
   if (policy.rollout !== undefined) return ROLLOUT_REASONS[policy.rollout];
-  // The docs name the two settings; the wording after the colon is ours (judgment).
-  if (flagSetting(policy.managed, 'disableAllHooks')) {
-    return 'hooks modules are turned off here: disableAllHooks in managed settings';
-  }
-  return flagSetting(policy.user, 'disableAllHooks')
-    ? 'hooks modules are turned off here: disableAllHooks in your settings'
-    : undefined;
+  const isOff =
+    flagSetting(policy.managed, 'disableAllHooks') ||
+    flagSetting(policy.managed, 'allowManagedHooksOnly') ||
+    flagSetting(policy.user, 'disableAllHooks');
+  return isOff ? TURNED_OFF_HERE : undefined;
 }

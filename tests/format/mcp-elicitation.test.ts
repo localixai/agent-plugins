@@ -25,6 +25,22 @@ import { ELICITATION_URL_ARGUMENT_CAP } from '../../src/format/mcp-elicitation.t
 
 const BOTH = { form: {}, url: {} };
 
+spec('cli.errors.MCP server rejected the elicitation capability', () => {
+  test('a server entry with "bareElicitationCapability": true is offered form mode only, on any revision', () => {
+    for (const protocolRevision of ['2026-07-28', '2025-11-25']) {
+      const declared = declaredElicitation({
+        protocolRevision,
+        userConfigured: true,
+        bareElicitationCapability: true,
+      });
+      expect(declared).toEqual({});
+      expect(elicitationModes(declared)).toEqual(['form']);
+    }
+    const unset = { protocolRevision: '2025-11-25', userConfigured: true };
+    expect(declaredElicitation({ ...unset, bareElicitationCapability: false })).toEqual(BOTH);
+  });
+});
+
 spec('mcp.behavior.Elicitation modes Claude Code declares', () => {
   test('on protocol revision 2026-07-28 both modes are declared, on every kind of connection', () => {
     for (const userConfigured of [true, false]) {

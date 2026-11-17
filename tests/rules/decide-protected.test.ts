@@ -73,7 +73,6 @@ const PROTECTED_FILES: readonly string[] = [
   'pyrightconfig.json',
   '.mcp.json',
   '.claude.json',
-  'remote-settings.json',
 ];
 
 /** The "Protected-path writes" column, per mode: what a write to `.git/config` gets. */
@@ -131,6 +130,12 @@ spec('permissions.mode.default', () => {
         expect(onPath('default', 'Write', `/home/alice/${file}`)).toEqual(ask('protected-path'));
       });
     }
+
+    test('remote-settings.json outside the configuration directory is not protected', () => {
+      expect(onPath('default', 'Write', '/work/app/remote-settings.json')).toEqual(
+        ask('default-prompt'),
+      );
+    });
 
     test('a file near the list is not protected', () => {
       expect(onPath('default', 'Write', '/work/app/.gitignore')).toEqual(ask('default-prompt'));

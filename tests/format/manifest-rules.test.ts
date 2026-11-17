@@ -120,3 +120,20 @@ for (const [label, names] of [
     });
   });
 }
+
+test('judgment J16.17 (oracle 2.1.325): "a@b@c" and an object without name fail the manifest as Invalid input; a bad range and an extra key do not', () => {
+  const findings = validateManifest({
+    name: 'demo',
+    dependencies: [
+      'ok',
+      'a@b@c',
+      { version: '^1' },
+      { name: 'x', version: 'not a range', extra: 1 },
+    ],
+  });
+  expect(findings.filter((found) => found.path.startsWith('dependencies'))).toEqual([
+    { severity: 'error', path: 'dependencies.1', message: 'Invalid input' },
+    { severity: 'error', path: 'dependencies.2', message: 'Invalid input' },
+  ]);
+  expect(readManifest({ name: 'demo', dependencies: ['a@b@c'] }).manifest).toBeUndefined();
+});

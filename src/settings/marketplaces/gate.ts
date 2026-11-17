@@ -7,7 +7,7 @@
 import type { SdkMarketplaceSource } from '../../protocol/official.ts';
 import { readSurfaceLocks } from '../customization/surfaces.ts';
 import type { PolicyView } from '../view.ts';
-import { matchMarketplaceSource, type ListKind } from './match-source.ts';
+import { matchClaudeAiMarketplace, matchMarketplaceSource, type ListKind } from './match-source.ts';
 import { byKind, type ByKind, type SourceKind } from './source-kinds.ts';
 
 export type SourceVerdict =
@@ -33,11 +33,19 @@ export type SkillsDirVerdict =
         | 'strictPluginOnlyCustomization';
     };
 
+/**
+ * Whose a marketplace hosted on claude.ai is, as claude.ai states it: the organization's, a
+ * claude.ai default one, or one made of a member's own uploads; `undefined` when it did not say.
+ */
+export type ClaudeAiMarketplaceScope = 'organization' | 'default' | 'member';
+
 export interface MarketplaceGate {
   /** On add, install, update, refresh and auto-update: may a marketplace come from this source? */
   check(source: SdkMarketplaceSource): SourceVerdict;
   /** At session start: does a marketplace registered from this source still load its plugins? */
   checkRegistered(name: string, source: SdkMarketplaceSource): RegisteredVerdict;
+  /** A marketplace hosted on claude.ai, matched by its host `claude.ai` (plugins/org.md). */
+  checkClaudeAi(name: string, scope: ClaudeAiMarketplaceScope | undefined): RegisteredVerdict;
   /** A marketplace Claude Code cannot find: it does not load while a restriction is active. */
   checkMissing(name: string): RegisteredVerdict;
   /** Any allowlist is set, or the blocklist names a source other than `skills-dir`. */
@@ -95,6 +103,20 @@ const LABELS: ByKind<string> = {
   'skills-dir': () => 'skills-dir',
 };
 
+/**
+ * "The allowlist and blocklist match a marketplace hosted on claude.ai by its host": only a
+ * `hostPattern` entry can name it, tested against `claude.ai` (`matchClaudeAiMarketplace`); on the
+ * allowlist it "admits your
+ * organization's claude.ai marketplaces and the claude.ai default marketplaces, but not a
+ * marketplace made of a member's own claude.ai uploads or one whose scope claude.ai didn't state"
+ * (plugins/org.md, "Marketplaces hosted on claude.ai").
+ */
+const ADMITTED_SCOPE: { readonly [S in ClaudeAiMarketplaceScope]: boolean } = {
+  organization: true,
+  default: true,
+  member: false,
+};
+
 const label = (source: SdkMarketplaceSource): string => byKind(LABELS, source);
 
 const BLOCKED_BY_POLICY = 'is blocked by enterprise policy';
@@ -105,6 +127,9 @@ const matchesAny = (
   entries: readonly SdkMarketplaceSource[],
   source: SdkMarketplaceSource,
 ): boolean => entries.some((entry) => matchMarketplaceSource(list, entry, source));
+
+const namesClaudeAi = (list: ListKind, entries: readonly SdkMarketplaceSource[]): boolean =>
+  entries.some((entry) => matchClaudeAiMarketplace(list, entry));
 
 const namesSkillsDir = (entries: readonly SdkMarketplaceSource[]): boolean =>
   entries.some((entry) => !NAMES_A_MARKETPLACE[entry.source]);
@@ -174,6 +199,18 @@ export function createMarketplaceGate(view: PolicyView): MarketplaceGate {
       return allowlist === undefined || matchesAny('strict', allowlist, source)
         ? { loads: true }
         : { loads: false, message: notAllowedMessage(name, allowlist) };
+    },
+    checkClaudeAi(name, scope) {
+      if (namesClaudeAi('blocked', blocked())) {
+        return { loads: false, message: registeredBlockedMessage(name) };
+      }
+      const allowlist = strict();
+      const admitted =
+        allowlist === undefined ||
+        (scope !== undefined && ADMITTED_SCOPE[scope] && namesClaudeAi('strict', allowlist));
+      return admitted
+        ? { loads: true }
+        : { loads: false, message: notAllowedMessage(name, allowlist ?? []) };
     },
     checkMissing(name) {
       if (!restrictionActive()) return { loads: true };

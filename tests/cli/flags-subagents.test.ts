@@ -132,6 +132,7 @@ describe('--agents', () => {
       expect(on.refusals).toEqual([]);
       expect(on.cliAgents).toBeUndefined();
       expect(run('{bad', { env: { CLAUDE_CODE_SAFE_MODE: '0' } }).refusals).toHaveLength(1);
+      expect(run('{bad', { env: { CLAUDE_CODE_SAFE_MODE: 'on' } }).refusals).toEqual([]);
     });
 
     test('with --resume or --continue an inline value is not checked and the session starts', () => {
@@ -260,6 +261,9 @@ describe('--forward-subagent-text', () => {
       );
       expect(planOf({}, { outputFormat: 'stream-json', env }).forwardSubagentText).toBe(false);
       expect(planOf({}, printFacts({ outputFormat: 'json', env })).forwardSubagentText).toBe(false);
+      const yes = { CLAUDE_CODE_FORWARD_SUBAGENT_TEXT: 'Yes' };
+      const facts = printFacts({ outputFormat: 'stream-json', env: yes });
+      expect(planOf({}, facts).forwardSubagentText).toBe(true);
     });
 
     test('the variable is ignored outside non-interactive stream-json, where the flag would warn', () => {

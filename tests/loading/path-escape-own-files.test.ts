@@ -34,7 +34,7 @@ spec('cli.errors.Path escapes plugin directory', () => {
       '.claude-plugin/plugin.json': json({ name: 'p', commands: ['./commands\\deploy.md'] }),
     });
     expect(messagesOf((await loadPlugin({ files })).issues)).toContain(
-      'commands path escapes plugin directory: ./commands\\deploy.md',
+      'commands path escapes plugin directory: ./commands\\deploy.md — its path contains a backslash, which is not resolved reliably on this platform',
     );
   });
 });

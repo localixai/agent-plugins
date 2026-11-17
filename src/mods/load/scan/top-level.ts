@@ -53,7 +53,8 @@ export interface TopLevel {
 export const ATOM_UNREADABLE =
   'takes a source the scan can read: hold the atom in a const, with plugin and key as string literals';
 
-function atomOf(call: CallExpression): Atom | undefined {
+/** The `{ plugin, key }` literal a call takes first: an atom's, or a `$.state` call's ref. */
+export function atomOf(call: CallExpression): Atom | undefined {
   const [first] = call.arguments;
   if (!isObject(first)) return undefined;
   const values = new Map<string, string>();
@@ -68,10 +69,19 @@ function atomOf(call: CallExpression): Atom | undefined {
   return plugin !== undefined && key !== undefined ? { plugin, key } : undefined;
 }
 
+/** What the index of a file knows of where it is, for its issues. */
 interface Where {
   readonly file: string;
   readonly declared: ReadonlySet<string> | undefined;
+  /** The mod's own plugin: a value of another is listed and not checked (§10.3.2 item 3). */
+  readonly plugin: string | undefined;
+  /** The 1-based line of an offset in the file's source. */
+  readonly lineOf: (offset: number) => number;
 }
+
+/** Claude Code 2.1.325's words for an undeclared value (Agent Plugins Extended §10.3.2 item 3, J10.2). */
+export const notDeclared = (value: Atom): string =>
+  `${value.plugin}.${value.key} is not declared: the manifest's types contract must name it in interface PluginState { ${value.plugin}: { ${value.key}: ... } }`;
 
 function declareAtom(
   top: TopLevel,
@@ -80,14 +90,17 @@ function declareAtom(
 ): void {
   const found = atom.isConst ? atomOf(atom.call) : undefined;
   if (!found) {
-    top.issues.push(scanIssue('state-unreadable', where.file, `${atom.name} ${ATOM_UNREADABLE}`));
+    const line = where.lineOf(atom.call.start);
+    top.issues.push(
+      scanIssue('state-unreadable', where.file, `${atom.name} ${ATOM_UNREADABLE}`, line),
+    );
     return;
   }
   top.atoms.set(atom.name, found);
-  if (where.declared && !where.declared.has(`${found.plugin}.${found.key}`)) {
-    top.issues.push(
-      scanIssue('state-undeclared', where.file, `${found.plugin}.${found.key} is not declared`),
-    );
+  const isOwn = where.plugin === undefined || where.plugin === found.plugin;
+  if (where.declared && isOwn && !where.declared.has(`${found.plugin}.${found.key}`)) {
+    const line = where.lineOf(atom.call.start);
+    top.issues.push(scanIssue('state-undeclared', where.file, notDeclared(found), line));
   }
 }
 
@@ -112,8 +125,11 @@ function declareStateValue(
   if (imported !== 'derive') return;
   const sources = value.isConst ? derivedSources(top, value.call) : undefined;
   if (sources) top.derived.set(value.name, sources);
-  else
-    top.issues.push(scanIssue('state-unreadable', where.file, `${value.name} ${ATOM_UNREADABLE}`));
+  else {
+    const message = `${value.name} ${ATOM_UNREADABLE}`;
+    const line = where.lineOf(value.call.start);
+    top.issues.push(scanIssue('state-unreadable', where.file, message, line));
+  }
 }
 
 /** One `const name = ...` or `let name = ...` of a top-level declaration. */
@@ -169,11 +185,7 @@ function exportedAsRegister(statement: ExportNamedDeclaration): readonly string[
 }
 
 /** Reads the top level of a program: imports from `claude-code`, functions, `register` and atoms. */
-export function indexProgram(
-  program: Program,
-  file: string,
-  declared: ReadonlySet<string> | undefined,
-): TopLevel {
+export function indexProgram(program: Program, where: Where): TopLevel {
   const top: TopLevel = {
     functions: new Map(),
     registrable: new Set(),
@@ -182,7 +194,6 @@ export function indexProgram(
     imported: new Map(),
     issues: [],
   };
-  const where: Where = { file, declared };
   for (const statement of program.body) {
     if (isImportDeclaration(statement)) recordImport(top, statement);
   }

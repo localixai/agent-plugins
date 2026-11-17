@@ -122,6 +122,17 @@ spec(
       }
     });
 
+    test('PermissionRequest, PermissionDenied and PostToolBatch do not reset the count (Agent Plugins Extended J7.136)', async () => {
+      for (const other of ['PermissionRequest', 'PermissionDenied', 'PostToolBatch'] as const) {
+        const { fire } = engineSession([gate()], keepGoing(2), {
+          environment: { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: '1' },
+        });
+        expect((await fire('Stop', AGAIN)).proceed).toBe(false);
+        await fire(other);
+        expect((await fire('Stop', AGAIN)).proceed).toBe(true);
+      }
+    });
+
     test('9 blocks with a tool call between each of them are never capped; 9 with none are', async () => {
       const { fire } = engineSession([gate()], keepGoing(18));
       for (let n = 0; n < 9; n += 1) {
@@ -246,4 +257,16 @@ spec(
 test('a value that is not a whole number is the default of 8 (judgment)', async () => {
   const results = await holds(9, { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: 'many' });
   expect(results).toEqual([...Array(8).fill(true), false]);
+});
+
+// J3.17 (spec/judgments.md): the cap reads scientific notation and digit separators; 0e0 is 0.
+test('the cap reads 2e0 and 1_0, 0e0 removes it, and a fraction is the default (J3.17)', async () => {
+  expect(await holds(3, { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: '2e0' })).toEqual([true, true, false]);
+  expect(await holds(11, { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: '1_0' })).toEqual([
+    ...Array(10).fill(true),
+    false,
+  ]);
+  expect(await holds(12, { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: '0e0' })).toEqual(Array(12).fill(true));
+  const fraction = await holds(9, { CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: '2.5' });
+  expect(fraction).toEqual([...Array(8).fill(true), false]);
 });

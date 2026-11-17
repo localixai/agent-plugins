@@ -205,6 +205,24 @@ spec(
       expect(bare.contents).toEqual([]);
     });
 
+    test('each result carries gatingHooks: module, pattern, hook and hasCatch, empty when none', () => {
+      const gate = {
+        module: './register.js',
+        pattern: 'tool.call',
+        hook: 'tool.call{tool=Bash}',
+        hasCatch: false,
+      };
+      const json = validationJson({
+        target: 'plugin',
+        path: '/w',
+        strict: false,
+        issues: [issue('warning', 'hooks/hooks.json', 'modules')],
+        gatingHooks: { 'hooks/hooks.json': [gate] },
+      });
+      expect(json.manifest?.gatingHooks).toEqual([]);
+      expect(json.contents[0]?.gatingHooks).toEqual([gate]);
+    });
+
     test('with marketplace.json and plugin.json, manifest is the marketplace and the plugin goes to contents', () => {
       const json = validationJson({
         target: 'marketplace',

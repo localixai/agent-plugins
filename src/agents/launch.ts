@@ -1,3 +1,4 @@
+import { isFalsyEnv } from '../format/env-flag.ts';
 import { AUTO_COMPACT_RANGE } from '../format/agent-scalars.ts';
 import type { CacheTtl } from '../format/agent-scalars.ts';
 import type { AgentIsolation } from '../format/agent-fields.ts';
@@ -87,16 +88,28 @@ export interface BackgroundInput {
   readonly claudeWillWait: boolean;
   /** `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`: "Claude waits for subagents to finish". */
   readonly backgroundDisabled?: boolean | undefined;
+  /**
+   * The main conversation is an interactive terminal, VS Code or desktop session on the user's
+   * machine (not `-p` or the Agent SDK): with fork mode on it cannot wait for a subagent.
+   */
+  readonly interactive?: boolean | undefined;
+  /** `CLAUDE_CODE_FORK_SUBAGENT` as set: fork mode is on unless it is an off spelling (`0`). */
+  readonly forkSubagent?: string | undefined;
 }
+
+/** Fork mode: on by default, `CLAUDE_CODE_FORK_SUBAGENT=0` (any off spelling) turns it off (spec §5.12.3). */
+export const forkModeOn = (value: string | undefined): boolean => !isFalsyEnv(value);
 
 /**
  * Whether a subagent runs in the background. "With nothing configured, a subagent that Claude
  * spawns from your main conversation starts in the background"; `background: true` keeps it there
- * "even when Claude asks to wait for it".
+ * "even when Claude asks to wait for it". With fork mode on, an interactive main conversation cannot
+ * wait, so the subagent starts in the background there (env-vars.md, `CLAUDE_CODE_FORK_SUBAGENT`).
  */
 export function runsInBackground(input: BackgroundInput): boolean {
   if (input.backgroundDisabled === true) return false;
-  return input.background === true || !input.claudeWillWait;
+  const cannotWait = input.interactive === true && forkModeOn(input.forkSubagent);
+  return input.background === true || cannotWait || !input.claudeWillWait;
 }
 
 export interface ClaudeMdScopes {

@@ -217,9 +217,9 @@ spec(
       expect(found?.errorType).toBe('dependency-unsatisfied');
     });
 
-    test('the error names the dependency as <name>@inline, which refers to the --plugin-dir copy', () => {
+    test('the error names the dependency as the entry declares it, not as <name>@inline (J16.24)', () => {
       expect(checkDeclaredDependency(entry(), withLocal(local(false)))?.message).toBe(
-        'Dependency "my-dependency@inline" is disabled — enable it or remove the dependency',
+        'Dependency "my-dependency@m" is disabled — enable it or remove the dependency',
       );
     });
 

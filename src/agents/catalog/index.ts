@@ -30,6 +30,7 @@ export {
   type TypeaheadEntry,
 } from './invoke.ts';
 export {
+  agentTeamsOn,
   namedSubagent,
   nestingAt,
   spawnableAgents,

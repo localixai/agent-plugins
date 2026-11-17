@@ -115,9 +115,9 @@ function readCall(cmdlet: string, words: readonly ShellWord[]): Call {
 
 /**
  * `Remove-Item` "gets its own check" (permission-modes.md, "Remove-Item in PowerShell"): a system
- * path or a wildcard is denied in every mode, and the working directory or a parent of it with
- * `-Recurse` needs the mode's approval. The kit does not model the denial, so such a call is simply
- * not approved by `acceptEdits` (spec/judgments.md).
+ * path or a wildcard is denied in every mode (`powershell-removal.ts`, a gate of `decide`), and the
+ * working directory or a parent of it with `-Recurse` needs the mode's approval, so `acceptEdits`
+ * does not approve it (spec/judgments.md).
  */
 function removalIsOrdinary(call: Call, targets: readonly string[], paths: PathContext): boolean {
   if (call.cmdlet !== 'remove-item') return true;

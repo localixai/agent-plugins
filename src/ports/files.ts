@@ -4,7 +4,8 @@
  * reads wherever the host says: its paths are host paths (absolute, built from `Locations`, such
  * as `~/.claude/agent-memory/<agent>/`), and a `PluginFiles` satisfies it only with its own
  * relative paths. A path that does not exist is `undefined`, never an error: absence is an
- * ordinary answer, a plugin is allowed to omit a file.
+ * ordinary answer, a plugin is allowed to omit a file. A path the system could not check is a
+ * `FileStat` with `checkFailed`, the one error channel of the port.
  */
 
 /** What a host knows about one entry; booleans, so no code compares a kind to a string. */
@@ -20,6 +21,14 @@ export interface FileStat {
    * folder above a path to see a link the path crosses, so a host must not hide an outside link.
    */
   readonly realPath?: string;
+  /**
+   * The operating system's error code when the path could not be checked for a reason other than
+   * "not found" (`ELOOP`, `EIO`, `ESTALE`, `EACCES`, on the path or a folder above it); `isFile` and
+   * `isDirectory` are then false. A host that cannot tell answers `undefined` as for a missing path,
+   * and the path is then simply absent. The kit refuses what such a path names and reports
+   * `<component> path could not be checked: <path> (<code>)` (errors.md, "Path could not be checked").
+   */
+  readonly checkFailed?: string;
 }
 
 export interface DirectoryEntry {

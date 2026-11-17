@@ -87,6 +87,10 @@ export interface FlagFacts {
   readonly files: Readonly<Record<string, FileFact>>;
   /** What each `--add-dir` path is; a path with no entry does not exist. */
   readonly directories: Readonly<Record<string, 'directory' | 'file'>>;
+  /** The session runs in a self-hosted environment (a runner of the user's own). */
+  readonly selfHosted?: boolean;
+  /** The MCP servers, by name, whose tool list the discovery cache holds from a previous connection. */
+  readonly cachedToolLists?: readonly string[];
 }
 
 export interface FlagContext {
@@ -162,6 +166,8 @@ export interface SessionPlan {
   readonly strictMcpConfig: boolean;
   /** `-p` with `--mcp-config` waits for pending servers up to this many milliseconds before the first turn. */
   readonly mcpWaitMs?: number;
+  /** The `--mcp-config` servers, by name, the first turn does not wait for: they connect on first use. */
+  readonly mcpWaitSkips?: readonly string[];
   readonly permissionMode?: PermissionMode;
   /** The `--tools` list: `[]` disables every built-in tool, `['default']` is the default set. */
   readonly tools?: readonly string[];

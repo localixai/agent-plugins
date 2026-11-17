@@ -54,9 +54,19 @@ type Planner<K extends PluginSourceKind> = (
   context: FetchPlanContext,
 ) => Planned;
 
+/**
+ * The install refusal of an entry path that cannot resolve inside the marketplace directory
+ * (errors.md, "Marketplace entry path does not stay inside the marketplace directory"): the prefix
+ * is as quoted, the parenthesis is the kit's own (spec J17.30).
+ */
+const entryPathRefusal = (context: FetchPlanContext, path: string, why: string): string =>
+  `Cannot install ${context.pluginId ?? `the entry "${path}"`}: its marketplace entry path does not stay inside the marketplace directory (${why})`;
+
 /** What a relative path means for each way the marketplace was added: the refusal, or `undefined` when its files are there. */
 const ORIGIN_REFUSAL: {
-  readonly [K in MarketplaceSourceKind]: ((path: string) => string) | undefined;
+  readonly [K in MarketplaceSourceKind]:
+    | ((path: string, context: FetchPlanContext) => string)
+    | undefined;
 } = {
   github: undefined,
   git: undefined,
@@ -66,17 +76,33 @@ const ORIGIN_REFUSAL: {
   'skills-dir': undefined,
   hostPattern: undefined,
   pathPattern: undefined,
-  url: (path) =>
-    `Relative path "${path}" cannot resolve: a marketplace added by URL has only its marketplace.json, so its marketplace entry path does not stay inside the marketplace directory. Give the entry a github, url or git-subdir source`,
+  url: (path, context) =>
+    entryPathRefusal(
+      context,
+      path,
+      `"${path}" is relative, and a marketplace added by URL has only its marketplace.json; give the entry a github, url or git-subdir source`,
+    ),
   settings: (path) =>
     `Relative path "${path}" is rejected in a marketplace declared in settings: it has no files. Give the entry a github, url or git-subdir source`,
 };
 
+/** On macOS and Linux a backslash in an entry path is not a separator: the path cannot be trusted to stay inside (§15.6.1). */
+const backslashRefusal = (path: string, context: FetchPlanContext): string | undefined =>
+  context.platform === 'posix' && path.includes('\\')
+    ? entryPathRefusal(
+        context,
+        path,
+        `"${path}" contains a backslash; write the path with forward slashes`,
+      )
+    : undefined;
+
+const originRefusal = (path: string, context: FetchPlanContext): string | undefined =>
+  context.marketplaceOrigin === undefined
+    ? undefined
+    : ORIGIN_REFUSAL[context.marketplaceOrigin.kind]?.(path, context);
+
 function planRelative(source: PluginSourceOf<'relative'>, context: FetchPlanContext): Planned {
-  const refusal =
-    context.marketplaceOrigin === undefined
-      ? undefined
-      : ORIGIN_REFUSAL[context.marketplaceOrigin.kind]?.(source.path);
+  const refusal = backslashRefusal(source.path, context) ?? originRefusal(source.path, context);
   if (refusal !== undefined) return refused([error('source', refusal)]);
   return planned({
     kind: 'local',

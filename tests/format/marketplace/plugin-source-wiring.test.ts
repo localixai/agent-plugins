@@ -64,9 +64,9 @@ describe('judgments: plugin source fields', () => {
     });
   });
 
-  test('a command broken in two ways reports both rules', () => {
+  test('a command too long and not printable reports the length and the one text message', () => {
     const found = issuesOf({ source: 'command', command: `${'a'.repeat(500)}    é` });
-    expect(found).toHaveLength(3);
+    expect(found).toHaveLength(2);
   });
 });
 

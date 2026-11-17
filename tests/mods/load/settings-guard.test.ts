@@ -224,11 +224,15 @@ spec('mods.setting.allowModsToOverrideDenyRules', () => {
     expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
   });
 
-  test("an ask rule still prompts: a user's mod cannot approve what an ask rule prompts for, with or without the option", async () => {
-    for (const option of [false, true]) {
-      const { result } = await check(guardOptions(option), 'ask');
-      expect(result).toMatchObject({ decision: 'deny' });
-    }
+  test("an ask rule still prompts: a user's mod's approval of what an ask rule prompts for becomes the prompt", async () => {
+    const { result, debug } = await check(guardOptions(false), 'ask');
+    expect(result).toEqual({ decision: 'ask' });
+    expect(debug).not.toContain('lifter tried to lift a deny rule in your settings');
+  });
+
+  test("set to true, a user's mod can approve past the ask rule's prompt too", async () => {
+    const { result } = await check(guardOptions(true), 'ask');
+    expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
   });
 
   test('a call no rule covers is approved as the mod answered', async () => {

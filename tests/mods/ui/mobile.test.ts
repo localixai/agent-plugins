@@ -1,8 +1,9 @@
 /**
  * The mobile app, which the docs name only as an app that raises `Backdrop` (reference.md, "Render
  * sites"). The elements table has no column for it; the kit takes it to draw what the Desktop app
- * draws, with the same props (judgment, spec/judgments.md). Tested outside `spec(...)`: a judgment
- * is never compatibility.
+ * draws, with the same props, but no `Client`: the declarations' mobile `Elements` table has none
+ * (claude-code/index.d.ts:4108; Agent Plugins Extended Judgment J10.104). Judgments
+ * (spec/judgments.md), tested outside `spec(...)`: a judgment is never compatibility.
  */
 import { expect, test } from 'bun:test';
 import { ELEMENT_COLUMN_OF, ELEMENT_NAMES } from '../../../src/protocol/mods-ui-names.ts';
@@ -17,18 +18,22 @@ import {
 import { node } from '../../support/mods-ui.ts';
 import { drawnProps } from '../../../src/mods/ui/elements/surface.ts';
 
-test('the mobile app draws by the Desktop column of the elements table', () => {
+test('the mobile app draws by the Desktop column of the elements table, less Client', () => {
   expect(ELEMENT_COLUMN_OF.mobile).toBe('desktop');
   expect(Object.keys(defaultElementTable('mobile'))).toEqual(
-    Object.keys(defaultElementTable('desktop')),
+    Object.keys(defaultElementTable('desktop')).filter((name) => name !== 'Client'),
   );
+  expect(Object.keys(defaultElementTable('mobile'))).toContain('Svg');
 });
 
-test('a tree is refused in the mobile app exactly where the Desktop app refuses it', () => {
-  for (const name of ELEMENT_NAMES) {
+test('a tree is refused in the mobile app where the Desktop app refuses it, and for a Client', () => {
+  for (const name of ELEMENT_NAMES.filter((one) => one !== 'Client')) {
     const desktop = treeProblem('Backdrop', 'desktop', node(name))?.replace('desktop', 'mobile');
     expect(treeProblem('Backdrop', 'mobile', node(name)), name).toBe(desktop);
   }
+  expect(treeProblem('Backdrop', 'mobile', node('Client'))).toBe(
+    'a tree Backdrop refuses: Client is not drawn by the mobile app',
+  );
   expect(treeProblem('Backdrop', 'mobile', node('Raster'))).toBe(
     'a tree Backdrop refuses: Raster is not drawn by the mobile app',
   );

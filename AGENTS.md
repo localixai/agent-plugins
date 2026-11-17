@@ -1,6 +1,6 @@
 # AGENTS.md
 
-The operating guide for people and coding agents in `@rsaryev/llx-plugin`: a library that
+The operating guide for people and coding agents in `@localix-ai/agent-plugins`: a library that
 adds Claude Code plugin support to any agent. Read this file first; it is short on purpose.
 
 ## The one rule: evidence, not memory

@@ -1,5 +1,5 @@
 /**
- * @rsaryev/llx-plugin — add Claude Code plugin support to any agent (docs/API.md).
+ * @localix-ai/agent-plugins — add Claude Code plugin support to any agent (docs/API.md).
  *
  * The root holds what a host needs to run plugins: loading a plugin, the host and its sessions, the
  * permission check of a tool call, the ports the host implements and Claude Code's own types. Each

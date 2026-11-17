@@ -5,7 +5,7 @@
  *
  * Each test builds a plugin folder in memory and calls the real `loadPlugin`.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { loadPlugin } from '../../src/index.ts';
 import { memoryFiles } from '../support/ports.ts';
 import { hooksFile, json, messagesOf, namesOf } from '../support/plugin-folder.ts';
@@ -134,7 +134,7 @@ spec('manifest.field.lspServers', () => {
         severity: 'error',
         path: '.lsp.json',
         message:
-          'Invalid LSP server config for ".lsp.json": bad: command: must not contain spaces unless it starts with "/"; put arguments in "args"',
+          'Invalid LSP server config for ".lsp.json": bad: command: Command should not contain spaces. Use args array for arguments.',
       },
     ]);
   });
@@ -189,7 +189,7 @@ spec('manifest.field.experimental.monitors', () => {
     ]);
   });
 
-  test('a valid sibling entry in the same file still loads when one entry is rejected (judgment: each entry stands alone)', async () => {
+  test('a file with an invalid entry is skipped whole and reported; the plugin loads (J9.7)', async () => {
     const { plugin, issues } = await load(
       {
         'monitors/monitors.json': json([
@@ -199,7 +199,23 @@ spec('manifest.field.experimental.monitors', () => {
       },
       'p',
     );
-    expect(namesOf(plugin?.monitors ?? [])).toEqual(['b']);
+    expect(plugin).toBeDefined();
+    expect(namesOf(plugin?.monitors ?? [])).toEqual([]);
     expect(issues.map((found) => found.path)).toEqual(['monitors/monitors.json[0]']);
+  });
+});
+
+describe('a hooks file that opens with a byte order mark (spec §2.1 item 2, J2.3; load oracle 2.1.319, 2.1.322)', () => {
+  test('loads no hooks of that file; the plugin and its other components load', async () => {
+    const { plugin, issues } = await load({
+      '.claude-plugin/plugin.json': json({ name: 'p' }),
+      'hooks/hooks.json': `﻿${hooksFile('echo hi')}`,
+      'skills/a/SKILL.md': 'A.',
+    });
+    expect(plugin?.hooks).toEqual({});
+    expect(plugin?.skills).toHaveLength(1);
+    expect(messagesOf(issues)).toEqual([
+      "Failed to load hooks from hooks/hooks.json: JSON Parse error: Unrecognized token ''",
+    ]);
   });
 });

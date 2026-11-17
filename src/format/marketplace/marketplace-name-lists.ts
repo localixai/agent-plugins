@@ -51,7 +51,7 @@ export const NON_MARKETPLACE_NAMES: ReadonlyMap<string, string> = new Map([
   ['builtin', 'is reserved for built-in plugins'],
   ['skills-dir', 'is reserved for plugins auto-loaded from .claude/skills/'],
   ['synced', 'is reserved for plugins synced from your claude.ai account'],
-  ['claude-plugin-test', 'is reserved for plugin tests'],
+  ['claude-plugin-test', 'is reserved for plugins loaded by claude plugin test'],
 ]);
 
 /** Reserved "in any casing" (requires Claude Code v2.1.275 or later). */

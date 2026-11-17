@@ -10,7 +10,9 @@ import { spec } from '../../support/spec.ts';
 spec('mods.troubleshoot.Check whether mods can load.no hooks module to load', () => {
   test('mods can load: the command finds no mod to test in this directory and says `no hooks module to load`', async () => {
     const run = await runPluginTests({ name: 'empty', tests: {} });
-    expect(run.lines).toEqual(['claude plugin test: no hooks module to load']);
+    expect(run.lines).toEqual([
+      'claude plugin test: .: no hooks module to load; there is no hooks/hooks.json naming one in "modules"',
+    ]);
     expect(run.exitCode).toBe(0);
   });
 
@@ -23,19 +25,21 @@ spec('mods.troubleshoot.Check whether mods can load.no hooks module to load', ()
       },
     });
     const run = await runPluginTests({ name: 'empty', tests: {}, policy: limited });
-    expect(run.lines).toEqual(['claude plugin test: no hooks module to load']);
+    expect(run.lines).toEqual([
+      'claude plugin test: .: no hooks module to load; there is no hooks/hooks.json naming one in "modules"',
+    ]);
   });
 });
 
 spec('mods.troubleshoot.Check whether mods can load.hooks modules are turned off here', () => {
-  test('`disableAllHooks` in your own settings blocks your mods: the message names the setting', async () => {
+  test("`disableAllHooks` in your own settings blocks your mods: Claude Code 2.1.325's line", async () => {
     const run = await runPluginTests({
       name: 'empty',
       tests: {},
       policy: policy({ user: { disableAllHooks: true } }),
     });
     expect(run.lines).toEqual([
-      'claude plugin test: hooks modules are turned off here: disableAllHooks in your settings',
+      'claude plugin test: hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)',
     ]);
     expect(run.exitCode).toBe(1);
   });
@@ -46,7 +50,18 @@ spec('mods.troubleshoot.Check whether mods can load.hooks modules are turned off
       tests: {},
       policy: policy({ managed: { disableAllHooks: true } }),
     });
-    expect(run.lines[0]).toStartWith('claude plugin test: hooks modules are turned off here');
+    expect(run.lines).toEqual([
+      'claude plugin test: hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)',
+    ]);
+    const onlyManaged = await runPluginTests({
+      name: 'empty',
+      tests: {},
+      policy: policy({ managed: { allowManagedHooksOnly: true } }),
+    });
+    expect(onlyManaged.lines).toEqual([
+      'claude plugin test: hooks modules are turned off here (disableAllHooks, allowManagedHooksOnly or a policy)',
+    ]);
+    expect(onlyManaged.exitCode).toBe(1);
     const remote = await runPluginTests({
       name: 'empty',
       tests: {},

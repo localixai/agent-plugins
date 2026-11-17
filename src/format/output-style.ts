@@ -42,6 +42,20 @@ function fileName(path: string): string {
   return base.replace(/\.md$/i, '');
 }
 
+/**
+ * A `name` that is not a string is read as its JavaScript string conversion (spec J6.2, oracle
+ * 2.1.319 and 2.1.322): `[a, b]` is `a,b`, a map `[object Object]`; a blank one is absent.
+ */
+function styleName(
+  value: unknown,
+  take: (read: FieldRead<string>) => string | undefined,
+): string | undefined {
+  if (typeof value !== 'object' || value === null) return take(readText(FIELD_KEYS.name, value));
+  // JavaScript's conversion, written out: a list joins its items with `,`, a map is `[object Object]`.
+  const text = (Array.isArray(value) ? value.join(',') : '[object Object]').trim();
+  return text === '' ? undefined : text;
+}
+
 const FIELD_KEYS = {
   name: 'name',
   description: 'description',
@@ -76,7 +90,7 @@ export function readOutputStyle(
     return read.value;
   };
   const { fields } = parsed;
-  const name = take(readText(FIELD_KEYS.name, fields[FIELD_KEYS.name])) ?? fileName(path);
+  const name = styleName(fields[FIELD_KEYS.name], take) ?? fileName(path);
   const description = take(readText(FIELD_KEYS.description, fields[FIELD_KEYS.description]));
   const keep = take(readFlag(FIELD_KEYS.keep, fields[FIELD_KEYS.keep])) ?? false;
   const force = take(readFlag(FIELD_KEYS.force, fields[FIELD_KEYS.force])) ?? false;
@@ -93,4 +107,19 @@ export function readOutputStyle(
     },
     issues,
   };
+}
+
+/**
+ * Of one plugin's styles that give the same `name`, exactly one is kept: the one whose path
+ * relative to the plugin root sorts last by UTF-16 code unit (spec J6.7, oracle 2.1.325: of
+ * `terse.md` and `terse2.md` both named `Terse`, `terse2.md` is listed). A fixed order keeps the
+ * result independent of the file system's. The kept style stays where it was.
+ */
+export function lastPerName(styles: readonly OutputStyle[]): OutputStyle[] {
+  const kept = new Map<string, OutputStyle>();
+  for (const style of styles) {
+    const held = kept.get(style.name);
+    if (held === undefined || held.path < style.path) kept.set(style.name, style);
+  }
+  return styles.filter((style) => kept.get(style.name) === style);
 }

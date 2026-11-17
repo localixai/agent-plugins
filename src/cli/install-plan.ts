@@ -17,6 +17,7 @@ import {
   type ConfigOutcome,
   type InstallOptions,
 } from './install-config.ts';
+import { closureRefusal, configRefusal } from './install-refusals.ts';
 import type { PendingInstall } from './install-start.ts';
 import { beforeLines, displayedOf, locate, marketplaceRefusal } from './install-lookup.ts';
 import {
@@ -55,6 +56,8 @@ export interface InstallFound {
     readonly name: string;
     readonly alreadyKnown: boolean;
     readonly registered: readonly RegisteredMarketplace[];
+    /** When `alreadyKnown`: the source it was added from; another source fails (§17.20.2). */
+    readonly existingSource?: RegisteredMarketplace['source'];
   };
   /** The refresh the plan asked for failed: "the install proceeds from the cached catalog". */
   readonly refreshFailed?: boolean;
@@ -156,20 +159,6 @@ function alreadyInstalled(
 
 const isInstalledAt = (id: string, scope: InstallScope, graph: GraphFacts): boolean =>
   graph.installed.some((record) => record.id === id && record.scope === scope);
-
-function configRefusal(config: ConfigOutcome): CommandOutput {
-  const lines = config.refused.map((problem) => `--config ${problem.key}: ${problem.message}`);
-  return commandFailed('install', ['Failed to install plugin:', ...lines].join('\n'), {
-    failureCode: 'invalid_config',
-    fields: { invalidKeys: config.refused.map((problem) => problem.key) },
-  });
-}
-
-function closureRefusal(id: string, messages: readonly string[]): CommandOutput {
-  return commandFailed('install', [`Failed to install plugin "${id}":`, ...messages].join('\n'), {
-    failureCode: 'dependency_error',
-  });
-}
 
 interface Succeeded {
   readonly id: string;

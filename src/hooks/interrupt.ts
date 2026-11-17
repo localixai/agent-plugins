@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../format/env-flag.ts';
 import type { Environment } from '../ports/index.ts';
 import type { HookEvent } from '../protocol/official.ts';
 import type { HookOutcome } from './outcome.ts';
@@ -43,7 +44,7 @@ const KEEP: InterruptPlan = { cancel: false };
 const CANCEL: InterruptPlan = { cancel: true };
 
 const backgroundDisabled = (environment: Environment): boolean =>
-  environment.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS')?.trim() === '1';
+  isTruthyEnv(environment.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS'));
 
 const PLANS: {
   readonly [K in InterruptKey]: (

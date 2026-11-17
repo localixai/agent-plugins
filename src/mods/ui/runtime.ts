@@ -123,7 +123,14 @@ export function createModsUi(options: ModsUiOptions): ModsUi {
           core: (e) => Promise.resolve({ type: ENGINE_TYPE, ref: e }),
         }),
       );
-      return foldRender(request.site, request.surface, settled, fold);
+      const drawn = foldRender(request.site, request.surface, settled, fold);
+      // troubleshoot.md, "A `ui.render` line says refused": the debug log's line beside the transcript's.
+      if ('refused' in drawn) {
+        options.debug(
+          `ui.render (${request.site}): the chain settled on a tree that does not validate`,
+        );
+      }
+      return drawn;
     },
     async fault(plugin, fault) {
       await fire('ui.fault', plugin, { ...fault, reason: faultReason(fault.reason) });

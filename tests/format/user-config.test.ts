@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { readManifest } from '../../src/format/index.ts';
+import { checkPluginManifest } from '../../src/format/validate/plugin-manifest.ts';
 import { spec } from '../support/spec.ts';
 
 const withOption = (option: Record<string, unknown>, key = 'api_token') =>
@@ -117,7 +118,7 @@ spec(['userConfig.field.options', 'userConfig.rule.Limit a field to fixed option
   test('the default is one of the listed values: a default outside the list fails to load', () => {
     const result = withOption({ ...tone, default: 'loud' });
     expect(result.manifest).toBeUndefined();
-    expect(result.issues[0]?.message).toContain('"default" must be one of the listed "options"');
+    expect(result.issues[0]?.message).toContain('default must be one of the options');
     expect(withOption({ ...tone, default: ['neutral'] }).manifest).toBeUndefined();
   });
 
@@ -145,5 +146,69 @@ describe('judgments (spec/judgments.md)', () => {
     const { default: _, ...noDefault } = tone;
     expect(withOption({ ...noDefault, required: false }).manifest).toBeUndefined();
     expect(withOption(noDefault).manifest).toBeUndefined();
+  });
+});
+
+describe('the options rules and messages of the validator (oracle 2.1.325, spec §3.4.2, J3.10)', () => {
+  const complete = { version: '1.0.0', description: 'Demo', author: { name: 'Team' } };
+  const errors = (option: Record<string, unknown>) =>
+    checkPluginManifest({ name: 'p', ...complete, userConfig: { k: { ...base, ...option } } })
+      .findings.filter((found) => found.severity === 'error')
+      .map((found) => [found.path, found.message]);
+
+  test('an empty list, a repeat in any case, and the default rules, in this order', () => {
+    expect(errors({ options: [] })).toEqual([
+      ['userConfig.k.options', 'options needs at least one value'],
+      [
+        'userConfig.k.default',
+        'a field with options needs a default among them, or required: true',
+      ],
+    ]);
+    expect(errors({ options: ['a', 'A'], default: 'b' })).toEqual([
+      ['userConfig.k.options', 'options cannot repeat a value (in any letter case)'],
+      ['userConfig.k.default', 'default must be one of the options: a, A'],
+    ]);
+  });
+
+  test('each value: empty, over 64 code points, edge space, hidden characters', () => {
+    const options = [' a', '', '😀'.repeat(65), 'x\u200by', `a${String.fromCharCode(0x202e)}b`];
+    expect(errors({ options, required: true })).toEqual([
+      ['userConfig.k.options.0', 'An option cannot start or end with a space'],
+      ['userConfig.k.options.1', 'An option cannot be empty'],
+      ['userConfig.k.options.2', 'An option can be at most 64 characters'],
+      [
+        'userConfig.k.options.3',
+        'An option cannot contain control, invisible or bidirectional-formatting characters',
+      ],
+      [
+        'userConfig.k.options.4',
+        'An option cannot contain control, invisible or bidirectional-formatting characters',
+      ],
+    ]);
+  });
+
+  test('64 code points pass, whatever their UTF-16 length; inner spaces, commas and accents pass', () => {
+    const options = ['😀'.repeat(64), 'a, b c', 'café'];
+    expect(errors({ options, required: true })).toEqual([]);
+    expect(withOption({ ...base, options, required: true }).manifest).toBeDefined();
+  });
+
+  test('options on a field that may not have them is reported alone', () => {
+    const only = [
+      'userConfig.k.options',
+      'options is only for a field of type "string" that is neither multiple nor sensitive',
+    ];
+    expect(errors({ type: 'number', options: ['a'], default: 'a' })).toEqual([only]);
+    expect(errors({ options: ['a'], multiple: true, default: 'zz' })).toEqual([only]);
+  });
+
+  test('every rule also keeps the plugin from loading', () => {
+    for (const option of [
+      { options: [], required: true },
+      { options: ['a', 'A'], required: true },
+      { options: ['x\u200by'], required: true },
+    ]) {
+      expect(withOption({ ...base, ...option }).manifest).toBeUndefined();
+    }
   });
 });

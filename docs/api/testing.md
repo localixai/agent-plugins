@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/testing`
+# `@localix-ai/agent-plugins/testing`
 
 Fakes of every port, for a host's tests.
 
@@ -19,7 +19,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `HttpReply` | type | The `replies` argument of `recordingHttp` |
 | `LocationOptions` | type | The `options` argument of `locations` |
 | `locations` | function | `Locations` over fixed POSIX-style paths; `dataCreated` lists the plugins whose data was asked for |
-| `MemoryEntry` | type | A file's text or bytes, or a symbolic link to another path of the folder (or outside it) |
+| `MemoryEntry` | type | A file's text or bytes, a symbolic link to another path of the folder (or outside it), or a path whose check fails with an error code (`{ checkFailed: 'ELOOP' }`) |
 | `memoryFiles` | function | An in-memory plugin folder: keys are `/`-separated paths relative to the folder, values the file's text or bytes |
 | `memoryScratch` | function | `ScratchFiles` that keeps what it is given: `files` maps the returned path to the content |
 | `ModelReply` | type | The `replies` argument of `fakeModel` |

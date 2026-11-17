@@ -38,7 +38,10 @@ function resultFailure(site: Site, value: unknown): Failure | undefined {
   if (tooDeep !== null) return refused(tooDeep);
   const answered = site.downstream.latest() !== undefined;
   const shape = ctx.rule.shapeProblem?.(value, answered, ctx.input);
-  return shape === undefined ? undefined : wrongShape(shape);
+  if (shape === undefined) return undefined;
+  const lead = ctx.rule.shapeDebug;
+  if (lead !== undefined) ctx.options.debug?.(`${entry.plugin.name}: ${lead}: ${shape}`);
+  return wrongShape(shape);
 }
 
 /** The outcome of a hook that returned `value`: refused when it does not fit, else the value as it counts. */

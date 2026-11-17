@@ -1,3 +1,4 @@
+import { positiveWholeEnv } from '../../format/env-number.ts';
 import { error, type PluginIssue } from '../../format/issues.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
@@ -80,14 +81,13 @@ const STRUCTURED_OUTPUT_ENV = 'MAX_STRUCTURED_OUTPUT_RETRIES';
 
 /**
  * How many attempts a subagent's structured output gets: `MAX_STRUCTURED_OUTPUT_RETRIES` or 5. A value
- * that is not a positive whole number is no value (judgment, as for the stall window).
+ * that is not a positive whole number (`2e3`, `64_000` are: J3.17) is no value (judgment, as for the
+ * stall window).
  */
 export function structuredOutputAttempts(
   env: Readonly<Record<string, string | undefined>>,
 ): number {
-  const text = env[STRUCTURED_OUTPUT_ENV];
-  const value = text !== undefined && /^\d+$/.test(text) ? Number(text) : 0;
-  return value > 0 ? value : DEFAULT_STRUCTURED_OUTPUT_ATTEMPTS;
+  return positiveWholeEnv(env[STRUCTURED_OUTPUT_ENV]) ?? DEFAULT_STRUCTURED_OUTPUT_ATTEMPTS;
 }
 
 export type AfterInvalidOutput =

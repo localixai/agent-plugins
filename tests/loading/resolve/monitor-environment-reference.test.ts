@@ -5,11 +5,11 @@
  * hook and in a hook that runs through PowerShell"); § Where each variable resolves (monitor
  * `command`: "Anywhere in `command`", "Not exported").
  *
- * The default `shellPaths: 'environment-reference'` is the kit's (spec/judgments.md): the command
- * names the three path variables as shell environment references and the process environment
- * supplies the values, so a path with shell metacharacters is never parsed as shell. Run through a
- * shell with that environment it is the same command line as the documented pasted form, which a
- * host gets with `shellPaths: 'pasted'` (the tests of the docs' literal text below ask for it).
+ * A monitor's path variables are pasted by default and never exported (Agent Plugins Extended §9.2.4,
+ * Judgment J9.17). `shellPaths: 'environment-reference'` is the host's opt-in (spec/judgments.md):
+ * the command names the three path variables as shell environment references and the process
+ * environment supplies the values, so a path with shell metacharacters is never parsed as shell. Run
+ * through a shell with that environment it is the same command line as the pasted form.
  */
 import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -38,6 +38,10 @@ const monitor = (command: string): Monitor => ({
 /** The docs' literal form: the path written into the command. */
 const pasted = (overrides: Partial<SubstitutionScope> = {}): SubstitutionScope =>
   scopeOf({ shellPaths: 'pasted', ...overrides });
+
+/** The host's opt-in: the reference written, the value exported. */
+const optIn = (overrides: Partial<SubstitutionScope> = {}): SubstitutionScope =>
+  scopeOf({ shellPaths: 'environment-reference', ...overrides });
 
 const resolve = async (command: string, scope: SubstitutionScope) => {
   const { resolved, issues } = await resolveMonitor(monitor(command), scope);
@@ -119,6 +123,14 @@ spec('environment.component.Monitor commands', () => {
     expect(resolved?.environment).toEqual({});
   });
 
+  test('pasted is the default: the paths are written in and none is exported, referenced or not', async () => {
+    const { resolved } = await resolveMonitor(monitor(`echo ${everywhere}`), scopeOf());
+    expect(resolved?.command).toBe(
+      `echo ${PATHS.CLAUDE_PLUGIN_ROOT}|${PATHS.CLAUDE_PLUGIN_DATA}|${PATHS.CLAUDE_PROJECT_DIR}`,
+    );
+    expect(resolved?.environment).toEqual({});
+  });
+
   test('no configured option is exported to the monitor: the pasted form carries no environment', async () => {
     const { resolved } = await resolveMonitor(monitor(`echo ${everywhere}`), pasted());
     expect(resolved?.command).toBe(
@@ -139,11 +151,11 @@ spec('environment.component.Monitor commands', () => {
   });
 });
 
-describe("shellPaths: environment-reference (judgment, the kit's default)", () => {
+describe("shellPaths: environment-reference (judgment, the host's opt-in for monitors)", () => {
   const everywhere = '${CLAUDE_PLUGIN_ROOT}|${CLAUDE_PLUGIN_DATA}|${CLAUDE_PROJECT_DIR}';
 
   test('the command names the variables and the environment carries the values', async () => {
-    const resolved = await resolve(`echo ${everywhere}`, scopeOf());
+    const resolved = await resolve(`echo ${everywhere}`, optIn());
     expect(resolved.command).toBe(
       'echo ${CLAUDE_PLUGIN_ROOT}|${CLAUDE_PLUGIN_DATA}|${CLAUDE_PROJECT_DIR}',
     );
@@ -152,29 +164,29 @@ describe("shellPaths: environment-reference (judgment, the kit's default)", () =
 
   test('only the variables the command references are exported, so the data folder is created on demand', async () => {
     const host = locations();
-    const resolved = await resolve('"${CLAUDE_PLUGIN_ROOT}"/a', scopeOf({ locations: host }));
+    const resolved = await resolve('"${CLAUDE_PLUGIN_ROOT}"/a', optIn({ locations: host }));
     expect(resolved.environment).toEqual({ CLAUDE_PLUGIN_ROOT: PATHS.CLAUDE_PLUGIN_ROOT });
     expect(host.dataCreated).toEqual([]);
-    await resolve('"${CLAUDE_PLUGIN_DATA}"/a', scopeOf({ locations: host }));
+    await resolve('"${CLAUDE_PLUGIN_DATA}"/a', optIn({ locations: host }));
     expect(host.dataCreated).toEqual(['my-plugin-acme-tools']);
   });
 
   test('no configured option reaches the monitor in the reference form either', async () => {
-    const resolved = await resolve(`echo ${everywhere}`, scopeOf());
+    const resolved = await resolve(`echo ${everywhere}`, optIn());
     expect(
       Object.keys(resolved.environment).some((name) => name.startsWith('CLAUDE_PLUGIN_OPTION_')),
     ).toBe(false);
   });
 
   test('${ENV_VAR} and its default expand as before, and user_config is still refused', async () => {
-    const resolved = await resolve('psql ${DB_URL} -c "${QUERY:-select 1}"', scopeOf());
+    const resolved = await resolve('psql ${DB_URL} -c "${QUERY:-select 1}"', optIn());
     expect(resolved.command).toBe('psql postgres://db -c "select 1"');
-    const refused = await resolveMonitor(monitor('./poll.sh ${user_config.region}'), scopeOf());
+    const refused = await resolveMonitor(monitor('./poll.sh ${user_config.region}'), optIn());
     expect(refused.resolved).toBeUndefined();
   });
 
   test('a variable followed by text is not read as a longer name: the reference is braced', async () => {
-    const resolved = await resolve('"${CLAUDE_PLUGIN_ROOT}"_old/run', scopeOf());
+    const resolved = await resolve('"${CLAUDE_PLUGIN_ROOT}"_old/run', optIn());
     expect(resolved.command).toBe('"${CLAUDE_PLUGIN_ROOT}"_old/run');
   });
 });
@@ -190,7 +202,7 @@ describe('the environment reference is the pasted form, run (judgment, tested wi
     const host = locations({ plugins: '/p dir', data: '/d dir', project: '/pr dir' });
     for (const template of templates) {
       const written = await resolve(template, pasted({ locations: host }));
-      const referenced = await resolve(template, scopeOf({ locations: host }));
+      const referenced = await resolve(template, optIn({ locations: host }));
       expect(referenced.command).not.toBe(written.command);
       const [one, two] = await Promise.all([
         sh(written.command, {}, tmpdir()),
@@ -208,7 +220,7 @@ describe('the environment reference is the pasted form, run (judgment, tested wi
       const host = { ...locations(), pluginRoot: () => hostile };
       const probe = 'printf "[%s]" "${CLAUDE_PLUGIN_ROOT}"/run.sh';
 
-      const safe = await resolve(probe, scopeOf({ locations: host }));
+      const safe = await resolve(probe, optIn({ locations: host }));
       const out = await sh(safe.command, safe.environment, dir);
       expect(out).toBe(`[${hostile}/run.sh]`);
       expect(await readdir(dir)).toEqual([]);
@@ -224,17 +236,14 @@ describe('the environment reference is the pasted form, run (judgment, tested wi
   test('a path with a double quote or a backtick does not break out either', async () => {
     const hostile = '/x"; echo breakout; "`id`';
     const host = { ...locations(), pluginRoot: () => hostile };
-    const safe = await resolve(
-      'printf "[%s]" "${CLAUDE_PLUGIN_ROOT}"',
-      scopeOf({ locations: host }),
-    );
+    const safe = await resolve('printf "[%s]" "${CLAUDE_PLUGIN_ROOT}"', optIn({ locations: host }));
     expect(await sh(safe.command, safe.environment, tmpdir())).toBe(`[${hostile}]`);
   });
 
   test('on a Windows host the environment still carries the native path', async () => {
     const resolved = await resolve(
       '"${CLAUDE_PLUGIN_ROOT}"/run.sh',
-      scopeOf({ locations: windowsLocations(), windows: true }),
+      optIn({ locations: windowsLocations(), windows: true }),
     );
     expect(resolved.command).toBe('"${CLAUDE_PLUGIN_ROOT}"/run.sh');
     expect(resolved.environment.CLAUDE_PLUGIN_ROOT).toBe(

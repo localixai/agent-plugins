@@ -1,4 +1,5 @@
 import type { PluginIssue } from '../format/issues.ts';
+import type { CorePackage } from '../loading/core/index.ts';
 import type { Plugin, ShellPaths } from '../loading/index.ts';
 import type { FolderScan } from '../ports/folder-scan.ts';
 import type { EnvFileStore, HookEngineOptions, HookPorts } from '../hooks/index.ts';
@@ -22,11 +23,28 @@ export interface HostPlugin {
   readonly source?: NonNullable<ExpandSession['pluginSource']>;
 }
 
+/**
+ * A core Agent Plugins package the host was given (`loadPluginPackage`, form `core`), known by its
+ * `name@marketplace` id like any plugin (Agent Plugins Extended §18.1.5): `enabledPlugins`, managed
+ * settings, name conflicts and dependencies treat it as one. Its skills, MCP servers and hook
+ * handlers run by the core (`docs/API.md`, "Core packages in a session").
+ */
+export interface HostCorePackage {
+  readonly id: string;
+  readonly package: CorePackage;
+  /** As `HostPlugin.enabled`. */
+  readonly enabled?: boolean;
+  /** As `HostPlugin.source`. */
+  readonly source?: HostPlugin['source'];
+}
+
 /** A plugin the host knows and whether it runs. */
 export interface HostedPlugin {
   readonly id: string;
   readonly name: string;
   readonly enabled: boolean;
+  /** A core package (Agent Plugins Extended §18.1.5 item 6: a plugin list says so). */
+  readonly core?: true;
 }
 
 /** What the host passes: the ports, with the ones its hook handler types need. */
@@ -34,6 +52,8 @@ export type HostPorts = HookPorts & { readonly folders?: FolderScan };
 
 export interface PluginHostOptions {
   readonly plugins: readonly HostPlugin[];
+  /** Core packages beside the plugins, loaded after them in the order given (J18.3). */
+  readonly corePackages?: readonly HostCorePackage[];
   readonly ports: HostPorts;
   /** The settings after `createPolicyView`; absent, no settings file exists. */
   readonly settings?: PolicyView;
@@ -54,6 +74,11 @@ export interface PluginHostOptions {
   };
   /** The host process's id: `CLAUDE_PID` in every command hook (env-vars.md). Absent, the variable is not set. */
   readonly processId?: number;
+  /**
+   * The organisation's HIPAA configuration applies (hipaa-setup.md): the Anthropic credentials are
+   * removed from the environment of every hook and subprocess the session starts.
+   */
+  readonly hipaa?: boolean;
   /** Host execution choices, forwarded unchanged to the hook engine; not plugin policy overrides. */
   readonly hookExecution?: Pick<
     HookEngineOptions,
@@ -62,10 +87,13 @@ export interface PluginHostOptions {
   /**
    * How every string the session hands a POSIX shell carries `${CLAUDE_PLUGIN_ROOT}`,
    * `${CLAUDE_PLUGIN_DATA}` and `${CLAUDE_PROJECT_DIR}`: a monitor `command`, an MCP `headersHelper`,
-   * a skill's `!` command. A bash shell-form hook always keeps the reference (Claude Code 2.1.322). Default `environment-reference`: the braced reference stays in
-   * the string and the value is in the process environment the session gives with it, so a project or
-   * plugin folder named `x$(touch PWNED)` is never parsed as shell. `pasted` writes the path itself
-   * (the docs' text), unsafe for such a folder. Judgment (spec/judgments.md).
+   * a skill's `!` command. A bash shell-form hook always keeps the reference (Claude Code 2.1.322).
+   * `environment-reference` (the default for a `headersHelper` and a `!` command, the explicit
+   * opt-in for a monitor): the braced reference stays in the string and the value is in the process
+   * environment the session gives with it, so a project or plugin folder named `x$(touch PWNED)` is
+   * never parsed as shell. `pasted` (the default for a monitor, whose path variables are never
+   * exported: Agent Plugins Extended §9.2.4, J9.17) writes the path itself, the docs' text, unsafe for
+   * such a folder. Judgment (spec/judgments.md).
    */
   readonly shellPaths?: ShellPaths;
   /**
@@ -113,7 +141,7 @@ export interface PluginHostOptions {
  * settings give `createPolicyView([])`; `userConfig` replaces the saved values of every plugin.
  */
 export type HostUpdate = {
-  readonly [K in 'plugins' | 'settings' | 'parentSettings' | 'userConfig']?:
+  readonly [K in 'plugins' | 'corePackages' | 'settings' | 'parentSettings' | 'userConfig']?:
     | PluginHostOptions[K]
     | undefined;
 };

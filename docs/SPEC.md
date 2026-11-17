@@ -13,7 +13,7 @@ output.
 | Real plugins (official and community marketplaces) | what plugins actually use (the corpus)            | `.cache/corpus/` (gitignored)        |
 | The oracle: `claude plugin validate --json` of the same release | message wording, and the checks only the validator makes, where the docs are silent | `.cache/corpus/oracle/<release>/` (gitignored) |
 
-Nothing else is evidence: not memory, not another host's behaviour (Localix included), not a
+Nothing else is evidence: not memory, not another host's behaviour (our own hosts' included), not a
 plausible guess. Where the docs are silent, the kit makes a **judgment**, recorded with its reason
 in the code comment next to it and listed in `spec/judgments.md`; a judgment never counts toward
 compatibility.
@@ -208,6 +208,51 @@ refuses a snapshot of another release, and when the declarations are pulled, a s
 what they declare. `tests/mods/declarations/surface.test.ts` compares the kit with the snapshot and
 fails on a difference not judged in `spec/judgments.md` (`**Dn** declarations <release>`, listed in
 `tests/support/declared-differences.ts`) and on a judged one that is gone (AGENTS.md, E2a).
+
+## The specification
+
+The library is becoming the implementation of **Agent Plugins Extended**, the specification that
+grows the vendor-neutral Agent Plugins format (the *core*) to the whole Claude Code plugin contract.
+The specification states the contract in normative chapters; this library implements it. It is a
+working draft, versioned `<core version>+claude-code.<release>` (today `1.1.0+claude-code.2.1.321`),
+and not published yet.
+
+**Today.** Nothing in this repository reads the specification. The requirements are this
+repository's own `spec/requirements.json`, extracted here as above, and the judgments are
+`spec/judgments.md`. The specification's requirement list is a snapshot of that file (taken at
+`018f293`, the same 2,730 ids for Claude Code 2.1.321), so an id means the same in both. The
+library reads the Claude Code form of a plugin and, in `./core`, loads the core form (a root
+`plugin.json` with a core `$schema`, core §4–§10); its tests of the core cite `core §n` and run
+outside `spec(...)`, since the requirement ids are Claude Code's. A session does not run core hooks
+or servers yet. The library makes no claim of conformance to the specification.
+
+**After the move** (planned, not done):
+
+- The library's tests prove the specification's requirements and judgments, at a version of the
+  specification it pins (a tag or a revision, not chosen yet), instead of its own snapshot.
+- Extracting the requirements, pulling the docs, the corpus and the oracle move to the
+  specification's tools; this repository keeps no copy of them.
+- Every place where the specification decided otherwise than this library behaves is either fixed
+  here or taken back to the specification. Until that list is worked through, a judgment here and
+  a judgment there may disagree, and this repository's tests are what the library does.
+
+How the conventions map:
+
+| Here                                                     | In the specification                                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `spec/requirements.json`, written by `bun run spec:extract` | its conformance requirement list, a snapshot never edited by hand (C2)    |
+| a requirement id, `<category path>.<key>`                | the same id; a normative paragraph names it in a `req` marker (C1)          |
+| proven: a passing test under `spec(id)` (E3)             | stated: a normative paragraph carries the id's marker                        |
+| `docs/COMPATIBILITY.md`, the share proven (E5)           | its conformance report, the share stated (E5)                                |
+| a row of `spec/judgments.md`, keyed by source file (E4)  | a judgment `J<chapter>.<n>` in the table at the end of its chapter (E4)      |
+| `oracle <release>` in a judgment (E5a)                   | evidence marked *oracle*, with the release named                             |
+| "oracle <release> overrides docs" (above)                | a deviation (E4a): the text follows the observed behaviour, not counted as stated |
+| `declarations <release>` (E2a)                           | official shapes of the same release (E2)                                     |
+| another host's behaviour is a lead, never evidence (E6)  | this library is the reference implementation: a lead, checked against the docs |
+
+The rule ids on the left are this repository's (AGENTS.md); those on the right are the
+specification's own guide, which shares E1, E2 and E4 in meaning but numbers the rest
+independently.
 
 ## Updating to a new Claude Code release
 

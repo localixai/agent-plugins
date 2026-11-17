@@ -7,6 +7,8 @@ import type { DecideContext } from './context.ts';
 import { cannotRuleOutRemoval, removesCriticalPath } from './critical-removal.ts';
 import { commandTargets } from './file-targets.ts';
 import { powershellVerdict } from './powershell-edits.ts';
+import { powershellRemovalDenied } from './powershell-removal.ts';
+import { inputString } from '../target/input.ts';
 import { NO_REDIRECTS, targetFacts, type RedirectFacts } from './redirects.ts';
 import { isProtectedPath, isSymlinkTargetOnly } from './protected-paths.ts';
 import { inScope } from './scope.ts';
@@ -60,6 +62,10 @@ export interface CallFacts {
   readonly unsandboxed: boolean;
   /** A `SubagentHandback` call, the delivery of a subagent's report. */
   readonly handback: boolean;
+  /** A PowerShell removal denied in every mode ("Remove-Item in PowerShell"). */
+  readonly removalDenied: boolean;
+  /** An `Artifact` read of another organization's public artifact. */
+  readonly foreignArtifact: boolean;
 }
 
 const NONE: CallFacts = {
@@ -83,6 +89,8 @@ const NONE: CallFacts = {
   exempt: false,
   unsandboxed: false,
   handback: false,
+  removalDenied: false,
+  foreignArtifact: false,
 };
 
 type Builder = (call: PreparedCall, ctx: DecideContext) => Partial<CallFacts>;
@@ -200,7 +208,19 @@ const powershellFacts: Builder = (call, ctx) => {
     shellEdits: parts.editsInScope,
     protectedWrite: parts.writesProtected,
     protectedViaLink: parts.writesProtectedViaLink,
+    removalDenied: powershellRemovalDenied(
+      command,
+      ctx.match.paths,
+      ctx.powershellCmdRemovalDenyOff === true,
+    ),
   };
+};
+
+/** An `Artifact` read the host says is another organization's public artifact. */
+const artifactFacts: Builder = (call, ctx) => {
+  const url = inputString(call.input, 'url');
+  const read = inputString(call.input, 'action') === 'read';
+  return { foreignArtifact: read && url !== undefined && ctx.foreignArtifact?.(url) === true };
 };
 
 /** WebFetch: a URL whose domain is in the host's preapproved set fetches without a prompt. */
@@ -233,6 +253,7 @@ const BUILDERS: ReadonlyMap<string, Builder> = new Map<string, Builder>([
   ['Bash', bashFacts],
   ['PowerShell', powershellFacts],
   ['WebFetch', webFetchFacts],
+  ['Artifact', artifactFacts],
 ]);
 
 /** "The built-in `AskUserQuestion` tool and MCP tools marked `requiresUserInteraction`." */

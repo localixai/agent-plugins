@@ -25,8 +25,12 @@ spec('install.loading.Paths that escape the plugin directory', () => {
       const files = memoryFiles({});
       const read = await collectMcpServers(files, written);
       expect(read.servers).toEqual({});
+      // spec §17 (Path escapes plugin directory): a backslash path names why it is refused.
+      const why = written.includes('\\')
+        ? ' — its path contains a backslash, which is not resolved reliably on this platform'
+        : '';
       expect(read.issues.map(({ message }) => message)).toEqual([
-        `mcpServers path escapes plugin directory: ${written}`,
+        `mcpServers path escapes plugin directory: ${written}${why}`,
       ]);
       expect(touched(files)).toEqual(['.mcp.json']);
     }

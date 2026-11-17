@@ -66,7 +66,8 @@ export async function validatePluginFolder(
 ): Promise<ValidationIssue[]> {
   const read = await readJson(files, MANIFEST_FILE, signal);
   if ('problem' in read) {
-    return [errorIn(MANIFEST_FILE, 'json', invalidJsonSyntax(read.problem))];
+    // The manifest's message ends with a period (spec §2.1 item 2); the marketplace file's does not (§15.2).
+    return [errorIn(MANIFEST_FILE, 'json', `${invalidJsonSyntax(read.problem)}.`)];
   }
   if (!isRecord(read.value))
     return inFile(MANIFEST_FILE, [errorAt('root', 'manifest must be an object')]);

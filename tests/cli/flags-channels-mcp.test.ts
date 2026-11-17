@@ -189,11 +189,65 @@ describe('--mcp-config', () => {
       expect(odd.mcpWaitMs).toBe(30_000);
     });
 
+    const servers = JSON.stringify({
+      mcpServers: {
+        local: { command: 'npx', args: ['srv'] },
+        remote: { type: 'http', url: 'https://mcp.example.com/mcp' },
+        stream: { type: 'sse', url: 'https://sse.example.com' },
+      },
+    });
+
+    test('a remote server with a cached tool list skips the wait and connects on first use', () => {
+      const plan = planOf(
+        { '--mcp-config': [servers] },
+        printFacts({ cachedToolLists: ['remote', 'local'] }),
+      );
+      expect(plan.mcpWaitMs).toBe(30_000);
+      // Only a remote server has a cached tool list: the stdio one is still waited for.
+      expect(plan.mcpWaitSkips).toEqual(['remote']);
+      expect(planOf({ '--mcp-config': [servers] }, printFacts()).mcpWaitSkips).toEqual([]);
+    });
+
+    test('in a self-hosted environment a shorter wait applies, for stdio servers only', () => {
+      const plan = planOf({ '--mcp-config': [servers] }, printFacts({ selfHosted: true }));
+      expect(plan.mcpWaitMs).toBe(2000);
+      expect(plan.mcpWaitSkips).toEqual(['remote', 'stream']);
+      const timed = planOf(
+        { '--mcp-config': [servers] },
+        printFacts({
+          selfHosted: true,
+          env: { MCP_TIMEOUT: '9000', CLAUDE_CODE_MCP_STARTUP_WAIT_MS: '500' },
+        }),
+      );
+      expect(timed.mcpWaitMs).toBe(500);
+    });
+
     test('without the flag there is nothing to load or wait for', () => {
       const plan = planOf({}, printFacts());
       expect(plan.mcpConfigs).toEqual([]);
       expect(plan.mcpWaitMs).toBeUndefined();
     });
+  });
+
+  // J3.17 (spec/judgments.md): MCP_TIMEOUT is read as every numeric variable is, a positive whole number.
+  test('MCP_TIMEOUT reads 2e3 and 64_000; a fraction or a sign leaves the default', () => {
+    const wait = (MCP_TIMEOUT: string) =>
+      planOf({ '--mcp-config': ['./mcp.json'] }, printFacts({ env: { MCP_TIMEOUT } })).mcpWaitMs;
+    expect([wait('2e3'), wait('64_000'), wait('1500.5'), wait('+5000'), wait('0')]).toEqual([
+      2000, 64_000, 30_000, 30_000, 30_000,
+    ]);
+  });
+
+  // J3.17: the self-hosted wait is a whole number, 0 included (it skips the wait); else 2 seconds.
+  test('CLAUDE_CODE_MCP_STARTUP_WAIT_MS reads 2e3, 64_000 and 0; a fraction leaves 2 seconds', () => {
+    const wait = (CLAUDE_CODE_MCP_STARTUP_WAIT_MS: string) =>
+      planOf(
+        { '--mcp-config': ['./mcp.json'] },
+        printFacts({ selfHosted: true, env: { CLAUDE_CODE_MCP_STARTUP_WAIT_MS } }),
+      ).mcpWaitMs;
+    expect([wait('2e3'), wait('64_000'), wait('0'), wait('1.5'), wait('-1')]).toEqual([
+      2000, 64_000, 0, 2000, 2000,
+    ]);
   });
 
   spec('cli.flag.--strict-mcp-config', () => {

@@ -7,7 +7,8 @@ import {
   SUGGESTED_KEYS,
 } from './plugin-fields.ts';
 import { nameFindings, type NameOptions } from './plugin-name.ts';
-import { isPathKey, PATH_SHAPES, pathShapeFindings } from './plugin-paths.ts';
+import { isPathKey } from './plugin-paths.ts';
+import { sourceFindings } from './inline-sources.ts';
 import { claimsOf, type PathClaim } from './path-claims.ts';
 import { inlineFindings } from './mcp-check.ts';
 import { hooksMapFindings } from './hooks-check.ts';
@@ -62,9 +63,7 @@ const movedWarning = (key: string): Finding =>
 
 /** The shape findings of one key under `experimental` (`types` is not one of them). */
 const experimentalPath = (key: string, value: unknown): Finding[] =>
-  isPathKey(key) && key !== 'types'
-    ? pathShapeFindings(`experimental.${key}`, PATH_SHAPES[key], value)
-    : [];
+  isPathKey(key) && key !== 'types' ? sourceFindings(key, `experimental.${key}`, value) : [];
 
 function experimentalFindings(experimental: unknown): Finding[] {
   if (!isRecord(experimental)) return [];
@@ -86,7 +85,7 @@ export function manifestPathFindings(manifest: Readonly<Record<string, unknown>>
     ? Object.entries(experimental).flatMap(([key, value]) => experimentalPath(key, value))
     : [];
   const top = Object.entries(manifest).flatMap(([key, value]) =>
-    isPathKey(key) && value !== undefined ? pathShapeFindings(key, PATH_SHAPES[key], value) : [],
+    isPathKey(key) && value !== undefined ? sourceFindings(key, key, value) : [],
   );
   return [...top, ...nested, ...claimsOf(manifest).findings];
 }

@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/mods/elements`
+# `@localix-ai/agent-plugins/mods/elements`
 
 The element table of mods and the checks of a drawn tree, for a UI process: no host, no port and no `node:` import. The same names are in `./mods`.
 

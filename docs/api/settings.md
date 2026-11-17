@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/settings`
+# `@localix-ai/agent-plugins/settings`
 
 Settings layers, their merge and the policy of every key, managed settings included.
 
@@ -24,6 +24,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ApprovalSession` | type | Whether the session can show the approval prompt (`canPromptForProjectServers`) |
 | `ApprovalVia` | type | What decided a server's status; absent while it is pending |
 | `Arrival` | type | How the change arrived: a settings file Claude Code watches, or a managed source delivered on a schedule |
+| `AUTO_MODE_DISABLED_NOTICE` | constant | What a session running in auto mode shows when a managed `disableAutoMode` moves it out: "auto mode disabled by settings" |
 | `AUTO_MODE_LISTS` | constant | The prose rule lists of the block, in the docs' order |
 | `AutoModeList` | type | One of `AUTO_MODE_LISTS` |
 | `AutoModeSettings` | type | The auto mode settings in force |
@@ -63,6 +64,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `channelVerdict` | function | The gate first (it blocks the development flag too), then the entry's own flag rule |
 | `ChannelVerdict` | type | What `ChannelSettingsPolicy.allowed` returns; What `channelVerdict` returns |
 | `claudeAiAppliesMarketplaceLists` | function | Whether claude.ai applies the marketplace lists at a place |
+| `ClaudeAiMarketplaceScope` | type | The `scope` argument of `MarketplaceGate.checkClaudeAi`: whose a claude.ai marketplace is |
 | `ClaudeJsonFacts` | type | What the host must do with the text of `~/.claude.json`, the file Claude Code writes for itself |
 | `ClaudeJsonOutcome` | type | What `readClaudeJson` returns |
 | `claudeJsonProject` | function | The `~/.claude.json` entry of one project (`projects["<path>"]`), as it was written |
@@ -137,6 +139,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `FirstWriteFacts` | type | The `facts` argument of `shouldAddGitExclude` |
 | `forceEnabledByManaged` | function | Whether managed settings force-enable the plugin |
 | `gatewaySignInRefused` | function | `/login` refuses every new cloud gateway sign-in on the machine while the highest managed source on it carries `gatewayInternalNetworks` with a value that cannot be read |
+| `GATEWAY_SESSION_EXPIRED` | constant | The line a gateway session that answered `401` prints before it opens signed out |
 | `GENERAL_KEYS` | constant | The keys beyond the policy keys the kit combines |
 | `GeneralKey` | type | One of `GENERAL_KEYS` |
 | `GeneralValues` | type | The value type of each general key, from the official `Settings`, never declared again (`undefined` as `Settings` has it: the key is optional) |
@@ -231,6 +234,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MarketplaceGate` | type | What `createMarketplaceGate` returns; The `gate` field of `MarketplaceSettingsPolicy` |
 | `MarketplaceRegistry` | type | What `createMarketplaceRegistry` returns; The `registry` field of `MarketplaceSettingsPolicy` |
 | `MarketplaceSettingsPolicy` | type | The marketplace keys behind one object: the two lists, the registry plan and the command sources |
+| `matchClaudeAiMarketplace` | function | Whether a list entry matches a marketplace hosted on claude.ai, by its host `claude.ai`: only a `hostPattern` can |
 | `matchMarketplaceSource` | function | Whether a list entry matches the source of a marketplace |
 | `matchUrlPattern` | function | Whether a URL matches an allowed HTTP hook URL pattern |
 | `maxConcurrentSubagents` | function | The subagent concurrency from `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`, or the default |
@@ -279,6 +283,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `NotApplied` | type | Why a settings value did not reach the session |
 | `NotAppliedVariable` | type | The `notApplied` field of `EnvResolution`; The `ignored` field of `SettingsEnv` |
 | `officialMarketplaceAutoinstallEnabled` | function | `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL=1`: "skips the registration permanently" |
+| `officialMarketplaceRegistration` | function | Whether Claude Code registers the official marketplace by itself: at the first interactive terminal session, never after a recorded skip |
+| `OfficialRegistration` | type | What `officialMarketplaceRegistration` returns |
+| `OfficialRegistrationFacts` | type | The `facts` argument of `officialMarketplaceRegistration` |
+| `OfficialRegistrationLaunch` | type | How this session was launched: an interactive terminal session, a `-p` run, a terminal attached to a cloud session, or the VS Code extension |
 | `OptionValue` | type | What an option or a server value is: "a string, number, Boolean, or array of strings", as the SDK types it |
 | `OptionValues` | type | The `userConfig` field of `PluginHostOptions`; The `userConfig` field of `SessionOptions` |
 | `OriginOf` | type | The origins a host names, per surface |
@@ -411,6 +419,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `resolveSettingsEnv` | function | The variables of the layers' `env` blocks that reach the environment |
 | `retentionValueApplies` | function | At startup on the cache: an invalid retention value "stays in the cached copy and is never applied" |
 | `RuleEntry` | type | A rule as written in a settings file, with the file's scope |
+| `RunningMode` | type | What `PermissionsPolicy.runningMode` returns: the mode a running session changes to, and its notice |
 | `runPolicyHelper` | function | Runs the helper with no arguments and `CLAUDE_CODE_VERSION` set, within `timeoutMs` counted from the file check (the check and the run share one budget) |
 | `runSubagentStatusLine` | function | Runs the selected `subagentStatusLine` once through the `CommandRunner` (`bash`, from `input.cwd`, the host's env, the input on stdin) and reads its rows; a run that does not exit 0 rewrites none |
 | `ScopeRule` | type | One of `SCOPE_RULES` |
@@ -469,8 +478,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `StartingMode` | type | What `PermissionsPolicy.startingMode` returns |
 | `StartInput` | type | What the host knows of the launch and the session |
 | `StartSource` | type | Why the session starts in the mode it does |
+| `StartupFailure` | type | What `startupFetchFailure` returns |
+| `StartupFailureFacts` | type | The `facts` argument of `startupFetchFailure` |
 | `StartupFetch` | type | What `startupFetchOf` returns |
 | `StartupFetchFacts` | type | The `facts` argument of `startupFetchOf` |
+| `startupFetchFailure` | function | What a failed startup fetch does: start, exit, or (a gateway `401` on an attended interactive launch with `forceRemoteSettingsRefresh` off) open signed out with `GATEWAY_SESSION_EXPIRED` |
 | `startupFetchOf` | function | What startup does about the fetch: `true` blocks until a fresh fetch and exits on failure; unset does not block, though a sign-in startup waits up to five seconds |
 | `SubagentLineRead` | type | The subagent status line that runs: a settings source's (with its scope) or a plugin's default |
 | `subagentStatusLineInput` | function | The stdin object of one refresh tick: the base hook fields, `columns` and `tasks`, each row's `tokenSamples` cut to its last 16 readings |

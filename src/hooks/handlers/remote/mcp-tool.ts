@@ -1,3 +1,4 @@
+import { positiveWholeEnv } from '../../../format/env-number.ts';
 import type { Clock, Environment, McpCaller } from '../../../ports/index.ts';
 import type { HookEvent } from '../../../protocol/official.ts';
 import type { HandlerEntry, HandlerResult, RawRun, RunContext } from '../context.ts';
@@ -65,9 +66,8 @@ const MCP_TIMEOUT_VARIABLE = 'MCP_TIMEOUT';
 const DEFAULT_MCP_TIMEOUT_MS = 30_000;
 
 function mcpTimeoutMs(environment: Environment): number {
-  const text = environment.get(MCP_TIMEOUT_VARIABLE)?.trim();
-  const value = text !== undefined && /^\d+$/.test(text) ? Number(text) : 0;
-  return value > 0 ? value : DEFAULT_MCP_TIMEOUT_MS;
+  // J3.17: read as every numeric variable is (spec §3.6.1 item 2).
+  return positiveWholeEnv(environment.get(MCP_TIMEOUT_VARIABLE)) ?? DEFAULT_MCP_TIMEOUT_MS;
 }
 
 /** "For at most `MCP_TIMEOUT` and within the hook's own `timeout`"; none on an observational event. */

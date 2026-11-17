@@ -109,7 +109,7 @@ async function entryIssues(
       warningIn(
         MARKETPLACE_FILE,
         `plugins[${index}].source`,
-        `Could not parse ${ENTRY_MANIFEST} for version cross-check: ${manifest.problem}`,
+        `Could not parse ${childOf(manifest.dir, ENTRY_MANIFEST)} for version cross-check: ${manifest.problem}`,
       ),
       errorIn(MARKETPLACE_FILE, `${prefix}json`, invalidJsonSyntax(manifest.problem)),
     ];

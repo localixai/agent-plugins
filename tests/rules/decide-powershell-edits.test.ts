@@ -4,7 +4,7 @@
  * in-scope paths, the quote-character rule, and the cases of `Remove-Item` that are not ordinary.
  */
 import { describe, expect, test } from 'bun:test';
-import { allow, ask, decision, pathsWith, rulesOf } from '../support/decide.ts';
+import { allow, ask, decision, deny, pathsWith, rulesOf } from '../support/decide.ts';
 import { spec } from '../support/spec.ts';
 
 const match = pathsWith({
@@ -72,8 +72,9 @@ spec('permissions.mode.acceptEdits', () => {
 
     test('a path a variable or wildcard hides', () => {
       expect(powershell('Remove-Item $dir\\a.txt')).toEqual(PROMPTS);
-      expect(powershell('Remove-Item .\\*')).toEqual(PROMPTS);
       expect(powershell('Remove-Item .\\*.log')).toEqual(PROMPTS);
+      // A target ending in `\*` is a wildcard the docs deny in every mode.
+      expect(powershell('Remove-Item .\\*')).toEqual(deny('powershell-removal'));
     });
 
     test('a parameter the kit does not validate', () => {
@@ -105,9 +106,9 @@ spec('permissions.mode.acceptEdits', () => {
   });
 
   describe('"Remove-Item in PowerShell": the targets that need more than acceptEdits', () => {
-    test('a system path or the home directory is not approved', () => {
-      expect(powershell('Remove-Item C:\\Windows -Recurse')).toEqual(PROMPTS);
-      expect(powershell('Remove-Item C:\\Users\\alice')).toEqual(PROMPTS);
+    test('a system path or the home directory is denied without asking', () => {
+      expect(powershell('Remove-Item C:\\Windows -Recurse')).toEqual(deny('powershell-removal'));
+      expect(powershell('Remove-Item C:\\Users\\alice')).toEqual(deny('powershell-removal'));
     });
 
     test('the working directory or a parent of it with -Recurse is not approved', () => {

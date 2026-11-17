@@ -57,7 +57,8 @@ function textOf(details: PluginDetails): readonly string[] {
     'Component inventory',
     ...INVENTORY_LABELS.map(([key, label]) => {
       const names = details.inventory[key];
-      return `  ${label}: ${names.length === 0 ? 'none' : names.join(', ')}`;
+      const listed = names.length === 0 ? '' : `  ${names.join(', ')}`;
+      return `  ${label} (${names.length})${listed}`;
     }),
     '',
     'Projected token cost',

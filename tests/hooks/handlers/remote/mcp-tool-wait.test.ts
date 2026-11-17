@@ -69,6 +69,15 @@ describe('the wait of an mcp_tool hook (judgments)', () => {
     expect(await waitFor(undefined, { MCP_TIMEOUT: 'soon' })).toBe(30_000);
   });
 
+  // J3.17 (spec/judgments.md): MCP_TIMEOUT is read as every numeric variable is.
+  test('MCP_TIMEOUT reads 2e3 and 64_000; a fraction, a sign or 0 leaves the default', async () => {
+    expect(await waitFor(undefined, { MCP_TIMEOUT: '2e3' })).toBe(2000);
+    expect(await waitFor(undefined, { MCP_TIMEOUT: '64_000' })).toBe(64_000);
+    for (const MCP_TIMEOUT of ['1500.5', '+5000', '0']) {
+      expect(await waitFor(undefined, { MCP_TIMEOUT })).toBe(30_000);
+    }
+  });
+
   test('a session abort during the wait is the shared cancelled run, not a not-connected error', async () => {
     const controller = new AbortController();
     const inner = fakeMcp({ connected: [] });

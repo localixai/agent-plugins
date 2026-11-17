@@ -66,17 +66,26 @@ export function backgroundCheckResult(credentials: Credentials, remote: RemoteSt
 const KEEP_ON_FAILURE = 'CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE';
 
 const FOLLOW_UPS: {
-  readonly [R in CheckResult]: (env: Environment) => CheckFollowUp;
+  readonly [R in CheckResult]: (env: Environment, checkoutHoldsCatalog: boolean) => CheckFollowUp;
 } = {
   'up-to-date': () => 'leave',
   'new-commits': () => 'reclone',
-  'cannot-reach-or-authenticate': (env) =>
-    isOn(env, KEEP_ON_FAILURE) ? 'keep-existing-checkout' : 'reclone',
+  'cannot-reach-or-authenticate': (env, checkoutHoldsCatalog) =>
+    isOn(env, KEEP_ON_FAILURE) && checkoutHoldsCatalog ? 'keep-existing-checkout' : 'reclone',
 };
 
-/** "After the check, Claude Code does one of the following." */
-export const afterBackgroundCheck = (result: CheckResult, env: Environment): CheckFollowUp =>
-  FOLLOW_UPS[result](env);
+/**
+ * "After the check, Claude Code does one of the following." `checkoutHoldsCatalog` is whether the
+ * existing checkout contains `.claude-plugin/marketplace.json`: the variable "skips the re-clone
+ * only for a checkout that already contains" it, so a marketplace never cloned, or whose clone
+ * stopped partway, still gets the clone attempt (plugins/troubleshooting.md, "Marketplace updates
+ * keep failing offline").
+ */
+export const afterBackgroundCheck = (
+  result: CheckResult,
+  env: Environment,
+  checkoutHoldsCatalog: boolean,
+): CheckFollowUp => FOLLOW_UPS[result](env, checkoutHoldsCatalog);
 
 /** "If that clone fails, the existing checkout stays in place." */
 export const afterReclone = (

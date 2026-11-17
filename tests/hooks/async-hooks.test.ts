@@ -61,14 +61,12 @@ spec('hooks.behavior.Configure an async hook', () => {
     expect(outcome.background).toHaveLength(1);
   });
 
-  test('the field is only available on command hooks: another type loses it with a warning', () => {
+  test('the field is only available on command hooks: another type loses it, without a warning (J7.10)', () => {
     const result = readHooksFile(
       file({ PreToolUse: [{ hooks: [{ type: 'http', url: 'http://h/x', async: true }] }] }),
     );
     expect(firstHandler(result)).toEqual({ type: 'http', url: 'http://h/x' });
-    expect(warningsOf(result).map((found) => found.path)).toEqual([
-      'hooks.PreToolUse[0].hooks[0].async',
-    ]);
+    expect(warningsOf(result)).toEqual([]);
   });
 
   test('without async the same hook is awaited: the dispatch reads its result', async () => {
@@ -203,6 +201,10 @@ spec(['hooks.behavior.How async hooks execute', 'hooks.behavior.Limitations'], (
     const delivery = await outcome.background[0];
     expect(delivery).toMatchObject({ additionalContext: 'kept' });
     expect(delivery).not.toHaveProperty('systemMessage');
+    // Agent Plugins Extended §7.3.3 item 3: "with a debug warning naming the field".
+    expect(delivery?.issues?.map((found) => found.message)).toEqual([
+      'The async hook response field systemMessage is not a string and is dropped',
+    ]);
   });
 
   test('a hookSpecificOutput.additionalContext of the wrong type is dropped, and a systemMessage beside it kept', async () => {
@@ -216,6 +218,7 @@ spec(['hooks.behavior.How async hooks execute', 'hooks.behavior.Limitations'], (
     const delivery = await outcome.background[0];
     expect(delivery).toMatchObject({ systemMessage: 'kept' });
     expect(delivery).not.toHaveProperty('additionalContext');
+    expect(delivery?.issues?.[0]?.message).toContain('hookSpecificOutput.additionalContext');
   });
 
   test('a response with a hookSpecificOutput that is not an object loses it; both wrong types leave a bare completion', async () => {
@@ -227,6 +230,12 @@ spec(['hooks.behavior.How async hooks execute', 'hooks.behavior.Limitations'], (
       handlerId: expect.any(String),
       outcome: 'completed',
       exitCode: 0,
+      issues: [
+        expect.objectContaining({
+          severity: 'warning',
+          path: expect.stringContaining('systemMessage'),
+        }),
+      ],
     });
   });
 

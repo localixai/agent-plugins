@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/mods/isolate`
+# `@localix-ai/agent-plugins/mods/isolate`
 
 What code inside an isolate needs; nothing below it imports a `node:` or `bun` module or any package. The same names are in `./mods`.
 

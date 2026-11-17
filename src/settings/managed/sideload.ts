@@ -28,10 +28,15 @@ export interface SideloadFacts {
   readonly pluginDirsVariable: readonly string[];
   /** The session is a cloud session. */
   readonly cloud: boolean;
+  /** The Agent SDK `plugins` option named plugin folders (plugins/org.md, control matrix). */
+  readonly sdkPlugins?: boolean;
 }
 
 export interface SideloadVerdict {
-  /** Startup exits with these errors, one per rejected flag or variable; empty when the session starts. */
+  /**
+   * Startup exits with these lines: one per rejected flag, the Agent SDK `plugins` option or the
+   * variable, then `SIDELOAD_CLOSING`; empty when the session starts.
+   */
   readonly refusals: readonly string[];
   /** The `--mcp-config` servers a cloud session starts without. */
   readonly droppedServers: readonly string[];
@@ -53,6 +58,25 @@ const REJECTED_WHEN: { readonly [F in SideloadFlag]: (facts: SideloadFacts) => b
 const refusalOf = (flag: string): string =>
   `${flag} is disabled by your organization's managed settings (disableSideloadFlags)`;
 
+/** The line after the rejected flags (plugins/troubleshooting.md, "`--plugin-dir is disabled …`"). */
+export const SIDELOAD_CLOSING =
+  'Plugins, custom agents, and MCP servers can only be loaded from sources your administrator has approved.';
+
+/** The line for the Agent SDK `plugins` option, in the flags' form: its name is the kit's (spec/judgments.md). */
+const SDK_PLUGINS = 'The Agent SDK plugins option';
+
+/** The rejected flags' lines, then the SDK option's and the variable's, then the closing line. */
+function refusalLines(facts: SideloadFacts): readonly string[] {
+  const lines = [
+    ...SIDELOAD_FLAGS.filter((flag) => REJECTED_WHEN[flag](facts)).map(refusalOf),
+    ...(facts.sdkPlugins === true ? [refusalOf(SDK_PLUGINS)] : []),
+    ...(facts.pluginDirsVariable.length > 0
+      ? [`${refusalOf('CLAUDE_CODE_PLUGIN_DIRS')}: unset the variable`]
+      : []),
+  ];
+  return lines.length === 0 ? [] : [...lines, SIDELOAD_CLOSING];
+}
+
 /** In a cloud session a server survives only as "in-process `type: "sdk"` entries and a Claude Tag session's Slack tools". */
 const survivesInCloud = (server: ConfiguredServer): boolean =>
   isInProcess(server) || server.claudeTagSlack === true;
@@ -60,15 +84,10 @@ const survivesInCloud = (server: ConfiguredServer): boolean =>
 /** What the session does with its flags and the plugin-folder variable under managed `disableSideloadFlags`. */
 export function sideloadVerdict(view: PolicyView, facts: SideloadFacts): SideloadVerdict {
   if (view.get('disableSideloadFlags') !== true) return { refusals: [], droppedServers: [] };
-  const flags = SIDELOAD_FLAGS.filter((flag) => REJECTED_WHEN[flag](facts)).map(refusalOf);
-  const variable =
-    facts.pluginDirsVariable.length > 0
-      ? [`${refusalOf('CLAUDE_CODE_PLUGIN_DIRS')}: unset the variable`]
-      : [];
   const dropped = facts.cloud
     ? facts.mcpServers.filter((server) => !survivesInCloud(server)).map((server) => server.name)
     : [];
-  return { refusals: [...flags, ...variable], droppedServers: dropped };
+  return { refusals: refusalLines(facts), droppedServers: dropped };
 }
 
 /**

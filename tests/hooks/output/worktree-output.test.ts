@@ -73,7 +73,7 @@ spec('hooks.behavior.WorktreeCreate output', () => {
     test('a hook that wrote JSON to stdout returns that line as the path: the command hook cannot return JSON', async () => {
       const json = '{"hookSpecificOutput":{"worktreePath":"/abs/wt"}}';
       const outcome = await created(`${json}\n`);
-      expect(outcome.effects.worktreePath).toBeUndefined();
+      expect(outcome.effects.worktreePath).toBe(json);
       expect(outcome.stdout.map(lastPathLine)).toEqual([json]);
     });
   });

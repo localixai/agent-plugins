@@ -88,7 +88,8 @@ function fromHttp(text: string): Parsed | undefined {
   if (parts === null) return undefined;
   const split = splitRef(text);
   const form = cloneForm(parts[2] ?? '', parts[3] ?? '', parts[4] !== undefined);
-  if (split === undefined || form === undefined) return { kind: 'url', url: text };
+  if (form === undefined) return { kind: 'url', url: text };
+  if (split === undefined) return refused(UNRECOGNIZED);
   const base = split.base.replace(/\/+$/, '');
   return git(form === 'append-git' ? `${base}.git` : base, split.ref);
 }
@@ -113,6 +114,8 @@ function fromShorthand(text: string): Parsed | undefined {
   const repo = cut < 0 ? rest : rest.slice(0, cut);
   const ref = cut < 0 ? undefined : rest.slice(cut + 1);
   const owner = text.slice(0, slash);
+  // An empty `#ref` is an unrecognized format, not a misspelled shorthand (spec J15.9).
+  if (ref === '' && rest[cut] === '#') return refused(UNRECOGNIZED);
   if (!isGitHubRepository(owner, repo) || ref === '') {
     return refused(
       `'${text}' is not a valid GitHub owner/repo shorthand. For a git repo, use the full https:// clone URL from your host (typically ending in .git — some hosts like Azure DevOps omit it). For a hosted marketplace.json, use its https:// URL. For a local path, use ./ or an absolute path.`,

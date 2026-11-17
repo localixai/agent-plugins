@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { parseHookOutput } from '../../../src/hooks/index.ts';
-import { merged, specific } from '../../support/hooks-output.ts';
+import { merged, specific, viaEngine } from '../../support/hooks-output.ts';
 import { spec } from '../../support/spec.ts';
 
 const start = (fields: object) => specific('SessionStart', fields);
@@ -250,5 +250,14 @@ describe('DirectoryAdded routes its systemMessage by source (hooks.md, "Director
     );
     expect(outcome.continue).toBe(true);
     expect(outcome.block).toBeUndefined();
+  });
+});
+
+describe('watchPaths: a relative entry is resolved against the input cwd (Agent Plugins Extended §7.5.28, Judgment J7.131)', () => {
+  test.each(['SessionStart', 'CwdChanged', 'FileChanged'] as const)('%s', async (event) => {
+    const outcome = await viaEngine(event, [
+      specific(event, { watchPaths: ['.envrc', './config/../.env', '/abs/x', '/work/app/.envrc'] }),
+    ]);
+    expect(outcome.effects.watchPaths).toEqual(['/work/app/.envrc', '/work/app/.env', '/abs/x']);
   });
 });

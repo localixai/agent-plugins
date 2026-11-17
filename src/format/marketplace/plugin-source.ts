@@ -8,6 +8,7 @@ import {
 } from './plugin-source-kinds.ts';
 import { invalidInput, type SourceSite } from './plugin-source-fields.ts';
 import type { SourceReading } from './entries.ts';
+import type { ReadMode } from './types.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 import { isAbsolutePath, rootRelative } from '../path-text.ts';
 
@@ -19,6 +20,10 @@ import { isAbsolutePath, rootRelative } from '../path-text.ts';
  */
 
 const MUST_START = 'Invalid string: must start with "./"';
+
+/** The line an entry whose path does not stay inside the marketplace is listed with (`errors.md`). */
+const entryPathRefused = (path: string): string =>
+  `Plugin source path refused: ${path} does not stay inside its marketplace directory. Check that the marketplace entry has a plain relative path.`;
 
 /** The tag `source: 'unsupported'` is the SDK's placeholder, not an authorable type. */
 const PLACEHOLDER_MESSAGE =
@@ -46,17 +51,9 @@ function bareName(raw: string, site: SourceSite): SourceReading {
   if (site.pluginRoot === undefined || raw.includes('/') || raw === '') {
     return { source: undefined, issues: [error(site.path, MUST_START)] };
   }
-  if (root === undefined) {
-    return {
-      source: undefined,
-      issues: [
-        error(
-          site.path,
-          `metadata.pluginRoot "${site.pluginRoot}" must be a relative path inside the marketplace, so "${raw}" cannot resolve under it`,
-        ),
-      ],
-    };
-  }
+  // A root that climbs out or is absolute leaves the bare name without a base: oracle 2.1.325
+  // reports the bare name like one without `./` (spec J15.6).
+  if (root === undefined) return { source: undefined, issues: [error(site.path, MUST_START)] };
   const path = root === '.' ? raw : `${root}/${raw}`;
   return { source: { kind: 'relative', path, bare: true }, issues: [] };
 }
@@ -69,16 +66,18 @@ function relative(raw: string, site: SourceSite): SourceReading {
   return bareName(raw, site);
 }
 
-/** On macOS and Linux a backslash after the leading `./` is refused; on Windows it is a separator. */
+/**
+ * On macOS and Linux a backslash after the leading `./` is refused by the client at install and at
+ * load, and "validation does not report it" (spec §15.6.1 items 2 and 4): validating keeps the path
+ * as written; loading refuses the entry with the load line of `errors.md`, "Marketplace entry path
+ * does not stay inside the marketplace directory". On Windows a backslash is a separator.
+ */
+const REFUSES_BACKSLASH: { readonly [M in ReadMode]: boolean } = { load: true, validate: false };
+
 function withSeparators(raw: string, site: SourceSite): SourceReading {
   const rest = raw === '.' ? '' : raw.slice(2);
-  if (site.platform === 'posix' && rest.includes('\\')) {
-    return {
-      source: undefined,
-      issues: [
-        error(site.path, `Path contains a backslash: ${raw}. Write the path with forward slashes`),
-      ],
-    };
+  if (site.platform === 'posix' && rest.includes('\\') && REFUSES_BACKSLASH[site.mode ?? 'load']) {
+    return { source: undefined, issues: [error(site.path, entryPathRefused(raw))] };
   }
   const path = rootRelative(rest, site.platform);
   return { source: { kind: 'relative', path, bare: false }, issues: [] };
@@ -101,6 +100,7 @@ export function parsePluginSource(raw: unknown, slot: EntrySlot): SourceReading 
   const site: SourceSite = {
     path: `plugins[${slot.index}].source`,
     platform: slot.context.platform ?? 'posix',
+    mode: slot.mode ?? 'load',
     ...(slot.pluginRoot === undefined ? {} : { pluginRoot: slot.pluginRoot }),
   };
   if (typeof raw === 'string') return relative(raw, site);

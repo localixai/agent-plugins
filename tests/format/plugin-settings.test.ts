@@ -56,13 +56,13 @@ describe('settings values (judgments)', () => {
     expect(read.issues.map((found) => found.severity)).toEqual(['warning', 'warning']);
   });
 
-  test('settings that are not an object are an error naming where they came from', () => {
+  test('settings that are not an object are a warning naming where they came from (J12.10)', () => {
     for (const raw of [null, [], 'agent']) {
       const read = readPluginSettings(raw, 'settings.json');
       expect(read.settings).toEqual({});
       expect(read.issues).toEqual([
         {
-          severity: 'error',
+          severity: 'warning',
           path: 'settings.json',
           message: 'settings.json must be a JSON object of settings',
         },

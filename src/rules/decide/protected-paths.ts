@@ -58,7 +58,6 @@ const FILES: ReadonlySet<string> = new Set([
   'pyrightconfig.json',
   '.mcp.json',
   '.claude.json',
-  'remote-settings.json',
 ]);
 
 const CLAUDE = '.claude';
@@ -180,6 +179,25 @@ const inDevMods = (path: string, paths: PathContext, options: ProtectedPathOptio
   relativeWithin(`${configDirectoryOf(paths, options)}/dev-mods`, path, paths.platform) !==
   undefined;
 
+const REMOTE_SETTINGS = 'remote-settings.json';
+
+/**
+ * The stored copy of server-managed settings "and the signature, sync, and consent files Claude Code
+ * keeps with it, in `~/.claude` or the directory `CLAUDE_CONFIG_DIR` points to" (permission-modes.md,
+ * "Protected paths"): `remote-settings.json` of the configuration directory, and the files the host
+ * names (`remoteSettingsFiles`). Judgment (spec/judgments.md, Agent Plugins Extended J13.35): the
+ * docs name the kept files by role only, so none is guessed.
+ */
+export function isStoredRemoteSettings(
+  path: string,
+  paths: PathContext,
+  options: ProtectedPathOptions,
+): boolean {
+  const below = relativeWithin(configDirectoryOf(paths, options), path, paths.platform);
+  const stored = below !== undefined && foldPath(below, paths.platform) === REMOTE_SETTINGS;
+  return stored || (options.remoteSettingsFiles ?? []).some((file) => samePath(file, path, paths));
+}
+
 /**
  * Whether `path` is the target of a symlinked settings file (`options.symlinkTargets`) and is not
  * protected for another reason: "If the file's own path is also that of a settings file ... the write
@@ -207,16 +225,20 @@ export function isProtectedPath(
 ): boolean {
   const segments = segmentsOf(path, paths);
   const name = segments.at(-1) ?? '';
-  const sessionFile = (options.files ?? []).some((file) => samePath(file, path, paths));
-  const sessionDirectory = (options.directories ?? []).some(
-    (directory) => relativeWithin(posixOf(directory, paths), path, paths.platform) !== undefined,
-  );
   return (
     hasDirectory(segments) ||
     FILES.has(name) ||
-    sessionFile ||
-    sessionDirectory ||
+    startedWith(path, paths, options) ||
     inDevMods(path, paths, options) ||
+    isStoredRemoteSettings(path, paths, options) ||
     protectedByClaude(segments, path, paths, options)
+  );
+}
+
+/** A file the session was started with, or a directory loaded with `--plugin-dir`. */
+function startedWith(path: string, paths: PathContext, options: ProtectedPathOptions): boolean {
+  if ((options.files ?? []).some((file) => samePath(file, path, paths))) return true;
+  return (options.directories ?? []).some(
+    (directory) => relativeWithin(posixOf(directory, paths), path, paths.platform) !== undefined,
   );
 }

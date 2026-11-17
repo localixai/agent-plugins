@@ -42,6 +42,41 @@ spec('permissions.reference.Sandboxed commands under the block', () => {
     expect(block.reachesSandbox).toBe(false);
     expect(block.denyRead).toEqual([]);
     expect(block.repositoryAllowEntriesCount).toBe(true);
+    expect(block.reopened).toEqual([]);
+    expect(block.readWrite).toEqual([]);
+  });
+  test('it re-opens the working directories, session worktrees, temp and ~/.claude parts the host names', () => {
+    const reopened = [
+      '/work/app',
+      '/work/app/.claude/worktrees/w1',
+      '/tmp/s1',
+      '/home/alice/.claude/skills',
+    ];
+    const block = sandboxReadBlock({ ...base, reopened });
+    expect(block.reopened).toEqual(reopened);
+    expect(block.readWrite).toEqual([]);
+    expect(block.denyWrite).toEqual([]);
+  });
+  test('in a linked git worktree the common .git stays readable and writable', () => {
+    const block = sandboxReadBlock({
+      ...base,
+      startDirectory: '/work/wt',
+      worktreeCommonGitDir: '/home/alice/src/app/.git',
+    });
+    expect(block.reopened).toContain('/home/alice/src/app/.git');
+    expect(block.readWrite).toEqual(['/home/alice/src/app/.git']);
+  });
+  test('hooks/ and config inside the common .git stay write-denied', () => {
+    const block = sandboxReadBlock({
+      ...base,
+      startDirectory: '/work/wt',
+      worktreeCommonGitDir: '/home/alice/src/app/.git',
+    });
+    expect(block.denyWrite).toEqual([
+      '/home/alice/src/app/.git/hooks',
+      '/home/alice/src/app/.git/config',
+    ]);
+    expect(sandboxReadBlock(base).denyWrite).toEqual([]);
   });
   test('the global git configuration is re-opened, file by file', () => {
     const files = gitConfigReopened({

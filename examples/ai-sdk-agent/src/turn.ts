@@ -1,4 +1,4 @@
-import type { PluginSession } from '@rsaryev/llx-plugin';
+import type { PluginSession } from '@localix-ai/agent-plugins';
 import { generateText, isStepCount, type LanguageModel, type ModelMessage, type ToolSet } from 'ai';
 import type { Trace } from './trace.ts';
 import { appendTranscript } from './transcript.ts';

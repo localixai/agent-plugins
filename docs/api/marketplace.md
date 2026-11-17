@@ -1,4 +1,4 @@
-# `@rsaryev/llx-plugin/marketplace`
+# `@localix-ai/agent-plugins/marketplace`
 
 Marketplaces, installs, updates and uninstalls, and the plugin store.
 
@@ -167,6 +167,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `EntrySlot` | type | Where an entry stands in its marketplace |
 | `ErrorsTabEntry` | type | An entry of the `/plugin` **Errors** tab: "Each entry pairs a message with a guidance line." |
 | `escapedPathIssue` | function | The issue that drops the path, or `undefined` when it stays inside the plugin |
+| `FailedPluginDirectory` | type | The `failedDirectories` field of `InitPluginFacts`: a `--plugin-dir`, SDK or synced entry that failed before it had a name |
 | `failedToInstall` | function | The summary the `/plugin` menu closes with when none of the selected plugins installed: `Failed to install: <plugin> (<reason>)` |
 | `failedToInstallPlugin` | function | `Failed to install plugin "<name>@<marketplace>": <message>`: the shell's prefix, with the plugin's real name |
 | `failureOnce` | function | The returned function says whether this event and command have not failed yet this session, and remembers that they have |
@@ -226,6 +227,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `IgnoredReason` | type | The `reason` argument of `ignoredLine`; What `ignoredReason` returns |
 | `IgnoredSettings` | type | Why a settings file does not load: a value Claude Code does not accept (`keys` names the settings in file order) or a top level that is not an object |
 | `IgnoredSurface` | type | Where the line shows: `claude plugin list` (one line, name bare) or the `/plugin` Errors tab (name quoted, fix beneath) |
+| `InitPluginFacts` | type | The `facts` argument of `initPluginFields` |
+| `initPluginFields` | function | The `plugins` and `plugin_errors` fields of the `system/init` message (headless.md) |
 | `inlinePluginId` | function | `<name>@inline`: "a plugin that `--plugin-dir`, `--plugin-url`, `CLAUDE_CODE_PLUGIN_DIRS` or the Agent SDK `plugins` option loaded" |
 | `INSTALL_COMMANDS` | constant | "You can run `/plugin install` in a session or `claude plugin install` in your shell." |
 | `INSTALL_TIMEOUT_MS` | constant | "Claude Code stops an install that runs longer and treats it as failed." |
@@ -292,6 +295,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `listingFields` | function | The display fields of one plugin as users see them at `stage` |
 | `ListingStage` | type | Whether the listing is of a plugin not installed yet (`listed`) or one whose files are on disk (`installed`) |
 | `LoadedInstalledPlugins` | type | What `loadInstalledPlugins` returns |
+| `LoadedPluginRow` | type | The `loaded` field of `InitPluginFacts` |
 | `loadInstalledPlugins` | function | Reads the records and applies the recovery the read calls for |
 | `loadNameIssues` | function | What adding or loading a marketplace refuses about its name, on top of `validationNameIssues` |
 | `loadsInPlace` | function | Whether a marketplace plugin is loaded in place rather than copied into the cache |
@@ -317,6 +321,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MarketplaceEntry` | type | The `entry` field of `LoadPluginInput`; The `entry` argument of `catalogDependencies` |
 | `MarketplaceFetchPlan` | type | The plan of fetching a marketplace |
 | `MarketplaceInputOptions` | type | The marketplace source `claude plugin marketplace add <source>` builds from the string you type: pure text in, a source or an issue out |
+| `MarketplaceInstallOutcome` | type | The `outcomes` argument of `pluginInstallEvents` |
 | `MarketplaceLoadStatus` | type | What `extraKnownMarketplaces` does with a source when the marketplace is added: the docs name two that parse and then fail to load |
 | `MarketplaceMetadata` | type | The `metadata` field of `Marketplace` |
 | `marketplaceNameIssues` | function | Every refusal a marketplace's name can draw: `validate`'s and adding or loading's |
@@ -402,6 +407,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `planPluginCommand` | function | What `/plugin` does on a host: "run `/plugin` with no plugin name: the panel opens on the Discover tab"; with a name it opens that plugin's details |
 | `planPluginFetch` | function | How `source` is fetched, or why it may not be |
 | `planPrune` | function | `claude plugin prune` as a decision: with none to remove a line that starts `Nothing to prune`; `--dry-run` lists them and ends `(dry run — nothing removed)` |
+| `planRemotePlugins` | function | Which plugins a session on an SSH remote machine gets copied, and which a Windows one leaves out; a WSL session gets none |
 | `planTreeCopy` | function | A plan of copying `entries`; `limits` apply to a tree that is copied whole (a `command` source in copy mode) |
 | `planUninstall` | function | `claude plugin uninstall <id> [--prune]` as a decision: the plugin goes |
 | `planUpdate` | function | What `request` does |
@@ -420,12 +426,16 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `PluginDirPlugin` | type | A plugin a session loads with `--plugin-dir`: its name and its manifest's `dependencies` |
 | `PluginHint` | type | A hint that parsed: `value` is `name@marketplace` |
 | `pluginIdIssues` | function | What a marketplace or entry `name` breaks before it can be part of an id |
+| `pluginInstallEvents` | function | The `system/plugin_install` events of a synchronous install (`CLAUDE_CODE_SYNC_PLUGIN_INSTALL`) |
+| `PluginInstallStamp` | type | The `stamp` argument of `pluginInstallEvents`: the session id and a source of event ids |
+| `PluginLoadError` | type | A load-time error of `InitPluginFacts`: `type` and `message` |
 | `PluginLookup` | type | What `lookupPlugin` returns |
 | `pluginNames` | function | The names of a plugin from its entry merge; a plugin that fails to load keeps its entry name, as it still has an id |
 | `PluginNames` | type | The two names of a marketplace plugin |
 | `pluginNotFound` | function | `Plugin "<name>" not found in marketplace "<marketplace>"`, with a hint when Claude Code did not refresh the marketplace before the lookup |
 | `PluginNotFound` | type | What `pluginNotFound` returns |
 | `pluginNotFoundAnywhere` | function | `Plugin "<name>" not found in any marketplace` in a session; `claude plugin install` says `any configured marketplace` |
+| `PluginNotLoaded` | type | The `unloaded` field of `InitPluginFacts` |
 | `PluginOperation` | type | One of `PLUGIN_OPERATIONS` |
 | `PluginRef` | type | A plugin as `<name>@<marketplace>`: the two parts the commands use, never split out of one string |
 | `pluginRootIssue` | function | The refusal for a plugin directory of a fetched marketplace that is, or passes through, a link that resolves outside the marketplace |
@@ -470,6 +480,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RefreshRequest` | type | The `request` argument of `refreshBeforeInstall` |
 | `RefusalEffect` | type | What a refusal does: a marketplace entry's refuses the install; `plugin.json`'s installs without the dependency, and the plugin then fails to load |
 | `refusalResultLine` | function | The last line of stdout of `claude plugin install\|uninstall\|update --json` for that refusal |
+| `refusedMarketplaceName` | function | The refusal of a registered marketplace whose name imitates an official one, or `undefined` when its name loads |
+| `RefusedMarketplaceName` | type | What `refusedMarketplaceName` returns |
 | `refuseForUnreadableRecords` | function | How `claude plugin install`, `uninstall` and `update` refuse |
 | `RefusingCommand` | type | The three commands that refuse while a record cannot be read, with the word their refusal uses |
 | `RegisteredMarketplace` | type | A registered marketplace, as far as the download-folder rule needs it |
@@ -488,7 +500,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `reloadGate` | function | Whether `/reload-plugins` applies, is refused for breaking the prompt cache, or applies with the MCP servers deferred |
 | `ReloadGate` | type | What `reloadGate` returns |
 | `reloadSummary` | function | The summary line `/reload-plugins` prints |
+| `REMOTE_PLUGINS_DIRECTORY` | constant | `~/.claude/remote/plugins/`: where the copies go on the remote machine |
+| `RemotePluginFacts` | type | The `plugins` argument of `planRemotePlugins`: an id and the paths inside the plugin |
+| `RemotePluginPlan` | type | What `planRemotePlugins` returns |
 | `RemoteState` | type | What the host sees of the remote when the check runs |
+| `RemoteTarget` | type | The `target` argument of `planRemotePlugins` |
 | `REMOVED_STATUS` | constant | The status `/plugin` shows under its **Flagged** heading |
 | `RemovedPlugin` | type | What `removedPlugins` returns |
 | `removedPlugins` | function | The installed plugins a marketplace update removes or renames |
@@ -626,7 +642,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `UNSUPPORTED_SOURCE_TYPE` | constant | The message of a source type this version cannot fetch, with the line the docs say follows it |
 | `UnsupportedLockfile` | type | One of `UNSUPPORTED_LOCKFILES` |
 | `untrustedSource` | function | The notice of a marketplace registered under a reserved name from a source that is not Anthropic's; it stops loading |
-| `untrustedSourceMessage` | function | `Marketplace "<name>" is registered from an untrusted source:...` |
+| `untrustedSourceMessage` | function | `Marketplace "<name>" is registered from an untrusted source:...`, its middle sentence the name refusal for the source |
 | `UpdateCheck` | type | The `check` field of `UpdateVerdict` |
 | `UpdateErrorsTabEntry` | type | "An entry in the `/plugin` Errors tab: the entry shows the new command and the `claude plugin update` command to run." |
 | `UpdateInstallCommand` | type | One of `INSTALL_COMMANDS` |

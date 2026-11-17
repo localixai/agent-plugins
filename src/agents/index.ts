@@ -41,6 +41,7 @@ export {
   claudeMdScopes,
   effectiveAutoCompactWindow,
   effectiveCacheTtl,
+  forkModeOn,
   mainSessionFirstTurn,
   runsInBackground,
   turnLimitOutcome,
@@ -97,5 +98,14 @@ export {
   type SkillCatalog,
   type SkillSkipReason,
 } from './preload-skills.ts';
+export {
+  DEFINITION_NOT_RESTORED,
+  restoreTeammate,
+  teammateSetup,
+  type TeammateDisplay,
+  type TeammateInput,
+  type TeammateRestore,
+  type TeammateSetup,
+} from './teammate.ts';
 export { afterHandbackDenial, type HandbackAfterDenial } from './handback-denial.ts';
 export { permissionSubagentPromptSurface, type SubagentPromptSurface } from './prompt-surface.ts';

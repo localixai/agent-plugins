@@ -1,7 +1,7 @@
 {
   "name": "kit-example-ai-sdk-agent",
   "private": true,
-  "description": "A small coding agent on the AI SDK that runs Claude Code plugins through @rsaryev/llx-plugin.",
+  "description": "A small coding agent on the AI SDK that runs Claude Code plugins through @localix-ai/agent-plugins.",
   "type": "module",
   "scripts": {
     "agent": "bun src/cli.ts",
@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.99",
+    "@localix-ai/agent-plugins": "link:../..",
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@rsaryev/llx-plugin": "link:../..",
     "ai": "7.0.165",
     "zod": "4.4.3"
   },

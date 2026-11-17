@@ -80,6 +80,33 @@ describe('env-vars.md: what Claude Code sets in each kind of subprocess', () => 
   });
 });
 
+describe('hipaa-setup.md, "Anthropic credentials in commands, hooks, and MCP servers" (Agent Plugins Extended §7.3.2.3 item 2)', () => {
+  const secrets = {
+    ANTHROPIC_API_KEY: 'sk',
+    ANTHROPIC_AUTH_TOKEN: 'tok',
+    CLAUDE_CODE_OAUTH_TOKEN: 'oauth',
+    GITHUB_TOKEN: 'gh',
+    AWS_SECRET_ACCESS_KEY: 'aws',
+  };
+
+  test('under the HIPAA configuration every kind loses the Anthropic credentials and keeps the others', () => {
+    for (const kind of SUBPROCESS_KINDS) {
+      const env = envOf(kind, { environment: secrets, hipaa: true });
+      expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+      expect(env).not.toHaveProperty('ANTHROPIC_AUTH_TOKEN');
+      expect(env).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN');
+      expect(env).toMatchObject({ GITHUB_TOKEN: 'gh', AWS_SECRET_ACCESS_KEY: 'aws' });
+    }
+  });
+
+  test('without it they stay; on Windows the names match in any case', () => {
+    expect(envOf('hook', { environment: secrets })).toMatchObject({ ANTHROPIC_API_KEY: 'sk' });
+    const lower = { environment: { anthropic_api_key: 'sk' }, hipaa: true };
+    expect(envOf('hook', lower)).toHaveProperty('anthropic_api_key');
+    expect(envOf('hook', { ...lower, windows: true })).not.toHaveProperty('anthropic_api_key');
+  });
+});
+
 describe('env-vars.md: what every kind inherits', () => {
   test('the OTEL_* exporter variables are removed, case-insensitively on Windows only', () => {
     for (const kind of SUBPROCESS_KINDS)

@@ -10,10 +10,14 @@ import type {
   HandlerStatus,
   BlockVia,
   HookNotice,
+  RunFacts,
 } from './verdict/types.ts';
 
-/** A short record of one handler's run for the host's log. */
-export interface HandlerRun {
+/**
+ * A record of one handler's run for the host's log: what it came to, and the facts the debug line
+ * is written from (`RunFacts`, Agent Plugins Extended §7.4.12 item 2).
+ */
+export interface HandlerRun extends RunFacts {
   readonly handlerId: string;
   readonly status: HandlerStatus;
   readonly via?: BlockVia;

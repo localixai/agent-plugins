@@ -54,8 +54,9 @@
           "files.bytes": 2077,
           "files.exists": 7,
           "files.list": 3,
-          "files.readText": 15,
-          "files.stat": 26
+          "files.readBytes": 1,
+          "files.readText": 14,
+          "files.stat": 29
         }
       },
       "8": {
@@ -66,8 +67,9 @@
           "files.bytes": 4037,
           "files.exists": 11,
           "files.list": 3,
-          "files.readText": 27,
-          "files.stat": 38
+          "files.readBytes": 1,
+          "files.readText": 26,
+          "files.stat": 41
         }
       },
       "16": {
@@ -78,8 +80,9 @@
           "files.bytes": 7957,
           "files.exists": 19,
           "files.list": 3,
-          "files.readText": 51,
-          "files.stat": 62
+          "files.readBytes": 1,
+          "files.readText": 50,
+          "files.stat": 65
         }
       }
     }
@@ -250,12 +253,16 @@
       "4": {
         "first": {
           "cpu.RegExp.exec": 56,
+          "environment.get": 4,
+          "environment.snapshot": 4,
           "locations.pluginData": 4,
           "locations.pluginRoot": 4,
           "locations.projectDir": 4
         },
         "second": {
           "cpu.RegExp.exec": 56,
+          "environment.get": 4,
+          "environment.snapshot": 4,
           "locations.pluginData": 4,
           "locations.pluginRoot": 4,
           "locations.projectDir": 4
@@ -264,12 +271,16 @@
       "8": {
         "first": {
           "cpu.RegExp.exec": 112,
+          "environment.get": 8,
+          "environment.snapshot": 8,
           "locations.pluginData": 8,
           "locations.pluginRoot": 8,
           "locations.projectDir": 8
         },
         "second": {
           "cpu.RegExp.exec": 112,
+          "environment.get": 8,
+          "environment.snapshot": 8,
           "locations.pluginData": 8,
           "locations.pluginRoot": 8,
           "locations.projectDir": 8
@@ -278,12 +289,16 @@
       "16": {
         "first": {
           "cpu.RegExp.exec": 224,
+          "environment.get": 16,
+          "environment.snapshot": 16,
           "locations.pluginData": 16,
           "locations.pluginRoot": 16,
           "locations.projectDir": 16
         },
         "second": {
           "cpu.RegExp.exec": 224,
+          "environment.get": 16,
+          "environment.snapshot": 16,
           "locations.pluginData": 16,
           "locations.pluginRoot": 16,
           "locations.projectDir": 16

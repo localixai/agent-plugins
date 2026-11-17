@@ -5,14 +5,16 @@ import {
   isHooksModuleName,
 } from '../../../format/mod-files.ts';
 import { validateManifest } from '../../../format/manifest.ts';
-import type { PluginFiles } from '../../../ports/index.ts';
-import type { ModCompiler } from '../../ports.ts';
 import { scanSourceOf, type CompileResult } from '../compile-output.ts';
 import { thrownByCompiler } from '../engine-faults.ts';
 import { declaredState, missingTypes, readTypes } from '../types-decl.ts';
 import { scanHooksModule, type ModScan } from '../scan/index.ts';
-import { scanLines } from './scan-lines.ts';
+import { hookLabel } from '../scan/uses.ts';
+import { ledEntry } from './scan-lead.ts';
+import { scanLines, typesNotes } from './scan-lines.ts';
 import { readJson } from '../../../format/read-json.ts';
+import { isRecord } from '../../../protocol/is-record.ts';
+import type { FileReport, ReportEntry, ValidateInput, ValidateReport } from './validate-report.ts';
 
 /**
  * `claude plugin validate <directory>` for a mod (plugins/mods/reference.md, "Commands"; create.md,
@@ -22,46 +24,26 @@ import { readJson } from '../../../format/read-json.ts';
  * report. It runs no code and never throws: what it cannot read is an issue, and the exit code says so.
  */
 
-export interface ValidateInput {
-  readonly files: PluginFiles;
-  /** The path as the user typed it: the report names it as `target`. */
-  readonly target: string;
-  /** TypeScript, TSX and JSX modules need it; a JavaScript module is read as written. */
-  readonly compiler?: ModCompiler;
-  readonly signal?: AbortSignal;
-}
-
-export interface FileReport {
-  readonly file: string;
-  readonly errors: readonly string[];
-  readonly warnings: readonly string[];
-  readonly notes: readonly string[];
-  readonly gatingHooks?: readonly {
-    readonly module: string;
-    readonly pattern: string | null;
-    readonly hook: string;
-    readonly hasCatch: boolean;
-  }[];
-}
-
-/** The `--json` object (cli-reference.md, "Output and exit codes"). */
-export interface ValidateReport {
-  readonly success: boolean;
-  readonly strict: boolean;
-  readonly target: string;
-  readonly manifest: FileReport | null;
-  readonly contents: readonly FileReport[];
-  readonly advice: readonly never[];
-  /** What the command prints, line by line. */
-  readonly lines: readonly string[];
-  /** 0 passed, 1 failed (an error, or a warning under `--strict`). */
-  readonly exitCode: 0 | 1;
-}
-
 const JSON_PATH = '.claude-plugin/plugin.json';
 const HOOKS_PATH = 'hooks/hooks.json';
 
-const messageOf = (issue: PluginIssue): string => `${issue.path}: ${issue.message}`;
+/**
+ * A `hooks.json` with neither `hooks` nor `modules` fails at `root` (oracle 2.1.321 and 2.1.325;
+ * Agent Plugins Extended §10.42.3 item 1, Judgment J10.174): the docs say it passes.
+ */
+const NEITHER_KEY =
+  'hooks.json must have `hooks` (the hook matchers) or `modules` (hooks modules), or both';
+const neitherKey = (value: unknown): PluginIssue[] =>
+  isRecord(value) && !('hooks' in value) && !('modules' in value)
+    ? [error('root', NEITHER_KEY)]
+    : [];
+
+const messageOf = (issue: PluginIssue): ReportEntry => ({
+  path: issue.path,
+  message: issue.message,
+});
+/** An entry as the command prints it: `<path>: <message>`. */
+const printed = (entry: ReportEntry): string => `${entry.path}: ${entry.message}`;
 const errorsOf = (issues: readonly PluginIssue[]) =>
   issues.filter((issue) => issue.severity === 'error').map(messageOf);
 const warningsOf = (issues: readonly PluginIssue[]) =>
@@ -131,42 +113,58 @@ async function missingSurfaces(
     .map((path) => error(written, `${path}: no such file`));
 }
 
+/** What the manifest says the module is checked against: its types file and its plugin's name. */
+interface Contract {
+  readonly typesPath: string | undefined;
+  readonly plugin: string | undefined;
+}
+
 async function checkModule(
   input: ValidateInput,
   entry: string,
   written: string,
-  typesPath: string | undefined,
+  { typesPath, plugin }: Contract,
 ): Promise<Module> {
   const source = await sourceOf(input, entry);
   if ('issue' in source) {
     return {
-      report: { file: written, errors: [source.issue.message], warnings: [], notes: [] },
+      report: {
+        file: written,
+        errors: [messageOf(source.issue)],
+        warnings: [],
+        notes: [],
+        gatingHooks: [],
+      },
       lines: [],
     };
   }
   const types = await readTypes(input.files, typesPath, input.signal);
   const scan = scanHooksModule(source.code, written, {
     isEntry: true,
+    ...(plugin === undefined ? {} : { plugin }),
     directory: entry.slice(0, Math.max(entry.lastIndexOf('/'), 0)),
     ...(types === undefined ? {} : { declaredState: declaredState(types) }),
   });
   const issues = [...scan.issues, ...(await missingSurfaces(input, written, scan))];
   const needed = types === undefined ? missingTypes(scan, written, typesPath) : undefined;
   if (needed !== undefined) issues.push(error(typesPath ?? JSON_PATH, needed));
-  const lines = scanLines(written, scan);
+  const lines = scanLines(written, scan, plugin);
+  const place = { written, entry, root: input.root ?? input.target };
   return {
     lines,
     report: {
       file: written,
-      errors: errorsOf(issues),
+      errors: issues
+        .filter((issue) => issue.severity === 'error')
+        .map((issue) => ledEntry(issue, place)),
       warnings: [],
       notes: lines.map((line) => line.replace(/^ {2}❯ /, '')),
       gatingHooks: scan.hooks
         .filter((hook) => hook.isGating)
         .map((hook) => ({
           module: written,
-          pattern: hook.matcher ?? null,
-          hook: hook.event,
+          pattern: hook.event,
+          hook: hookLabel(hook),
           hasCatch: hook.hasCatch,
         })),
     },
@@ -189,7 +187,7 @@ function verdict(counts: {
 /** The manifest and its `types` path, read from `.claude-plugin/plugin.json`. */
 async function checkManifest(
   input: ValidateInput,
-): Promise<{ readonly report: FileReport; readonly typesPath: string | undefined }> {
+): Promise<{ readonly report: FileReport } & Contract> {
   const read = await readJson(input.files, JSON_PATH, input.signal);
   const issues: PluginIssue[] =
     'value' in read
@@ -204,35 +202,49 @@ async function checkManifest(
     'value' in read && typeof read.value === 'object' && read.value !== null
       ? Reflect.get(read.value, 'types')
       : undefined;
+  const name: unknown = 'value' in read && isRecord(read.value) ? read.value.name : undefined;
+  const typesPath = resolveTypesPath({
+    types: typeof declared === 'string' ? declared : undefined,
+  });
+  const notes = await typesNotes(input.files, typesPath, input.signal);
   return {
-    report: { file: JSON_PATH, errors: errorsOf(issues), warnings: warningsOf(issues), notes: [] },
-    typesPath: resolveTypesPath({ types: typeof declared === 'string' ? declared : undefined }),
+    report: {
+      file: JSON_PATH,
+      errors: errorsOf(issues),
+      warnings: warningsOf(issues),
+      notes,
+      gatingHooks: [],
+    },
+    typesPath,
+    plugin: typeof name === 'string' ? name : undefined,
   };
 }
 
 /** The files of the hooks module: what `hooks/hooks.json` says, and the module it names. */
 async function checkModules(
   input: ValidateInput,
-  typesPath: string | undefined,
+  contract: Contract,
 ): Promise<{ readonly files: readonly FileReport[]; readonly lines: readonly string[] }> {
   const read = await readJson(input.files, HOOKS_PATH, input.signal);
   const modules = 'value' in read ? readHooksJsonModules(read.value) : { issues: [] };
+  const issues = 'value' in read ? [...neitherKey(read.value), ...modules.issues] : modules.issues;
   const hooksFile: FileReport[] =
-    modules.issues.length === 0
+    issues.length === 0
       ? []
       : [
           {
             file: HOOKS_PATH,
-            errors: errorsOf(modules.issues),
-            warnings: warningsOf(modules.issues),
+            errors: errorsOf(issues),
+            warnings: warningsOf(issues),
             notes: [],
+            gatingHooks: [],
           },
         ];
   const { entry, written } = modules;
   if (entry === undefined || written === undefined || !isHooksModuleName(entry)) {
     return { files: hooksFile, lines: [] };
   }
-  const module = await checkModule(input, entry, written, typesPath);
+  const module = await checkModule(input, entry, written, contract);
   return { files: [...hooksFile, module.report], lines: module.lines };
 }
 
@@ -248,14 +260,15 @@ export async function validateMod(
   options: { readonly strict?: boolean } = {},
 ): Promise<ValidateReport> {
   const strict = options.strict === true;
-  const { report: manifest, typesPath } = await checkManifest(input);
-  const modules = await checkModules(input, typesPath);
+  const { report: manifest, ...contract } = await checkManifest(input);
+  const modules = await checkModules(input, contract);
   const all = [manifest, ...modules.files];
   const done = verdict({ errors: sum(all, 'errors'), warnings: sum(all, 'warnings'), strict });
   const lines = [
     `Validating plugin manifest: ${input.target}/${JSON_PATH}`,
-    ...all.flatMap((file) => file.errors.map((line) => `  ✘ ${line}`)),
-    ...manifest.warnings.map((line) => `  ⚠ ${line}`),
+    ...all.flatMap((file) => file.errors.map((entry) => `  ✘ ${printed(entry)}`)),
+    ...manifest.warnings.map((entry) => `  ⚠ ${printed(entry)}`),
+    ...manifest.notes.map((line) => `  ❯ ${line}`),
     ...modules.lines,
     done.line,
   ];

@@ -1,4 +1,5 @@
 import { readFlagAgents } from '../format/agent-flag.ts';
+import { isTruthyEnv } from '../format/env-flag.ts';
 import { warning, type PluginIssue } from '../format/issues.ts';
 import type { PluginSettings } from '../format/plugin-settings.ts';
 import {
@@ -131,8 +132,6 @@ const NOT_WIRED = warning(
   'the host gave no folder-scan port, so no personal, project, managed or added-directory agent is read',
 );
 
-const ON = '1';
-
 const NO_FLAG: ReturnType<typeof readFlagAgents> = { agents: [], issues: [] };
 
 const readFlag = (flag: unknown): ReturnType<typeof readFlagAgents> =>
@@ -147,8 +146,9 @@ function builtinPolicyOf(
   const { environment } = portsOf(state, options);
   return {
     interactive,
-    disableExplorePlan: environment.get('CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS') === ON,
-    disableAll: environment.get('CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS') === ON,
+    // On/off variables: any on spelling (env-vars.md, "Variables"; spec J3.16).
+    disableExplorePlan: isTruthyEnv(environment.get('CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS')),
+    disableAll: isTruthyEnv(environment.get('CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS')),
   };
 }
 

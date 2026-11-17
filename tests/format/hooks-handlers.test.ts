@@ -149,12 +149,11 @@ describe('Hook handler fields', () => {
       expect(firstHandler(result)).toEqual(handler);
     });
 
-    test('on a handler that is not a command is a stray field, dropped with a warning', () => {
+    test('on a handler that is not a command is a stray field, dropped without a warning (J7.10)', () => {
       const result = read({ type: 'http', url: 'https://example.com', shell: 'bash' });
       expect(errorsOf(result)).toEqual([]);
-      expect(warningsOf(result)).toEqual([
-        expect.objectContaining({ path: 'hooks.PreToolUse[0].hooks[0].shell' }),
-      ]);
+      expect(result.issues).toEqual([]);
+      expect(firstHandler(result)).toEqual({ type: 'http', url: 'https://example.com' });
     });
   });
 
@@ -225,21 +224,23 @@ describe('Hook handler fields', () => {
     });
   }
 
-  test('a field of another handler type is dropped with a warning', () => {
-    const result = read({ type: 'prompt', prompt: 'p', command: 'x', async: true });
+  // Agent Plugins Extended §7.2.3, Judgment J7.10 (oracle 2.1.325 validate reports nothing).
+  test('a field of another handler type is dropped without a warning', () => {
+    const result = read({
+      type: 'prompt',
+      prompt: 'p',
+      command: 'x',
+      async: true,
+      onFailure: 'block',
+    });
     expect(firstHandler(result)).toEqual({ type: 'prompt', prompt: 'p' });
-    expect(warningsOf(result).map((found) => found.path)).toEqual([
-      'hooks.PreToolUse[0].hooks[0].command',
-      'hooks.PreToolUse[0].hooks[0].async',
-    ]);
+    expect(result.issues).toEqual([]);
   });
 
-  test('a field no handler has is dropped with a warning', () => {
+  test('a field no handler has is dropped without a warning', () => {
     const result = read({ ...command, retries: 3 });
     expect(firstHandler(result)).toEqual(command);
-    expect(warningsOf(result)).toEqual([
-      expect.objectContaining({ path: 'hooks.PreToolUse[0].hooks[0].retries' }),
-    ]);
+    expect(result.issues).toEqual([]);
   });
 
   test('"inputs" of an mcp_tool hook are kept as written, including ${path} references', () => {

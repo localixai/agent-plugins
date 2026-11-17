@@ -83,6 +83,17 @@ spec('agents.frontmatter.maxTurns', () => {
   });
 });
 
+describe('judgments (spec/judgments.md): maxTurns written as text', () => {
+  test('a quoted whole number is that number and drives the limit; quoted text that is not one is dropped', () => {
+    // Oracle 2.1.325: a plugin agent with `maxTurns: "2"` stopped after 2 turns, as `maxTurns: 2`.
+    const maxTurns = agentWith('maxTurns: "2"').definition.maxTurns;
+    expect(maxTurns).toBe(2);
+    expect(turnLimitOutcome(maxTurns, 2)).toEqual({ stop: true, partial: true });
+    expect(agentWith('maxTurns: "two"').definition.maxTurns).toBeUndefined();
+    expect(agentWith('maxTurns: "0"').definition.maxTurns).toBeUndefined();
+  });
+});
+
 spec('agents.frontmatter.experimental', () => {
   test('the documented example: repo-auditor sets cacheTtl 1h in the experimental map', () => {
     const { extras } = agentWith('experimental:\n  cacheTtl: 1h');

@@ -69,11 +69,14 @@ describe('checking given values', () => {
 describe('which options are unset', () => {
   const config = { declared, values: { api_url: 'https://x' } };
 
-  test('an option with neither a saved value nor a default is unset', () => {
-    expect(unsetKeys(config)).toEqual(['retries', 'verbose', 'tags']);
+  test('an option without a saved value is unset, even one with a default (spec §3.4.4)', () => {
+    expect(unsetKeys(config)).toEqual(['retries', 'verbose', 'tone', 'tags']);
   });
 
   test('values merged in count as set', () => {
-    expect(unsetKeys(withValues(config, { retries: 1 }))).toEqual(['verbose', 'tags']);
+    expect(unsetKeys(withValues(config, { retries: 1, tone: 'warm' }))).toEqual([
+      'verbose',
+      'tags',
+    ]);
   });
 });

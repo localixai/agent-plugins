@@ -16,11 +16,41 @@ export const THEME_CLEARED = 'the theme is cleared';
 /** The request id of a backdrop at `ui.render`. */
 const BACKDROP_REQUEST = 'backdrop';
 
+/** A raw color: `#hex`, or `rgb()`, `rgba()`, `hsl()`, `hsla()` of numbers; a theme key or a name is refused. */
+const RAW_COLOR =
+  /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(?:rgba?|hsla?)\(\s*-?[\d.]+%?(?:\s*[,/ ]\s*-?[\d.]+%?){2,3}\s*\))$/i;
+
+/**
+ * `glass` (`ThemeBackdropGlass`, claude-code/index.d.ts:13967): `blur` 0 to 64 (absent, 16), `tint`
+ * a raw color (absent, the surface's panel color), `opacity` 0 to 1 (absent, 0.6); or `false`.
+ */
+const glassFields = z.union([
+  z.literal(false),
+  z.object({
+    blur: z.number().min(0).max(64).default(16),
+    tint: z.string().regex(RAW_COLOR).optional(),
+    opacity: z.number().min(0).max(1).default(0.6),
+  }),
+]);
+
+/** The glass of a backdrop that names none: the default glass, `{}` with its defaults (Agent Plugins Extended §10.26). */
+export const DEFAULT_GLASS = { blur: 16, opacity: 0.6 } as const;
+
+type Glass = z.infer<typeof glassFields>;
+
+/** The glass as the site's props carry it: the defaults filled in, a `tint` only when one was given. */
+function glassOf(glass: Glass | undefined): NonNullable<SessionBackdrop['glass']> {
+  if (glass === undefined) return DEFAULT_GLASS;
+  if (glass === false) return false;
+  const { blur, tint, opacity } = glass;
+  return { blur, ...(tint === undefined ? {} : { tint }), opacity };
+}
+
 /** `id` is a name you choose (reference.md, "Limits"); `colorScheme` is `'light'` or `'dark'`. */
 const backdropFields = z.looseObject({
   id: z.string(),
   colorScheme: z.enum(['light', 'dark']).optional(),
-  glass: z.unknown().optional(),
+  glass: glassFields.optional(),
 });
 // Judgment: the docs name `backdrop` as what `set` takes and no other field, so it is required.
 const setArgs = z.looseObject({ backdrop: backdropFields });
@@ -34,7 +64,7 @@ function backdropOf(deps: Deps, event: unknown): SessionBackdrop {
     id: backdrop.id,
     plugin: deps.plugin,
     ...(backdrop.colorScheme === undefined ? {} : { colorScheme: backdrop.colorScheme }),
-    ...(backdrop.glass === undefined ? {} : { glass: backdrop.glass }),
+    glass: glassOf(backdrop.glass),
   };
 }
 

@@ -60,6 +60,7 @@ spec("lsp.troubleshooting.Language server doesn't start", () => {
     );
     const plan = planLspStartup(resolved, { executableAvailable: false, cwd: '/work' });
     expect(plan.process).toBeUndefined();
-    expect(plan.issues[0]?.message).toStartWith('Executable not found in $PATH');
+    // code-intelligence.md, troubleshooting.md: the binary is quoted.
+    expect(plan.issues[0]?.message).toBe('Executable not found in $PATH: "missing-server"');
   });
 });

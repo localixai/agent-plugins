@@ -94,20 +94,22 @@ spec('lsp.field.extensionToLanguage', () => {
   test('is required', () => {
     expect(refusal({ command: 'gopls' })).toContain('extensionToLanguage');
   });
-  test('needs at least one entry', () => {
-    expect(refusal({ command: 'gopls', extensionToLanguage: {} })).toContain('extensionToLanguage');
+  test("needs at least one entry, in the validator's words (oracle 2.1.325, spec §9.1.3)", () => {
+    expect(refusal({ command: 'gopls', extensionToLanguage: {} })).toContain(
+      'extensionToLanguage: extensionToLanguage must have at least one mapping',
+    );
   });
   test('every key starts with a dot', () => {
     const message = refusal({ command: 'gopls', extensionToLanguage: { '.go': 'go', go: 'go' } });
-    expect(message).toContain('extensionToLanguage');
-    expect(message).toContain('no dot in "go"');
+    expect(message).toContain('extensionToLanguage.go: Invalid key in record');
   });
   test('every offending key is named, and a dotted key alone is accepted', () => {
     const message = refusal({
       command: 'gopls',
       extensionToLanguage: { '.go': 'go', go: 'go', mod: 'gomod' },
     });
-    expect(message).toContain('no dot in "go", "mod"');
+    expect(message).toContain('extensionToLanguage.go: Invalid key in record');
+    expect(message).toContain('extensionToLanguage.mod: Invalid key in record');
     expect(
       accepted({ ...gopls, extensionToLanguage: { '.go': 'go' } })?.extensionToLanguage,
     ).toEqual({ '.go': 'go' });

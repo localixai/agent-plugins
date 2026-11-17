@@ -5,7 +5,7 @@
  *
  * Type-only imports: the SDK's runtime starts the Claude Code program and is never loaded.
  */
-import type { Settings, tool } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKSystemMessage, Settings, tool } from '@anthropic-ai/claude-agent-sdk';
 
 export type {
   AgentDefinition,
@@ -81,6 +81,14 @@ export type SdkMarketplaceSource = NonNullable<Settings['strictKnownMarketplaces
  * (`{ marketplace, plugin }`).
  */
 export type ChannelPluginRef = NonNullable<Settings['allowedChannelPlugins']>[number];
+
+/**
+ * The plugin fields of the `system/init` message (`plugins`, `plugin_errors`) and the
+ * `system/plugin_install` progress event, as the SDK types them (headless.md, "Fail CI when a
+ * plugin or MCP server doesn't load", "Track plugin installs").
+ */
+export type InitPluginFields = Pick<SDKSystemMessage, 'plugins' | 'plugin_errors'>;
+export type { SDKPluginInstallMessage } from '@anthropic-ai/claude-agent-sdk';
 
 /** The provenance an Agent SDK application stamps on a user message (`{ kind: 'human' }` for keyboard input). */
 export type { SDKMessageOrigin } from '@anthropic-ai/claude-agent-sdk';

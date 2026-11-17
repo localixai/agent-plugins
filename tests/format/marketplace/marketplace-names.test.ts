@@ -166,7 +166,7 @@ spec(
         ['builtin', 'is reserved for built-in plugins'],
         ['skills-dir', 'is reserved for plugins auto-loaded from .claude/skills/'],
         ['synced', 'is reserved for plugins synced from your claude.ai account'],
-        ['claude-plugin-test', 'is reserved for plugin tests'],
+        ['claude-plugin-test', 'is reserved for plugins loaded by claude plugin test'],
       ];
       for (const [name, reason] of reasons) {
         expect(validationNameIssues(name)).toEqual([
@@ -175,7 +175,7 @@ spec(
       }
     });
 
-    test('npm, pip, uv, cargo, github and gh are reserved in any casing', () => {
+    test('npm, pip, uv, cargo, github and gh are reserved in any casing: validate reports the lower case, adding refuses every casing (J15.3)', () => {
       expect([...ANY_CASING_NAMES].toSorted()).toEqual([
         'cargo',
         'gh',
@@ -185,8 +185,12 @@ spec(
         'uv',
       ]);
       for (const name of ANY_CASING_NAMES) {
-        for (const spelled of [name, name.toUpperCase(), name[0]?.toUpperCase() + name.slice(1)]) {
-          expect(messages(validationNameIssues(spelled))).toEqual([
+        expect(messages(validationNameIssues(name))).toEqual([
+          `Marketplace name "${name}" is reserved`,
+        ]);
+        for (const spelled of [name.toUpperCase(), name[0]?.toUpperCase() + name.slice(1)]) {
+          expect(validationNameIssues(spelled)).toEqual([]);
+          expect(messages(loadNameIssues(spelled))).toEqual([
             `Marketplace name "${spelled}" is reserved`,
           ]);
         }

@@ -1,12 +1,15 @@
+import type { McpTransport } from './mcp-config.ts';
 import type { EnvLookup } from './mcp-env.ts';
 import { mcpTimeouts, positiveWhole, switchOf } from './mcp-knobs.ts';
+import { NEW_REVISION } from './mcp-elicitation.ts';
+import { wholeEnv } from './env-number.ts';
 
 /**
  * The environment variables that decide how MCP servers connect at startup and how long a call runs
  * before it moves to the background (env-vars.md, "Variables"; mcp.md, "Automatic backgrounding of long
  * tool calls", "Server status detail", "MCP client runtimes"; agent-sdk/mcp.md, "Connection timing").
  * Pure over a lookup of the environment: connecting, the cache on disk and the clock are the host's.
- * What a value that is not plain digits does is a judgment (spec/judgments.md): it is ignored.
+ * A value that is not a number (digits, `2e3`, `64_000`: spec §3.6.1 item 2, J3.17) is ignored.
  */
 
 /** "Maximum number of local MCP servers (stdio) to connect in parallel during startup (default: 3)". */
@@ -36,11 +39,8 @@ export interface McpBackgrounding {
   readonly waitsForTasks: boolean;
 }
 
-/** A value of plain digits, `0` included; anything else is `undefined`. */
-const wholeOrZero = (text: string | undefined): number | undefined =>
-  text !== undefined && /^\d+$/.test(text) && Number.isSafeInteger(Number(text))
-    ? Number(text)
-    : undefined;
+/** A whole number, `0` included, of a numeric variable (spec §3.6.1 item 2); anything else is `undefined`. */
+const wholeOrZero = wholeEnv;
 
 /**
  * `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS`: "Set to `0` to turn automatic backgrounding off and, in an
@@ -61,7 +61,17 @@ export interface McpStartupServer {
   readonly alwaysLoad: boolean;
   /** Its tool list comes from a valid discovery-cache entry: it connects on its first tool call. */
   readonly cached: boolean;
+  /** Its transport: only an `http` or `sse` server is served from the discovery cache (spec §8.8 item 1). */
+  readonly transport: McpTransport;
 }
+
+/** Which transports a discovery-cache entry serves: "a remote (`http` or `sse`) server". */
+const CACHEABLE: { readonly [T in McpTransport]: boolean } = {
+  stdio: false,
+  sse: true,
+  http: true,
+  ws: false,
+};
 
 export interface McpStartupRun {
   /** `claude -p` without `--input-format stream-json`. */
@@ -80,7 +90,7 @@ export function mcpStartupWaitsFor(
   server: McpStartupServer,
   run: McpStartupRun,
 ): boolean {
-  if (server.cached) return false;
+  if (server.cached && CACHEABLE[server.transport]) return false;
   const blocking = switchOf(lookup('MCP_CONNECTION_NONBLOCKING')) === false;
   return blocking || server.alwaysLoad || run.printMode;
 }
@@ -237,3 +247,12 @@ export function mcpClientSettings(lookup: EnvLookup): McpClientSettings {
     warnings: [...runtime.warnings, ...(v2 ? negotiation.warnings : [])],
   };
 }
+
+/**
+ * Whether a channel server may register as a channel once connected (mcp.md, "Push messages with
+ * channels"; spec §9.3 item 5): on the v2 runtime a server that negotiated revision 2026-07-28 does
+ * not, since that revision cannot carry channel messages; its tools still work. On the earlier
+ * handshake, or on the v1 runtime, it registers as usual.
+ */
+export const registersAsChannel = (runtime: McpClientRuntime, protocolRevision: string): boolean =>
+  !(IS_V2[runtime] && protocolRevision >= NEW_REVISION);

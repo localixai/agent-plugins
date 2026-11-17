@@ -5,7 +5,7 @@
  * (spec/judgments.md) and is tested outside spec().
  */
 import { describe, expect, test } from 'bun:test';
-import { readOutputStyle } from '../../src/format/output-style.ts';
+import { lastPerName, readOutputStyle } from '../../src/format/output-style.ts';
 import { spec } from '../support/spec.ts';
 
 const DIAGRAMS = `---
@@ -95,7 +95,7 @@ spec('outputStyles.frontmatter.description', () => {
     expect(readOutputStyle('a.md', '---\nname: a\n---\nBody').style.description).toBeUndefined();
   });
 
-  test('the body is not borrowed as a description', () => {
+  test('the field is not filled from the body (the list shows the body line instead, J6.3)', () => {
     expect(
       readOutputStyle('a.md', '---\nname: a\n---\nFirst line').style.description,
     ).toBeUndefined();
@@ -157,15 +157,20 @@ describe('judgments (spec/judgments.md)', () => {
     expect(issues[0]?.message).toStartWith('keep-coding-instructions ');
   });
 
-  test('a name or description that is not text falls back; the instructions are trimmed', () => {
+  test('a list or map name is its JavaScript string; a map description falls back; the instructions are trimmed (J6.2)', () => {
     const { style, issues } = readOutputStyle(
       's.md',
       '---\nname: [a]\ndescription: {}\n---\n\n\n  Body \n\n',
     );
-    expect(style.name).toBe('s');
+    expect(style.name).toBe('a');
     expect(style.description).toBeUndefined();
     expect(style.instructions).toBe('Body');
-    expect(issues).toHaveLength(2);
+    expect(issues).toHaveLength(1);
+    const listed = (name: string): string =>
+      readOutputStyle('s.md', `---\nname: ${name}\n---\nB`, { plugin: 'p' }).style.id;
+    expect(listed('[a, b]')).toBe('p:a,b');
+    expect(listed('{a: 1}')).toBe('p:[object Object]');
+    expect(listed('[]')).toBe('p:s');
   });
 
   test('a number is a name; a blank name falls back to the file name', () => {
@@ -194,5 +199,23 @@ describe('judgments (spec/judgments.md)', () => {
       expect(style.keepCodingInstructions).toBe(false);
       expect(issues).toEqual([]);
     }
+  });
+});
+
+describe('one style per name within a plugin (J6.7, oracle 2.1.325)', () => {
+  const read = (path: string, text: string) => readOutputStyle(path, text, { plugin: 'p' }).style;
+
+  test('of two files with one name, the last by UTF-16 order of the relative path is kept, in place', () => {
+    const second = read('output-styles/terse2.md', '---\nname: Terse\n---\nTwo.');
+    const first = read('output-styles/terse.md', '---\nname: Terse\n---\nOne.');
+    const other = read('output-styles/loud.md', 'Loud.');
+    expect(lastPerName([second, other, first])).toEqual([second, other]);
+    expect(lastPerName([first, other, second])).toEqual([other, second]);
+  });
+
+  test('UTF-16 code units decide, not letter case or locale', () => {
+    const upper = read('output-styles/Z.md', '---\nname: s\n---\nZ');
+    const lower = read('output-styles/a.md', '---\nname: s\n---\na');
+    expect(lastPerName([lower, upper])).toEqual([lower]);
   });
 });

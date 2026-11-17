@@ -14,8 +14,9 @@ export interface StateReads {
  * "A `ui.render` hook that reads a value subscribes to it, so Claude Code redraws that site each
  * time you write the value, and you don't call `$.ui.invalidate`" (interface.md, "Keep a value in
  * `$.state`"). A write of a value any site read calls `invalidate`. Judgment: the reads of two sites
- * drawn at once are not told apart (each subscribes to both), which only redraws more. A write of
- * a value the drawing in progress has read asks for no redraw.
+ * drawn at once are not told apart (each subscribes to both), which only redraws more. While a site
+ * draws, `$.state.set` is refused (`StateStore.drawing`, J10.112); a write that still reaches the
+ * store then (a host's own) of a value the drawing has read asks for no redraw.
  */
 export function trackStateReads(state: StateStore, invalidate: () => void): StateReads {
   const bySite = new Map<string, ReadonlySet<string>>();
@@ -36,7 +37,7 @@ export function trackStateReads(state: StateStore, invalidate: () => void): Stat
       reading = new Set<string>();
       const mine = reading;
       try {
-        return await run();
+        return await state.drawing(run);
       } finally {
         bySite.set(site, mine);
         reading = outer;
