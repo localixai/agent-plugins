@@ -1,9 +1,11 @@
 {
   "name": "@localix-ai/agent-plugins",
   "version": "0.1.1",
-  "description": "Add Claude Code plugin support to any agent: load plugins and run their skills, commands, agents and hooks through ports your host implements.",
+  "description": "Claude Code plugin support for any agent, and the implementation of Agent Plugins Extended: load, validate and run plugins and core Agent Plugins packages through ports your host implements.",
   "keywords": [
     "agent",
+    "agent-plugins",
+    "agent-plugins-extended",
     "agent-sdk",
     "agents",
     "ai",
@@ -20,6 +22,7 @@
     "plugins",
     "skills",
     "slash-commands",
+    "specification",
     "subagents",
     "typescript"
   ],
@@ -36,6 +39,7 @@
   "files": [
     "dist",
     "src",
+    "CHANGELOG.md",
     "!**/*.test.*"
   ],
   "type": "module",
