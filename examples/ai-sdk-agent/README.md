@@ -19,7 +19,8 @@ the plugin work, the agent only supplies ports and a tool loop.
 
 ```sh
 bun install            # at the repository root, then here
-bun run corpus:fetch   # at the repository root: the official plugins the scenarios use
+# the scenarios read the official plugins from the corpus Agent Plugins Extended fetches
+# (`bun run corpus:fetch` in its extend/tools/; CORPUS_DIR points elsewhere)
 bun install            # here
 bun run smoke          # one turn on a scripted model: no key, no network
 bun run scenarios      # every scenario on Claude Haiku 5.5

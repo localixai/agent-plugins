@@ -4,7 +4,7 @@ import type { UserConfigOption } from './manifest-schema.ts';
  * What an MCPB bundle's own `manifest.json` says (plugins/components.md, "Include a packaged MCPB
  * server": "The server takes its name from the `name` in the bundle's manifest" and "A bundle's own
  * manifest can declare settings the server needs from the user in a `user_config` block"). The format
- * itself lives at github.com/modelcontextprotocol/mcpb, not in the pulled docs, so every rule here is
+ * itself lives at github.com/modelcontextprotocol/mcpb, not in the Claude Code docs, so every rule here is
  * a judgment (spec/judgments.md). Pure data: extracting or downloading the archive is the host's.
  */
 

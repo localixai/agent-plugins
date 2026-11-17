@@ -3,39 +3,44 @@
 The operating guide for people and coding agents in `@localix-ai/agent-plugins`: a library that
 adds Claude Code plugin support to any agent. Read this file first; it is short on purpose.
 
-## The one rule: evidence, not memory
+## The one rule: the spec, not memory
 
-The kit implements what Anthropic publishes, and nothing it remembers or guesses.
+The kit implements **Agent Plugins Extended** (https://github.com/localixai/agent-plugins-extended)
+at the revision `spec/SOURCE.json` pins, and nothing it remembers or guesses. The spec mines Claude
+Code (its docs, its mods declarations, its validator and loader run as a black box, the corpus of
+real plugins); this repository never does, and syncs what the spec publishes.
 
-- **E1** Behaviour comes from the official docs (`.cache/claude-docs/`, `bun run docs:pull`).
-  Before you change anything in an area, pull the docs and read the section you implement. Cite
-  it (page and section) in the test file's header.
-- **E2** Shapes come from the official types (`@anthropic-ai/claude-agent-sdk`), re-exported in
-  `src/protocol/official.ts`. Never declare a type for something the SDK already types.
-- **E2a** The mods surface (events and their fields, `$` and its members, `next`, the elements of
-  each surface and their props, the state helpers, `claude-code/testing`, the built-in tools'
-  inputs) comes from the TypeScript declarations Claude Code writes beside a mod it loads
-  (`.cache/claude-types/`, `bun run types:pull`), of the same release as the docs and the SDK
-  (SP8): evidence after the docs and before the oracle. The docs call them the complete reference
-  and say to trust them when the two disagree (plugins/mods/reference.md, the note under the title;
-  create.md, "Get type definitions for your version"), so on the mods surface a declaration, or its
-  comment, wins over a page that says otherwise. Tests read the committed snapshot `spec/mods-declarations.json` (`bun
-  run types:extract`), never `.cache`; cite `claude-code/index.d.ts:<line>` of the release. A
-  behaviour only the declarations give is a `spec/judgments.md` row `declarations <release>`,
-  tested outside `spec(...)`: compatibility measures the docs.
-- **E3** Every behaviour is proven by a test under `spec(id)` for a requirement in
-  `spec/requirements.json`. Never invent an id; never edit the file by hand (`bun run
-  spec:extract` writes it).
-- **E4** Where the docs are silent, make a judgment, say so in a comment and add a row to
-  `spec/judgments.md`. A judgment is tested outside `spec(...)` and never counts as compatibility.
+- **E1** The contract is the spec at the pinned revision. Requirement ids, judgments (`J<n>.<m>`)
+  and the snapshots the tests read (`spec/requirements.json`, `spec/mods-declarations.json`,
+  `spec/docs-tables.json`, the scope files) come from it through `bun run spec:sync`, never by
+  hand; `check:spec` (SP4) fails on an edited or stale copy. Cite the section a test proves in the
+  test file's header (the spec's chapter, or the docs page and section the requirement names).
+- **E1a** This repository never mines Claude Code. A change of behaviour the spec does not state
+  goes to the spec first (a requirement, a judgment or a deviation in agent-plugins-extended);
+  sync the revision that states it, then implement here.
+- **E2** Shapes come from the official types (`@anthropic-ai/claude-agent-sdk`) of the release the
+  spec targets, re-exported in `src/protocol/official.ts`. Never declare a type for something the
+  SDK already types.
+- **E2a** The mods surface (events and their fields, `$` and its members, `next`, the elements and
+  their props, the state helpers, `claude-code/testing`, the built-in tools' inputs) is the spec's
+  `spec/mods-declarations.json`, read by the tests and never by hand; cite
+  `claude-code/index.d.ts:<line>` of the release. A behaviour only the declarations give is tested
+  outside `spec(...)`: compatibility measures the requirements.
+- **E3** Every behaviour the spec requires is proven by a test under `spec(id)` for a requirement in
+  `spec/requirements.json`. Never invent an id.
+- **E4** `spec/judgments.md` records only the decisions the spec leaves to an implementation (how
+  the kit shapes an API, orders work, words an issue the spec does not word), each linked to the
+  spec's J-id where one exists. A judgment is tested outside `spec(...)` and never counts as
+  compatibility.
 - **E5** Report compatibility only from `docs/COMPATIBILITY.md` (`bun run compat`): the share
   proven overall and per category. Never state a percentage or "supported" from your own reading.
-- **E5a** Message wording and validator-only checks the docs do not describe come from the oracle,
-  `claude plugin validate` of the same release, run as a black box on inputs (never read or
-  unpacked). Record each such behaviour in `spec/judgments.md` as `oracle <release>` with a minimal
-  input of your own, and test it outside `spec(...)`. Where the docs or the declarations (E2a) speak, they win.
-- **E6** Another host's behaviour (Localix, a blog, an issue) is a lead to check against the docs,
-  never evidence. Port code from Localix only after its behaviour is checked against the docs.
+- **E5a** What Claude Code does where its docs are silent or disagree (a validator's wording, a
+  loading outcome) is what the spec's judgments and deviations state, with the oracle runs they
+  rest on; the kit's tests of it run outside `spec(...)`. The differential checks here (`corpus*`,
+  `oracle:*`, docs/TESTING.md) measure the kit, never the contract: a difference they show that the
+  spec does not settle goes to the spec (E1a).
+- **E6** Another host's behaviour (Localix, a blog, an issue) is a lead for the spec, never
+  evidence. Port code from Localix only after the spec states the behaviour.
 
 ## Docs
 
@@ -44,38 +49,37 @@ The kit implements what Anthropic publishes, and nothing it remembers or guesses
 | `docs/API.md`             | anything public: the API, its principles, what is done and what is planned; `docs/api/` has one row per export |
 | `docs/GETTING-STARTED.md` | a host's first steps: install, the type peers, type-checking, wiring the ports                                 |
 | `docs/ARCHITECTURE.md`    | where code goes: layers, invariants, folders                                                                   |
-| `docs/SPEC.md`            | requirements, proof, official types, updating to a new Claude Code release                                     |
+| `docs/SPEC.md`            | the spec this kit follows, syncing it, proof, official types, moving to a new spec revision                    |
 | `docs/TESTING.md`         | tests: test first, layout, determinism, what a spec test asserts                                               |
 | `docs/SECURITY.md`        | where the kit is stricter than Claude Code, and the risks it leaves to the host                                |
 | `docs/COMPATIBILITY.md`   | generated by `bun run compat`; never edit                                                                      |
-| `spec/judgments.md`       | where the kit decides what the docs leave open                                                                 |
-| `spec/scope-audit.md`     | owner-approved plugin-host boundary and the reasons for native-runtime exclusions                              |
+| `spec/judgments.md`       | where the kit decides what the spec leaves to an implementation (E4)                                           |
+| `spec/SOURCE.json`        | the spec revision `spec/` is synced from, and each file's hash; written by `bun run spec:sync`                 |
 | `CHANGELOG.md`            | every `feat`, `fix`, `perf` commit (G2)                                                                        |
 
 Update the doc that owns a behaviour in the same commit as the code.
 
 ## Commands
 
-| Task                               | Command                                                           |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| Install                            | `bun install` (also installs the git hooks)                       |
-| Pull the official docs             | `bun run docs:pull` (into `.cache/claude-docs/`, never committed) |
-| Pull the mods declarations         | `bun run types:pull`, then `bun run types:extract` (E2a)          |
-| Extract the requirements           | `bun run spec:extract`                                            |
-| Tests                              | `bun test`, or one file: `bun test tests/format/…`                |
-| Tests and the compatibility report | `bun run compat`                                                  |
-| Everything (pre-push and CI)       | `bun run check` (never `--no-verify`)                             |
-| Format / lint                      | `bun run format`, `bun run lint` (`lint:fix` to apply)            |
-| Types                              | `bun run typecheck`                                               |
-| Build                              | `bun run build`                                                   |
+| Task                               | Command                                                |
+| ---------------------------------- | ------------------------------------------------------ |
+| Install                            | `bun install` (also installs the git hooks)            |
+| Sync the spec                      | `bun run spec:sync [ref]` (default: the pinned commit) |
+| Tests                              | `bun test`, or one file: `bun test tests/format/…`     |
+| Tests and the compatibility report | `bun run compat`                                       |
+| Everything (pre-push and CI)       | `bun run check` (never `--no-verify`)                  |
+| Format / lint                      | `bun run format`, `bun run lint` (`lint:fix` to apply) |
+| Types                              | `bun run typecheck`                                    |
+| Build                              | `bun run build`                                        |
 
 ## How to add a behaviour
 
-1. `bun run docs:pull`; if the docs moved, `bun run spec:extract` (docs/SPEC.md, "Updating").
-2. Find the requirement ids in `spec/requirements.json` for what you implement.
-3. Write the failing test in `tests/<module>/` under `spec(ids)`, citing the section.
-4. Implement in the right layer (docs/ARCHITECTURE.md), using the official types.
-5. `bun run compat`, then `bun run check`. Commit the code, tests, docs and report together.
+1. Find what the spec states for it: the chapter, and the requirement ids in
+   `spec/requirements.json`. When the spec does not state it, take it to the spec first (E1a) and
+   `bun run spec:sync <ref>` once the spec does.
+2. Write the failing test in `tests/<module>/` under `spec(ids)`, citing the section.
+3. Implement in the right layer (docs/ARCHITECTURE.md), using the official types.
+4. `bun run compat`, then `bun run check`. Commit the code, tests, docs and report together.
 
 ## Rules
 
@@ -93,7 +97,7 @@ Each rule is checked by a gate; a gate never gets a baseline or an exception wit
 | Q1     | Complexity ≤ 10, cognitive ≤ 15, depth ≤ 3, ≤ 4 params, ≤ 25 statements, ≤ 80 lines per function                                                            | `lint` (quality)    |
 | T1     | No focused or switched-off test                                                                                                                             | `check:tests`       |
 | T2     | Tests only in `tests/<module>/`, support in `tests/support/`                                                                                                | `check:test-layout` |
-| SP1–7  | Requirements valid; test ids exist; SDK and docs are the same release; pulled docs extracted; scope; every docs page audited or excluded with a reason      | `check:spec`        |
+| SP1–5  | Requirements valid; test ids exist; the SDK is the spec's release; `spec/` is the pinned spec, byte for byte; the snapshots parse                           | `check:spec`        |
 | C1     | Every test passes and `docs/COMPATIBILITY.md` is current                                                                                                    | `compat --check`    |
 | DOC1–3 | Paths named in docs exist; every doc has a row above; every export of every entry has a row in its `docs/api/` table, and every name the docs import exists | `check:docs`        |
 | D1     | No unused file, export or dependency                                                                                                                        | `check:deadcode`    |

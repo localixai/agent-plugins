@@ -29,16 +29,14 @@ setting does, as Claude Code does.
 
 ## Agent Plugins Extended
 
-The library is becoming the implementation of **Agent Plugins Extended**, a specification that
-grows the vendor-neutral Agent Plugins format to the whole Claude Code plugin contract. The
-specification defines the contract; this library implements it. It is a working draft
-(`1.1.0+claude-code.2.1.321`) and not published yet.
+agent-plugins follows Agent Plugins Extended (https://github.com/localixai/agent-plugins-extended),
+which mines Claude Code; this library syncs from it. The specification grows the vendor-neutral
+Agent Plugins format to the whole Claude Code plugin contract and defines it; this library
+implements it. It is a working draft (`1.1.0+claude-code.2.1.321`).
 
-Where things stand today:
-
-- **The contract the library is measured against is still its own**, `spec/requirements.json`,
-  extracted from Claude Code's documentation. The specification's requirement list is a snapshot
-  of the same file: the same 2,730 ids for Claude Code 2.1.321.
+- **The contract is the specification at a pinned commit.** `spec/` holds its requirement list
+  (2,730 ids for Claude Code 2.1.321), the mods declarations and the scope, synced by `bun run
+  spec:sync` and recorded with their hashes in `spec/SOURCE.json`; the tests prove those ids.
 - **The library reads both forms of a plugin.** The Claude Code form (`.claude-plugin/plugin.json`
   and its components, or a folder with components in their default places) as before, and, through
   `@localix-ai/agent-plugins/core`, the core Agent Plugins form: a root `plugin.json` with the core
@@ -50,11 +48,8 @@ Where things stand today:
   manifest check (`checkDualPackage`), and §18.4's conversion both ways (`convertPluginPackage`,
   `coreToClaudeCode`, `claudeCodeToCore`): the files to write beside the source as data, a note
   for everything not carried over, and hooks through a generated Node.js adapter.
-- **The move onto the specification is planned, not done.** After it, the tests prove the
-  requirements and judgments of a pinned version of the specification, and the extraction, the
-  corpus and the oracle live with the specification instead of here. Until then no claim of
-  conformance to the specification is made. [docs/SPEC.md](docs/SPEC.md), "The
-  specification", maps the two sets of conventions.
+- **What the specification does not state is not implemented here on a guess.** It goes to the
+  specification first; [docs/SPEC.md](docs/SPEC.md) has the process and how the conventions map.
 
 ## Install
 

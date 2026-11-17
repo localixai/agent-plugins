@@ -1,6 +1,6 @@
 /**
  * What a Claude Code 2.1.322 SESSION registers from a plugin, against the kit's session (E5a;
- * docs/TESTING.md, "Runtime oracle"; docs/SPEC.md, "Where Claude Code differs from its docs"). Each
+ * docs/TESTING.md, "Runtime oracle"; docs/SPEC.md, "Judgments and deviations"). Each
  * folder of tests/fixtures/runtime is a plugin of its own; its `expected.json` is what the oracle
  * (`claude -p` and the `init` event, `bun run oracle:runtime`) registered, ids only, so this test
  * needs no `claude`. A field the kit gives differently on purpose is in `judgments.json` with the

@@ -1,6 +1,10 @@
 import type { Proof } from './junit.ts';
-import type { Requirement, RequirementsFile } from '../spec/requirements.ts';
-import { CATEGORIES, type Category } from '../spec/sources.ts';
+import {
+  CATEGORIES,
+  type Category,
+  type Requirement,
+  type RequirementsFile,
+} from '../spec/requirements.ts';
 
 /** A requirement's standing in a test run. */
 type Standing = 'proven' | 'failing' | 'unproven';

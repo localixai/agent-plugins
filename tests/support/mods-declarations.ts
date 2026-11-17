@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import declared from '../../spec/mods-declarations.json' with { type: 'json' };
-import { declarationsSchema, type Declarations } from '../../scripts/spec/declarations/snapshot.ts';
+import { declarationsSchema, type Declarations } from '../../scripts/spec/declarations.ts';
 
 /**
- * The mods declarations of the pinned release (AGENTS.md, E2a), as the committed snapshot
- * `spec/mods-declarations.json` holds them (`bun run types:extract`); `check:spec` (SP8) compares it
- * with the pulled declarations, so a test never reads `.cache/claude-types`.
+ * The mods declarations of the pinned release (AGENTS.md, E2), as the spec's
+ * `mods-declarations.json` holds them, synced into `spec/` (`bun run spec:sync`).
  */
 export const DECLARED: Declarations = declarationsSchema.parse(declared);
 

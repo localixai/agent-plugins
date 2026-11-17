@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/localixai/agent-plugins-extended",
+  "commit": "d215c3a6dfb1c5f4e30b5fa1c450d7a4f96a94a2",
+  "release": "2.1.321",
+  "files": {
+    "requirements.json": "951539aa59389049810021273bc841bf0ceb7377d8ba43f69bfbdcda40832811",
+    "mods-declarations.json": "52f5e04906d1239e8bb2414a539ae96766274fcfbdbcbf881eccdec77aced37c",
+    "docs-tables.json": "6eeb61540d0e6552a7bdc6103149a40fa6be75f5e8f4747c95e5023939b122cf",
+    "out-of-scope.json": "848fc1f3b1d3c6e18515aeeb239f4cbe67bd3ebd87bf9419d14bc98e609a343b",
+    "out-of-scope-pages.json": "c9a04ab33f7600fd861b89e40df206baff23a90738b1f6b409a29b6f7fc50dcf",
+    "scope-audit.md": "8a7f4af6847a1e71b8cbd83007a63e639b0f06ded841816f1a6f4fded12c2c9a"
+  }
+}

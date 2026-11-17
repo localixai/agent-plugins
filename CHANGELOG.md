@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- **Breaking (repository):** the library follows Agent Plugins Extended
+  (https://github.com/localixai/agent-plugins-extended), which mines Claude Code, and syncs from it.
+  `spec/` is the spec's `extend/conformance/` files at the commit `spec/SOURCE.json` pins
+  (`d215c3a`, Claude Code 2.1.321), with each file's SHA-256. New `bun run spec:sync [ref]` copies
+  them from the checkout beside this one or from GitHub (`git`, then `gh`); `check:spec` fails on a
+  hand edit, a stale copy, or an Agent SDK of another release. The mining scripts are gone from
+  here: `docs:pull`, `types:pull`, `types:extract`, `spec:extract`, `corpus:fetch` and the corpus
+  oracle runs. `bun run corpus` and `corpus:load` read the verdicts the spec recorded, from
+  `CORPUS_DIR` or the spec checkout's `extend/.cache/corpus`. The package's API is unchanged.
 - The converter's hook adapter derives profiles as `hooks/core` does (J18.16, J18.21): a text `Read`
   gets no profile (no more `cat -n` numbering), a completed command with `returnCodeInterpretation`
   gets none, and an MCP name with `__` more than once after `mcp__` gets none. It fires core

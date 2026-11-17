@@ -2,7 +2,7 @@
  * Declarations 2.1.321 (AGENTS.md, E2a; plugins/mods/reference.md, the note under the title, and
  * create.md, "Get type definitions for your version": the declarations are the complete reference
  * and win when a page disagrees). The kit's mods surface against `spec/mods-declarations.json`
- * (`bun run types:extract`, compared with the pulled declarations by `check:spec`, SP8): the events
+ * (synced from the spec by `bun run spec:sync`, held to its hash by `check:spec`, SP4): the events
  * and their input and result fields (claude-code/index.d.ts:4053 on), the members of `$` and how
  * each answers (`CoreEngineInterface`, :2369), the fields of `next` and of a `.catch` handler's
  * (`Next`, :6977), the elements of each surface and their props (`Elements`, :4053), the values

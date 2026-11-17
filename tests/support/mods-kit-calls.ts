@@ -62,8 +62,8 @@ type Fields = (typeof DECLARED.events)[string]['input'];
 
 /**
  * The fields an event's input declares for what the kit fired. `tool.call` is a union of one shape
- * per tool, of which the snapshot keeps the fields all share (scripts/spec/declarations/extract.ts,
- * `MANY_VARIANTS`); "the tool's arguments beside them" (claude-code/index.d.ts:14180) are the named
+ * per tool, of which the snapshot keeps the fields all share (how the spec reads
+ * the declarations); "the tool's arguments beside them" (claude-code/index.d.ts:14180) are the named
  * tool's declared input, any shape.
  */
 function inputFieldsOf(event: string, fields: Fields, seen: unknown): Fields {

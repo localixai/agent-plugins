@@ -19,7 +19,7 @@ import {
   type RuntimeInit,
 } from '../oracle/runtime.ts';
 import { readRequirements } from '../spec/requirements.ts';
-import { CORPUS_DIR, readCorpusTargets } from './location.ts';
+import { readCorpusTargets, REPORTS_DIR } from './location.ts';
 import { lookupName } from './plugin-name.ts';
 import { pool } from './pool.ts';
 import { runsAtSessionStart } from './session-start.ts';
@@ -49,7 +49,7 @@ async function oracleNames(init: RuntimeInit, dir: string): Promise<string[]> {
  * machine's managed settings load. A bare `code-review` is Claude Code's own, not the plugin's.
  */
 async function baselineNames(): Promise<ReadonlySet<string>> {
-  const empty = join(CORPUS_DIR, 'baseline-empty');
+  const empty = join(REPORTS_DIR, 'baseline-empty');
   await mkdir(empty, { recursive: true });
   const init = await runtimeOracle(empty);
   if (init === undefined) throw new Error('the oracle printed no init for an empty --plugin-dir');
@@ -109,7 +109,7 @@ for (const field of FIELDS) {
   const n = compared.filter((row) => row.differs.some((v) => v.field === field)).length;
   console.log(`  ${field} differs: ${n}`);
 }
-const report = join(CORPUS_DIR, 'runtime-report.json');
+const report = join(REPORTS_DIR, 'runtime-report.json');
 await writeFile(
   report,
   `${JSON.stringify(

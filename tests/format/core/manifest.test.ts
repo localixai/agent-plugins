@@ -3,7 +3,7 @@
  * object, unknown top-level field reported and ignored, every other violation fatal, `$schema`
  * selects the rules), §5.3 (required `$schema` and `name`), §5.4 (metadata typed by JSON type only;
  * `author` closed), §5.5 (name constraints), §5.6 and §8.1 (extensions). Claude Code has no core
- * packages, so these are judgment-style tests outside `spec(...)` (docs/SPEC.md, "The specification").
+ * packages, so these are judgment-style tests outside `spec(...)` (docs/SPEC.md, "How the conventions map").
  */
 import { describe, expect, test } from 'bun:test';
 import { coreNameProblems, readCoreManifest } from '../../../src/entry/core.ts';

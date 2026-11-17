@@ -1,6 +1,6 @@
 /**
  * `bun scenarios/run.ts [name…]`: runs the agent on Claude Haiku 5.5 against real plugins from the
- * official marketplace (fetched by `bun run corpus:fetch` at the repository root) and the kit-demo
+ * official marketplace (the corpus Agent Plugins Extended fetches, `CORPUS_DIR`) and the kit-demo
  * fixture, each in a fresh temporary workspace, and checks what happened: hooks fired, calls
  * blocked, skills expanded, files and commits made, subagents and MCP tools used.
  */
@@ -12,7 +12,11 @@ import { anthropicKey } from '../src/key.ts';
 import type { Trace } from '../src/trace.ts';
 
 const ROOT = resolve(import.meta.dir, '..', '..', '..');
-const OFFICIAL = join(ROOT, '.cache', 'corpus', 'claude-plugins-official', 'plugins');
+/** The spec's corpus (docs/TESTING.md, "Corpus"): `CORPUS_DIR`, else the checkout beside this one. */
+const CORPUS =
+  process.env['CORPUS_DIR'] ??
+  join(ROOT, '..', 'agent-plugins-extended', 'extend', '.cache', 'corpus');
+const OFFICIAL = join(CORPUS, 'claude-plugins-official', 'plugins');
 const DEMO = resolve(import.meta.dir, '..', 'fixtures', 'kit-demo');
 
 interface Run {

@@ -1,23 +1,24 @@
 # Plugin-host scope audit
 
 The owner selected **100% of the plugin-host contract**, not a reimplementation of the Claude Code
-application, on 2026-11-08. This is a scope decision, not evidence that any remaining behavior works.
-Passing tests alone determine compatibility. An unimplemented plugin rule stays in the denominator.
+application, on 2026-11-08. This is a scope decision, not evidence that any behaviour is stated or implemented. Only
+`REPORT.md` says how much the specification states (E5); an implementation's own tests say what it
+implements. An unstated plugin rule stays in the denominator.
 
 ## Boundary
 
-The kit reads, validates, discovers, installs, updates, configures and executes plugin components.
+A client reads, validates, discovers, installs, updates, configures and executes plugin components.
 It owns hook dispatch, permission matching, skill expansion, component catalogs, plugin policy,
 MCP/LSP configuration and naming, monitor triggers, channel messages and the mods extension API.
 The mods UI protocol is a plugin interface and is **in scope**; native menus are not.
 
 The host supplies its model, agent scheduler, MCP/LSP transport clients, native UI and storage ports.
-Those effects must not be replaced with tautological tests or hardcoded descriptions of Claude Code.
-Official SDK shapes stay in `src/protocol/official.ts`; SDK client methods are not this library's API.
+Official SDK shapes stay authoritative for the shapes they define (E2); the SDK client's query and
+session methods are not part of the contract.
 
 ## Whole pages classified outside the contract
 
-Each page below remains in `spec/out-of-scope-pages.json`, with the existing documented reason.
+Each page below remains in [`out-of-scope-pages.json`](out-of-scope-pages.json), with the existing documented reason.
 
 | Page | Reason | What remains covered elsewhere |
 | --- | --- | --- |
@@ -44,7 +45,7 @@ Each page below remains in `spec/out-of-scope-pages.json`, with the existing doc
 
 ## Partial pages
 
-The `scripts/spec/scope-*.ts` entries name excluded headings explicitly. New headings default to
+The `extend/tools/src/mine/requirements/scope-*.ts` entries name excluded headings explicitly. New headings default to
 inclusion and a stale skip fails extraction.
 
 - `tools-reference.md`: retain tool names and input shapes, agent tool selection, permission-rule
@@ -63,7 +64,7 @@ inclusion and a stale skip fails extraction.
   timing is UI. Source restrictions, required plugins and update controls stay in scope.
 - `server-managed-settings.md`: retain delivered-policy validation, composition, approval gating
   and fail-closed decisions. Account-bound polling, approval persistence and login routing are
-  supplied by the delivery host, not implemented by the kit.
+  supplied by the delivery host, not by a client.
 - `output-styles.md`: retain file format, loading and selection semantics; native application menus
   are UI.
 - `errors.md`: retain relevant plugin diagnostics. Eval access, native memory loading and the MCP
@@ -77,12 +78,12 @@ inclusion and a stale skip fails extraction.
 
 ## Mixed tables
 
-`scripts/spec/row-scope.ts` identifies foreign environment/flag rows by their documented meaning,
-not by whether a passing test exists. The broad plugin/topic filters still include unknown names
+`extend/tools/src/mine/requirements/row-scope.ts` identifies foreign environment/flag rows by their documented meaning,
+not by whether an implementation handles them. The broad plugin/topic filters still include unknown names
 matching plugin interfaces. Global switches that affect plugin execution are explicitly included.
 
-`spec/out-of-scope.json` records table-row exclusions as `section — row` as well as excluded
+[`out-of-scope.json`](out-of-scope.json) records table-row exclusions as `section — row` as well as excluded
 headings. When several table rules read one table, a row is excluded only if **none** admits it.
 The audit cannot claim a plugin setting is excluded merely because another topic's rule omitted it.
 
-No source in the audit reads the compatibility report or the JUnit proof ledger.
+No source in the audit reads a coverage report or an implementation's test results.

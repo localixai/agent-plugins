@@ -1,19 +1,14 @@
 /**
- * The shape of `spec/mods-declarations.json`: what the mods declarations of one release declare,
- * as names, fields and the lines they are on (AGENTS.md, E2a). `bun run types:extract` writes it
- * from `.cache/claude-types/`; `check:spec` (SP8) compares it with the pulled declarations, so a
- * test never reads `.cache` (docs/TESTING.md).
+ * The shape of `spec/mods-declarations.json`: what the mods declarations of one Claude Code release
+ * declare, as names, fields and the lines they are on (AGENTS.md, E2), as Agent Plugins Extended
+ * publishes it. `bun run spec:sync` copies the file from the spec; tests read it through this schema.
  */
-import { join } from 'node:path';
 import { z } from 'zod';
-import { ROOT } from '../../docs/location.ts';
-
-export const DECLARATIONS_FILE = join(ROOT, 'spec', 'mods-declarations.json');
 
 const field = z.strictObject({ name: z.string(), optional: z.boolean() });
 
 /**
- * One kind of value a declared type allows (shape.ts): a primitive, a literal, a function, an array
+ * One kind of value a declared type allows: a primitive, a literal, a function, an array
  * of a shape, or an object with its fields (`open` when it has an index signature; `name` alone when
  * it is declared outside the mods declarations, such as `Uint8Array`; neither past the last level).
  */

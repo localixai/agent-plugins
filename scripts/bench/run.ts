@@ -1,6 +1,6 @@
 /**
  * `bun run bench`: how fast the kit does the work a host repeats, measured on the real plugins of
- * the corpus (`bun run corpus:fetch`). Effects are stubbed (a command "runs" in no time), so the
+ * the spec's corpus (docs/TESTING.md, "Corpus"). Effects are stubbed (a command "runs" in no time), so the
  * numbers are the kit's own cost: reading, host assembly, hook selection and verdicts, skill
  * expansion. Prints the times, then the same work counted by the meter (`corpus-counts.ts`), and
  * writes both to `.cache/bench.json`. Times are not a gate (they depend on the machine); the counts

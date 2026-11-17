@@ -3,7 +3,7 @@
  * object; `$schema`; three closed server variants; the `command` token; `cwd` forms; `url` and
  * `headers` rules; server `extensions`), §7.2.2 (failure boundaries: the file, then one server, then
  * an unsupported transport), §9.2 (no `PLUGIN_ROOT`/`PLUGIN_DATA` in `env`), §10.1 (the version
- * matches `plugin.json`). Judgment-style tests outside `spec(...)` (docs/SPEC.md, "The specification").
+ * matches `plugin.json`). Judgment-style tests outside `spec(...)` (docs/SPEC.md, "How the conventions map").
  */
 import { describe, expect, test } from 'bun:test';
 import { commandProblem, readCoreMcp } from '../../../src/entry/core.ts';

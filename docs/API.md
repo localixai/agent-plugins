@@ -1080,9 +1080,9 @@ const { target, issues } = await validatePlugin({ files, label: 'my-plugin' });
 for (const { severity, file, path, message } of issues) console.log(severity, file, path, message);
 ```
 
-`validatePlugin` reproduces `claude plugin validate <dir>` of the Claude Code release the kit
-tracks: the same folder, the same findings, the same wording (docs/SPEC.md, "Sources of truth", the
-oracle). It reads the folder through the `PluginFiles` port, never throws, and never follows a
+`validatePlugin` reproduces `claude plugin validate <dir>` of the Claude Code release the spec
+targets: the same folder, the same findings, the same wording, as Agent Plugins Extended states them
+(docs/SPEC.md, "Sources of truth"). It reads the folder through the `PluginFiles` port, never throws, and never follows a
 symlink (a link is skipped, with the warning the official CLI gives).
 
 | API | What it does |

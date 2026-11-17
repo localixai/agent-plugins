@@ -1,8 +1,8 @@
 /**
  * The names and numbers the mods reference gives as tables (plugins/mods/reference.md § Events,
  * § Mods API methods, § Limits), compared with the constants. The tables are the committed
- * snapshot (`tests/support/mods-reference.ts`); `check:spec` compares it with the pulled page, so a
- * change to the page shows up there, and the `mods.event.*` requirement ids are the events.
+ * snapshot the spec publishes (`tests/support/mods-reference.ts`, synced by `bun run spec:sync`), so a
+ * change to the page arrives with the spec, and the `mods.event.*` requirement ids are the events.
  */
 import { describe, expect, test } from 'bun:test';
 import {

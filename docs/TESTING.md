@@ -14,10 +14,11 @@ lack uses `skipIf(!available)`.
 ## Deterministic
 
 Tests touch no network, no real clock, no randomness and no files outside a temporary folder they
-make. The kit's ports make this natural: a test passes fakes. The pulled docs and the corpus are
-read only by `scripts/`, never by `bun test`: a table a test needs from the docs is committed
-(`spec/docs-tables.json`, `tests/support/tool-table.ts`) and `check:spec` (SP5) compares it with
-the pulled docs.
+make. The kit's ports make this natural: a test passes fakes. What a test needs from the contract
+is in `spec/`, synced from Agent Plugins Extended (`spec/docs-tables.json`,
+`spec/mods-declarations.json`; docs/SPEC.md, "Syncing the spec"), or written by hand from the
+section it cites (`tests/support/tool-table.ts`). The corpus is read only by `scripts/`, never by
+`bun test`.
 
 ## Fakes of the ports
 
@@ -34,31 +35,34 @@ through these and extends them in a file of its own, never by editing another st
 - One `spec(...)` block per requirement (or a small set the same behaviour proves together).
 - A positive case and the documented failure: a field of the wrong type fails, a path with `..`
   is refused with the validator's message.
-- Messages the docs quote verbatim are asserted verbatim.
-- No assertion on behaviour the docs do not state; a judgment is tested outside `spec(...)`.
+- Messages the spec quotes verbatim are asserted verbatim.
+- No assertion on behaviour the spec does not state; a judgment is tested outside `spec(...)`.
 
 ## Corpus
 
-The spec proves the kit against the docs; the corpus checks it against real plugins and the real
-validator. `bun run corpus:fetch` clones the official and community marketplaces into
-`.cache/corpus/`, reads them with the kit's own `readMarketplace`, and runs each entry's
-`planPluginFetch` as a host would (a shallow git clone pinned to the entry's `sha` or `ref`, sparse
-for a subdirectory). `bun run corpus` runs the kit over every fetched plugin and compares it with
-the oracle, `claude plugin validate --json` of the same Claude Code release (SP3), run as a program
-and never read (`scripts/corpus/oracle.ts`, cached per release). The kit's side of the comparison is
+The spec tests prove the kit against the requirements; the corpus measures it against real plugins
+and Claude Code's own verdicts on them. Agent Plugins Extended owns both: `bun run corpus:fetch`
+and `bun run corpus:oracle` in its `extend/tools/` fetch every plugin of the official and community
+marketplaces and record what `claude plugin validate --json` and `claude --plugin-dir <dir> plugin
+details <name>` of the spec's release say about each. This repository never fetches the corpus or
+runs Claude Code for those verdicts; it reads them from `CORPUS_DIR`, by default the spec checkout's
+`extend/.cache/corpus` beside this repository (`scripts/corpus/location.ts`), for the release
+`spec/SOURCE.json` names.
+
+`bun run corpus` runs the kit over every plugin and compares it with the recorded validation
+verdict (`scripts/corpus/oracle.ts`); a plugin without one is counted apart. The kit's side is
 `validatePlugin` over the plugin's folder (docs/API.md, "Validating"); `loadPlugin`'s own verdict
 is printed on a separate line, because loading and validating differ on purpose (the validator
 reports advice and checks the loader never makes). The run prints:
 
-- the verdict agreement: an error exactly when the oracle reports one;
-- the share of the oracle's findings the kit reports with the same severity and message, and the
-  share also at the same file and path (findings are paired as a multiset, a finding at the right
-  place first);
-- the most frequent findings the kit misses, reports beyond the oracle, or puts elsewhere.
+- the verdict agreement: an error exactly when Claude Code's validator reports one;
+- the share of its findings the kit reports with the same severity and message, and the share also
+  at the same file and path (findings are paired as a multiset, a finding at the right place first);
+- the most frequent findings the kit misses, reports beyond the validator, or puts elsewhere.
 
-`.cache/corpus/report.json` holds every plugin's. Nothing of the corpus is committed, and `bun test`
-never reads it. Tests of what the oracle showed are written with inputs of their own, outside
-`spec(...)` (docs/SPEC.md, "Sources of truth").
+`.cache/corpus/report.json` here holds every plugin's. Nothing of the corpus is committed, and
+`bun test` never reads it. A difference the run shows is a lead for the spec, never evidence here
+(AGENTS.md, E5a): what the spec then states is tested with inputs of our own.
 
 Where the kit and the oracle still differ, and why: a plugin whose directory does not exist is
 reported with the oracle's absolute path; `directory`-profile findings of the validator (checks
@@ -76,7 +80,7 @@ loader, as mcp.md says, while the validator reports nothing for that file.
 | Tests and the report           | `bun run compat`                       |
 | Everything CI and pre-push run | `bun run check`                        |
 | The example agent on a scripted model (no key, no network; part of `check`) | `bun run check:example` |
-| Real plugins against the oracle | `bun run corpus:fetch`, then `bun run corpus` |
+| Real plugins against the spec's recorded verdicts | `bun run corpus`, `bun run corpus:load` |
 
 ## Benchmarks
 
@@ -117,8 +121,8 @@ explain; one that fell is a saving to write in the changelog.
 
 ### Times over the corpus
 
-`bun run bench` times what a host repeats, over the real plugins of the corpus (`bun run
-corpus:fetch` first), with effects stubbed so the numbers are the kit's own cost:
+`bun run bench` times what a host repeats, over the real plugins of the corpus (the spec's,
+"Corpus" above), with effects stubbed so the numbers are the kit's own cost:
 
 - `loadPlugin` per plugin, from disk (the corpus disk adapter) and from memory (kit CPU only);
 - `createPluginHost`, `openSession`, `session.skills()` and `dispatch('PreToolUse')` for 20 plugins
@@ -143,16 +147,15 @@ the module's own tests do not notice: a weak or missing assertion. The report go
 so it runs by hand, never in hooks or CI. Run it on a module after changing its tests or code, and
 kill survivors by asserting the documented behaviour they change, never by testing the mutation.
 
-## Loading oracle
+## Loading comparison
 
 `bun run corpus:load` compares what the kit LOADS with what Claude Code loads, plugin by plugin:
 whether the plugin loads, and the names of its skills (commands included, as multisets), agents,
-hook events, MCP servers and LSP servers. Claude Code's side comes from
-`claude --plugin-dir <dir> plugin details <name>`, run as a black box in a private config folder
-(`.cache/corpus/oracle-load/home`): the command is offline, reads no person's settings and calls no
-model. Results are cached per Claude Code version in `.cache/corpus/oracle-load/<version>/`; every
-difference is written to `.cache/corpus/load-report.json`. `validatePlugin` agreeing with
-`claude plugin validate` says nothing about loading; this does.
+hook events, MCP servers and LSP servers. Claude Code's side is the inventory the spec recorded
+from `claude --plugin-dir <dir> plugin details <name>` (`scripts/corpus/load-oracle.ts` reads
+`<corpus>/oracle-load/<release>/`); a plugin without one is counted apart. Every difference is
+written to `.cache/corpus/load-report.json`. `validatePlugin` agreeing with `claude plugin
+validate` says nothing about loading; this does.
 
 What the comparison reads: the kit's side is `loadPlugin` itself (`scripts/corpus/load-kit.ts`), not
 a session, because `plugin details` lists what a plugin declares: a skill by the name it has inside
@@ -166,6 +169,15 @@ path to a file or a `commands` object map (its debug log reports `ENOTDIR`); the
 opposite (plugins/components.md, "Commands" and "Agents"), and the kit keeps the docs until a
 session shows otherwise. `bun run corpus:load` prints the agreement per field; that residual is
 all of the remaining `skills` and `agents` differences.
+
+## Differential checks on fixtures
+
+The checks below run Claude Code as a black box on small fixtures of our own and compare the kit
+with what it does; the result is committed beside the fixture, and `bun test` compares the kit with
+it without running Claude Code. They measure this implementation, never the contract (AGENTS.md,
+E5a): the behaviour they check is the spec's, and a difference the spec does not settle goes to the
+spec first (E1a). `bun run corpus:runtime` is the same check of a session over the corpus plugins
+that run nothing at start.
 
 ## Remote MCP credential oracle
 

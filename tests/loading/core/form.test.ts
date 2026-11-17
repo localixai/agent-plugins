@@ -3,7 +3,7 @@
  * the loader of an Extended client that follows the decision: a Claude Code plugin loads exactly as
  * `loadPlugin` loads it, a core package by core §4–§10, a dual package as Claude Code only. The
  * chapter's requirement ids are Claude Code's layout ids, which the form decision does not prove, so
- * these are judgment-style tests outside `spec(...)` (docs/SPEC.md, "The specification").
+ * these are judgment-style tests outside `spec(...)` (docs/SPEC.md, "How the conventions map").
  */
 import { describe, expect, test } from 'bun:test';
 import { checkDualPackage, detectPluginForm, loadPluginPackage } from '../../../src/entry/core.ts';

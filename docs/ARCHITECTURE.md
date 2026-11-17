@@ -120,13 +120,14 @@ The foundation's names win; a design that says otherwise means this:
 | --------------- | --------------------------------------------------------------------------- |
 | `src/`          | the package                                                                 |
 | `tests/`        | tests mirroring `src/` modules; `tests/support/` helpers (`spec()`)         |
-| `spec/`         | `requirements.json` (generated), `judgments.md`                             |
-| `scripts/docs/` | `docs:pull`                                                                 |
-| `scripts/spec/` | the requirement extractor and `check:spec`                                  |
+| `spec/`         | the files synced from Agent Plugins Extended, `SOURCE.json`, `judgments.md` |
+| `scripts/docs/` | `check:docs`'s export tables, the repository root                           |
+| `scripts/spec/` | `spec:sync`, `check:spec` and the schemas of the synced snapshots           |
+| `scripts/corpus/` | the comparisons over the spec's corpus and its recorded verdicts          |
 | `scripts/compat/` | the compatibility report                                                  |
 | `scripts/`      | the other gates (`check-*.ts`)                                              |
 | `config/lint/`  | the quality lint (`quality.json`) and the kit's own rules (`kit-rules.js`)  |
-| `.cache/`       | pulled docs, the corpus, test reports: local only                           |
+| `.cache/`       | test and comparison reports: local only                                     |
 
 ## Notes on recent modules
 

@@ -1,6 +1,7 @@
 /**
- * `bun run corpus`: runs the kit over every plugin `corpus:fetch` fetched and compares it with the
- * oracle, `claude plugin validate --json`, plugin by plugin:
+ * `bun run corpus`: runs the kit over every plugin of the spec's corpus and compares it with the
+ * verdicts of `claude plugin validate --json` the spec recorded for the release `spec/SOURCE.json`
+ * pins (`oracle.ts`), plugin by plugin:
  *
  * - the verdict: the oracle reports an error exactly when `validatePlugin` does;
  * - each finding: an oracle error or warning `validatePlugin` reports with the same severity and
@@ -14,12 +15,11 @@
 import { join } from 'node:path';
 import { loadPlugin, validatePlugin } from '../../src/index.ts';
 import { type ValidationIssue } from '../../src/entry/format.ts';
-import { readRequirements } from '../spec/requirements.ts';
+import { readSource } from '../spec/source.ts';
 import { diskFiles } from './disk-files.ts';
 import { readCorpusTargets, REPORT_FILE, type CorpusTarget } from './location.ts';
 import { oracle, type OracleFinding } from './oracle.ts';
 import { pool } from './pool.ts';
-import { oracleRelease } from '../oracle/claude-bin.ts';
 
 interface Compared {
   readonly plugin: string;
@@ -68,7 +68,7 @@ async function compare(release: string, plugin: CorpusTarget): Promise<Compared>
   const id = plugin.key;
   const files = diskFiles(plugin.dir);
   const [report, validated, loaded] = await Promise.all([
-    oracle(release, id, plugin.dir),
+    oracle(release, id),
     validatePlugin({ files, label: plugin.dir }),
     loadPlugin({ files, fallbackName: plugin.name }),
   ]);
@@ -110,7 +110,7 @@ const only = onlyAt === -1 ? '' : (process.argv[onlyAt + 1] ?? '');
 const fetched = (await readCorpusTargets())
   .filter((plugin) => plugin.key.includes(only))
   .slice(0, limit);
-const release = await oracleRelease((await readRequirements()).claudeCode);
+const release = (await readSource()).release;
 let done = 0;
 const results = await pool(fetched, 8, async (plugin) => {
   const result = await compare(release, plugin);
@@ -125,7 +125,9 @@ const agree = ran.filter((result) => result.oracleError === result.kitError);
 const findings = ran.reduce((sum, result) => sum + result.matched + result.missed.length, 0);
 const matched = ran.reduce((sum, result) => sum + result.matched, 0);
 const pct = (part: number, whole: number) => `${((100 * part) / Math.max(whole, 1)).toFixed(1)}%`;
-console.log(`Plugins compared: ${ran.length} (oracle failed on ${results.length - ran.length})`);
+console.log(
+  `Plugins compared: ${ran.length} (no recorded verdict: ${results.length - ran.length})`,
+);
 console.log(`Verdict agreement: ${pct(agree.length, ran.length)} (${agree.length}/${ran.length})`);
 console.log(`  oracle error, kit none: ${ran.filter((r) => r.oracleError && !r.kitError).length}`);
 console.log(`  kit error, oracle none: ${ran.filter((r) => r.kitError && !r.oracleError).length}`);

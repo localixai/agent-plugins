@@ -4,7 +4,7 @@
  * by the platform's name rules; the plugin root as the default working directory), §9.2 (one
  * non-recursive pass over `args`, `env` values and `cwd`; never `command`; other `${...}` literal),
  * §7.2.1 (`cwd` expanded before it is resolved, contained in its base; `./` command resolved against
- * the root). Judgment-style tests outside `spec(...)` (docs/SPEC.md, "The specification").
+ * the root). Judgment-style tests outside `spec(...)` (docs/SPEC.md, "How the conventions map").
  */
 import { describe, expect, test } from 'bun:test';
 import {

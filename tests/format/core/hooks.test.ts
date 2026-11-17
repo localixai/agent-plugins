@@ -3,7 +3,7 @@
  * object, `$schema`, the five events, closed handlers, the command token, handler `extensions`),
  * §7.3.2 (failure isolation: the file, then an event member, then one handler), §10.1 (the version
  * matches `plugin.json`). Running handlers is a later wave (Agent Plugins Extended §18.1).
- * Judgment-style tests outside `spec(...)` (docs/SPEC.md, "The specification").
+ * Judgment-style tests outside `spec(...)` (docs/SPEC.md, "How the conventions map").
  */
 import { describe, expect, test } from 'bun:test';
 import { CORE_HOOK_EVENTS, readCoreHooks } from '../../../src/entry/core.ts';

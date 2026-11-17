@@ -1,4 +1,4 @@
-import type { Alternative, Shape } from '../../scripts/spec/declarations/snapshot.ts';
+import type { Alternative, Shape } from '../../scripts/spec/declarations.ts';
 
 /**
  * Whether a value fits a declared shape (`spec/mods-declarations.json`, `Shape`), as the problems
