@@ -16,13 +16,21 @@ const NEEDS_TELEMETRY_FILTER: { readonly [T in ModTier]: boolean } = {
   core: false,
 };
 
-const FORM = { true: 'an async generator', false: 'an async function' } as const;
+/**
+ * A hook of the wrong form: on a streaming event, the static analysis's message (§10.4.2, J10.2);
+ * a generator on any other event, which the analysis does not refuse, in the kit's words.
+ */
+const FORM = {
+  true: (event: string) =>
+    `the hook on "${event}" is not an async generator: ${event} streams, so it takes async function* ($, e, next) { ... }, which yields the chunks and returns the result`,
+  false: (event: string) => `on("${event}") takes an async function hook`,
+} as const;
 
 function formProblem(hook: RegisteredHook): PluginIssue | undefined {
   if (isWildcard(hook.event) || !isKnownEvent(hook.event)) return undefined;
   const wanted = isStreamEvent(hook.event);
   if (wanted === hook.isGenerator) return undefined;
-  return error(at(hook.event), `on("${hook.event}") takes ${FORM[`${wanted}`]} hook`);
+  return error(at(hook.event), FORM[`${wanted}`](hook.event));
 }
 
 /**

@@ -1,3 +1,4 @@
+import { isTruthyEnv } from '../../format/env-flag.ts';
 import type { PolicyView } from '../view.ts';
 
 /** What turned the bundled skills off. */
@@ -17,9 +18,6 @@ export interface BundledSkillsDecision {
   readonly builtInCommandsTypable: true;
 }
 
-/** The variable's documented value (env-vars.md: "Set to `1`"). */
-const ENV_ON = '1';
-
 /** `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS`, the name of the variable the host's environment carries. */
 export const BUNDLED_SKILLS_ENV = 'CLAUDE_CODE_DISABLE_BUNDLED_SKILLS';
 
@@ -34,7 +32,8 @@ export function bundledSkills(
 ): BundledSkillsDecision {
   const decidedBy: BundledOffBy[] = [];
   if (view.get('disableBundledSkills') === true) decidedBy.push('setting');
-  if (env[BUNDLED_SKILLS_ENV] === ENV_ON) decidedBy.push('env');
+  // "Set to `1`": an on/off variable with the full spelling set (J3.16).
+  if (isTruthyEnv(env[BUNDLED_SKILLS_ENV])) decidedBy.push('env');
   const disabled = decidedBy.length > 0;
   return {
     disabled,

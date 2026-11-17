@@ -92,12 +92,12 @@ spec('agents.behavior.Choose the subagent scope.--agents', () => {
     expect(agents[0]?.ignored).toEqual(['color', 'experimental']);
   });
 
-  test('a name that starts with "-" is refused with the reason the docs print', () => {
+  test('a name that starts with "-" is refused with the reason the docs print, and the invalid value loads no agent (§5.5.1)', () => {
     const { agents, issues } = readFlagAgents({
       '-bad': { description: 'Bad', prompt: 'x' },
       good: { description: 'Good', prompt: 'x' },
     });
-    expect(agents.map((agent) => agent.name)).toEqual(['good']);
+    expect(agents).toEqual([]);
     expect(issues).toEqual([
       { severity: 'error', path: '--agents', message: "-bad: agent names must not start with '-'" },
     ]);
@@ -113,7 +113,7 @@ spec('agents.behavior.Choose the subagent scope.--agents', () => {
     const { agents, issues } = readFlagAgents(mixed);
     expect(issues.map((issue) => issue.path)).toEqual(['--agents.broken', '--agents.also-broken']);
     expect(issues.some((issue) => issue.message.includes('must not start with'))).toBe(false);
-    expect(agents.map((agent) => agent.name)).toEqual(['good']);
+    expect(agents).toEqual([]);
     const fixed = readFlagAgents({
       ...mixed,
       broken: { description: 'd', prompt: '' },
@@ -122,7 +122,7 @@ spec('agents.behavior.Choose the subagent scope.--agents', () => {
     expect(fixed.issues.map((issue) => issue.message)).toEqual([
       "-first: agent names must not start with '-'",
     ]);
-    expect(fixed.agents.map((agent) => agent.name)).toEqual(['broken', 'also-broken', 'good']);
+    expect(fixed.agents).toEqual([]);
   });
 
   test('a "-" name with a schema problem of its own reports the schema problem only', () => {
@@ -155,7 +155,7 @@ spec('agents.behavior.Choose the subagent scope.--agents', () => {
       broken: 'text',
       fine: { description: 'd', prompt: '' },
     });
-    expect(agents.map((agent) => agent.name)).toEqual(['fine']);
+    expect(agents).toEqual([]);
     expect(issues.map((issue) => issue.path)).toEqual(['--agents.broken']);
   });
 });

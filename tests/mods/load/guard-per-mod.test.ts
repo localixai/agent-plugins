@@ -28,8 +28,8 @@ spec('mods.troubleshoot.Messages from the built-in guard', () => {
       });
     }
     expect(notices.map((notice) => notice.line)).toEqual([
-      'one tried to lift a deny rule in your settings',
-      'two tried to lift a deny rule in your settings',
+      'one tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
+      'two tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
     ]);
   });
 });

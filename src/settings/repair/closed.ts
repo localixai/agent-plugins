@@ -8,7 +8,6 @@ import {
   stripInvalid,
   type Repair,
 } from './support.ts';
-import { isRecord } from '../../protocol/is-record.ts';
 
 /**
  * The repairs of the keys that have their own fallback (managed-settings.md, "Keys that fail
@@ -17,44 +16,6 @@ import { isRecord } from '../../protocol/is-record.ts';
  */
 
 const isText = (entry: unknown): entry is string => typeof entry === 'string';
-
-/** An `allowedMcpServers` or `deniedMcpServers` entry: at least one of `serverName`, `serverCommand`, `serverUrl`, each of its type (spec/judgments.md). */
-function readServerEntry(entry: unknown): Readonly<Record<string, unknown>> | undefined {
-  if (!isRecord(entry)) return undefined;
-  const { serverName, serverCommand, serverUrl } = entry;
-  const command =
-    serverCommand === undefined ||
-    (Array.isArray(serverCommand) && serverCommand.length > 0 && serverCommand.every(isText));
-  const text = (field: unknown): boolean => field === undefined || isText(field);
-  const named = [serverName, serverCommand, serverUrl].some((field) => field !== undefined);
-  return named && command && text(serverName) && text(serverUrl) ? entry : undefined;
-}
-
-const SERVER_ENTRY = 'Expected { serverName }, { serverCommand } or { serverUrl }';
-
-/**
- * `allowedMcpServers`: unreadable in managed settings it is an empty allowlist, so no server users
- * add is admitted; an individual invalid entry is stripped and the valid subset enforced.
- */
-export const mcpAllowlist: Repair = (value, at) => {
-  if (!Array.isArray(value)) {
-    return at.closed
-      ? failedClosed(at, [], 'an empty allowlist: no MCP server users add is admitted')
-      : dropped(at, `"${at.key}" must be a list of servers`);
-  }
-  const { entries, issues } = stripInvalid(value, at, readServerEntry, SERVER_ENTRY);
-  return kept(entries, issues);
-};
-
-/**
- * `deniedMcpServers`: an invalid entry is stripped; a wholly invalid value is dropped with a
- * warning, "since denying every server would block servers the policy never named".
- */
-export const mcpDenylist: Repair = (value, at) => {
-  if (!Array.isArray(value)) return dropped(at, `"${at.key}" must be a list of servers`);
-  const { entries, issues } = stripInvalid(value, at, readServerEntry, SERVER_ENTRY);
-  return kept(entries, issues);
-};
 
 const readProvider = (entry: unknown): string | undefined =>
   API_PROVIDERS.find((provider) => provider === entry);

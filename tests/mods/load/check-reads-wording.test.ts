@@ -2,8 +2,9 @@
  * The wording of the reasons `claude plugin validate` gives for the rules of create.md § Check what
  * Claude Code reads from your mod, where the page names no message (it does for `$.ui is used as a
  * value`, a dynamic import, `require`, a shadowed `on` and a non-literal event name, which
- * check-reads.test.ts asserts under `spec(...)`). These are the kit's own words (spec/judgments.md),
- * not the official CLI's, so they are tested outside `spec(...)`.
+ * check-reads.test.ts asserts under `spec(...)`). Most are the words Agent Plugins Extended §10.4.2
+ * quotes from 2.1.325 (J10.2, a SHOULD); an import that leaves the plugin directory is the kit's own
+ * wording. Tested outside `spec(...)`.
  */
 import { expect, test } from 'bun:test';
 import { validateMod } from '../../../src/mods/load/commands/validate.ts';
@@ -29,18 +30,13 @@ async function reason(module: string): Promise<string> {
   return errors[0] ?? '';
 }
 
-const TOP_LEVEL =
-  'which the scan cannot read: pass $ only to a function declared at the top level of this file';
+const BOUND = '$ itself is bound to a name (bound, passed, spread, returned or read)';
 
-test('`$` passed to a method, an inner function and an imported function name where it went', async () => {
-  expect(await reason(wrap('({ f($) {} }).f($)'))).toContain(
-    `$ is passed to a method, ${TOP_LEVEL}`,
-  );
-  expect(await reason(wrap('const f = ($) => $.fs.read("x"); f($)'))).toContain(
-    `$ is passed to f, ${TOP_LEVEL}`,
-  );
+test('`$` passed to a method, an inner function or an imported function takes the words of 2.1.325 (Agent Plugins Extended §10.4.2, J10.2)', async () => {
+  expect(await reason(wrap('({ f($) {} }).f($)'))).toContain(BOUND);
+  expect(await reason(wrap('const f = ($) => $.fs.read("x"); f($)'))).toContain(BOUND);
   expect(await reason(`import { helper } from './helper.js'\n${wrap('helper($)')}`)).toContain(
-    `$ is passed to helper, ${TOP_LEVEL}`,
+    BOUND,
   );
 });
 

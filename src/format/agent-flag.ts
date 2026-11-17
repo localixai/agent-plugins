@@ -119,9 +119,9 @@ function capped(problems: readonly PluginIssue[]): readonly PluginIssue[] {
 const isError = (issue: PluginIssue): boolean => issue.severity === 'error';
 
 /**
- * Reads the parsed `--agents` value. A definition that cannot load is an error and is left out; the
- * rest still load (Claude Code stops at the first failing check; a host has no process to stop, so the
- * rest load and the checks only decide which errors are reported). Judgment (spec/judgments.md): the
+ * Reads the parsed `--agents` value. An invalid value loads no agent at all: Claude Code exits with
+ * code 1 and prints the first failing check only (§5.5.1), so `agents` is empty while any error is
+ * reported, and the host refuses to start the session. Judgment (spec/judgments.md): the
  * docs do not say which keys a definition must
  * have, so `description` and `prompt` are required (they are the two fields every subagent has).
  */
@@ -135,8 +135,9 @@ export function readFlagAgents(raw: unknown): FlagAgentsRead {
   // errors.md orders the checks: the schema problems of every definition first, and the `-` names only
   // when none is left ("you see the second only after you fix the first").
   const dashed = reads.flatMap((read) => read.dashed ?? []);
+  const reported = schema.length > 0 ? schema : dashed;
   return {
-    agents: reads.flatMap((read) => read.agents),
-    issues: [...capped(schema.length > 0 ? schema : dashed), ...issues.filter((i) => !isError(i))],
+    agents: reported.length > 0 ? [] : reads.flatMap((read) => read.agents),
+    issues: [...capped(reported), ...issues.filter((i) => !isError(i))],
   };
 }

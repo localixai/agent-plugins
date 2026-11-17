@@ -2,6 +2,37 @@
 
 ## [Unreleased]
 
+- The kit follows Agent Plugins Extended `0ed968b`, where the 48 disagreements its judgments
+  listed are settled (the spec's own ledger `v16-disagreements`); `spec/judgments.md` has none left.
+  What changed in behaviour:
+  - A `PostToolUse` `updatedToolOutput` is checked against every built-in tool's output type in
+    `sdk-tools.d.ts`, Read, Edit, Write and the rest included, every nested field (J7.138); the
+    shapes are written by the new `scripts/tool-output-shapes.ts`, and `CHECKED_TOOL_OUTPUTS` lists
+    the 43 tools. A tool without an output type still passes unchecked.
+  - A mod's matcher takes an object as a partial of an object field, and a value against an array
+    field holds when some element matches (§10.13.3); a non-RegExp object is no longer an issue.
+  - All `session.end` hooks share a clock that starts when the settings hooks finish and never
+    stops: a hook waiting on a `$` call when it runs out is skipped (§10.11).
+  - Registration refuses a non-generator hook on a streaming event with the static analysis's
+    message (`the hook on "turn.step" is not an async generator: ...`), and `$` passed to a function
+    the scan cannot follow fails with `$ itself is bound to a name ...` (§10.4.2, J10.2).
+  - The guard's two deny-rule messages end with `(allowModsToOverrideDenyRules)` (§10.42.2).
+  - The read block refuses an `LSP` call whose `filePath` is outside the working directories
+    (§13.12.2).
+  - `baselineDecision` asks for a read outside the working directories in `default`,
+    `acceptEdits`, `plan` and `auto` (§13.1, §13.9.4).
+  - An `npm` entry of `strictKnownMarketplaces` or `blockedMarketplaces` matches nothing (§14.8.3).
+  - `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` is on for any on spelling (`true`, `yes`, `on`; J3.16).
+  - A manifest `.json` MCP file that is missing draws no load issue; the validator still reports it
+    (§8.1 item 5).
+  - An install whose dependency has a `command` source or a `headersHelper` is refused until the
+    user installs that dependency by itself, as well as listing it in `leftOut` (§16.24).
+  - `claude plugin install`, `uninstall` and `update` refuse with `failureCode:
+    "install_records_unreadable"` while the new `unreadableRecords` fact is set (§16.6.2).
+  - `CLAUDE_CODE_SUBAGENT_MODEL` alone no longer moves the built-in Explore or Plan; with
+    `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` it does (§5.8.2).
+  - An invalid `--agents` value loads no agent at all, as Claude Code exits (§5.5.1).
+
 - **Breaking (repository):** the library follows Agent Plugins Extended
   (https://github.com/localixai/agent-plugins-extended), which mines Claude Code, and syncs from it.
   `spec/` is the spec's `extend/conformance/` files at the commit `spec/SOURCE.json` pins

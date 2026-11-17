@@ -18,8 +18,6 @@ type Matchers = Registry<[own: Facts, source: Facts], boolean>;
 
 /** `<owner>/*`: "Only the whole repository-name position can be a wildcard". */
 const OWNER_WILDCARD = /^([^/*\s]+)\/\*$/;
-/** `@scope/*`, the npm form (SDK type comment). */
-const SCOPE_WILDCARD = /^(@[^/*\s]+)\/\*$/;
 
 const ownerOf = (repo: string): string | undefined => OWNER_WILDCARD.exec(repo)?.[1];
 
@@ -114,18 +112,6 @@ const blockedGit: Matcher<'git'> = (_entry, own, source) =>
 const blockedUrl: Matcher<'url'> = (_entry, own, source) =>
   source.cloned ? sameRepoOf(own, source) : source.concrete && sameExactly(own, source);
 
-const npmMatch: Matcher<'npm'> = (entry, own, source) => {
-  if (!source.concrete || source.kind !== own.kind) return false;
-  const scope = SCOPE_WILDCARD.exec(entry.package)?.[1];
-  const named =
-    scope === undefined
-      ? own.locator === source.locator
-      : source.locator.startsWith(`${scope}/`) && source.locator.split('/').length === 2;
-  return (
-    named && (own.registry === undefined || (source.registry?.startsWith(own.registry) ?? false))
-  );
-};
-
 const hostMatch =
   (wide: boolean): Matcher<'hostPattern'> =>
   (entry, _own, source) =>
@@ -145,7 +131,8 @@ const strictSettings: Matcher<'settings'> = (entry, own, source) =>
 const COMMON = {
   file: exact,
   directory: exact,
-  npm: npmMatch,
+  // No `npm` marketplace registers, so an `npm` entry matches nothing on either list (§14.8.3).
+  npm: never,
   pathPattern: pathMatch,
   'skills-dir': never,
 };

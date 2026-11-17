@@ -19,8 +19,8 @@ describe('a repeated MCP config file', () => {
     expect(twice.issues).toHaveLength(1);
     expect(twice.issues[0]?.message).toStartWith('mcpServers ./mcp/broken.json is not valid JSON:');
   });
-  test('a declared ./.mcp.json that is missing is reported, as any declared file is', async () => {
+  test('a declared ./.mcp.json that is missing is not reported by the loader, as no missing .json file is (§8.1 item 5)', async () => {
     const { issues } = await collectMcpServers(memoryFiles({}), './.mcp.json');
-    expect(issues).toHaveLength(1);
+    expect(issues).toEqual([]);
   });
 });

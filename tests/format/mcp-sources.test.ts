@@ -48,17 +48,11 @@ spec('mcp.source..json', () => {
     });
   });
 
-  test('a file that is missing does not load, the rest of the plugin does', async () => {
+  test('a .json file that is missing contributes no servers and the loader reports nothing (§8.1 item 5)', async () => {
     const files = memoryFiles({ '.mcp.json': JSON.stringify({ root: node('r.js') }) });
     const { servers, issues } = await collectMcpServers(files, './mcp/gone.json');
     expect(servers).toEqual({ root: node('r.js') });
-    expect(issues).toEqual([
-      {
-        severity: 'error',
-        path: 'mcpServers',
-        message: 'mcpServers path not found: ./mcp/gone.json',
-      },
-    ]);
+    expect(issues).toEqual([]);
   });
 
   test('an entry Claude Code would drop is an error issue and the other entries load', async () => {

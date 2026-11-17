@@ -9,6 +9,11 @@ import { nestingProblem } from './nesting.ts';
 import { skipProblem } from './tiers.ts';
 import type { TraceEntry } from '../trace-types.ts';
 
+/** Where a hook stands for the time its event's hooks share: inside `next` it does not have the floor. */
+export interface Floor {
+  inNext: number;
+}
+
 /** What `next(e)` gives a hook: a promise for a function hook, a stream for a generator hook. */
 export type Output = Promise<unknown> | Stream;
 
@@ -17,6 +22,8 @@ export interface NextParts {
   readonly signal: AbortSignal;
   readonly origin: HookOrigin;
   readonly budget: Budget;
+  /** How many of the hook's `next` calls are in flight: a hook waiting there does not have the floor. */
+  readonly floor: Floor;
   readonly isGenerator: boolean;
   /** The tier of the mod whose hook this is. */
   readonly tier: ModTier;
@@ -44,10 +51,14 @@ async function* failing(message: string): Stream {
 }
 
 /** A stream the hook pulls from, which stops the hook's time budget while it waits (time inside `next` is not the hook's own). */
-async function* metered(stream: Stream, budget: Budget): Stream {
+async function* metered(stream: Stream, budget: Budget, floor: Floor): Stream {
   for (;;) {
     budget.pause();
-    const step = await stream.next().finally(() => budget.resume());
+    floor.inNext += 1;
+    const step = await stream.next().finally(() => {
+      floor.inNext -= 1;
+      budget.resume();
+    });
     if (step.done) return step.value;
     yield step.value;
   }
@@ -80,9 +91,13 @@ function hookStream(stream: Stream): HookStream {
 }
 
 /** Runs `work` with the budget stopped: stopped first, so the hooks that `work` starts see the floor taken. */
-async function paused<T>(budget: Budget, work: () => Promise<T>): Promise<T> {
+async function paused<T>(budget: Budget, floor: Floor, work: () => Promise<T>): Promise<T> {
   budget.pause();
-  return work().finally(() => budget.resume());
+  floor.inNext += 1;
+  return work().finally(() => {
+    floor.inNext -= 1;
+    budget.resume();
+  });
 }
 
 /** The view of a budget a hook sees: `ms` is the whole limit and `remainingMs` what is left now. */
@@ -95,8 +110,8 @@ const budgetView = (budget: Budget): { readonly ms: number; readonly remainingMs
 
 function outputOf(parts: NextParts, run: Tracked, replay: boolean): Output {
   if (parts.isGenerator)
-    return hookStream(metered(replay ? finish(run) : run.stream, parts.budget));
-  return paused(parts.budget, () => drain(run));
+    return hookStream(metered(replay ? finish(run) : run.stream, parts.budget, parts.floor));
+  return paused(parts.budget, parts.floor, () => drain(run));
 }
 
 function refuse(parts: NextParts, message: string): Output {

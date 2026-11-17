@@ -141,19 +141,25 @@ spec('hooks.output.PostToolUse.updatedToolOutput', () => {
     expect(outcome.effects.updatedToolOutput).toEqual({ ...BASH, stdout: 'two' });
   });
 
-  test('only the shapes the kit mirrors are checked, and the list says which', () => {
-    expect([...CHECKED_TOOL_OUTPUTS].toSorted()).toEqual([
-      'Bash',
-      'Glob',
-      'Grep',
-      'WebFetch',
-      'WebSearch',
-    ]);
-  });
-
-  test('a tool the kit does not mirror is passed through, unchecked (judgment)', () => {
+  test('every built-in tool with an output type in sdk-tools.d.ts is checked, Read and Edit included (Agent Plugins Extended J7.138)', () => {
+    for (const tool of ['Bash', 'Read', 'Edit', 'Write', 'NotebookEdit', 'TodoWrite', 'Agent']) {
+      expect(CHECKED_TOOL_OUTPUTS).toContain(tool);
+    }
     expect(
       onTool('Edit', [post({ updatedToolOutput: 'anything' })]).effects.updatedToolOutput,
+    ).toBeUndefined();
+    const file = { filePath: '/a', content: 'x', numLines: 1, startLine: 1, totalLines: 1 };
+    const read = (shape: object) => onTool('Read', [post({ updatedToolOutput: shape })]);
+    expect(read({ type: 'text', file }).effects.updatedToolOutput).toEqual({ type: 'text', file });
+    const wrong = read({ type: 'text', file: { filePath: '/a' } });
+    expect(wrong.effects.updatedToolOutput).toBeUndefined();
+    expect(wrong.issues[0]?.message).toContain('Read output shape');
+  });
+
+  test('a built-in tool without an output type is passed through, unchecked (J7.138)', () => {
+    expect(CHECKED_TOOL_OUTPUTS).not.toContain('PowerShell');
+    expect(
+      onTool('PowerShell', [post({ updatedToolOutput: 'anything' })]).effects.updatedToolOutput,
     ).toBe('anything');
   });
 });

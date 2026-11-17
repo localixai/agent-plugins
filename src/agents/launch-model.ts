@@ -119,9 +119,19 @@ const FORCED_ORDER: readonly ModelSource[] = ['env', 'builtin', 'main'];
 const kindOf = (model: string, input: SubagentModelInput): ModelValueKind =>
   model === input.mainModel ? 'inherit' : modelValueKind(model);
 
+/** "Setting `CLAUDE_CODE_SUBAGENT_MODEL` by itself doesn't change the model the built-in Explore and Plan subagents run on" (§5.8.2). */
+const UNMOVED_BY_VARIABLE: ReadonlySet<string> = new Set(['Explore', 'Plan']);
+const ORDER_WITHOUT_ENV: readonly ModelSource[] = ORDER.filter((from) => from !== 'env');
+
+const orderOf = (input: SubagentModelInput): readonly ModelSource[] => {
+  if (input.force === true) return FORCED_ORDER;
+  const builtin = input.builtin?.name;
+  return builtin !== undefined && UNMOVED_BY_VARIABLE.has(builtin) ? ORDER_WITHOUT_ENV : ORDER;
+};
+
 /** The model a subagent runs on, in "the subagent model order" of sub-agents.md. */
 export function resolveSubagentModel(input: SubagentModelInput): SubagentModel {
-  for (const from of input.force === true ? FORCED_ORDER : ORDER) {
+  for (const from of orderOf(input)) {
     const model = PICKS[from](input);
     if (model !== undefined) return { model, from, kind: kindOf(model, input) };
   }

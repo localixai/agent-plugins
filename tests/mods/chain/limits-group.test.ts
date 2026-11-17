@@ -100,7 +100,26 @@ describe('all session.end hooks together', () => {
       expect(h.reports).toEqual([]);
     });
 
-    test("time a hook spends inside next is not counted against the shared budget, Claude Code's own work included (judgment)", async () => {
+    test('the shared clock never stops: a hook waiting on a $ call when it runs out is skipped (§10.11)', async () => {
+      const h = harness();
+      const gate = Promise.withResolvers<string>();
+      h.mod(
+        'waits',
+        'user',
+        [fn('session.end', async ($, e, next) => (await $.store.get('k'), next(e)))],
+        {
+          'store.get': () => gate.promise,
+        },
+      );
+      const pending = h.fire('session.end', { reason: 'clear' }, { groupMs: 500 });
+      await flush();
+      h.clock.advance(500);
+      await pending;
+      expect(h.reports.map((report) => report.plugin)).toEqual(['waits']);
+      expect(h.coreSeen).toEqual([{ reason: 'clear' }]);
+    });
+
+    test("a hook waiting inside next when the shared clock runs out is not at fault, Claude Code's own work included (judgment)", async () => {
       const h = harness();
       h.mod('my-mod', 'user', [fn('session.end', (_$, e, next) => next(e))]);
       const gate = Promise.withResolvers<string>();

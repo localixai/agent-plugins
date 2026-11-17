@@ -16,9 +16,14 @@ const MODS_LIMITED = "mods are limited to your organization's by policy (allowMa
 /** Judgment: the docs say the guard "refuses every user's mod at load" without quoting a line. */
 const MANAGED_UNREADABLE =
   "managed settings could not be read, so mods that are not your organization's are refused";
-const LIFT_ATTEMPT = 'tried to lift a deny rule in your settings';
-const CHECK_FAILED =
-  'the deny rules in your settings could not be checked for this call, so it is refused';
+/**
+ * "Each message names the option your organization's administrator sets to change the rule"
+ * (§10.42.2): the table quotes what each contains; the option follows in parentheses, as in
+ * `MODS_LIMITED` (judgment: the docs quote that form for one message only).
+ */
+const OVERRIDE_OPTION = ' (allowModsToOverrideDenyRules)';
+const LIFT_ATTEMPT = `tried to lift a deny rule in your settings${OVERRIDE_OPTION}`;
+const CHECK_FAILED = `the deny rules in your settings could not be checked for this call, so it is refused${OVERRIDE_OPTION}`;
 
 type Any = Promise<unknown> | AsyncGenerator<unknown, unknown>;
 type Next = ModNext<unknown, Any>;

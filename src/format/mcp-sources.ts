@@ -3,7 +3,6 @@ import { error, type PluginIssue } from './issues.ts';
 import { locate, locateContext, type LocateOptions } from './locate.ts';
 import { rootRelative, type PathPlatform } from './path-text.ts';
 import { parseJson } from './read-json.ts';
-import { pathNotFound } from './messages.ts';
 import { loadBundle, type McpLoadContext } from './mcp-bundles.ts';
 import {
   readMcpConfig,
@@ -44,16 +43,15 @@ const failed = (path: string, message: string): McpConfigRead => none([error(pat
 async function loadJsonFile(
   path: string,
   context: McpLoadContext,
-  missing: 'report' | 'ignore',
+  own: boolean,
 ): Promise<McpConfigRead> {
-  const located = await locate(context, FIELD, path, missing === 'ignore');
+  const located = await locate(context, FIELD, path, own);
   if (located.issue) return none([located.issue]);
   const text = located.stat?.isFile
     ? await context.files.readText(rootRelative(path, context.platform), context.signal)
     : undefined;
-  if (text === undefined) {
-    return missing === 'ignore' ? none() : failed(FIELD, pathNotFound(FIELD, path));
-  }
+  // A missing file contributes no servers and the loader reports nothing; a validator does (§8.1 item 5).
+  if (text === undefined) return none();
   const parsed = parseJson(text);
   if ('problem' in parsed)
     return failed(path, `${FIELD} ${path} is not valid JSON: ${parsed.problem}`);
@@ -80,7 +78,7 @@ const STRATEGIES: { readonly [K in McpSourceKind]: (value: unknown) => McpSource
       : undefined,
   'json-file': (value) =>
     typeof value === 'string' && value.endsWith('.json')
-      ? { kind: 'json-file', load: (context) => loadJsonFile(value, context, 'report') }
+      ? { kind: 'json-file', load: (context) => loadJsonFile(value, context, false) }
       : undefined,
   // Any other string is a bundle path: a wrong extension then fails as "must end in .mcpb or .dxt".
   'bundle-path': (value) =>
@@ -187,9 +185,8 @@ export async function collectMcpServers(
       ? []
       : [manifestValue];
   const once = withoutRepeatedFiles(declared, context.platform);
-  const rootDeclared = once.some((value) => fileOf(value, context.platform) === ROOT_FILE);
   const loaded = await Promise.all([
-    loadJsonFile(ROOT_FILE, context, rootDeclared ? 'report' : 'ignore'),
+    loadJsonFile(ROOT_FILE, context, true),
     ...once
       .filter((value) => fileOf(value, context.platform) !== ROOT_FILE)
       .map((value: unknown) => {

@@ -230,11 +230,12 @@ const refused = (
  * against tags", "Combine constraints from several plugins"). A dependency in another marketplace
  * follows `crossMarketplaceDecision` with the root plugin's marketplace as the root: one declared in
  * a marketplace entry refuses the install, one in `plugin.json` is left out; a `command` source and
- * a `headersHelper` entry are left to the user. A conflict between ranges, a range no tag in an own
+ * a `headersHelper` entry are left to the user and refuse the install until the user installs them
+ * by itself (§16.24). A conflict between ranges, a range no tag in an own
  * repository meets, or a dependency its marketplace does not list refuses the whole plan:
  * `steps` is empty and nothing changes ("Plugin A and the dependency stay as they were").
  * Judgments (spec/judgments.md): the docs are silent on cycles and on depth, so each plugin is
- * planned once and the walk has no limit; a dependency left out does not fail the install; a plugin
+ * planned once and the walk has no limit; a cross-marketplace dependency left out does not fail the install; a plugin
  * read from the catalog (the root above all) replaces its installed ranges with its new ones.
  * A catalog plugin with `manifestUnread` is planned from its entry's dependencies and listed in
  * `needs` (judgment `installNeeds`): the host fetches what the plan needs and plans again until

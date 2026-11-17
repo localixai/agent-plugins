@@ -143,12 +143,8 @@ function handlePassed(run: Run, call: CallExpression, dollar: Node, via: string 
     return;
   }
   run.handled.add(dollar);
-  fail(
-    run,
-    'dollar-escapes',
-    `$ is passed to ${name ?? 'a method'}, which the scan cannot read: pass $ only to a function declared at the top level of this file`,
-    dollar,
-  );
+  // §10.4.2: passing `$` anywhere else breaks the rule on `$` itself, with its message (J10.2).
+  fail(run, 'dollar-escapes', DOLLAR_BOUND, dollar);
 }
 
 function handleCallNode(run: Run, node: CallExpression, ctx: Ctx): void {

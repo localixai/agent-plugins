@@ -18,6 +18,7 @@ import {
   type InstallOptions,
 } from './install-config.ts';
 import { closureRefusal, configRefusal } from './install-refusals.ts';
+import { recordsRefusal } from './records-refusal.ts';
 import type { PendingInstall } from './install-start.ts';
 import { beforeLines, displayedOf, locate, marketplaceRefusal } from './install-lookup.ts';
 import {
@@ -65,6 +66,11 @@ export interface InstallFound {
   readonly installedCopyPresent?: boolean;
   /** The answer to `Run this command now? [y/N]`, once the host has asked. */
   readonly answer?: boolean;
+  /**
+   * The text `readInstalledPlugins` reported for a record of `installed_plugins.json` this version
+   * cannot read, or a format it does not know; the command then refuses (§16.6.2 item 1).
+   */
+  readonly unreadableRecords?: string;
 }
 
 /** What the host carries out for a successful install. */
@@ -240,6 +246,8 @@ export async function planInstall(
   sha256: Sha256,
 ): Promise<InstallRun> {
   const before = beforeLines(found);
+  const records = recordsRefusal('install', pending.plugin, found.unreadableRecords);
+  if (records !== undefined) return ended(records, before);
   const refused = marketplaceRefusal(pending, found);
   if (refused !== undefined) return ended(refused, []);
   const located = locate(pending, found);

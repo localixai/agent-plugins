@@ -18,14 +18,12 @@ describe('a permissionMode that is no mode counts as unset', () => {
   });
 });
 
-describe('the baseline ignores scope where the table names none', () => {
-  test('a read in default mode is allowed in or out of scope', () => {
-    const outside = baselineDecision('default', { category: 'read', inScope: false });
-    expect(outside).toBe('allow');
-  });
-
-  test('a read in auto mode is allowed: the first read outside is session state, not modelled', () => {
-    expect(baselineDecision('auto', { category: 'read', inScope: false })).toBe('allow');
+describe('a read outside the working directories', () => {
+  test('asks in default, acceptEdits, plan and auto (§13.1 item 2, §13.9.4 item 2); only the first such read in auto is session state, not modelled', () => {
+    for (const mode of ['default', 'acceptEdits', 'plan', 'auto'] as const) {
+      expect(baselineDecision(mode, { category: 'read', inScope: false })).toBe('ask');
+      expect(baselineDecision(mode, { category: 'read', inScope: true })).toBe('allow');
+    }
   });
 });
 

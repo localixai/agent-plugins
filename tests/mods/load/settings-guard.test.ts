@@ -214,9 +214,11 @@ spec('mods.setting.allowModsToOverrideDenyRules', () => {
     const { result, debug } = await check(guardOptions(false), 'deny');
     expect(result).toEqual({
       decision: 'deny',
-      reason: 'lifter tried to lift a deny rule in your settings',
+      reason: 'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
     });
-    expect(debug).toContain('lifter tried to lift a deny rule in your settings');
+    expect(debug).toContain(
+      'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
+    );
   });
 
   test("set to true, a user's mod can approve a call a deny rule refuses", async () => {
@@ -227,7 +229,9 @@ spec('mods.setting.allowModsToOverrideDenyRules', () => {
   test("an ask rule still prompts: a user's mod's approval of what an ask rule prompts for becomes the prompt", async () => {
     const { result, debug } = await check(guardOptions(false), 'ask');
     expect(result).toEqual({ decision: 'ask' });
-    expect(debug).not.toContain('lifter tried to lift a deny rule in your settings');
+    expect(debug).not.toContain(
+      'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
+    );
   });
 
   test("set to true, a user's mod can approve past the ask rule's prompt too", async () => {
@@ -246,7 +250,7 @@ spec('mods.setting.allowModsToOverrideDenyRules', () => {
       expect(result).toEqual({
         decision: 'deny',
         reason:
-          'the deny rules in your settings could not be checked for this call, so it is refused',
+          'the deny rules in your settings could not be checked for this call, so it is refused (allowModsToOverrideDenyRules)',
       });
     }
   });
@@ -263,7 +267,7 @@ spec('mods.setting.allowModsToOverrideDenyRules', () => {
     const { result } = await check(userSet, 'deny');
     expect(result).toEqual({
       decision: 'deny',
-      reason: 'lifter tried to lift a deny rule in your settings',
+      reason: 'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
     });
   });
 

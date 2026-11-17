@@ -93,55 +93,18 @@ describe('sources that are not marketplaces', () => {
   });
 });
 
-describe('npm entries (judgment: from the SDK type comments, the docs table has no npm row)', () => {
+describe('npm entries (§14.8.3: no npm marketplace registers)', () => {
   const entry = { source: 'npm', package: '@acme/claude-marketplace' } as const;
   const scoped = { source: 'npm', package: '@acme/*' } as const;
-  const pinned = {
-    source: 'npm',
-    package: 'pkg',
-    registry: 'https://npm.example.com/api/',
-  } as const;
 
-  test('a package name matches exactly; "@scope/*" matches every package of the scope only', () => {
+  test('an npm entry parses and matches nothing on either list, its own package included', () => {
     for (const list of ['strict', 'blocked'] as const) {
-      expect(
-        matchMarketplaceSource(list, entry, { source: 'npm', package: '@acme/claude-marketplace' }),
-      ).toBe(true);
-      expect(matchMarketplaceSource(list, entry, { source: 'npm', package: '@acme/other' })).toBe(
-        false,
-      );
+      expect(matchMarketplaceSource(list, entry, entry)).toBe(false);
       expect(matchMarketplaceSource(list, scoped, { source: 'npm', package: '@acme/other' })).toBe(
-        true,
-      );
-      expect(
-        matchMarketplaceSource(list, scoped, { source: 'npm', package: '@acme-evil/other' }),
-      ).toBe(false);
-      expect(matchMarketplaceSource(list, scoped, { source: 'npm', package: '@acme/a/b' })).toBe(
         false,
       );
+      expect(matchMarketplaceSource(list, entry, github('@acme/claude-marketplace'))).toBe(false);
     }
-  });
-
-  test('an entry with a registry prefix needs the source to name a registry under it', () => {
-    const under = {
-      source: 'npm',
-      package: 'pkg',
-      registry: 'https://npm.example.com/api/v1',
-    } as const;
-    expect(matchMarketplaceSource('strict', pinned, under)).toBe(true);
-    expect(matchMarketplaceSource('strict', pinned, { source: 'npm', package: 'pkg' })).toBe(false);
-    expect(
-      matchMarketplaceSource('strict', pinned, {
-        source: 'npm',
-        package: 'pkg',
-        registry: 'https://evil.example/api/',
-      }),
-    ).toBe(false);
-  });
-
-  test('the version is not compared and an npm entry matches no other kind', () => {
-    expect(matchMarketplaceSource('strict', entry, { ...entry, version: '9.9.9' })).toBe(true);
-    expect(matchMarketplaceSource('strict', entry, github('@acme/claude-marketplace'))).toBe(false);
     expect(matchMarketplaceSource('strict', hostPattern('.*'), entry)).toBe(false);
   });
 });

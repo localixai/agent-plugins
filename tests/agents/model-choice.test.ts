@@ -226,6 +226,25 @@ spec('agents.behavior.Run every subagent on one model', () => {
     });
   });
 
+  test('the variable alone does not change the built-in Explore or Plan (§5.8.2); with FORCE it does', () => {
+    const fable = { mainModel: 'claude-fable-5', mainFamily: 'fable' } as const;
+    const explore = { name: 'Explore', connection: 'subscription' } as const;
+    const plan = { name: 'Plan', connection: 'subscription' } as const;
+    const general = { name: 'general-purpose', connection: 'subscription' } as const;
+    expect(resolveSubagentModel({ ...fable, builtin: explore, envModel: 'haiku' })).toEqual({
+      model: 'opus',
+      from: 'builtin',
+      kind: 'alias',
+    });
+    expect(resolveSubagentModel({ ...fable, builtin: plan, envModel: 'haiku' }).from).toBe('main');
+    expect(resolveSubagentModel({ ...fable, builtin: general, envModel: 'haiku' }).from).toBe(
+      'env',
+    );
+    expect(
+      resolveSubagentModel({ ...fable, builtin: explore, envModel: 'haiku', force: true }).model,
+    ).toBe('haiku');
+  });
+
   test('only FORCE: the built-in Explore keeps the model listed for it', () => {
     const fable = { mainModel: 'claude-fable-5', mainFamily: 'fable' } as const;
     const explore = { name: 'Explore', connection: 'subscription' } as const;

@@ -25,7 +25,7 @@ import {
   traceOfSlot,
   type Slot,
 } from './link-trace.ts';
-import { createCatchNext, createNext, type NextParts } from './next.ts';
+import { createCatchNext, createNext, type Floor, type NextParts } from './next.ts';
 import { reentrySkips } from './reentry.ts';
 import { TIER_RANK } from './tiers.ts';
 import { hookStep } from './trace.ts';
@@ -79,7 +79,7 @@ const tierStart = (ctx: Context, tier: keyof typeof TIER_RANK): number => {
 
 function partsOf(
   site: Site,
-  budget: ReturnType<typeof createBudget>,
+  { budget, floor }: { budget: ReturnType<typeof createBudget>; floor: Floor },
   signal: AbortSignal,
 ): NextParts {
   const { ctx, entry } = site;
@@ -87,6 +87,7 @@ function partsOf(
     signal,
     origin: ctx.options.origin,
     budget,
+    floor,
     isGenerator: entry.hook.isGenerator,
     tier: entry.tier,
     event: ctx.name,
@@ -105,7 +106,8 @@ async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> 
   const { ctx, entry } = site;
   if (ctx.group?.budget.isExpired())
     return { failed: groupTimedOut(ctx.group.event, ctx.group.budget.ms) };
-  const budget = createBudget(ctx.clock, run.ms, ctx.group ? { parent: ctx.group.budget } : {});
+  const budget = createBudget(ctx.clock, run.ms);
+  const floor = { inNext: 0 };
   const abandon = new AbortController();
   const signal = AbortSignal.any([ctx.options.signal, abandon.signal]);
   // The hook's frame, for what its own calls skip, lasts until its run (its `next` included) ends.
@@ -121,7 +123,7 @@ async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> 
       run.start(
         guardApi(entry.plugin.api, budget, within),
         deepFreeze(site.e),
-        partsOf(site, budget, signal),
+        partsOf(site, { budget, floor }, signal),
       ),
     );
   } catch (error) {
@@ -132,7 +134,12 @@ async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> 
   let ended: Outcome;
   try {
     const watch = watchLinger(ctx.clock, signal, MOD_LIMITS.lingerMs, () => lingerReport(site));
-    ended = yield* guarded(out, { budget, watch, ...(ctx.group ? { group: ctx.group } : {}) });
+    ended = yield* guarded(out, {
+      budget,
+      floor,
+      watch,
+      ...(ctx.group ? { group: ctx.group } : {}),
+    });
   } finally {
     leave();
   }

@@ -37,7 +37,11 @@ const rest = (decision: BaselineDecision): Row => ({
   other: decision,
 });
 
-/** In scope allowed, out of scope prompts: the `acceptEdits` cell for edits and filesystem commands. */
+/**
+ * In scope allowed, out of scope prompts: the `acceptEdits` cell for edits and filesystem commands,
+ * and every asking mode's cell for reads (§13.1 item 2; in `auto` the first read outside prompts,
+ * §13.9.4 item 2, and which read is the first is session state the baseline does not keep).
+ */
 const ALLOW_IN_SCOPE: ScopedCell = { inScope: 'allow', outOfScope: 'ask' };
 
 /**
@@ -47,20 +51,20 @@ const ALLOW_IN_SCOPE: ScopedCell = { inScope: 'allow', outOfScope: 'ask' };
  */
 const BASELINE: { readonly [M in PermissionMode]: Row } = {
   // "Reads only"
-  default: { ...rest('ask'), read: 'allow' },
+  default: { ...rest('ask'), read: ALLOW_IN_SCOPE },
   // "Reads, file edits, and common filesystem commands" (in scope)
   acceptEdits: {
     ...rest('ask'),
-    read: 'allow',
+    read: ALLOW_IN_SCOPE,
     edit: ALLOW_IN_SCOPE,
     'filesystem-command': ALLOW_IN_SCOPE,
   },
   // "Reads, plus classifier-approved commands when auto mode is available": only the baseline.
-  plan: { ...rest('ask'), read: 'allow' },
+  plan: { ...rest('ask'), read: ALLOW_IN_SCOPE },
   // "Everything, with background safety checks": reads and in-scope edits skip the classifier
   // (decision order, step 2), "everything else goes to the classifier" (step 3).
   auto: {
-    read: 'allow',
+    read: ALLOW_IN_SCOPE,
     edit: { inScope: 'allow', outOfScope: 'classify' },
     'filesystem-command': 'classify',
     other: 'classify',

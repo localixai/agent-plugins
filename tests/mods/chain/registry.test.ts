@@ -78,15 +78,40 @@ describe('matchers (events.md § Filter which events a hook handles)', () => {
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a RegExp of another realm is a RegExp to the matcher
     expect(await run({ matcher: { tool: foreign as RegExp } }, TOOLS)).toEqual(['Bash']);
   });
-  test('an object that is neither a RegExp nor { $regexp } is an issue, not a matcher that takes everything (judgment)', () => {
-    for (const value of [{ notARegexp: 1 }, null, { $regexp: 1 }]) {
-      const h = harness();
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a module that breaks the matcher type
-      const matcher = { tool: value as unknown as RegExp };
-      const issues = h.mod('my-mod', 'user', [fn('tool.call', seeing([]), { matcher })]);
-      expect(issues).toHaveLength(1);
-      expect(issues[0]?.message).toContain('expected a string, number, boolean, RegExp');
-    }
+  test('an object is matched as a partial of an object field (§10.13.3 item 1)', async () => {
+    const h = harness();
+    const seen: unknown[] = [];
+    const matcher = { input: { command: /^git /, flags: { force: true } } };
+    h.mod('my-mod', 'user', [fn('tool.call', seeing(seen), { matcher })]);
+    await h.fire('tool.call', {
+      tool: 'yes',
+      input: { command: 'git push', flags: { force: true, v: 1 } },
+    });
+    await h.fire('tool.call', {
+      tool: 'no',
+      input: { command: 'git push', flags: { force: false } },
+    });
+    await h.fire('tool.call', { tool: 'no', input: 'git push' });
+    await h.fire('tool.call', { tool: 'no' });
+    expect(seen).toEqual(['yes']);
+  });
+  test('against an array field a value holds when some element matches (§10.13.3 item 1)', async () => {
+    const h = harness();
+    const seen: unknown[] = [];
+    h.mod('my-mod', 'user', [
+      fn('tool.call', seeing(seen), { matcher: { tags: 'b', items: { id: 2 } } }),
+    ]);
+    await h.fire('tool.call', { tool: 'yes', tags: ['a', 'b'], items: [{ id: 1 }, { id: 2 }] });
+    await h.fire('tool.call', { tool: 'no', tags: ['a'], items: [{ id: 2 }] });
+    expect(seen).toEqual(['yes']);
+  });
+  test('a $regexp that is not a string is an issue, not a matcher that takes everything (judgment)', () => {
+    const h = harness();
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a module that breaks the matcher type
+    const matcher = { tool: { $regexp: 1 } as unknown as RegExp };
+    const issues = h.mod('my-mod', 'user', [fn('tool.call', seeing([]), { matcher })]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain('expected a string, RegExp or { $regexp');
   });
   test('a malformed serialised expression is an issue, and nothing of the module loads', () => {
     const h = harness();
@@ -179,10 +204,10 @@ describe('registering a module (events.md § Filter which events a hook handles)
     expect(h.mod('a', 'user', [hook])).toEqual([]);
     expect(h.mod('b', 'user', [hook])).toEqual([]);
   });
-  test('a hook of the wrong form for its event is refused: an async generator on turn.step, an async function elsewhere (judgment)', () => {
+  test('a hook of the wrong form for its event is refused: an async generator on turn.step in the words of §10.4.2 (J10.2), an async function elsewhere (judgment)', () => {
     const h = harness();
     expect(h.mod('a', 'user', [fn('turn.step', (_$, e, next) => next(e))])[0]?.message).toBe(
-      'on("turn.step") takes an async generator hook',
+      'the hook on "turn.step" is not an async generator: turn.step streams, so it takes async function* ($, e, next) { ... }, which yields the chunks and returns the result',
     );
     expect(
       h.mod('b', 'user', [

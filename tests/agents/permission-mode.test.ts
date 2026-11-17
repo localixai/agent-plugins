@@ -22,9 +22,9 @@ const heldWhatever = (main: Parameters<typeof resolve>[0], mode: Parameters<type
 };
 
 spec('agents.permissionMode.default', () => {
-  test('Manual mode reads only: everything else prompts, in scope or not', () => {
+  test('Manual mode reads only, inside the working directories (§13.1 item 2): everything else prompts', () => {
     expect(row('default')).toEqual(['allow', 'ask', 'ask', 'ask']);
-    expect(row('default', false)).toEqual(['allow', 'ask', 'ask', 'ask']);
+    expect(row('default', false)).toEqual(['ask', 'ask', 'ask', 'ask']);
   });
 
   test('"default" and its alias "manual" run in Manual mode when the main conversation lets them', () => {
@@ -60,7 +60,7 @@ spec('agents.permissionMode.acceptEdits', () => {
   });
 
   test('paths outside that scope still prompt', () => {
-    expect(row('acceptEdits', false)).toEqual(['allow', 'ask', 'ask', 'ask']);
+    expect(row('acceptEdits', false)).toEqual(['ask', 'ask', 'ask', 'ask']);
   });
 
   test('a subagent that sets it runs in it when the main conversation is default or dontAsk', () => {
@@ -81,7 +81,8 @@ spec('agents.permissionMode.auto', () => {
   // under it and what is routed to it.
   test('reads and in-scope edits skip the classifier; everything else goes to it', () => {
     expect(row('auto')).toEqual(['allow', 'allow', 'classify', 'classify']);
-    expect(row('auto', false)).toEqual(['allow', 'classify', 'classify', 'classify']);
+    // The first read outside the working directories prompts (§13.9.4 item 2).
+    expect(row('auto', false)).toEqual(['ask', 'classify', 'classify', 'classify']);
   });
 
   test('a main conversation in auto makes the subagent run in auto and ignores what it sets', () => {

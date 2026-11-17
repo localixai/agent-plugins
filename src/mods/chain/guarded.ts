@@ -2,6 +2,7 @@ import type { Budget } from '../../foundation/index.ts';
 import { groupTimedOut, thrown, timedOut, type Failure } from './failure.ts';
 import { isHookBody } from './hook-body.ts';
 import type { LingerWatch } from './linger.ts';
+import type { Floor } from './next.ts';
 
 /** How one run of a hook (or of its handler) ended. */
 export type Outcome = { readonly value: unknown } | { readonly failed: Failure };
@@ -10,6 +11,8 @@ export type Outcome = { readonly value: unknown } | { readonly failed: Failure }
 export interface Limits {
   readonly budget: Budget;
   readonly group?: { readonly budget: Budget; readonly event: string };
+  /** Whether the hook waits inside `next`, where the shared time running out is not its fault. */
+  readonly floor?: Floor;
   /** Told each step the hook's own code is running, for `HookBudget.lingerMs`. */
   readonly watch?: LingerWatch;
 }
@@ -19,9 +22,10 @@ function expiry(limits: Limits): Promise<{ readonly failed: Failure }> {
   const own = limits.budget.expired.then(() => ({ failed: timedOut(limits.budget.ms) }));
   if (!limits.group) return own;
   const { budget, event } = limits.group;
-  // The shared time is spent by whichever hook has the floor; one waiting inside `next` is not at fault.
+  // The shared clock never stops (§10.11): it fails the hook that has the floor when it runs out,
+  // one waiting on a `$` call included; a hook waiting inside `next` is not at fault.
   const shared = budget.expired.then(() =>
-    limits.budget.isRunning()
+    (limits.floor?.inNext ?? 0) === 0
       ? { failed: groupTimedOut(event, budget.ms) }
       : new Promise<never>(() => undefined),
   );

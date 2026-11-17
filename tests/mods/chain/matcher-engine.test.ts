@@ -50,6 +50,22 @@ const seeing = (seen: unknown[]) => (_$: unknown, e: Ev, next: (e: Ev) => Promis
 };
 
 describe('a regular expression of a matcher runs in the host engine when there is one', () => {
+  test('a regular expression inside a partial or against an array element runs there too', async () => {
+    const { engine, calls } = fakeEngine(({ value }) => value === 'git push');
+    const h = harness([], { matcherEngine: engine });
+    const seen: unknown[] = [];
+    h.mod('my-mod', 'user', [
+      fn('tool.call', seeing(seen), { matcher: { input: { command: /^git / }, tags: /x/ } }),
+    ]);
+    await h.fire('tool.call', {
+      tool: 'Bash',
+      input: { command: 'git push' },
+      tags: ['a', 'git push'],
+    });
+    await h.fire('tool.call', { tool: 'Read', input: { command: 'ls' }, tags: ['git push'] });
+    expect(seen).toEqual(['Bash']);
+    expect(calls.map(({ value }) => value)).toEqual(['git push', 'a', 'git push', 'ls']);
+  });
   test('the engine answers, not this thread: a pattern the engine says matches does, whatever RegExp says', async () => {
     const { engine, compiled, calls } = fakeEngine(({ source }) => source === 'anything');
     const h = harness([], { matcherEngine: engine });

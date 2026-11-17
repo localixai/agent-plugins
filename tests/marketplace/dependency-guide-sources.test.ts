@@ -76,10 +76,16 @@ spec('dependencies.guide.Constrain a dependency that has a non-git source', () =
     ]);
   });
 
-  test('Claude Code never installs a dependency with a command source: the user installs it first', () => {
+  test('Claude Code never installs a dependency with a command source: the user installs it first, and until then the dependent fails to install (§16.24)', () => {
     const result = plan('consumer@m', facts([consumer, plugin('lib', { source: command })]));
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.steps).toEqual([]);
+    expect(result.issues.map((one) => [one.path, one.message])).toEqual([
+      [
+        'dependencies.lib@m',
+        'Dependency "lib@m" has a command source, which Claude Code never installs as a dependency; install it first: claude plugin install lib@m',
+      ],
+    ]);
     expect(result.leftOut).toEqual([
       expect.objectContaining({
         id: 'lib@m',
@@ -98,6 +104,7 @@ spec('dependencies.guide.Constrain a dependency that has a non-git source', () =
       facts([consumer, plugin('lib', { headersHelper: './token.sh', source: archive })]),
     );
     expect(result.steps).toEqual([]);
+    expect(result.ok).toBe(false);
     expect(result.leftOut.map((one) => [one.id, one.reason])).toEqual([
       ['lib@m', 'headers-helper'],
     ]);
@@ -128,15 +135,19 @@ spec('dependencies.guide.Constrain a dependency that has a non-git source', () =
     });
 
     test.each(DEPENDENCY_INSTALL_OPERATIONS)(
-      '%s installs a missing registry dependency but leaves a command source and a headersHelper entry for the user',
+      '%s leaves a command source and a headersHelper entry for the user and fails until they are installed (§16.24)',
       (operation) => {
         const result = plan('consumer@m', missing, operation);
-        expect(result.steps.map((one) => [one.id, one.action])).toEqual([['lib@m', 'install']]);
+        expect(result.steps).toEqual([]);
         expect(result.leftOut.map((one) => [one.id, one.reason, one.command])).toEqual([
           ['tool@m', 'command-source', 'claude plugin install tool@m'],
           ['gated@m', 'headers-helper', 'claude plugin install gated@m'],
         ]);
-        expect(result.ok).toBe(true);
+        expect(result.issues.map((one) => one.path)).toEqual([
+          'dependencies.tool@m',
+          'dependencies.gated@m',
+        ]);
+        expect(result.ok).toBe(false);
       },
     );
 

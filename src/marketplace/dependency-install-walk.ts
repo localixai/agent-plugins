@@ -24,7 +24,10 @@ import type { NormalizedDependency } from './types.ts';
 /** Why Claude Code does not install a dependency itself. */
 export type LeftOutReason = 'command-source' | 'headers-helper' | 'cross-marketplace';
 
-/** A dependency the install leaves out; the dependent then fails to load until the user acts. */
+/**
+ * A dependency the install leaves out. A `command` or `headersHelper` one also refuses the install
+ * until the user installs it by itself (§16.24); a cross-marketplace `plugin.json` one does not.
+ */
 export interface LeftOut {
   readonly id: string;
   readonly reason: LeftOutReason;
@@ -170,7 +173,10 @@ function fromCatalog(id: string, walk: Walk): Children {
   }
   const reason = leftReason(entry);
   if (reason === undefined) return entry.dependencies;
-  walk.leftOut.push(leave(id, reason));
+  // The user installs it by itself first; until then the dependent fails to install (§16.24).
+  const left = leave(id, reason);
+  walk.leftOut.push(left);
+  walk.issues.push(error(`dependencies.${id}`, left.message));
   return undefined;
 }
 

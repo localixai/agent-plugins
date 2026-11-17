@@ -83,13 +83,14 @@ spec('agents.behavior.Built-in subagents', () => {
 });
 
 describe('the order around the Explore rule (spec/judgments.md)', () => {
-  test('CLAUDE_CODE_SUBAGENT_MODEL and a model passed on the call come before the rule', () => {
+  test('a model passed on the call comes before the rule; CLAUDE_CODE_SUBAGENT_MODEL alone does not (§5.8.2), with FORCE it does', () => {
     const input = { ...fableMain, builtin: explore('subscription') };
     expect(resolveSubagentModel({ ...input, envModel: 'haiku' })).toEqual({
-      model: 'haiku',
-      from: 'env',
+      model: 'opus',
+      from: 'builtin',
       kind: 'alias',
     });
+    expect(resolveSubagentModel({ ...input, envModel: 'haiku', force: true }).from).toBe('env');
     expect(resolveSubagentModel({ ...input, invocation: 'sonnet' })).toEqual({
       model: 'sonnet',
       from: 'invocation',

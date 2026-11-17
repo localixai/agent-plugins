@@ -45,4 +45,9 @@ export interface PluginUpdateFacts {
   readonly tty: boolean;
   /** The answer to `Run this command now? [y/N]`, once the host has asked. */
   readonly answer?: boolean;
+  /**
+   * The text `readInstalledPlugins` reported for a record of `installed_plugins.json` this version
+   * cannot read, or a format it does not know; the command then refuses (§16.6.2 item 1).
+   */
+  readonly unreadableRecords?: string;
 }

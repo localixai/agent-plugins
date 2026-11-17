@@ -3,7 +3,7 @@ import type { Clock } from '../../ports/index.ts';
 import type { ModMatcherValue, ModMatcher } from '../../protocol/mods-events.ts';
 import type { MatcherEngine, MatcherPattern } from '../ports.ts';
 import type { SkipKind } from '../types.ts';
-import { fieldOf, localTest, patternOf, toList } from './match-local.ts';
+import { fieldOf, localTest, partialOf, patternOf, toList } from './match-local.ts';
 
 export { acceptsField, isUnfiltered } from './match-local.ts';
 
@@ -87,12 +87,48 @@ async function askEngine(
 
 /** The test of one allowed value: in `engine` when it is a regular expression and there is one. */
 function valueTest(allowed: ModMatcherValue, engine: MatcherEngine | undefined): Probe {
+  const partial = engine ? partialOf(allowed) : undefined;
+  if (partial) return elementwise(partialProbe(fieldTests(partial, engine)));
   const source = engine ? patternOf(allowed) : undefined;
   if (!engine || source === undefined) return localTest(allowed);
   const pattern = engine.compile(...source);
-  return (actual, run, field) =>
-    typeof actual === 'string' ? askEngine(pattern, actual, run, field) : false;
+  return elementwise((actual, run, field) =>
+    typeof actual === 'string' ? askEngine(pattern, actual, run, field) : false,
+  );
 }
+
+/** Against an array value a test holds when some element passes it (§10.13.3 item 1). */
+const elementwise =
+  (probe: Probe): Probe =>
+  async (actual, run, field) => {
+    if (!Array.isArray(actual)) return probe(actual, run, field);
+    let fault: MatchFault | undefined;
+    for (const item of actual) {
+      const answer = await probe(item, run, field);
+      if (answer === true) return true;
+      if (typeof answer === 'object') fault ??= answer;
+    }
+    return fault ?? false;
+  };
+
+/** A partial of an object field: every field it names lets the object's field through. */
+const partialProbe =
+  (fields: readonly FieldTest[]): Probe =>
+  async (actual, run) => {
+    if (typeof actual !== 'object' || actual === null) return false;
+    for (const field of fields) {
+      const verdict = await anyAllowed(field, fieldOf(actual, field.name), run);
+      if (!verdict.matched) return verdict.fault ?? false;
+    }
+    return true;
+  };
+
+const fieldTests = (matcher: ModMatcher, engine: MatcherEngine | undefined): FieldTest[] =>
+  Object.entries(matcher).flatMap(([name, field]) =>
+    field === undefined
+      ? []
+      : [{ name, alternatives: toList(field).map((value) => valueTest(value, engine)) }],
+  );
 
 interface FieldTest {
   readonly name: string;
@@ -128,9 +164,8 @@ export function compileMatcher(
 ): CompiledMatcher | { readonly problem: string } {
   const fields: FieldTest[] = [];
   for (const [name, field] of Object.entries(matcher ?? {})) {
-    if (field === undefined) continue;
     try {
-      fields.push({ name, alternatives: toList(field).map((value) => valueTest(value, engine)) });
+      fields.push(...fieldTests({ [name]: field }, engine));
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
       return { problem: `matcher field "${name}" is not a valid regular expression: ${why}` };

@@ -118,6 +118,15 @@ const readFacts: Builder = (call, ctx) => {
   };
 };
 
+/** LSP: no prompt of its own, but the read block refuses its `filePath` outside (§13.12.2 item 1, J7.210). */
+const lspFacts: Builder = (call, ctx) => {
+  const requested = requestedPath(call, ctx.match.paths);
+  if (requested === undefined) return {};
+  return readBlocked(touched(call, requested), ctx)
+    ? { blockedBy: 'outside-working-directory' }
+    : {};
+};
+
 /** Edit, Write, NotebookEdit and MultiEdit. */
 const editFacts: Builder = (call, ctx) => {
   const requested = requestedPath(call, ctx.match.paths);
@@ -246,6 +255,7 @@ const BUILDERS: ReadonlyMap<string, Builder> = new Map<string, Builder>([
   ['Read', readFacts],
   ['Grep', readFacts],
   ['Glob', readFacts],
+  ['LSP', lspFacts],
   ['Edit', editFacts],
   ['Write', editFacts],
   ['NotebookEdit', editFacts],

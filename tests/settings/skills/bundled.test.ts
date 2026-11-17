@@ -89,8 +89,11 @@ describe('what the docs leave open (spec/judgments.md)', () => {
     ]);
   });
 
-  test('only the documented value 1 of the variable counts', () => {
-    for (const value of ['0', 'true', '', undefined]) {
+  test('the variable is on for any on spelling, in any case, trimmed (J3.16); anything else leaves them on', () => {
+    for (const value of ['1', 'true', 'YES', ' on ']) {
+      expect(bundledSkills(viewOf(), { [BUNDLED_SKILLS_ENV]: value }).disabled).toBe(true);
+    }
+    for (const value of ['0', 'false', 'maybe', '', undefined]) {
       expect(bundledSkills(viewOf(), { [BUNDLED_SKILLS_ENV]: value }).disabled).toBe(false);
     }
   });

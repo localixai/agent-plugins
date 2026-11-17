@@ -57,6 +57,10 @@ async function collect(stream: Stream): Promise<unknown> {
   }
 }
 
+/** The time all the hooks of `event` share, stopped until the settings hooks finish (§10.11). */
+const groupOf = (clock: Clock, event: string, ms: number | undefined): Pick<Context, 'group'> =>
+  ms === undefined ? {} : { group: { budget: createBudget(clock, ms, { paused: true }), event } };
+
 /** The chains of hooks, one per event, and what runs them (events.md, "How a hook handles an event"). */
 export function createModChain(options: ModChainOptions): ModChain {
   const registry = createRegistry(options.matcherEngine);
@@ -92,16 +96,14 @@ export function createModChain(options: ModChainOptions): ModChain {
       ...hostParts,
       calling: { frames, followed: running !== undefined, frame: running?.current() },
       ...stepsFor(opts),
-      ...(groupMs === undefined
-        ? {}
-        : {
-            group: { budget: createBudget(options.clock, groupMs, { paused: true }), event: name },
-          }),
+      ...groupOf(options.clock, name, groupMs),
     };
     try {
       // The managed settings hooks run first; when one answers, no mod's hook runs.
       const first = opts.before === undefined ? undefined : await opts.before(frozen);
       if (first !== undefined) return first;
+      // The shared time is counted from when the settings hooks finish, and never stops (§10.11).
+      ctx.group?.budget.resume();
       return yield* runFrom(ctx, 0, frozen);
     } finally {
       ctx.group?.budget.dispose();

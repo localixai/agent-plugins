@@ -174,6 +174,17 @@ spec('permissions.mode.bypassPermissions', () => {
           expect(read('/etc/hosts')).toEqual(deny('outside-working-directory'));
         });
 
+        test('an LSP call is refused by its filePath outside the working directories (§13.12.2 item 1, J7.210)', () => {
+          const lsp = (filePath: string) =>
+            decide(
+              { toolName: 'LSP', input: { operation: 'hover', filePath, line: 1, character: 1 } },
+              baseContext('bypassPermissions', READS),
+            );
+          expect(lsp('/etc/hosts')).toEqual(deny('outside-working-directory'));
+          expect(lsp('/work/app/src/a.ts').outcome).toBe('allow');
+          expect(lsp('src/a.ts').outcome).toBe('allow');
+        });
+
         test('a symlink that leads out of the working directory is judged by where it leads', () => {
           const call: PreparedCall = {
             toolName: 'Read',

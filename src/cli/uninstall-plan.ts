@@ -13,6 +13,8 @@ import {
   type ResultFields,
 } from './result.ts';
 import { matchingIds, nameOf, qualifiedCommands } from './plugin-ref.ts';
+import { recordsRefusal } from './records-refusal.ts';
+import { flagProblem } from './uninstall-flags.ts';
 import { chooseScope, type ConfigScope } from './scope.ts';
 import { DATA_PRESERVED, uninstallRetention, type Retention } from './uninstall-data.ts';
 import { stillOnReason, type StillSwitchedOn } from './uninstall-refusal.ts';
@@ -42,6 +44,8 @@ export interface UninstallFacts {
   readonly graph: GraphFacts;
   /** Both stdin and stdout are a terminal. */
   readonly tty: boolean;
+  /** What `readInstalledPlugins` reported for records it cannot read: the command refuses (§16.6.2). */
+  readonly unreadableRecords?: string;
 }
 
 /** What `--prune` removes with the plugin, and whether the user is asked first. */
@@ -125,15 +129,6 @@ const ambiguous = (argument: string, ids: readonly string[]): UninstallStart =>
     ),
   );
 
-/** `--json` and a missing `-y` are flag problems: nothing is printed but the reason. */
-function flagProblem(args: UninstallArguments, tty: boolean): string | undefined {
-  if (args.json === true && args.prune === true) return '--json cannot be combined with --prune';
-  if (args.prune === true && args.yes !== true && !tty) {
-    return '--prune needs -y when stdin or stdout is not a terminal';
-  }
-  return undefined;
-}
-
 function pruneStep(
   args: UninstallArguments,
   graph: GraphFacts,
@@ -152,6 +147,8 @@ export function startUninstall(args: UninstallArguments, facts: UninstallFacts):
   if ('reason' in chosen) return done(chosen);
   const problem = flagProblem(args, facts.tty);
   if (problem !== undefined) return done(usageError(problem));
+  const records = recordsRefusal('uninstall', args.plugin, facts.unreadableRecords);
+  if (records !== undefined) return done(records);
   const { scope } = chosen;
   const here = facts.graph.installed
     .filter((record) => record.scope === scope)

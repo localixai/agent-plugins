@@ -16,6 +16,7 @@ import {
   type CommandOutput,
   type ResultFields,
 } from './result.ts';
+import { recordsRefusal } from './records-refusal.ts';
 import { chooseScope } from './scope.ts';
 import { commandToAccept, failureLine, locate } from './update-locate.ts';
 import type { UpdatableInstall, PluginUpdateArguments, PluginUpdateFacts } from './update-facts.ts';
@@ -202,6 +203,8 @@ export async function planPluginUpdate(
     ...(args.acceptCommand === undefined ? {} : { acceptCommand: args.acceptCommand }),
   });
   if (exclusive !== undefined) return ended(exclusive);
+  const records = recordsRefusal('update', args.plugin, facts.unreadableRecords);
+  if (records !== undefined) return ended(records);
   const located = locate(args, facts, 'scope' in chosen ? chosen.scope : undefined);
   if ('end' in located) return ended(located.end);
   const { install } = located;

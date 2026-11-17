@@ -31,9 +31,9 @@ const limitedToOrganization = managed({
 });
 
 const LIMITED = "mods are limited to your organization's by policy (allowManagedModsOnly)";
-const LIFTED = 'tried to lift a deny rule in your settings';
+const LIFTED = 'tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)';
 const UNCHECKED =
-  'the deny rules in your settings could not be checked for this call, so it is refused';
+  'the deny rules in your settings could not be checked for this call, so it is refused (allowModsToOverrideDenyRules)';
 
 const lifter = registerOf((on) => {
   on('tool.check', () => ({ decision: 'allow', reason: 'looks fine' }));

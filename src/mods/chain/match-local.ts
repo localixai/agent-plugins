@@ -14,28 +14,59 @@ const isRegExp = (value: unknown): value is RegExp =>
 
 const isText = (value: unknown): value is string => typeof value === 'string';
 
+/** A regular-expression value: `/x/`, or the `{ $regexp, flags }` a hooks module runtime sends. */
+const isPattern = (value: ModMatcherValue): boolean =>
+  isRegExp(value) ||
+  (typeof value === 'object' && value !== null && Object.hasOwn(value, '$regexp'));
+
 /**
- * The source and flags of a regular-expression value (`/x/` or the `{ $regexp, flags }` a hooks
- * module runtime sends), with the stateful flags dropped; `undefined` for a string, number or
- * boolean. Any other object is no matcher value at all and throws, so the hook is refused.
+ * The source and flags of a regular-expression value, with the stateful flags dropped; `undefined`
+ * for any other value. A `$regexp` or `flags` that is not a string throws, so the hook is refused.
  */
 export function patternOf(allowed: ModMatcherValue): [string, string] | undefined {
-  if (typeof allowed !== 'object') return undefined;
+  if (!isPattern(allowed)) return undefined;
   const [source, flags]: [unknown, unknown] = isRegExp(allowed)
     ? [allowed.source, allowed.flags]
     : [Reflect.get(Object(allowed), '$regexp'), Reflect.get(Object(allowed), 'flags') ?? ''];
   if (!isText(source) || !isText(flags)) {
-    throw new TypeError('expected a string, number, boolean, RegExp or { $regexp, flags }');
+    throw new TypeError('expected a string, RegExp or { $regexp: string, flags?: string }');
   }
   return [source, flags.replace(STATEFUL_FLAGS, '')];
 }
 
-/** The test of one allowed value in this thread; throws a `SyntaxError` when a serialised expression does not compile. */
+/** An object value that is no regular expression: matched as a partial of an object field (§10.13.3 item 1). */
+export function partialOf(allowed: ModMatcherValue): ModMatcher | undefined {
+  return typeof allowed === 'object' && allowed !== null && !isPattern(allowed)
+    ? (allowed as ModMatcher) // narrowed: an object of the union that is neither RegExp nor { $regexp }
+    : undefined;
+}
+
+const isRecord = (value: unknown): value is object => typeof value === 'object' && value !== null;
+
+/** The in-thread test of a partial: every field it names lets the object's field through. */
+function partialTest(partial: ModMatcher): (actual: unknown) => boolean {
+  const fields = Object.entries(partial).flatMap(([name, field]) =>
+    field === undefined ? [] : [{ name, tests: toList(field).map(localTest) }],
+  );
+  return (actual) =>
+    isRecord(actual) &&
+    fields.every(({ name, tests }) => tests.some((each) => each(fieldOf(actual, name))));
+}
+
+/**
+ * The test of one allowed value in this thread; against an array value it holds when some element
+ * passes (§10.13.3 item 1). Throws a `SyntaxError` when a serialised expression does not compile.
+ */
 export function localTest(allowed: ModMatcherValue): (actual: unknown) => boolean {
+  const partial = partialOf(allowed);
   const source = patternOf(allowed);
-  if (source === undefined) return (actual) => actual === allowed;
-  const pattern = new RegExp(...source);
-  return (actual) => typeof actual === 'string' && pattern.test(actual);
+  const pattern = source ? new RegExp(...source) : undefined;
+  const one: (actual: unknown) => boolean = partial
+    ? partialTest(partial)
+    : pattern
+      ? (actual) => typeof actual === 'string' && pattern.test(actual)
+      : (actual) => actual === allowed;
+  return (actual) => (Array.isArray(actual) ? actual.some(one) : one(actual));
 }
 
 const isList = (
