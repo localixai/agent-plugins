@@ -1,6 +1,6 @@
 /**
  * What a scan does with links in a folder tree the layout leaves open, as Claude Code 2.1.322 does
- * it (`bun run oracle:runtime`, tests/fixtures/runtime/symlinked-duplicates, and probes recorded in
+ * it (the spec's runtime oracle, spec/oracle/runtime/symlinked-duplicates, and probes recorded in
  * spec/judgments.md): a commands or agents scan does not enter a symlinked folder; a skills scan
  * follows a linked skill folder through the same containment rule as a declared path
  * (plugins/loading.md, "Paths that escape the plugin directory": "A symlink that leads outside the

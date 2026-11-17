@@ -1,7 +1,7 @@
 /**
  * What a session registers from a plugin where Claude Code 2.1.319 decides and the docs say less or
  * differently (E5a; spec/judgments.md, "oracle 2.1.319"; docs/SPEC.md). Each test is the smallest
- * plugin of its own that shows one rule; the same shapes are the fixtures of tests/fixtures/runtime,
+ * plugin of its own that shows one rule; the same shapes are the fixtures of spec/oracle/runtime,
  * checked against the oracle's recorded result by runtime-oracle.test.ts. Outside `spec(...)`.
  */
 import { describe, expect, test } from 'bun:test';

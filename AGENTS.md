@@ -12,7 +12,8 @@ real plugins); this repository never does, and syncs what the spec publishes.
 
 - **E1** The contract is the spec at the pinned revision. Requirement ids, judgments (`J<n>.<m>`)
   and the snapshots the tests read (`spec/requirements.json`, `spec/mods-declarations.json`,
-  `spec/docs-tables.json`, the scope files) come from it through `bun run spec:sync`, never by
+  `spec/docs-tables.json`, `spec/tools-table.json`, the scope files, the oracle outcomes in
+  `spec/oracle/`) come from it through `bun run spec:sync`, never by
   hand; `check:spec` (SP4) fails on an edited or stale copy. Cite the section a test proves in the
   test file's header (the spec's chapter, or the docs page and section the requirement names).
 - **E1a** This repository never mines Claude Code. A change of behaviour the spec does not state
@@ -36,9 +37,12 @@ real plugins); this repository never does, and syncs what the spec publishes.
   proven overall and per category. Never state a percentage or "supported" from your own reading.
 - **E5a** What Claude Code does where its docs are silent or disagree (a validator's wording, a
   loading outcome) is what the spec's judgments and deviations state, with the oracle runs they
-  rest on; the kit's tests of it run outside `spec(...)`. The differential checks here (`corpus*`,
-  `oracle:*`, docs/TESTING.md) measure the kit, never the contract: a difference they show that the
-  spec does not settle goes to the spec (E1a).
+  rest on; the kit's tests of it run outside `spec(...)`. No script here starts Claude Code: the
+  spec runs it and records the outcomes (`spec/oracle/`, synced; the corpus ones read from the
+  spec's `extend/.cache/oracle/`), and the differential checks here (`corpus*`, `oracle:*`,
+  `bench:validate`, the oracle tests; docs/TESTING.md, "Oracle runs") compare the kit with them.
+  They measure the kit, never the contract: a difference they show that the spec does not settle
+  goes to the spec (E1a).
 - **E6** Another host's behaviour (Localix, a blog, an issue) is a lead for the spec, never
   evidence. Port code from Localix only after the spec states the behaviour.
 
@@ -85,23 +89,23 @@ Update the doc that owns a behaviour in the same commit as the code.
 
 Each rule is checked by a gate; a gate never gets a baseline or an exception without the owner.
 
-| Id     | Rule                                                                                                                                                        | Gate                |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| L1     | A `src/` module imports only from its own folder and lower layers                                                                                           | `check:layers`      |
-| L2     | `@anthropic-ai/*` only in `src/protocol/`, only `import type`                                                                                               | `check:layers`      |
-| L3     | `src/` uses no `node:*`, `bun`, `Bun`, `process`, `Date`, `fetch` or timer: every effect is a port                                                          | `check:layers`      |
-| L4     | `src/` never imports `tests/` or `scripts/`                                                                                                                 | `check:layers`      |
-| S1     | No file over 300 lines; split by responsibility                                                                                                             | `check:size`        |
-| K1     | No `switch`: what differs per member is a strategy in a registry typed over the union                                                                       | `lint` (quality)    |
-| K2     | Never compare a kind-like field to a string, nor pass a member to a generic guard as one                                                                    | `lint` (quality)    |
-| Q1     | Complexity ≤ 10, cognitive ≤ 15, depth ≤ 3, ≤ 4 params, ≤ 25 statements, ≤ 80 lines per function                                                            | `lint` (quality)    |
-| T1     | No focused or switched-off test                                                                                                                             | `check:tests`       |
-| T2     | Tests only in `tests/<module>/`, support in `tests/support/`                                                                                                | `check:test-layout` |
-| SP1–5  | Requirements valid; test ids exist; the SDK is the spec's release; `spec/` is the pinned spec, byte for byte; the snapshots parse                           | `check:spec`        |
-| C1     | Every test passes and `docs/COMPATIBILITY.md` is current                                                                                                    | `compat --check`    |
-| DOC1–3 | Paths named in docs exist; every doc has a row above; every export of every entry has a row in its `docs/api/` table, and every name the docs import exists | `check:docs`        |
-| D1     | No unused file, export or dependency                                                                                                                        | `check:deadcode`    |
-| G1–2   | Conventional Commits; `feat`/`fix`/`perf` add a CHANGELOG entry                                                                                             | `commit-msg` hook   |
+| Id     | Rule                                                                                                                                                                      | Gate                |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| L1     | A `src/` module imports only from its own folder and lower layers                                                                                                         | `check:layers`      |
+| L2     | `@anthropic-ai/*` only in `src/protocol/`, only `import type`                                                                                                             | `check:layers`      |
+| L3     | `src/` uses no `node:*`, `bun`, `Bun`, `process`, `Date`, `fetch` or timer: every effect is a port                                                                        | `check:layers`      |
+| L4     | `src/` never imports `tests/` or `scripts/`                                                                                                                               | `check:layers`      |
+| S1     | No file over 300 lines; split by responsibility                                                                                                                           | `check:size`        |
+| K1     | No `switch`: what differs per member is a strategy in a registry typed over the union                                                                                     | `lint` (quality)    |
+| K2     | Never compare a kind-like field to a string, nor pass a member to a generic guard as one                                                                                  | `lint` (quality)    |
+| Q1     | Complexity ≤ 10, cognitive ≤ 15, depth ≤ 3, ≤ 4 params, ≤ 25 statements, ≤ 80 lines per function                                                                          | `lint` (quality)    |
+| T1     | No focused or switched-off test                                                                                                                                           | `check:tests`       |
+| T2     | Tests only in `tests/<module>/`, support in `tests/support/`                                                                                                              | `check:test-layout` |
+| SP1–5  | Requirements valid; test ids exist; the SDK is the spec's release; `spec/` is the pinned spec, byte for byte; the snapshots parse, and the tools table copy is the spec's | `check:spec`        |
+| C1     | Every test passes and `docs/COMPATIBILITY.md` is current                                                                                                                  | `compat --check`    |
+| DOC1–3 | Paths named in docs exist; every doc has a row above; every export of every entry has a row in its `docs/api/` table, and every name the docs import exists               | `check:docs`        |
+| D1     | No unused file, export or dependency                                                                                                                                      | `check:deadcode`    |
+| G1–2   | Conventional Commits; `feat`/`fix`/`perf` add a CHANGELOG entry                                                                                                           | `commit-msg` hook   |
 
 Also: no `any`, no non-null `!`, no `as` casts outside a narrow, commented reason, no lint-disable
 comment without its reason, no legacy shims, no `git stash`/`reset`/`checkout` of others' work.

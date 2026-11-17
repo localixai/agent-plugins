@@ -1,6 +1,6 @@
 /**
  * What the kit's session registers from a plugin folder, in the shape of the runtime oracle's
- * registry (`runtime.ts`): `loadPlugin` over the folder, then a host with one plugin and a session,
+ * registry (`recorded.ts`): `loadPlugin` over the folder, then a host with one plugin and a session,
  * read through `agents()`, `skills()`, `mcpServers()` and `outputStyles()` as a host reads them.
  */
 import { readFile } from 'node:fs/promises';
@@ -23,7 +23,7 @@ import {
 } from '../../src/testing/index.ts';
 import { readCatalog, type PluginCatalog } from '../../src/host/catalog.ts';
 import { diskFiles } from '../corpus/disk-files.ts';
-import { SETTINGS_FILE, type Registry } from './runtime.ts';
+import { SETTINGS_FILE, type Registry } from './recorded.ts';
 
 const NOT_LOADED: Registry = {
   loaded: false,

@@ -6,7 +6,7 @@ import { readsAsEmptyInRemoteMcp } from './remote-mcp-credentials.ts';
  * ... whose name looks like a credential, such as a name with `TOKEN`, `SECRET`, `PASSWORD`, `KEY`,
  * or `AUTH` in it in either letter case", Git's `GIT_CONFIG_KEY_<n>` apart, and "a fixed list of
  * credential variables whose names don't follow that pattern"). The page gives the rule only by
- * example; this is Claude Code's, observed with `bun run oracle:headers-helper-env`
+ * example; this is Claude Code's, observed with the spec's headers-helper-env oracle
  * (spec/judgments.md, "headersHelper credential names") and checked against the recorded result by
  * tests/loading/helper-credentials.test.ts.
  */

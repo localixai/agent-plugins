@@ -1,28 +1,37 @@
 /**
- * `bun run bench:validate`: `claude plugin validate <dir>` (the program `CLAUDE_ORACLE_BIN` names,
- * else `claude`) against the kit's `validatePlugin` on a fixed list of corpus plugins, the first 30
- * by `marketplace/name`. Each is run `REPS` times and the median is kept. Columns:
+ * `bun run bench:validate [--release x.y.z]`: `claude plugin validate <dir>` against the kit's
+ * `validatePlugin` on the corpus plugins the spec timed (`oracle:record validate-timings` in its
+ * `extend/tools/`, the first 30 by `marketplace/name`, cached under
+ * `<oracle cache>/<release>/validate-timings.json`; the release defaults to the pinned one). This
+ * script never runs `claude`: its column is the spec's record, made on this machine. The kit's
+ * columns are run `REPS` times and the median is kept. Columns:
  *
- * - `claude`: one `claude plugin validate <dir>` process, start to exit;
+ * - `claude`: one `claude plugin validate <dir>` process, start to exit, as the spec timed it;
  * - `kit process`: one `bun` process that imports the kit and validates the folder (this script with
  *   `--one <dir>`), the same unit of work as the `claude` column;
  * - `kit in process`: `validatePlugin` alone in a warm process, the cost a host pays per plugin.
  *
  * Both programs also validate an empty folder: the floor of every run, the cost of starting the
- * process with nothing to read (`claude --version` takes a shorter path and is no floor). The
- * plugins' findings are not compared here (that is `bun run corpus`). Nothing is sent anywhere but
- * what `claude plugin validate` does itself.
+ * process with nothing to read. The plugins' findings are not compared here (that is `bun run
+ * corpus`).
  */
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { validatePlugin } from '../../src/index.ts';
 import { diskFiles } from '../corpus/disk-files.ts';
-import { readCorpusTargets } from '../corpus/location.ts';
-import { CLAUDE_BIN, claudeVersion } from '../oracle/claude-bin.ts';
+import { z } from 'zod';
+import { FILL, ORACLE_CACHE_DIR, readCorpusTargets } from '../corpus/location.ts';
+import { readSource } from '../spec/source.ts';
 
-const PLUGINS = 30;
 const REPS = 5;
+
+/** What the spec timed: the median ms of `claude plugin validate`, per plugin and on an empty folder. */
+const timingsSchema = z.object({
+  claudeCodeVersion: z.string(),
+  floor: z.number(),
+  plugins: z.record(z.string(), z.number()),
+});
 
 const median = (samples: readonly number[]): number => {
   const sorted = samples.toSorted((a, b) => a - b);
@@ -66,33 +75,43 @@ interface Row {
   readonly 'kit in process': number;
 }
 
-/** The medians of one folder in the three columns. */
-const rowOf = async (plugin: string, dir: string): Promise<Row> => ({
+/** The medians of one folder in the three columns, `claude` the spec's. */
+const rowOf = async (plugin: string, dir: string, claude: number): Promise<Row> => ({
   plugin,
-  claude: await medianOf(() => spawned([CLAUDE_BIN, 'plugin', 'validate', dir])),
+  claude,
   'kit process': await medianOf(() => spawned([process.execPath, import.meta.path, '--one', dir])),
   'kit in process': await medianOf(() => timeOf(() => validatePlugin({ files: diskFiles(dir) }))),
 });
 
 async function compare(): Promise<void> {
-  const version = await claudeVersion();
-  if (version === undefined) throw new Error(`${CLAUDE_BIN} --version did not run`);
-  const targets = (await readCorpusTargets())
-    .toSorted((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-    .slice(0, PLUGINS);
+  const at = process.argv.indexOf('--release');
+  const release = (at === -1 ? undefined : process.argv[at + 1]) ?? (await readSource()).release;
+  const file = join(ORACLE_CACHE_DIR, release, 'validate-timings.json');
+  const timed = timingsSchema.safeParse(
+    await Bun.file(file)
+      .json()
+      .catch(() => undefined),
+  );
+  if (!timed.success) {
+    throw new Error(`${file} is missing: \`bun run oracle:record validate-timings\`, ${FILL}`);
+  }
+  const version = timed.data.claudeCodeVersion;
+  const targets = (await readCorpusTargets()).filter(({ key }) => key in timed.data.plugins);
   const empty = await mkdtemp(join(tmpdir(), 'bench-validate-'));
   let floor: Row;
   try {
-    floor = await rowOf('(an empty folder: the floor)', empty);
+    floor = await rowOf('(an empty folder: the floor)', empty, timed.data.floor);
   } finally {
     await rm(empty, { recursive: true });
   }
   const rows: Row[] = [];
-  for (const target of targets) rows.push(await rowOf(target.key, target.dir));
+  for (const target of targets) {
+    rows.push(await rowOf(target.key, target.dir, timed.data.plugins[target.key] ?? 0));
+  }
   const total = (column: Exclude<keyof Row, 'plugin'>): number =>
     Math.round(rows.reduce((sum, row) => sum + row[column], 0));
   console.log(
-    `claude plugin validate (Claude Code ${version}) vs validatePlugin, ${targets.length} plugins, median of ${REPS} runs, ms`,
+    `claude plugin validate (Claude Code ${version}, the spec's timing) vs validatePlugin, ${targets.length} plugins, median of ${REPS} runs, ms`,
   );
   console.table([floor, ...rows]);
   console.table([

@@ -1,7 +1,8 @@
 import type { RuleFormatId } from '../../src/rules/index.ts';
 
 /**
- * The tools table of tools-reference.md copied by hand: the "Permission required" column, the
+ * The tools table of tools-reference.md copied by hand (`check:spec` SP5 holds it to the spec's
+ * `spec/tools-table.json`): the "Permission required" column, the
  * "Rule format" table's "Applies to" column (a tool it does not list takes only its bare name),
  * and a call of each tool that stays inside the working directory `/work/app`. Tests read this,
  * never the catalog, so the catalog is checked against the docs and not against itself.

@@ -92,7 +92,7 @@ const DISPOSITIONS: {
  * What stands for a sensitive value in skill, command and agent content, where "a sensitive value
  * there becomes a placeholder" (plugins/manifest-reference.md). The docs give no text; Claude Code
  * 2.1.319 sends the model this one, a command's body included, saved value or not
- * (`bun run oracle:model-content`).
+ * (the spec's model-content oracle).
  */
 export const SENSITIVE_PLACEHOLDER = (key: string): string =>
   `[sensitive option '${key}' not available in skill content]`;

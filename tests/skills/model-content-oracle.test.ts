@@ -1,13 +1,21 @@
 import { describe, expect, test } from 'bun:test';
-import { caseNames, kitExpansion, readExpected } from '../../scripts/oracle/model-content.ts';
+import { kitExpansion } from '../../scripts/oracle/model-content.ts';
+import {
+  caseFolders,
+  MODEL_CONTENT_DIR,
+  readModelExpected,
+} from '../../scripts/oracle/recorded.ts';
 
 /**
  * What the model reads when a plugin's skill or command is invoked: the kit's `expandSkill` text is
- * the block Claude Code sends after the `<command-message>` block (`bun run oracle:model-content`,
- * recorded in tests/fixtures/model-content/<case>/expected.json).
+ * the block Claude Code sends after the `<command-message>` block (the spec's model-request oracle,
+ * recorded in spec/oracle/model-content/<case>/expected.json).
  */
 const cases = await Promise.all(
-  (await caseNames()).map(async (name) => ({ name, expected: await readExpected(name) })),
+  caseFolders(MODEL_CONTENT_DIR).map(async (name) => ({
+    name,
+    expected: await readModelExpected(name),
+  })),
 );
 
 describe('the text a skill or command gives the model (oracle)', () => {

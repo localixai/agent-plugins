@@ -10,8 +10,9 @@ the hole, the kit's default, what the change costs real plugins (counted over th
 docs/TESTING.md, "Corpus"), and the option. The judgments are recorded in `spec/judgments.md`
 (`shellPaths`, `requireCall`).
 
-The observations were made with `claude -p` against a fake Messages API (the method of
-`scripts/oracle/model-request.ts`) on Claude Code 2.1.322, the docs being those of 2.1.321.
+The observations were made with `claude -p` against a fake Messages API (the method of the spec's
+model-request oracle, Agent Plugins Extended's `extend/tools/src/mine/oracle/model-request.ts`) on
+Claude Code 2.1.322, the docs being those of 2.1.321.
 
 ## Deviations
 

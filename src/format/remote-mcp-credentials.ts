@@ -2,7 +2,7 @@
  * The `${VAR}` names a remote MCP server's `url` and `headers` read as empty, whether or not the
  * variable is set and whatever `:-default` it carries (mcp.md, "Credential variables that read as
  * empty"). The page lists them only "such as"; the set here is Claude Code's, observed with
- * `bun run oracle:remote-mcp-env` (spec/judgments.md, "Remote MCP credential names"), and
+ * the spec's remote-mcp-env oracle (spec/judgments.md, "Remote MCP credential names"), and
  * tests/loading/remote-mcp-credentials.test.ts checks it against the recorded result.
  *
  * Names compare without regard to case (`npm_token`, `Http_Proxy` are emptied too).

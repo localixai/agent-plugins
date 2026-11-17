@@ -132,9 +132,11 @@ It then counts the same work with the meter (`scripts/bench/corpus-counts.ts`), 
 and writes `.cache/bench.json`. Timings depend on the machine, so they are not a gate; the counts
 are the same on every run over one corpus checkout.
 
-`bun run bench:validate` compares `claude plugin validate <dir>` (the program `CLAUDE_ORACLE_BIN`
-names, else `claude`) with `validatePlugin` on the first 30 corpus plugins by `marketplace/name`,
-the median of five runs each, and an empty folder as the floor of both programs. Starting the
+`bun run bench:validate` compares `claude plugin validate <dir>` with `validatePlugin` on the first
+30 corpus plugins by `marketplace/name`, the median of five runs each, and an empty folder as the
+floor of both programs. The `claude` column is the spec's timing on this machine (`oracle:record
+validate-timings`, `<oracle cache>/<release>/validate-timings.json`, "Over the corpus" below); this
+script never runs it. Starting the
 `claude` process is almost all of its time, so the comparison says what one CLI call costs a
 host, not how fast either reads a plugin.
 
@@ -170,92 +172,57 @@ opposite (plugins/components.md, "Commands" and "Agents"), and the kit keeps the
 session shows otherwise. `bun run corpus:load` prints the agreement per field; that residual is
 all of the remaining `skills` and `agents` differences.
 
-## Differential checks on fixtures
+## Oracle runs
 
-The checks below run Claude Code as a black box on small fixtures of our own and compare the kit
-with what it does; the result is committed beside the fixture, and `bun test` compares the kit with
-it without running Claude Code. They measure this implementation, never the contract (AGENTS.md,
-E5a): the behaviour they check is the spec's, and a difference the spec does not settle goes to the
-spec first (E1a). `bun run corpus:runtime` is the same check of a session over the corpus plugins
-that run nothing at start.
+This repository never runs Claude Code. Agent Plugins Extended runs it as a black box on fixtures
+written for the purpose and records what it did (`bun run oracle:record` in its `extend/tools/`; its
+`extend/conformance/README.md`, "Oracle runs", says how each run is isolated). The fixtures and the
+outcomes are small, so the spec commits them in `extend/conformance/oracle/`, and `bun run
+spec:sync` copies them into `spec/oracle/` with the other snapshots (docs/SPEC.md). The kit's side
+stays here and reads them through `scripts/oracle/recorded.ts`; `bun test` compares, with no
+`claude` installed. These checks measure this implementation, never the contract (AGENTS.md, E5a):
+the behaviour they check is the spec's, and a difference the spec does not settle goes to the spec
+first (E1a). A new release's outcomes reach this repository only as a new spec revision.
 
-## Remote MCP credential oracle
+| Outcome (`spec/oracle/`) | What Claude Code was asked | The kit's side |
+| --- | --- | --- |
+| `runtime/<case>/expected.json` | what a session registers from the case's plugin (`init` of `claude -p --plugin-dir`), ids only | `tests/host/runtime-oracle.test.ts`, `bun run oracle:runtime` |
+| `settings.json` | the Agent SDK's `resolveSettings` per key, and the mode `claude -p` starts in | `bun run oracle:settings` |
+| `subprocess-scrub/expected.json` | what a hook receives under `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` | `tests/hooks/handlers/command/scrub-judgments.test.ts` |
+| `remote-mcp-env/expected.json` | which `${VAR}` names a remote MCP `url` and `headers` read as empty | `tests/loading/remote-mcp-credentials.test.ts` |
+| `headers-helper-env/expected.json` | which variables a supplied `headersHelper` runs without | `tests/loading/helper-credentials.test.ts` |
+| `model-content/<case>/expected.json` | the user text blocks the model gets when a skill or command is invoked | `tests/skills/model-content-oracle.test.ts` (`scripts/oracle/model-content.ts`) |
 
-`bun run oracle:remote-mcp-env` observes which `${VAR}` names Claude Code reads as empty in a remote
-MCP server's `url` and `headers` (mcp.md lists them "such as"). For the names of
-`tests/fixtures/remote-mcp-env/candidates.txt`, a project `.mcp.json` sends one header per name to a
-local HTTP server through `claude mcp get`; a covered name arrives empty whether or not it is set,
-so the run sets no variable and gets a bare environment. The result is committed as `expected.json`
-beside the candidates; `tests/loading/remote-mcp-credentials.test.ts` checks the kit's rule against it
-without running Claude Code, and `--check` fails when a new release empties other names.
+### Runtime
 
-## headersHelper environment oracle
-
-`bun run oracle:headers-helper-env` observes which variables Claude Code removes from a supplied
-`headersHelper` (mcp.md, "Which variables a helper can read", gives the rule by example). Every name
-of `tests/fixtures/headers-helper-env/candidates.txt` is set to a dummy value in a bare environment
-(a proxy to an address `NO_PROXY` bypasses), a trusted private project's helper prints the names it
-received to a local HTTP server through `claude mcp get`, and the result is committed as
-`expected.json`; `tests/loading/helper-credentials.test.ts` checks the kit's rule against it.
-
-`bun run oracle:subprocess-scrub` observes what `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` leaves of each
-variable of `tests/fixtures/subprocess-scrub/candidates.json` (env-vars.md, "What the subprocess
-environment scrub removes", gives the rule by example): a bare environment, a private config folder
-whose SessionStart hook prints its environment, an API address nobody listens on, and the run stopped
-once the hook wrote. The result is committed as `expected.json`;
-`tests/hooks/handlers/command/scrub-judgments.test.ts` checks the kit's one scrub against it.
-
-## Model-request oracle
-
-`bun run oracle:model-content` reads what Claude Code sends the model when a plugin's skill or
-command is invoked. `scripts/oracle/model-request.ts` runs `claude -p "/<plugin>:<skill> <args>"`
-with `ANTHROPIC_BASE_URL` pointing at a local fake Messages API that records each request and
-streams back one word, so no model is called; the config and working folders are private and the
-environment is bare. Each case of `tests/fixtures/model-content/<case>/` is a tiny plugin of its own
-and a `case.json`; the user message blocks Claude Code sent for the skill (its own reminders left out), with the
-run's paths and session id normalized, are committed as `expected.json`. `tests/skills/model-content-oracle.test.ts` compares the
-kit's `expandSkill` with the block after `<command-message>` without running Claude Code. The run
-executes the plugin: point it only at fixtures written for it.
-
-## Runtime oracle
-
-`bun run oracle:runtime` compares what the kit's SESSION registers with what a Claude Code session
-registers, plugin by plugin, for the fixtures of `tests/fixtures/runtime/<case>/` (each folder is a
-tiny plugin of its own, named after the case). Claude Code's side is the `init` event of
-`claude -p --plugin-dir <fixture> --output-format stream-json --verbose --max-turns 1 hi`, run as a
-black box (`scripts/oracle/runtime.ts`) in a private home, config folder and working folder, with no
-inherited variable but `PATH`, an invalid API key and an API address nothing listens on; the run is
-ended at `init`, before the model is asked, so nothing is spent. It runs the fixture's hooks and MCP
-servers (a stdio server that does not exist is enough: its name is registered, its status `failed`),
-so point it only at fixtures written for it, never at a third-party or corpus plugin. The event is
-cached per Claude Code version and content hash of the fixture in `.cache/oracle-runtime/<version>/`;
-`oracle-settings.json` in a fixture is copied to the config folder as `settings.json`.
-
-Per case it compares, filtered to the plugin's own names: `loaded` (the plugin is among the session's
-plugins), `agents`, `slashCommands` (`slash_commands`), `skills` (`init.skills`; its rule is in
-`spec/judgments.md`), `mcpServers` (`mcp_servers`, named `plugin:<plugin>:<server>`) and `outputStyle`
-(the setting, echoed). The kit's side is `scripts/oracle/kit-registry.ts`: `loadPlugin` over the
-folder, `createPluginHost`, then `session.agents()`, `skills()` (the menu), `mcpServers()` and
-`outputStyles()`.
-
-`expected.json` beside each fixture is the oracle's result, ids only, and is committed:
-`bun test` (`tests/host/runtime-oracle.test.ts`) checks the kit against it without running `claude`.
-`oracle:runtime` rewrites a stale `expected.json` when `claude` is installed (`--check` fails
-instead) and exits non-zero on a difference not recorded in `tests/fixtures/runtime/judgments.json`
-(the value the kit gives and the reason). `.cache` stays uncommitted.
+Per case `oracle:runtime` compares, filtered to the plugin's own names: `loaded` (the plugin is among
+the session's plugins), `agents`, `slashCommands` (`slash_commands`), `skills` (`init.skills`; its
+rule is in `spec/judgments.md`), `mcpServers` (`mcp_servers`, named `plugin:<plugin>:<server>`) and
+`outputStyle` (the setting, echoed). The kit's side is `scripts/oracle/kit-registry.ts`:
+`loadPlugin` over the folder, `createPluginHost`, then `session.agents()`, `skills()` (the menu),
+`mcpServers()` and `outputStyles()`; a case's `oracle-settings.json` is its user layer. A field the
+kit gives differently on purpose is in `tests/fixtures/runtime-judgments.json` (the value the kit
+gives and the row of `spec/judgments.md`); any other difference fails.
 
 Where the oracle cannot see: the winner of two agents with one name (names only), the model's skill
 listing, output styles (`init.output_style` echoes the setting; a forced plugin style is not
 reflected), and statuses of servers that need a network.
 
-## Settings oracle
+### Settings
 
-`bun run oracle:settings` compares the kit's settings merge (`loadSettingsLayers`, `createPolicyView`,
-`startingMode`) with the Agent SDK's own resolver, `resolveSettings` and `filterEscalatingDefaultMode`
-(pure JS, `@alpha`), for the cases of `scripts/oracle/settings-cases.ts`; for the mode a session
-starts in it also asks `claude` itself, isolated as the runtime oracle is and ended at `init`. HOME
-and the config folder are private; the machine's managed settings file cannot be moved, so the kit is
-handed the same file (an MDM profile is not seen). Lists compare as sets, since the order carries no
-behaviour. A case where the kit is known to differ carries the reason (`known`); the run exits
-non-zero on an unknown difference, on a known one that no longer differs, and on any difference from
-`claude`. Nothing is cached or committed but the cases.
+`oracle:settings` hands the kit's merge (`loadSettingsLayers`, `createPolicyView`, `startingMode`)
+each case's files and compares each key with the SDK resolver's recorded value, and the starting
+mode also with `claude`'s. Lists compare as sets, since the order carries no behaviour. The
+recording machine's managed settings are not recorded: a key they set is not compared, and where
+there were any the kit gets a managed file that delivers an unrelated key, so a parent layer meets a
+managed policy as it did there. A case where the kit is known to differ carries the reason in
+`scripts/oracle/settings-known.ts`; the run exits non-zero on an unknown difference, on a known one
+that no longer differs, and on any difference from `claude`.
+
+### Over the corpus
+
+`bun run corpus:runtime` is the runtime check over the corpus plugins: the spec records a session
+per plugin that runs nothing at start (`oracle:record corpus-runtime`), too large to commit, in its
+`extend/.cache/oracle/<release>/corpus-runtime/` (`ORACLE_CACHE_DIR` moves it; `--release` picks
+the release, the pinned one by default). The kit's registry of each plugin is compared field by
+field, and the differences go to `.cache/corpus/runtime-report.json`.

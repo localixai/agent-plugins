@@ -11,6 +11,14 @@
   here: `docs:pull`, `types:pull`, `types:extract`, `spec:extract`, `corpus:fetch` and the corpus
   oracle runs. `bun run corpus` and `corpus:load` read the verdicts the spec recorded, from
   `CORPUS_DIR` or the spec checkout's `extend/.cache/corpus`. The package's API is unchanged.
+- **Repository:** no script here starts Claude Code any more. The spec runs it on fixtures and on
+  the corpus (`bun run oracle:record` in agent-plugins-extended) and records what it did; the
+  fixtures and their outcomes moved there and arrive in `spec/oracle/` through `bun run spec:sync`,
+  which now syncs whole folders (symbolic links kept). `oracle:runtime`, `oracle:settings`,
+  `corpus:runtime` and `bench:validate` compare the kit with the recorded outcomes;
+  `oracle:subprocess-scrub`, `oracle:remote-mcp-env`, `oracle:headers-helper-env` and
+  `oracle:model-content` are gone (their tests compare in `bun test`). `check:spec` SP5 checks
+  `tests/support/tool-table.ts` against the spec's `spec/tools-table.json` again.
 - The converter's hook adapter derives profiles as `hooks/core` does (J18.16, J18.21): a text `Read`
   gets no profile (no more `cat -n` numbering), a completed command with `returnCodeInterpretation`
   gets none, and an MCP name with `__` more than once after `mcp__` gets none. It fires core
@@ -1501,8 +1509,8 @@ once, in Changed or Removed.
   generated exclusion log and regression-test that new plugin sections stay in scope.
 - `bun run oracle:runtime`: what a Claude Code session registers from a plugin (`init` event of
   `claude -p --plugin-dir`, no model call) against the kit's session, for 32 fixtures
-  (`tests/fixtures/runtime`); each fixture's `expected.json` is committed, so `bun test` checks it
-  without `claude`.
+  (then in this repository; now the spec's, synced to `spec/oracle/runtime`); each fixture's
+  `expected.json` is committed, so `bun test` checks it without `claude`.
 - `bun run corpus:load`: the kit's loading compared with Claude Code's own (`claude plugin
   details` over `--plugin-dir`) on every corpus plugin, per component.
 - `bun run mutation <module>`: StrykerJS mutation testing of one module against its own tests,

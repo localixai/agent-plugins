@@ -6,8 +6,11 @@
  * - SP3 the installed `@anthropic-ai/claude-agent-sdk` describes the release the synced spec
  *   describes (SDK `0.3.N` ↔ Claude Code `2.1.N`): the types and the spec never disagree.
  * - SP4 `spec/SOURCE.json` pins Agent Plugins Extended at one commit, lists exactly the synced
- *   files, and every one of them is byte for byte what it recorded; the snapshots name its release.
- * - SP5 the snapshots the tests read parse: `docs-tables.json`, `mods-declarations.json`.
+ *   files (the folders' too, file by file), and every one of them is byte for byte what it
+ *   recorded; the snapshots name its release.
+ * - SP5 the snapshots the tests read parse (`docs-tables.json`, `mods-declarations.json`,
+ *   `tools-table.json`), and `tests/support/tool-table.ts`, the tools table the tests read, is the
+ *   spec's `tools-table.json`: the same tools, "Permission required" and rule format.
  */
 import { join, relative } from 'node:path';
 import { z } from 'zod';
@@ -15,8 +18,10 @@ import { ROOT } from '../docs/location.ts';
 import { declarationsSchema } from './declarations.ts';
 import { snapshotSchema } from './docs-tables.ts';
 import { readRequirements } from './requirements.ts';
-import { NAMING_RELEASE, SPEC_DIR, SYNCED, hashOf, readSource, releaseIn } from './source.ts';
+import { NAMING_RELEASE, SPEC_DIR, readSource, releaseIn } from './source.ts';
+import { syncedOnDisk } from './synced-files.ts';
 import { testIds } from './test-ids.ts';
+import { toolTableDrift, toolsTableSchema } from './tool-table.ts';
 
 const SYNC = 'run `bun run spec:sync` (docs/SPEC.md, "Syncing the spec")';
 const problems: string[] = [];
@@ -58,20 +63,25 @@ if (source && patch(sdk.version) !== patch(source.release)) {
 }
 
 if (source) {
+  const onDisk = await syncedOnDisk();
   const recorded = Object.keys(source.files).toSorted();
-  if (JSON.stringify(recorded) !== JSON.stringify([...SYNCED].toSorted())) {
+  const present = [...onDisk.keys()].toSorted();
+  for (const name of recorded.filter((one) => !onDisk.has(one))) {
+    problems.push(`SP4 spec/${name} is missing: ${SYNC}`);
+  }
+  for (const name of present.filter((one) => source.files[one] === undefined)) {
     problems.push(
-      `SP4 spec/SOURCE.json lists ${recorded.join(', ')}, not the synced files: ${SYNC}`,
+      `SP4 spec/${name} is not a file of the spec's at ${source.commit.slice(0, 7)}: ${SYNC}`,
     );
   }
-  for (const name of SYNCED) {
-    const bytes = await Bun.file(join(SPEC_DIR, name))
-      .bytes()
-      .catch(() => undefined);
-    if (bytes === undefined) problems.push(`SP4 spec/${name} is missing: ${SYNC}`);
-    else if (hashOf(bytes) !== source.files[name]) {
+  for (const [name, bytes] of onDisk) {
+    if (source.files[name] === undefined) continue;
+    if (bytes.hash !== source.files[name]) {
       problems.push(`SP4 spec/${name} is not the spec's at ${source.commit.slice(0, 7)}: ${SYNC}`);
-    } else if (NAMING_RELEASE.some((one) => one === name) && releaseIn(bytes) !== source.release) {
+    } else if (
+      NAMING_RELEASE.some((one) => one === name) &&
+      releaseIn(bytes.bytes) !== source.release
+    ) {
       problems.push(`SP4 spec/${name} names another release than ${source.release}: ${SYNC}`);
     }
   }
@@ -87,6 +97,8 @@ const parses = async (name: string, schema: z.ZodType): Promise<void> => {
 };
 await parses('docs-tables.json', snapshotSchema);
 await parses('mods-declarations.json', declarationsSchema);
+await parses('tools-table.json', toolsTableSchema);
+for (const drift of await toolTableDrift()) problems.push(`SP5 ${drift}`);
 
 for (const problem of problems) console.error(problem);
 process.exit(problems.length > 0 ? 1 : 0);

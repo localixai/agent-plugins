@@ -126,7 +126,7 @@ async function placeOf(
 
 /**
  * Which occurrence of a file or skill folder reached twice stays (Claude Code 2.1.322,
- * tests/fixtures/runtime/symlinked-duplicates): the entry itself over a link to it, whatever their
+ * spec/oracle/runtime/symlinked-duplicates): the entry itself over a link to it, whatever their
  * order; of links only, the first in folder order.
  */
 function keeperOf(places: readonly Place[]): Map<string, number> {

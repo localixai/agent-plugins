@@ -84,7 +84,7 @@ describe('session.expandSkill()', () => {
       .expandSkill('formatter:review', { arguments: 'src/', signal: signal() });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // A skill's text opens with its folder (oracle 2.1.319, `bun run oracle:model-content`).
+    // A skill's text opens with its folder (oracle 2.1.319, the spec's model-content oracle).
     expect(result.text).toBe(
       'Base directory for this skill: /plugins/formatter@acme-tools/skills/review\n\n' +
         'Review src/ using the rules in /plugins/formatter@acme-tools/rules.md.',

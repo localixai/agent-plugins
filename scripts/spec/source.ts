@@ -25,13 +25,25 @@ export const SYNCED = [
   'requirements.json',
   'mods-declarations.json',
   'docs-tables.json',
+  'tools-table.json',
   'out-of-scope.json',
   'out-of-scope-pages.json',
   'scope-audit.md',
 ] as const;
 
+/**
+ * The folders synced whole into `spec/`: every file under them, recorded one by one in
+ * `SOURCE.json` (`oracle/runtime/agent-names/expected.json`). A symbolic link is synced as one, and
+ * its hash is that of its target's path, as git stores it.
+ */
+export const SYNCED_FOLDERS = ['oracle'] as const;
+
 /** The synced files that name the Claude Code release they describe (`claudeCode`). */
-export const NAMING_RELEASE = ['requirements.json', 'mods-declarations.json'] as const;
+export const NAMING_RELEASE = [
+  'requirements.json',
+  'mods-declarations.json',
+  'tools-table.json',
+] as const;
 
 const sha256 = z.string().regex(/^[0-9a-f]{64}$/);
 

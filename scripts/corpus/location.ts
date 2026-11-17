@@ -14,6 +14,15 @@ export const CORPUS_DIR =
   process.env['CORPUS_DIR'] ??
   join(ROOT, '..', 'agent-plugins-extended', 'extend', '.cache', 'corpus');
 const PLUGINS_DIR = join(CORPUS_DIR, 'plugins');
+
+/**
+ * Where the spec caches what Claude Code did on the corpus, per release (`bun run oracle:record
+ * corpus-runtime` in its `extend/tools/`): `ORACLE_CACHE_DIR` when it is set, else the spec
+ * checkout's `extend/.cache/oracle` beside this repository.
+ */
+export const ORACLE_CACHE_DIR =
+  process.env['ORACLE_CACHE_DIR'] ??
+  join(ROOT, '..', 'agent-plugins-extended', 'extend', '.cache', 'oracle');
 const INDEX_FILE = join(CORPUS_DIR, 'index.json');
 
 /** Where the comparisons write what differs. */

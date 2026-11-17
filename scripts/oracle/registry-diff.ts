@@ -1,14 +1,15 @@
 /**
- * Compares the kit's registry of a fixture with the oracle's expected one, field by field. A field
- * may differ on purpose: `judgments.json` beside the fixtures names the value the kit gives and the
+ * Compares the kit's registry of a fixture with the one the spec recorded, field by field. A field
+ * may differ on purpose: tests/fixtures/runtime-judgments.json names the value the kit gives and the
  * row of spec/judgments.md that explains it; anything else that differs is a failure.
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { EXPECTED_FILE, type Registry } from './runtime.ts';
+import { ROOT } from '../docs/location.ts';
+import type { Registry } from './recorded.ts';
 
-export const FIXTURES_DIR = join(import.meta.dir, '..', '..', 'tests', 'fixtures', 'runtime');
+const JUDGMENTS_FILE = join(ROOT, 'tests', 'fixtures', 'runtime-judgments.json');
 
 export const FIELDS = [
   'loaded',
@@ -19,15 +20,6 @@ export const FIELDS = [
   'outputStyle',
 ] as const satisfies readonly (keyof Registry)[];
 export type Field = (typeof FIELDS)[number];
-
-export const registrySchema = z.object({
-  loaded: z.boolean(),
-  agents: z.array(z.string()),
-  slashCommands: z.array(z.string()),
-  skills: z.array(z.string()),
-  mcpServers: z.array(z.string()),
-  outputStyle: z.string(),
-});
 
 const judgmentsSchema = z.record(
   z.string(),
@@ -47,19 +39,9 @@ export interface FieldVerdict {
   readonly row?: string;
 }
 
-export async function readExpected(dir: string): Promise<Registry | undefined> {
-  try {
-    return registrySchema.parse(JSON.parse(await readFile(join(dir, EXPECTED_FILE), 'utf8')));
-  } catch {
-    return undefined;
-  }
-}
-
 export async function readJudgments(): Promise<Judgments> {
   try {
-    return judgmentsSchema.parse(
-      JSON.parse(await readFile(join(FIXTURES_DIR, 'judgments.json'), 'utf8')),
-    );
+    return judgmentsSchema.parse(JSON.parse(await readFile(JUDGMENTS_FILE, 'utf8')));
   } catch {
     return {};
   }

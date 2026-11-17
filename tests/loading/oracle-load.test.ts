@@ -228,7 +228,7 @@ describe('a skill folder named by a manifest path', () => {
 });
 
 describe('a file reached twice through a link inside the plugin loads once (oracle 2.1.319)', () => {
-  // tests/fixtures/runtime/symlinked-duplicates: `agents/judge.agent.md -> judge.md` registers one
+  // spec/oracle/runtime/symlinked-duplicates: `agents/judge.agent.md -> judge.md` registers one
   // agent, `commands/y.md -> x.md` one command, `skills/alias -> real` one skill.
   const linked = {
     '.claude-plugin/plugin.json': '{ "name": "plug" }',

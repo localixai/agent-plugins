@@ -3,17 +3,14 @@
  * gets, and what "looks like a credential" means. The docs give examples only; the rows below are
  * oracle 2.1.321 (spec/judgments.md, `src/format/credential-env.ts`): a SessionStart hook printed its
  * environment under `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` with each variable of
- * tests/fixtures/subprocess-scrub set (`bun run oracle:subprocess-scrub`). Asserted outside
+ * spec/oracle/subprocess-scrub set (the spec's oracle, synced by `bun run spec:sync`). Asserted outside
  * `spec(...)`: an oracle row is never docs proof.
  */
 import { describe, expect, test } from 'bun:test';
 import { runHandler } from '../../../../src/hooks/handlers/index.ts';
 import { pluginCommand, runContext, settingsCommand } from '../../../support/hooks-run.ts';
 import { fakeEnvironment, scriptedRunner } from '../../../support/ports.ts';
-import {
-  readScrubCandidates,
-  readScrubExpected,
-} from '../../../../scripts/oracle/subprocess-scrub.ts';
+import { readScrubCandidates, readScrubExpected } from '../../../../scripts/oracle/recorded.ts';
 
 const candidates = await readScrubCandidates();
 const { left } = await readScrubExpected();

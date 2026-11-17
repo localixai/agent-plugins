@@ -29,6 +29,8 @@ requirement, a judgment or a deviation in agent-plugins-extended. Once the spec 
 | `spec/requirements.json` | every requirement id of the contract, with its category and the docs page and section it cites | the spec |
 | `spec/mods-declarations.json` | what the mods declarations of the release declare (E2a) | the spec |
 | `spec/docs-tables.json` | the tables of the mods reference page as data, for the mods tests | the spec |
+| `spec/tools-table.json` | the tools table of tools-reference.md as data, which `tests/support/tool-table.ts` must match (SP5) | the spec |
+| `spec/oracle/` | fixtures the spec wrote for Claude Code to run, and what it did on each, which the oracle tests compare the kit with (docs/TESTING.md, "Oracle runs") | the spec |
 | `spec/out-of-scope.json`, `spec/out-of-scope-pages.json` | the sections and pages the contract leaves out, with reasons | the spec |
 | `spec/scope-audit.md` | the owner-approved plugin-host boundary | the spec |
 | `spec/SOURCE.json` | the repository, the commit, the Claude Code release and the SHA-256 of each file above | `bun run spec:sync` |
@@ -41,7 +43,9 @@ A requirement id reads `<category path>.<key>`: `manifest.field.homepage`,
 ## Syncing the spec
 
 `bun run spec:sync [ref] [--remote]` (`scripts/spec/sync.ts`) copies the files above from
-`extend/conformance/` of the spec at a git ref into `spec/` and rewrites `spec/SOURCE.json`.
+`extend/conformance/` of the spec at a git ref into `spec/` and rewrites `spec/SOURCE.json`. A
+synced folder (`oracle/`) is replaced whole and recorded file by file; a symbolic link in it stays a
+link, hashed as the path it names.
 
 - The ref defaults to the commit `SOURCE.json` pins, so a plain run restores the pinned files. A
   branch (`main`) or a tag moves the pin to the commit it names.
@@ -56,10 +60,14 @@ A requirement id reads `<category path>.<key>`: `manifest.field.homepage`,
 - **SP1** `spec/requirements.json` parses, and its ids are unique and sorted.
 - **SP2** every id a test names in `spec(...)` is a requirement.
 - **SP3** the installed Agent SDK is the release `SOURCE.json` names (`0.3.N` ↔ `2.1.N`).
-- **SP4** `SOURCE.json` lists exactly the synced files, each is byte for byte what it recorded, and
-  the snapshots name its release: a hand edit or a stale copy fails, and `bun run spec:sync` is the
-  only fix.
-- **SP5** the snapshots the tests read parse (`docs-tables.json`, `mods-declarations.json`).
+- **SP4** `SOURCE.json` lists exactly the synced files (`scripts/spec/synced-files.ts`: the
+  folders' too, with no file more or less), each is byte for byte what it recorded, and the
+  snapshots name its release: a hand edit or a stale copy fails, and `bun run spec:sync` is the only
+  fix.
+- **SP5** the snapshots the tests read parse (`docs-tables.json`, `mods-declarations.json`,
+  `tools-table.json`), and `tests/support/tool-table.ts`, the tools table the rules tests read, has
+  the spec's tools, "Permission required" and rule formats (`scripts/spec/tool-table.ts`): the
+  copy is held to the docs through the spec, never by reading the docs here.
 
 ## Proof
 

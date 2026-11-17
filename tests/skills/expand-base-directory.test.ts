@@ -1,6 +1,6 @@
 /**
  * The text a skill gives the model opens with its folder; a command's does not (Claude Code 2.1.319,
- * observed by `bun run oracle:model-content`: "Base directory for this skill: <dir>", a blank line,
+ * observed by the spec's model-content oracle: "Base directory for this skill: <dir>", a blank line,
  * then the body). The docs do not show the line; spec/judgments.md records it.
  */
 import { describe, expect, test } from 'bun:test';
