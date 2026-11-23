@@ -164,6 +164,26 @@ spec('skills.frontmatter.paths', () => {
     );
   });
 
+  test('in the main conversation, after a cd into a subdirectory, patterns stay relative to the primary working directory (§4.7.3)', () => {
+    const skill = listed('src/**/*.ts');
+    const main = { primaryWorkingDirectory: CWD };
+    expect(skillActivatesFor(skill, '/work/app/src/a.ts', '/work/app/pkg', main)).toBe(true);
+    expect(skillActivatesFor(skill, '/work/app/pkg/src/a.ts', '/work/app/pkg', main)).toBe(false);
+    // A relative file is still read from the working directory it was named in.
+    expect(skillActivatesFor(skill, '../src/a.ts', '/work/app/pkg', main)).toBe(true);
+    // Without the primary directory (a subagent), the patterns are relative to its own cwd.
+    expect(skillActivatesFor(skill, '/work/app/pkg/src/a.ts', '/work/app/pkg')).toBe(true);
+  });
+
+  test('a cd out of the primary working directory (another worktree) uses the new directory', () => {
+    const skill = listed('**/*.ts');
+    const main = { primaryWorkingDirectory: CWD };
+    expect(skillActivatesFor(skill, '/work/app-worktree/a.ts', '/work/app-worktree', main)).toBe(
+      true,
+    );
+    expect(skillActivatesFor(skill, '/work/app/a.ts', '/work/app-worktree', main)).toBe(false);
+  });
+
   test('on Windows a drive path is matched in POSIX form', () => {
     const skill = listed('src/**/*.ts');
     expect(

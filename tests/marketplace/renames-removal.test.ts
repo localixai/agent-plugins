@@ -13,7 +13,7 @@ import {
   mergeEntryWithManifest,
 } from '../../src/format/marketplace/entry-merge.ts';
 import { renameNotice, resolveRename } from '../../src/marketplace/renames.ts';
-import { removedPlugins, REMOVED_STATUS } from '../../src/marketplace/removal.ts';
+import { NEEDS_ATTENTION, removedPlugins } from '../../src/marketplace/removal.ts';
 import { loaded, rawEntry } from '../support/marketplace-entries.ts';
 import {
   documented,
@@ -68,10 +68,10 @@ spec(UNINSTALL_REMOVED, () => {
     expect(only?.uninstallFrom).toEqual([]);
   });
 
-  test('each removed plugin is listed with the status Removed from marketplace', () => {
+  test('each removed plugin is listed under Needs attention on the Installed tab (spec §16.21.1)', () => {
     const found = removedPlugins(installed, flagged(true));
-    expect(found.every((one) => one.status === REMOVED_STATUS)).toBe(true);
-    expect(REMOVED_STATUS).toBe('Removed from marketplace');
+    expect(found.every((one) => one.listedUnder === NEEDS_ATTENTION)).toBe(true);
+    expect(NEEDS_ATTENTION).toBe('Needs attention');
   });
 
   test('the field is read from the top level of marketplace.json', () => {

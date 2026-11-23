@@ -105,16 +105,20 @@ spec(['marketplace.entry.description', 'marketplace.entry.displayName'], () => {
     expect(readOne(rawEntry({ displayName: 'My  Plugin, v2' })).issues).toEqual([]);
   });
 
-  test('another type drops the entry, naming the field', () => {
+  test('another type is a validator error naming the field; at load the entry is kept and refuses to install (J15.15)', () => {
     for (const key of ['description', 'displayName']) {
-      const { entry, issues } = readOne(rawEntry({ [key]: 4 }));
-      expect(entry).toBeUndefined();
-      expect(issues).toEqual([
+      const validated = readOne(rawEntry({ [key]: 4 }), slotAt(0, { mode: 'validate' }));
+      expect(validated.issues).toEqual([
         {
           severity: 'error',
           path: `plugins[0].${key}`,
           message: 'Invalid input: expected string, received number',
         },
+      ]);
+      const loaded = readOne(rawEntry({ [key]: 4 }));
+      expect(loaded.issues).toEqual([]);
+      expect(loaded.entry?.invalid).toEqual([
+        `${key}: Invalid input: expected string, received number`,
       ]);
     }
   });

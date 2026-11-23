@@ -60,6 +60,8 @@ const mcpToolSchema = z.object({
   server: text,
   tool: text,
   input: z.record(text, z.unknown()).exactOptional(),
+  // Claude Code 2.1.328 (hooks.md, "MCP tool hook fields").
+  onFailure: onFailure.exactOptional(),
   ...common,
 });
 

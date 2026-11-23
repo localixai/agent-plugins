@@ -8,6 +8,12 @@ import {
 } from '../../../protocol/mods-ui-names.ts';
 import { firstProblem, oneOf, type ElementDef } from './def.ts';
 
+/** `maxLines`: "a whole number from 1" (claude-code/index.d.ts:16840). */
+const fromOne = (value: unknown): string | undefined =>
+  value === undefined || (Number.isInteger(value) && typeof value === 'number' && value >= 1)
+    ? undefined
+    : 'Text prop "maxLines" must be a whole number from 1';
+
 /** What `Text`'s `dir` takes (claude-code/index.d.ts:13935). */
 const TEXT_DIRECTIONS = ['ltr', 'rtl'] as const;
 import type { ElementNode, Props } from './node.ts';
@@ -24,6 +30,8 @@ export const TEXT: ElementDef = {
     'dimColor',
     'inverse',
     'wrap',
+    // The most rows drawn, the last ending in an ellipsis (claude-code/index.d.ts:16840, 2.1.326).
+    'maxLines',
     'size',
     'weight',
     'mono',
@@ -39,6 +47,7 @@ export const TEXT: ElementDef = {
       oneOf('Text', props, 'size', TEXT_SIZES),
       oneOf('Text', props, 'weight', TEXT_WEIGHTS),
       oneOf('Text', props, 'dir', TEXT_DIRECTIONS),
+      fromOne(props.maxLines),
     ),
 };
 

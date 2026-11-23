@@ -1,5 +1,5 @@
 import { isFalsyEnv } from '../format/env-flag.ts';
-import { AUTO_COMPACT_RANGE } from '../format/agent-scalars.ts';
+import { AUTO_COMPACT_MIN } from '../format/agent-scalars.ts';
 import type { CacheTtl } from '../format/agent-scalars.ts';
 import type { AgentIsolation } from '../format/agent-fields.ts';
 
@@ -11,7 +11,9 @@ import type { AgentIsolation } from '../format/agent-fields.ts';
  * files are the host's. The model and effort decisions are in `launch-model.ts`.
  */
 
-const { min: WINDOW_MIN, max: WINDOW_MAX } = AUTO_COMPACT_RANGE;
+/** model-config.md: `CLAUDE_CODE_AUTO_COMPACT_WINDOW` from 100000 to 1000000; outside, the limit. */
+const VARIABLE_MIN = 100_000;
+const VARIABLE_MAX = 1_000_000;
 
 export interface AutoCompactInput {
   /** The definition's `autoCompactWindow` (already read; a dropped field is undefined). */
@@ -20,31 +22,37 @@ export interface AutoCompactInput {
   readonly inherited: number;
   /** `CLAUDE_CODE_AUTO_COMPACT_WINDOW` as a number. */
   readonly env?: number | undefined;
+  /** The context window of the subagent's model; absent, `inherited` stands for it. */
+  readonly modelWindow?: number | undefined;
   /** The agent runs the whole session (`--agent`, the `agent` setting). */
   readonly asMainSession: boolean;
 }
 
-const clamp = (tokens: number): number => Math.min(Math.max(tokens, WINDOW_MIN), WINDOW_MAX);
+const clamp = (tokens: number): number => Math.min(Math.max(tokens, VARIABLE_MIN), VARIABLE_MAX);
 
 /** model-config.md: a value below the minimum or above the maximum is treated as the limit. */
 const usableEnv = (env: number | undefined): number | undefined =>
   env !== undefined && Number.isFinite(env) && env > 0 ? clamp(env) : undefined;
 
-const inRange = (tokens: number): boolean =>
-  Number.isSafeInteger(tokens) && tokens >= WINDOW_MIN && tokens <= WINDOW_MAX;
+/** A field the subagent applies: a whole number of 100000 or more, no upper bound (§5.5). */
+const usableField = (input: AutoCompactInput): number | undefined => {
+  const { field } = input;
+  if (input.asMainSession || field === undefined) return undefined;
+  return Number.isSafeInteger(field) && field >= AUTO_COMPACT_MIN ? field : undefined;
+};
 
 /**
- * The auto-compact window a subagent compacts at. The variable wins ("the subagent uses that
- * variable's window instead and the field has no effect, unless Claude Code ignores the variable's
- * value"); the field only lowers ("To compact earlier, set a value below that window") and "has no
- * effect" for a session run as the agent.
+ * The auto-compact window a subagent compacts at (§5.10). The field only lowers ("a value not below
+ * the window the subagent would otherwise inherit changes nothing") and has no effect for a session
+ * run as the agent. With `CLAUDE_CODE_AUTO_COMPACT_WINDOW` also set, the subagent uses the lowest of
+ * the field's value, its model's context window and the variable's window.
  */
 export function effectiveAutoCompactWindow(input: AutoCompactInput): number {
+  const field = usableField(input);
   const env = usableEnv(input.env);
-  if (env !== undefined) return env;
-  const { field, inherited } = input;
-  if (input.asMainSession || field === undefined || !inRange(field)) return inherited;
-  return Math.min(field, inherited);
+  const windows =
+    env === undefined ? [input.inherited] : [input.modelWindow ?? input.inherited, env];
+  return Math.min(...windows, ...(field === undefined ? [] : [field]));
 }
 
 export interface TurnLimitOutcome {
@@ -95,6 +103,8 @@ export interface BackgroundInput {
   readonly interactive?: boolean | undefined;
   /** `CLAUDE_CODE_FORK_SUBAGENT` as set: fork mode is on unless it is an off spelling (`0`). */
   readonly forkSubagent?: string | undefined;
+  /** The subagent is the built-in `web-fetch` agent, which always runs in the foreground (§5.12.3, §5.12.4). */
+  readonly webFetchAgent?: boolean | undefined;
 }
 
 /** Fork mode: on by default, `CLAUDE_CODE_FORK_SUBAGENT=0` (any off spelling) turns it off (spec §5.12.3). */
@@ -107,9 +117,22 @@ export const forkModeOn = (value: string | undefined): boolean => !isFalsyEnv(va
  * wait, so the subagent starts in the background there (env-vars.md, `CLAUDE_CODE_FORK_SUBAGENT`).
  */
 export function runsInBackground(input: BackgroundInput): boolean {
-  if (input.backgroundDisabled === true) return false;
+  if (input.backgroundDisabled === true || input.webFetchAgent === true) return false;
   const cannotWait = input.interactive === true && forkModeOn(input.forkSubagent);
   return input.background === true || cannotWait || !input.claudeWillWait;
+}
+
+/**
+ * Whether a spawning subagent waits for a nested subagent's result (§5.12.2, "Let subagents spawn
+ * their own subagents"): in an interactive session it always does; in `-p` and the SDK only for a
+ * nested subagent in the foreground, and a background one reports to the main conversation if it
+ * outlasts the subagent that spawned it.
+ */
+export function spawnerWaitsForNested(input: {
+  readonly interactive: boolean;
+  readonly nestedInBackground: boolean;
+}): boolean {
+  return input.interactive || !input.nestedInBackground;
 }
 
 export interface ClaudeMdScopes {

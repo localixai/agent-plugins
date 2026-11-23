@@ -9,7 +9,9 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `actionButtons` | function | The buttons the user's `binding` of the keybinding action `action` presses |
 | `activeModsLine` | function | The line `/plugin` shows under its tabs: `1 mod active · first-mod`, when a mod that is not built in has loaded |
 | `AGENT_STATUSES` | constant | The `status` of each entry `$.agent.list()` returns; `idle` and `waiting` require Claude Code v2.1.289 or later, and the kit implements the current behaviour |
+| `AgentLimits` | type | What `$.agent.limits()` resolves to: `{ concurrent, depth, isBackgroundEnabled }` |
 | `AgentStatus` | type | One of `AGENT_STATUSES` |
+| `AgentToolCall` | type | A tool call `$.agent.call` makes as an agent's own: `{ tool, input, agentId? }` |
 | `AgentType` | type | A subagent type a mod registered with `$.agent.register` |
 | `AnyModEventName` | type | Any mods event name: engine, classic or API |
 | `API_EVENT_NAMES` | constant | The mods events named after mods API methods |
@@ -27,8 +29,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `AtomKey` | type | `{ plugin, key }` as the type declaration file names a value; `id` names one member of a family |
 | `AutocompleteRow` | type | The `claudeCode` argument of `autocompleteRows`; What `autocompleteRows` returns |
 | `autocompleteRows` | function | The rows shown for a `prompt.autocomplete`: Claude Code's own first, then the rows the mods answered, "below Claude Code's own" |
-| `BackdropBoard` | type | The session's one backdrop: a `$.theme.set` replaces it and `$.theme.clear` removes it, whichever mod set it |
 | `BackdropDrawn` | type | What `$.theme.set` resolves to |
+| `BandDrawn` | type | What `ModsUi.drawBand` resolves to: the rows that settled and fit, what the stack shows, and the refusal lines |
+| `BandRequest` | type | The `request` argument of `ModsUi.drawBand`: the app, the `AbovePrompt` props, the measured window |
+| `BandRow` | type | One mod's row of the band, `{ plugin, tree }`, as `AbovePromptList`'s `rows` holds it |
+| `BackdropGlass` | type | How a surface frosts its panels over a scene, defaults filled in, or `false` |
 | `backdropRender` | function | The `ui.render` event of the `Backdrop` site when the Desktop or mobile app asks to draw the session's backdrop |
 | `BandState` | type | The band's collapse. "The band stays collapsed until the user expands it, even after `/clear`, and is expanded again the next time Claude Code starts" |
 | `BORDER_STYLES` | constant | `Box` `borderStyle` names; any other value draws no border |
@@ -75,6 +80,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `createPaneRegistry` | function | The registry of a session's mod panes |
 | `createPlacedRows` | function | The rows mods placed, by request id |
 | `createRedrawGate` | function | Throttles redraws to the rate of `rate` and coalesces the calls that come sooner into one redraw that runs `redraw` when it happens, so it reads the data as it is then |
+| `createRefusalBook` | function | The book `registerRules` reads: who refused each plugin, and the mods whose `plugin.register` hook is running, so a narrowing of `e.provides` names its mod |
 | `createRegistries` | function | The registries of one mods host; `asyncContext` follows the command runs (`CommandRuns`) |
 | `createReplayLedger` | function | `replayed` is told, once for each kind of call, that a fresh copy's call was answered from the first |
 | `createRunGate` | function | The gate over the session's own numbers: the turns and the spend come from `ModSession` |
@@ -85,8 +91,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `decideModLoad` | function | Whether `candidate`'s hooks module loads under `policy`, and in which tier |
 | `decideSite` | function | Whether `site` is raised in `surface`: the "Rendered on" column of the render sites table |
 | `DECLARED_API_MEMBERS` | constant | The members of `$` the declarations name and the reference page does not |
-| `DECLARED_EVENT_NAMES` | constant | The engine's own events the declarations name and the reference page does not: `prompt.change`, raised after the prompt box changed |
+| `DECLARED_API_NAMESPACES` | constant | The namespaces of `$` the declarations add and the documentation does not name: `$.vcs` (experimental, J10.23) |
+| `DECLARED_EVENT_NAMES` | constant | The engine's own events the declarations name and the reference page does not: `prompt.change`, `tool.offer`, `agent.report` and `ui.pointer` |
 | `DeclaredEventName` | type | One of `DECLARED_EVENT_NAMES` |
+| `DeclaredOptionalPorts` | type | The optional ports of the members of `$` the 2.1.330 declarations add: `agentCalls`, `sessionFacts`, `hookEnv`, `wasm`, `vcs` |
 | `deepFreeze` | function | Freezes `value` and every plain object and array inside it, in place, and returns it |
 | `DeepReadonly` | type | `T` with every property, element and nested value read-only |
 | `defaultElementTable` | function | The elements `surface` draws (the check marks of the elements table) |
@@ -98,6 +106,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `digitButton` | function | The button a digit typed alone into an empty prompt (and then a pause) presses: "a digit `hotkey` on a button in the band also fires" |
 | `DispatchOptions` | type | The `options` argument of `ModChain.dispatch`; The `options` argument of `ModChain.dispatchStream` |
 | `DispatchTrace` | type | The hooks that handle an event, and the steps they took, in chain order (a function hook that ran to an answer is a step; a generator hook, or one that failed, is not) |
+| `displayOnlyReply` | function | A `command.run` answer as the model may read it: `isTextDisplayOnly` stands only for a hook that answered without `next`, on a command registered without `immediate` |
 | `drawFaultLine` | function | The line for an error the app hit while drawing a tree or a site's props: `first-mod: ui.render (ToolUse) threw while drawn: <error>; the engine drew its own` |
 | `Drawn` | type | What a site shows once the chain settled: the tree of a mod (replacing Claude Code's drawing), Claude Code's own drawing (with the props the last `next(e)` gave it) |
 | `drawsAsLink` | function | Whether a `Link` draws as a link |
@@ -135,7 +144,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `FetchResponse` | type | What `ModFetcher.request` returns |
 | `FileReport` | type | The `manifest` field of `ValidateReport`; The `contents` field of `ValidateReport` |
 | `FIRED_CALLS` | constant | The calls declared to answer nothing: each returns at once and its event goes on through the chain on its own |
-| `FireOptions` | type | What a caller of `fire` may give: its own signal, the core behaviour at the end of the chain, and the narrowing options the chain has |
+| `FireOptions` | type | What a caller of `fire` may give: its own signal, the core behaviour at the end of the chain, the narrowing options the chain has, and `answered`, told the mod whose hook answered without `next` (who held an MCP server back) |
 | `FocusGrantInput` | type | What caused a `$.ui.open` that asks for focus: a command or a press is the user's; a timer or hook is the mod's |
 | `FoldOptions` | type | The `options` argument of `foldRender`; The `options` argument of `ModsUi.draw` |
 | `foldRender` | function | Folds what the `ui.render` chain settled on into what is drawn |
@@ -144,6 +153,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `FsAncestor` | type | One instruction file `$.fs.ancestors` found: its directory, the name asked for, its text and its parts |
 | `FsAncestorsRequest` | type | What `$.fs.ancestors` asks for, its paths absolute |
 | `FsEntry` | type | One entry of `$.fs.list`: `{ name, kind, size, mtimeMs, isLink }`; `mtimeMs` a regular file's own, 0 for any other kind and when the host gives none |
+| `FsRange` | type | A range of a file in bytes: `$.fs.read`'s `offset` and `length` |
 | `FsStat` | type | What `$.fs.stat` resolves to: `{ kind, size, mtimeMs, isLink }`, and `realPath` when it was asked with `{ resolve: true }` and the path leads somewhere |
 | `Gesture` | type | A key of `GESTURES` |
 | `grantsFocus` | function | Whether `focus: true` is granted |
@@ -153,7 +163,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `handleKey` | function | What one key does |
 | `HELD_AT_TIMEOUT` | constant | The line a foreground Bash or PowerShell command gets when it reaches its timeout while the session's input is held |
 | `HOOK_FAILURE_KINDS` | constant | `HookFailure.kind`: a hook threw or misreturned, or ran over its time |
-| `HookAccess` | type | Admission uses the original frozen input, not a previous hook's rewrite |
+| `HookAccess` | type | What a host's admission reads of a hook and an event: the event, the hook's tier, whether it is built in, the event as fired (never a rewrite) and who fired it (`origin`) |
 | `HookCall` | type | What a hook receives from the host's runtime to reach the kit: `$` calls, `next`, and its own signal |
 | `HookFailure` | type | Why a hook's `.catch` handler is asked to answer: `next.error` |
 | `HookFailureKind` | type | One of `HOOK_FAILURE_KINDS` |
@@ -194,17 +204,20 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MATCHER_MS` | constant | How long the engine has to test one pattern against one value (judgment: the docs give no limit for a matcher) |
 | `MatcherEngine` | type | Runs a regular expression of a matcher outside the host's thread, or under a limit |
 | `MatcherPattern` | type | One pattern ready to test strings |
+| `mayWithhold` | function | Whether a mod of a tier may withhold a namespace at `engine.create`: `prepend` and `append` only (§10.19.5) |
 | `matchesEvent` | function | Whether `event` passes `matcher` in this thread: every field the matcher names lets the event's field through (a list, any of its values |
 | `memberOf` | function | The member of `source` for the event's `requestId`; `source` itself when the event has none |
 | `mergeModSettingsLayers` | function | The same key-specific merge and managed exceptions as the host's settings, not a shallow merge |
 | `mergeToolCheck` | function | The decision a call gets, from the decision Claude Code reached (what `next(e)` resolves to) and the one a mod answered |
+| `MessagesQuery` | type | What `$.session.messages({ last?, after? })` asked for |
 | `MOD_EVENT_GROUPS` | constant | The events a mod can handle that have a name of their own, by group |
-| `MOD_EVENT_NAMES` | constant | The 48 documented events, flat, in the order of the reference |
+| `MOD_EVENT_NAMES` | constant | The 51 documented events, flat, in the order of the reference |
 | `MOD_LIMITS` | constant | The limits on mods: hook time and sizes |
 | `MOD_NAME_PATTERN` | constant | Command, tool, subagent type and pane names: letters, digits, `_` and `-`, up to `nameChars` |
 | `MOD_SCAN_ISSUE_CODES` | constant | The one list of what a hooks module scan refuses, so a host tells the issues apart by `code` rather than by the words of `message` |
 | `MOD_TIERS` | constant | A mod's priority group, in the order the chain runs them |
 | `ModAccount` | type | The session's sign-in, as `$.session.identity()` answers it to a mod managed settings install |
+| `ModAgentCalls` | type | The agents' loops: a tool run as one agent's own call (`$.agent.call`), and the agent limits (`$.agent.limits`) |
 | `ModAgents` | type | The `agents` field of `ModSessionPorts` |
 | `ModApiSettlementOptions` | type | The `options` argument of `settleModApi` |
 | `ModApprovalFacts` | type | Whether a call a user's mod approved still reaches the auto-mode classifier |
@@ -228,6 +241,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ModFetchVerdict` | type | What `modFetchVerdict` returns |
 | `ModFs` | type | The host's file system, with the same permissions as the user running Claude Code |
 | `ModHook` | type | A mod's hook for one event |
+| `ModHookEnv` | type | The variables a command hook of a plugin gets, for `$.process.hookEnv()` |
 | `ModHookStream` | type | What `next(e)` is on a streaming event: the stream of everything beneath |
 | `ModHostPorts` | type | Every port the mods API reaches, as the kit holds them once the optional ones are filled |
 | `ModHostPortsInput` | type | What a host gives `createModsHost`: the platform and session ports, and any of the optional ones |
@@ -268,6 +282,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ModScanIssue` | type | A scan issue: every one is an error, its message opening with the file |
 | `ModScanIssueCode` | type | One of `MOD_SCAN_ISSUE_CODES` |
 | `ModSession` | type | The `session` argument of `createRunGate`; The `session` field of `ModSessionPorts` |
+| `ModSessionFacts` | type | Facts of the session and its machine: `$.session.info()` and `$.session.machine()` |
 | `ModSessionPorts` | type | The ports of the session itself: its transcript, turns, prompts, agents, commands, tools, models and settings |
 | `ModSettingsReader` | type | Mods' own port for settings (not the settings stream's `SettingsSources`) |
 | `ModsFiredMember` | type | The calls declared to answer nothing (`FiredEventName`) return `undefined` at once |
@@ -290,7 +305,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ModsUiOptions` | type | The `options` argument of `createModsUi` |
 | `modsVersionProblem` | function | What a version too old says, or `undefined` when mods load (wording ours, judgment) |
 | `ModsWhere` | type | Where the session runs, as far as mods care |
-| `ModTheme` | type | The apps connected to the session that draw a backdrop: the Desktop app and the mobile app |
+| `ModTheme` | type | The apps connected to the session that paint its theme: whether a backdrop is drawn, and each change of the theme |
 | `ModTier` | type | One of `MOD_TIERS` |
 | `ModTimer` | type | What `$.clock.after` and `$.clock.every` give back: `cancel()` stops the timer, also one whose event is still on its way through the chain |
 | `ModToolFlow` | type | Host-supplied effects of one tool call, in the ordering of mods/events.md, "When tool.check fires" |
@@ -298,6 +313,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ModTools` | type | The `tools` field of `ModSessionPorts` |
 | `ModTurns` | type | The `turns` field of `ModSessionPorts` |
 | `ModUses` | type | What a policy mod reads in `e.uses` of `plugin.register`: calls without the `$.` prefix |
+| `ModVcs` | type | Version control behind `$.vcs` and the `vcs.*` events: the client's own behaviour, Git or nothing |
+| `ModWasm` | type | The mod environment's WebAssembly: compiles the bytes `$.wasm.compile` hands over |
 | `nameProblem` | function | Why `name` cannot name a `what` (`command`, `tool`...), or `undefined` when it can |
 | `NextOutput` | type | What `next(e)` gives back: a promise of the result, or for a streaming event a stream of chunks that ends in it |
 | `nextTurnText` | function | The text of the next turn and whether it breaks the prompt cache |
@@ -326,12 +343,18 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `PlainDataLimits` | type | The `limits` argument of `plainDataProblem` |
 | `plainDataProblem` | function | The first limit `value` goes past, or `undefined` when it fits |
 | `PlainDataProblem` | type | Which limit a value went past, first found |
+| `PluginKeptOut` | type | One plugin `plugin.register` kept out wholly or in part (`ModLoadReport.keptOut`), with its `RegisterVerdict` |
 | `PluginNamespace` | type | `$.plugin`: this plugin's name and directory, which are values, not calls |
+| `PluginProvides` | type | `e.provides` of `plugin.register`: every part a plugin ships, by kind |
+| `PluginRegisterFacts` | type | What a host tells `plugin.register` of a plugin beyond its hooks module (`ModPlugin.register`): its parts, the kinds left unread, its hosts, `requiredByOrganization` |
+| `PluginRegisterInput` | type | The event of `plugin.register` (`PluginRegisterInput`, claude-code/index.d.ts:9937 of 2.1.330) |
 | `promptDroppedText` | function | The line the user sees when a `prompt.submit` hook drops their prompt: "they see `Prompt dropped by a hook:` followed by your reason" |
 | `PromptMedia` | type | One slice of an image or document of the prompt in flight (`PromptMedia`,:9466): its bytes as base64, at most 4 MiB a call |
 | `PromptPainted` | type | What `$.prompt.paint` resolves to (`PromptPainted`,:9786): whether the runs stand, and the box as it is |
 | `Props` | type | The props of an element, as plain data and callbacks |
 | `propsReachSite` | function | Whether the `props` a hook passes to `next` change what the app draws at `site`: in the panel they do not change the question card, though "draws your elements above it" |
+| `PROVIDES_KINDS` | constant | The kinds of `e.provides`: `agents`, `bin`, `commands`, `hooks`, `lspServers`, `mcpServers`, `modules`, `monitors`, `outputStyles`, `skills`, `themes`, `workflows` |
+| `ProvidesKind` | type | One of `PROVIDES_KINDS` |
 | `QUEUE_DROPS` | constant | What a call that waited in the queue gives when the user stops the turn before it ran |
 | `read` | function | The value, or the atom's default while nothing was written; a derived value is computed |
 | `readEngineSettings` | function | Claude Code's own read of the session's merged settings |
@@ -344,13 +367,20 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `redrawsUnasked` | function | Whether a redraw cause redraws without a request |
 | `ReentryInfo` | type | An event fired from inside a mods API call made by `plugin` |
 | `REFUSAL_REASONS` | constant | Why the session takes no new work from a mod |
-| `REGISTER_RULES` | constant | The rule of `plugin.register`: `{ refuse: reason }` with a string reason, or the result of `next(e)` (judgment |
+| `RefusalBook` | type | What `createRefusalBook` returns |
 | `RegisteredHook` | type | What a hook registers: the event (or `*` or `classic.*`), an optional matcher, and the hook |
 | `RegisteredKind` | type | What the registries hold: what a host lists, and what it is told changed |
 | `registeredView` | function | The read surface over `registries` |
+| `registerRules` | function | The rule of `plugin.register`: `{ refuse: reason }` with a string reason, or the result of `next(e)`; a passed `e.provides` must be a subset of the one received, `themes` and `bin` unnarrowed, and one left out is restored |
 | `RegisterTier` | type | The tiers a mod registers in |
+| `RegisterUses` | type | `e.uses` of `plugin.register`: events, calls without `$.`, and `env`, `state` and `hosts` when the module uses them |
+| `RegisterUsesHosts` | type | `e.uses.hosts`: the hosts `$.http.fetch` and `$.audio.play` calls spell, and the methods called with a URL the scan cannot read |
+| `RegisterVerdict` | type | What `plugin.register` came to: the whole plugin refused, by whom and why, or the parts the mods left out |
 | `Registry` | type | What a mod registered, by name |
 | `ReloadOutcome` | type | What reloading one mod came to |
+| `ReloadSession` | type | The facts of a session `reloadsOnSave` reads: an interactive terminal session, and whether it takes more than one prompt |
+| `reloadsOnSave` | function | Whether a session reloads a `--plugin-dir` or skills-directory mod when one of its files is saved (`CLAUDE_CODE_PLUGIN_DIR_WATCH`, §10.8.2) |
+| `ReloadSource` | type | Where a mod that reloads on save was loaded from: `plugin-dir` or `skills-dir` |
 | `RENDER_SITE_NAMES` | constant | The sites, in the order of the reference table |
 | `RENDER_SITES` | constant | The sites a mod renders at: their props, request and surfaces |
 | `renderEvent` | function | The `ui.render` event for one site, or why it is not raised: the site is not drawn in that app, or the request lacks its id or (in the VS Code extension) its viewport |
@@ -374,7 +404,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RunGate` | type | What the session says about new work: the host tells it what happened to the session's input (`interrupt`, `userInput`, `endInput`), the limits come from the run |
 | `RunLimits` | type | `--max-turns` and `--max-budget-usd` of a `claude -p` run, or the Agent SDK's turn and spend limits |
 | `runModPromptSubmit` | function | Restore a dropped prompt and its message |
-| `runModToolCall` | function | Managed PreToolUse → tool.call → other PreToolUse → tool.check → review/prompt → execution |
+| `runModToolCall` | function | Managed PreToolUse → tool.call → other PreToolUse → tool.check → review/prompt → tool.run → execution |
 | `RunOutput` | type | The module as the host's engine runs it, in the format the host chose; the kit never reads `format`, it hands it to `ModRuntime.load` |
 | `runScopedModCall` | function | Admission for a host-backed mods API method |
 | `scanHooksModule` | function | The static scan of one file of a hooks module |
@@ -382,14 +412,18 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ScannedHook` | type | What a static scan of a hooks module found: the events it hooks, the mods API calls it makes, the environment variables and the `$.state` values it reads and writes |
 | `ScanOutput` | type | The module as the scan reads it: ESM, the one format the scan understands |
 | `scanSourceOf` | function | The code the scan reads: the `scan` output, else the `run` output when it is an ES module |
+| `sceneBackdrop` | function | The `Backdrop` site's props for the session's theme: `scene`, `plugin`, `glass`, `overrideColorScheme`; `undefined` for a ground or no theme |
 | `Scope` | type | The context the calls of one mod run in |
 | `ScopeBook` | type | The scopes of the other loaded mods, which a lent method's calls run in the caller's context |
 | `selects` | function | Whether `pattern` selects `event`: `*` every event but a telemetry one (`Glob`,:5346), `ns.*` every one under that namespace (`telemetry.*` the telemetry events) |
 | `SESSION_END_REASONS` | constant | Why a session ends, tied to the official `ExitReason` union: an SDK update that adds or drops a reason fails the typecheck here |
-| `SessionBackdrop` | type | The session's backdrop, as the `Backdrop` render site's props: the fields `$.theme.set` was given and `plugin`, the mod that set it |
+| `SessionBackdrop` | type | The `Backdrop` render site's props: the scene, the mod that set it, its glass and `overrideColorScheme` |
 | `SessionEndReason` | type | One of `SESSION_END_REASONS`: the `reason` of `session.end` |
 | `SessionEntry` | type | One entry of `$.session.messages()` |
 | `SessionIdentity` | type | How the session is signed in: `kind` (`claude.ai`, `console`, `api-key`, `none`, a cloud provider's name) and whether the server vouched for the account |
+| `SessionInfo` | type | What `$.session.info()` resolves to: `transcriptPath` and the optional facts of the session |
+| `SessionMachine` | type | What `$.session.machine()` resolves to: `uname` fields and the package managers and runtimes on the `PATH` |
+| `SessionTheme` | type | The session's one theme: its backdrop, `overrideColorScheme`, the Desktop app's `colors`, `sound` and `style`, and the mod that set it |
 | `SettingsLayer` | type | `{ source, settings }` for one source in use that holds settings |
 | `settingsLayersForMods` | function | The layers a `settings.read` hook receives |
 | `settleModApi` | function | The mods API a hook on `engine.create` changed |
@@ -433,6 +467,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `TextBlock` | type | A block of `prompt` or `system`; `cache` marks a cache breakpoint after it |
 | `textStyle` | function | How an app draws a `Text`'s weight and typography |
 | `TextStyle` | type | What `textStyle` returns |
+| `ThemeBackdrop` | type | The session's backdrop: a scene with its glass, or a still ground (`{ color }`, `{ gradient }`, `{ vector }`) |
+| `ThemeBoard` | type | The session's one theme: a `$.theme.set` replaces all of it and `$.theme.clear` removes it, whichever mod set it |
 | `TIERS` | constant | The chain's five tiers, outermost first |
 | `TimerEventName` | type | The calls that return a timer and not a promise |
 | `ToastBoard` | type | What `createToastBoard` returns; The `toasts` field of `ModsUi` |
@@ -463,7 +499,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `VSCODE_IGNORED` | constant | The props the VS Code extension ignores: it draws the element as if they were left out |
 | `VSCODE_LABELS` | constant | What the panel frames: "From the token-chart plugin" for a drawing, "Edited by the token-chart plugin" for a rewrite |
 | `vscodePanePlacement` | function | `e.props.placement` and `e.viewport.isFullscreen` of a pane for a panel `widthPx` wide |
-| `watchesPluginDirs` | function | Whether a session reloads `--plugin-dir` mods when a file changes |
+| `WasmSource` | type | The bytes `$.wasm.compile` hands over, as its event carries them: `{ base64, path? }` |
 | `whereModsRun` | function | What `where` says about hooks and drawing; `reachesCloud` is whether the plugin reaches a cloud session |
 | `WhereModsRun` | type | What `whereModsRun` returns |
 | `Wildcard` | type | One of `WILDCARDS` |
@@ -473,6 +509,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `WORKER_STOP_LIMIT` | constant | "The worker stopped three times and Claude Code couldn't trace the stops to one mod" |
 | `WorkerCrash` | type | A stop of the hooks worker, as the host's runtime saw it |
 | `WorkerHealth` | type | What `createWorkerHealth` returns |
+| `writtenModAsks` | function | Whether the client asks before it loads the mods Claude writes: never where they cannot load, in `auto` or `bypassPermissions` mode, or in a resumed session |
 | `WrittenModGate` | type | The three ways the page lists a session where it cannot load |
 | `writtenModRefusal` | function | Why a mod Claude wrote cannot load in this session, or `undefined` when it can once it is approved |
 | `WrittenModRefusal` | type | What `writtenModRefusal` returns |

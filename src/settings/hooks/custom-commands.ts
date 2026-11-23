@@ -4,7 +4,7 @@ import type { HookGate } from './hook-gate.ts';
 /**
  * The commands that follow the hooks (settings-reference.md, `disableAllHooks` "Status line and file
  * suggestion gates" and `allowManagedHooksOnly`; goal.md, "Requirements"): the status line, the file
- * suggestion command, the subagent status line, plugin monitors and `/goal`. The kit gives the
+ * suggestion command, plugin monitors and `/goal`. The kit gives the
  * decision; rendering, starting a monitor and running a command stay the host's.
  */
 export interface CommandGates {
@@ -15,7 +15,6 @@ export interface CommandGates {
   readonly commandsDisabled: {
     readonly statusLine: boolean;
     readonly fileSuggestion: boolean;
-    readonly subagentStatusLine: boolean;
   };
   /**
    * "Narrowed to managed settings": `allowManagedHooksOnly`, a `disableAllHooks` that is `true`
@@ -44,7 +43,7 @@ export function createCommandGates(gate: HookGate, session: CommandSessionFacts)
   const trusted = session.folderTrusted ?? true;
   const off = gate.managedDisable || !trusted;
   return {
-    commandsDisabled: { statusLine: off, fileSuggestion: off, subagentStatusLine: off },
+    commandsDisabled: { statusLine: off, fileSuggestion: off },
     commandSettingsNarrowedToManaged:
       gate.managedOnly || gate.otherDisable || (session.safeMode ?? false),
     monitorsRun: (plugin) => !gate.managedOnly || gate.forceEnabled(plugin),

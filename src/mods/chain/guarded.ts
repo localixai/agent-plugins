@@ -1,5 +1,5 @@
 import type { Budget } from '../../foundation/index.ts';
-import { groupTimedOut, thrown, timedOut, type Failure } from './failure.ts';
+import { groupTimedOut, thrown, timedOut, waitedOut, type Failure } from './failure.ts';
 import { isHookBody } from './hook-body.ts';
 import type { LingerWatch } from './linger.ts';
 import type { Floor } from './next.ts';
@@ -13,13 +13,19 @@ export interface Limits {
   readonly group?: { readonly budget: Budget; readonly event: string };
   /** Whether the hook waits inside `next`, where the shared time running out is not its fault. */
   readonly floor?: Floor;
+  /** The time the hook may wait on `$` calls, for the events that bound it (§10.11). */
+  readonly wait?: Budget;
   /** Told each step the hook's own code is running, for `HookBudget.lingerMs`. */
   readonly watch?: LingerWatch;
 }
 
 /** Resolves with the failure once a limit is spent; never resolves while both have time. */
 function expiry(limits: Limits): Promise<{ readonly failed: Failure }> {
-  const own = limits.budget.expired.then(() => ({ failed: timedOut(limits.budget.ms) }));
+  const ownTime = limits.budget.expired.then(() => ({ failed: timedOut(limits.budget.ms) }));
+  const { wait } = limits;
+  const own = wait
+    ? Promise.race([ownTime, wait.expired.then(() => ({ failed: waitedOut(wait.ms) }))])
+    : ownTime;
   if (!limits.group) return own;
   const { budget, event } = limits.group;
   // The shared clock never stops (§10.11): it fails the hook that has the floor when it runs out,

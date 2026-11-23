@@ -24,6 +24,20 @@ const retention = (extra: Partial<Parameters<typeof uninstallRetention>[0]> = {}
   uninstallRetention({ id: 'formatter@m', scope: 'project', remaining: [], ...extra });
 
 spec('cli.plugin.What an uninstall deletes and keeps', () => {
+  test('with the options it deletes the files extracted into mcpb/ from its bundles, but one another plugin uses', () => {
+    const bundles = { own: ['db-1a2b', 'shared-9f'], usedByOthers: ['shared-9f'] };
+    expect(retention({ bundles }).mcpbDelete).toEqual(['db-1a2b']);
+  });
+
+  test('options that stay keep the extracted files too', () => {
+    const bundles = { own: ['db-1a2b'], usedByOthers: [] };
+    expect(retention({ bundles, remaining: 'unreadable' }).mcpbDelete).toEqual([]);
+    expect(retention({ bundles, remaining: [record('formatter@m', 'user')] }).mcpbDelete).toEqual(
+      [],
+    );
+    expect(retention().mcpbDelete).toEqual([]);
+  });
+
   test('from the last scope it deletes the options, the secrets and the data directory', () => {
     expect(retention()).toMatchObject({
       saved: 'delete',

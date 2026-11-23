@@ -70,6 +70,11 @@ spec('install.develop.Load a folder of plugins', () => {
     });
   });
 
+  test('a dot-named subfolder is skipped even with a manifest (spec §16.8 item 4, 2.1.330)', async () => {
+    const files = memoryFiles({ ...plugin('alpha'), ...plugin('.hidden'), ...plugin('.git') });
+    expect(await readPluginDirectory(files)).toEqual({ isFolder: true, plugins: ['alpha'] });
+  });
+
   test('everything else is skipped without an error, including a subfolder that has no manifest', async () => {
     const files = memoryFiles({ 'only/skills/a/SKILL.md': 'x', 'notes.txt': 'x' });
     expect(await readPluginDirectory(files)).toEqual({ isFolder: true, plugins: [] });

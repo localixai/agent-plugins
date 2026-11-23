@@ -122,16 +122,14 @@ spec('install.guide.Manage installed plugins', () => {
 });
 
 spec('install.guide.Uninstall a plugin the project enables', () => {
-  test('asks whether to disable it for you or uninstall it for everyone', () => {
+  test('asks, as a list without single-letter answers, whether to disable it for you or uninstall it for everyone', () => {
     expect(uninstallChoice({ enabledByProject: true })).toEqual([
       {
-        key: 'y',
         label: 'Disable for me',
         writes: { file: '.claude/settings.local.json', value: false },
         installed: true,
       },
       {
-        key: 'u',
         label: 'Uninstall for everyone',
         removesFrom: '.claude/settings.json',
         installed: false,

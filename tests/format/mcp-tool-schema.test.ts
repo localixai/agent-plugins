@@ -3,7 +3,7 @@
  * root are flattened into one object; a description sentence names the parameter groups; a tool
  * Claude Code cannot flatten is skipped), § Tools with invalid input schemas (top-level property
  * names of 1 to 64 characters of ASCII letters, digits, `_`, `.`, `-`; JSON Schema draft 2020-12
- * meta-schema for a schema with no `$schema` or the 2020-12 one; with flag fetching off the tool is
+ * meta-schema for a schema with no `$schema` or the 2020-12 one; while the flags have not arrived the tool is
  * sent and the log says `input schema would be rejected by the Anthropic API`), § Tools whose input
  * schema the API refuses (the log line `the API refused this tool's input schema`, `The API said:`, the
  * tool resent without parameters); errors.md § Tool input schema is invalid (the property-name

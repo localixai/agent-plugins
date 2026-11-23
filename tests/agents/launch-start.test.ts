@@ -9,6 +9,7 @@ import {
   claudeMdScopes,
   mainSessionFirstTurn,
   runsInBackground,
+  spawnerWaitsForNested,
   worktreeDisposition,
 } from '../../src/agents/launch.ts';
 import { agentWith } from '../support/launch.ts';
@@ -31,6 +32,27 @@ spec('agents.frontmatter.background', () => {
 
   test('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1: Claude waits for subagents, so none runs in the background', () => {
     expect(runsInBackground({ claudeWillWait: false, backgroundDisabled: true })).toBe(false);
+  });
+});
+
+spec('agents.behavior.Built-in subagents', () => {
+  test('the built-in web-fetch agent runs in the foreground, even where an interactive main conversation cannot wait (§5.12.4)', () => {
+    const interactive = { claudeWillWait: false, interactive: true } as const;
+    expect(runsInBackground(interactive)).toBe(true);
+    expect(runsInBackground({ ...interactive, webFetchAgent: true })).toBe(false);
+  });
+});
+
+spec('agents.behavior.Let subagents spawn their own subagents', () => {
+  test('in an interactive session a spawning subagent waits for its nested subagents', () => {
+    for (const nestedInBackground of [true, false]) {
+      expect(spawnerWaitsForNested({ interactive: true, nestedInBackground })).toBe(true);
+    }
+  });
+
+  test('in -p and the SDK it waits only for a foreground nested subagent', () => {
+    expect(spawnerWaitsForNested({ interactive: false, nestedInBackground: false })).toBe(true);
+    expect(spawnerWaitsForNested({ interactive: false, nestedInBackground: true })).toBe(false);
   });
 });
 

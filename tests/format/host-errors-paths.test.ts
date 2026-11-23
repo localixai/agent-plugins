@@ -23,7 +23,7 @@ spec(`${E}Path escapes plugin directory`, () => {
 // A judgment of the specification (J17.29: errors.md names "EIO or ESTALE" together), so outside spec().
 test('ESTALE is reported as EIO', () => {
   expect(pathCouldNotBeChecked('skills', '/p/skills', 'ESTALE')).toBe(
-    'skills path could not be checked: /p/skills (EIO)',
+    "skills path couldn't be checked: /p/skills (EIO)",
   );
   expect(pathCouldNotBeCheckedInList('skills', '/p/skills', 'ESTALE')).toBe(
     'Path not found: /p/skills (skills, EIO)',

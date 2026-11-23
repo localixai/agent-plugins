@@ -49,6 +49,13 @@ spec(
       expect(custom.cache()).toBe('/mnt/plugins/cache');
       expect(custom.marketplace('m')).toBe('/mnt/plugins/marketplaces/m');
     });
+
+    test('synced/ and .trash/ stay under ~/.claude/plugins even when the override is set (spec §16.6)', () => {
+      const custom = createStoreLayout('/mnt/plugins', join, '/home/u/.claude/plugins');
+      expect(custom.synced()).toBe('/home/u/.claude/plugins/synced');
+      expect(custom.trash()).toBe('/home/u/.claude/plugins/.trash');
+      expect(custom.mcpb()).toBe('/mnt/plugins/mcpb');
+    });
   },
 );
 
@@ -86,6 +93,10 @@ describe('the paths under the root (loading.md, "Find plugins on disk")', () => 
     expect(layout.trash()).toBe('/home/u/.claude/plugins/.trash');
   });
 
+  test("the files extracted from plugins' MCP bundles are in mcpb/ (spec §16.6)", () => {
+    expect(layout.mcpb()).toBe('/home/u/.claude/plugins/mcpb');
+  });
+
   test('the records and the flagged list are files of the root', () => {
     expect(layout.installedPlugins()).toBe('/home/u/.claude/plugins/installed_plugins.json');
     expect(layout.knownMarketplaces()).toBe('/home/u/.claude/plugins/known_marketplaces.json');
@@ -121,6 +132,7 @@ describe('what a name under the root is', () => {
     ['marketplaces', 'marketplaces'],
     ['synced', 'synced'],
     ['.trash', 'trash'],
+    ['mcpb', 'mcpb'],
     ['notes.txt', 'unknown'],
     ['installed_plugins.set-aside.json', 'unknown'],
   ])('%s is %s', (name, expected) => {

@@ -83,6 +83,23 @@ describe('hookSessionGates', () => {
       allowedUrls: ['https://hooks.example/*'],
       allowedEnvVars: ['TOKEN'],
     });
+    // A list outside managed settings does not cover the hooks of managed settings (J12.18).
+    expect(gates.managedHttpPolicy).toEqual({});
+  });
+
+  test('a managed list covers the managed hooks with the list merged across files (J12.18)', () => {
+    const gates = hookSessionGates(
+      viewOf(
+        managed({ allowedHttpHookUrls: ['https://org/*'] }),
+        user({ allowedHttpHookUrls: ['https://mine/*'], httpHookAllowedEnvVars: ['TOKEN'] }),
+      ),
+      PLAIN,
+    );
+    expect(gates.managedHttpPolicy).toEqual({ allowedUrls: ['https://org/*', 'https://mine/*'] });
+    expect(gates.httpPolicy).toEqual({
+      allowedUrls: ['https://org/*', 'https://mine/*'],
+      allowedEnvVars: ['TOKEN'],
+    });
   });
 
   test('forceEnabled names the plugins managed enabledPlugins turns on', () => {

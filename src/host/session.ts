@@ -105,7 +105,6 @@ function viewOf(
     agentCatalog: (overrides) => agents.agentCatalog(overrides),
     selectAgent: (choice, overrides) => agents.selectAgent(choice, overrides),
     pluginDefaults: () => agents.pluginDefaults(),
-    subagentStatusLine: (facts) => agents.subagentStatusLine(facts),
     withTurn: (turn) => viewOf(core, next(turn), scope),
     async runScoped(turn, run) {
       const own = createTurnScope();

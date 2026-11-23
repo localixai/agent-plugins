@@ -6,6 +6,7 @@ import { describe, expect, test } from 'bun:test';
 import { spec } from '../support/spec.ts';
 import {
   background,
+  FULL_POOL,
   granted,
   MCP_NAMES,
   names,
@@ -37,6 +38,10 @@ const BACKGROUND_KEEPS = [
   'TaskStop',
   'SendMessage',
   'Artifact',
+  'ListPlugins',
+  'ListSkills',
+  'SearchPlugins',
+  'SearchSkills',
 ] as const;
 
 spec(['agents.frontmatter.tools', 'tools.behavior.Agent tool behavior.Fork'], () => {
@@ -121,6 +126,33 @@ spec(['agents.frontmatter.tools', 'tools.behavior.Agent tool behavior.Fork'], ()
       const outcome = resolve({}, fork({ atDepthLimit: true }));
       expect(granted(outcome)).toContain('Agent');
       expect(outcome.ok && outcome.spawnTypes).toBe('none');
+    });
+  });
+});
+
+spec('agents.behavior.Built-in subagents', () => {
+  describe('WebFetch where the built-in web-fetch agent reads web pages (§5.7.1, §5.12.4)', () => {
+    const withoutWebFetch = {
+      ...FULL_POOL,
+      builtin: FULL_POOL.builtin.filter((tool) => tool !== 'WebFetch'),
+    };
+
+    test('a subagent the Agent tool starts keeps WebFetch though the main conversation has none', () => {
+      expect(names({}, run({ webFetchAgent: true }), withoutWebFetch)).toContain('WebFetch');
+      expect(names({}, background({ webFetchAgent: true }), withoutWebFetch)).toContain('WebFetch');
+      expect(names({ tools: ['WebFetch'] }, run({ webFetchAgent: true }), withoutWebFetch)).toEqual(
+        ['WebFetch'],
+      );
+    });
+
+    test('a fork and a teammate have no WebFetch, as the main conversation has none', () => {
+      expect(names({}, fork({ webFetchAgent: true }))).not.toContain('WebFetch');
+      expect(names({}, run({ teammate: true, webFetchAgent: true }))).not.toContain('WebFetch');
+    });
+
+    test('without the web-fetch agent, the pool decides as before', () => {
+      expect(names({}, run(), withoutWebFetch)).not.toContain('WebFetch');
+      expect(names({}, fork())).toContain('WebFetch');
     });
   });
 });

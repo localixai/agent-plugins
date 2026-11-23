@@ -110,15 +110,33 @@ spec('settings.key.httpHookAllowedEnvVars', () => {
     });
   });
 
-  describe('applies to hooks from every source, managed settings included', () => {
-    // Design: `httpHook` takes no origin, so no origin can be exempt from the limit. It composes with
-    // `runs(origin)`, which keeps a managed hook running while the variables are still limited.
-    test('a managed HTTP hook runs by origin and still loses the unlisted variables', () => {
+  describe('which hooks a list covers (spec §12.7.1, Judgment J12.18)', () => {
+    const managedVars = (policy: ReturnType<typeof hookPolicyOf>, own: readonly string[]) => {
+      const verdict = policy.httpHook('https://hook.test/', own, { managed: true });
+      return verdict.run ? verdict.interpolate : [];
+    };
+
+    test('a managed list limits the hooks of managed settings, which still run by origin', () => {
       const policy = hookPolicyOf([
         managed({ allowManagedHooksOnly: true, httpHookAllowedEnvVars: ['OK'] }),
       ]);
       expect(runs(policy, fromManaged)).toBe(true);
+      expect(managedVars(policy, ['OK', 'NOT_OK'])).toEqual(['OK']);
       expect(interpolated(policy, ['OK', 'NOT_OK'])).toEqual(['OK']);
+    });
+
+    test('a list only outside managed settings leaves the managed hooks their own list', () => {
+      const policy = hookPolicyOf([managed({}), user({ httpHookAllowedEnvVars: ['MINE'] })]);
+      expect(managedVars(policy, ['ORG', 'MINE'])).toEqual(['ORG', 'MINE']);
+      expect(interpolated(policy, ['ORG', 'MINE'])).toEqual(['MINE']);
+    });
+
+    test('once a managed list exists, the managed hooks are checked against the merged list', () => {
+      const policy = hookPolicyOf([
+        managed({ httpHookAllowedEnvVars: ['ORG'] }),
+        user({ httpHookAllowedEnvVars: ['MINE'] }),
+      ]);
+      expect(managedVars(policy, ['ORG', 'MINE', 'OTHER'])).toEqual(['ORG', 'MINE']);
     });
   });
 

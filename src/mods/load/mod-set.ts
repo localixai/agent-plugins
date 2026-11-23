@@ -1,6 +1,7 @@
 import { GUARD_NAME } from '../../protocol/mods-settings.ts';
 import { TIER_RANK } from '../chain/tiers.ts';
 import { loadOne, reloadOne } from './host-support.ts';
+import type { PluginKeptOut } from './register-ask.ts';
 import {
   modLineChannel,
   type ModLineChannel,
@@ -9,17 +10,16 @@ import {
 } from './line-channel.ts';
 import type { LoadedMod, ModPlugin, ReloadOutcome } from './loader.ts';
 import type { LoadLineKind } from './prepare.ts';
-import type { ModCandidate } from './policy.ts';
+import { guardLoads, type ModCandidate } from './policy.ts';
 import { GUARD_CANDIDATE, orderMods, orderOne, type OrderedMod } from './order.ts';
-import { guardLoads } from './policy.ts';
 import type { ModsPolicyInput } from './policy-input.ts';
 import { sideloadRefusal } from './plugin-dirs.ts';
 import type { Wired } from './wiring.ts';
 import { recoverFromCrash } from './crash-recovery.ts';
 import { createWorkerHealth, type WorkerHealth } from './health.ts';
+import { inTurn } from './in-turn.ts';
 import type { ReplayMode } from '../api/replay.ts';
 import type { WorkerCrash } from '../ports.ts';
-
 /**
  * The mods a host holds: which plugins it was given, which of them are loaded, and how they come and
  * go (`load`, `loadMod`, `unloadMod`, `reload`, `reloadMod`). A mod is keyed by its name, as the chain
@@ -41,6 +41,8 @@ export interface ModLoadReport {
   readonly notices: readonly ModNotice[];
   /** The message startup exits with when managed settings reject `--plugin-dir` (`disableSideloadFlags`). */
   readonly startupRefusal?: string;
+  /** The plugins `plugin.register` kept out, wholly or in part, for the host to honour (`PluginKeptOut`). */
+  readonly keptOut: readonly PluginKeptOut[];
 }
 
 export interface ModSetDeps {
@@ -152,7 +154,7 @@ interface Target {
 /** Loads one ordered mod into the set; its line, if any, goes to `out`. */
 async function loadInto(ctx: Ctx, out: Out, target: Target): Promise<void> {
   const { mod, plugin, before } = target;
-  const outcome = await loadOne(ctx.wired, mod, plugin?.files);
+  const outcome = await loadOne(ctx.wired, mod, plugin);
   if (outcome.mod) {
     ctx.loaded = byRunningOrder([...ctx.loaded, outcome.mod]);
     out.mods.push(outcome.mod);
@@ -168,7 +170,8 @@ async function loadInto(ctx: Ctx, out: Out, target: Target): Promise<void> {
 async function finish(ctx: Ctx, out: Out): Promise<ModLoadReport> {
   for (const line of out.lines) ctx.debug(line);
   await ctx.announce(out.mods, 'first');
-  return { loaded: [...ctx.loaded], lines: out.lines, notices: out.notices };
+  const keptOut = ctx.wired.env.keptOut.splice(0);
+  return { loaded: [...ctx.loaded], lines: out.lines, notices: out.notices, keptOut };
 }
 
 const refused = (ctx: Ctx, startupRefusal: string): ModLoadReport => ({
@@ -176,6 +179,7 @@ const refused = (ctx: Ctx, startupRefusal: string): ModLoadReport => ({
   lines: [],
   notices: [],
   startupRefusal,
+  keptOut: [],
 });
 
 /** Loads `given` in the order policy gives; the guard only when it is not loaded already. */
@@ -260,19 +264,6 @@ async function unloadOne(ctx: Ctx, name: string): Promise<boolean> {
   ctx.forget(name);
   return gone;
 }
-
-/**
- * Every change to the set runs after the one before it ends (judgment): a stop of the worker that
- * comes in the middle of `reload`, or a second stop in a row, would otherwise both rewrite `loaded`.
- */
-const inTurn = (): (<T>(run: () => Promise<T>) => Promise<T>) => {
-  let tail: Promise<unknown> = Promise.resolve();
-  return (run) => {
-    const next = tail.then(run);
-    tail = next.catch(() => undefined);
-    return next;
-  };
-};
 
 export function createModSet(deps: ModSetDeps): ModSet {
   const ctx: Ctx = { ...deps, loaded: [], known: [], health: createWorkerHealth() };

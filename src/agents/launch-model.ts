@@ -6,7 +6,7 @@ import {
   type ModelValueKind,
 } from './model-value.ts';
 import { EFFORT_LEVELS } from '../protocol/effort.ts';
-import type { AgentDefinition, EffortLevel } from '../protocol/official.ts';
+import type { AgentDefinition, EffortLevel, ThinkingConfig } from '../protocol/official.ts';
 
 /**
  * Which model a subagent runs on, and at which effort (sub-agents.md, "Choose a model", "Run
@@ -38,6 +38,14 @@ export interface SubagentModelInput {
   readonly mainModel: string;
   /** The main model's family (`opus`, `sonnet`...); undefined when Claude Code cannot tell it on another provider. */
   readonly mainFamily?: string | undefined;
+  /**
+   * For a nested subagent, the spawning subagent's model: the parent conversation's (§5.1, §5.8.2).
+   * It then stands where `mainModel` stands in the order and the alias rule; absent at depth 1,
+   * where the parent is the main conversation.
+   */
+  readonly parentModel?: string | undefined;
+  /** The family of `parentModel`, as `mainFamily` is of `mainModel`; read only with `parentModel`. */
+  readonly parentFamily?: string | undefined;
   /** `ANTHROPIC_DEFAULT_OPUS_MODEL` is set, so `opus` means the model you set. */
   readonly opusPinned?: boolean | undefined;
   /**
@@ -49,7 +57,7 @@ export interface SubagentModelInput {
 }
 
 export interface SubagentModel {
-  /** An alias or a full model ID; the main conversation's model (`mainModel`) when `kind` is `inherit`. */
+  /** An alias or a full model ID; the parent conversation's model (`parentModel`, else `mainModel`) when `kind` is `inherit`. */
   readonly model: string;
   readonly from: ModelSource;
   /**
@@ -68,23 +76,30 @@ const INHERIT = 'inherit';
 /** The one alias that follows the main model when its family cannot be told. */
 const UNKNOWN_FAMILY_ALIAS: ModelAlias = 'opus';
 
+/** The parent conversation's model and family: the spawning subagent's when nested, else the main's. */
+const parentOf = (input: SubagentModelInput) =>
+  input.parentModel === undefined
+    ? { model: input.mainModel, family: input.mainFamily }
+    : { model: input.parentModel, family: input.parentFamily };
+
 const written = (value: string | undefined): string | undefined => {
   const text = value?.trim();
   return text === undefined || text === '' ? undefined : text;
 };
 
 /**
- * Whether a family alias resolves to the main conversation's model: "The main conversation's
- * model belongs to that family", or its family cannot be told, which "covers only the `opus`
- * alias, and doesn't apply when you set `ANTHROPIC_DEFAULT_OPUS_MODEL`".
+ * Whether a family alias selects the parent conversation's exact model (§5.8.3): the parent's model
+ * belongs to that family, or its family cannot be told, which covers only the `opus` alias and not
+ * while `ANTHROPIC_DEFAULT_OPUS_MODEL` is set.
  */
-function meansMainModel(alias: ModelAlias, input: SubagentModelInput): boolean {
-  if (input.mainFamily !== undefined) return input.mainFamily === alias;
+function meansParentModel(alias: ModelAlias, input: SubagentModelInput): boolean {
+  const { family } = parentOf(input);
+  if (family !== undefined) return family === alias;
   return alias === UNKNOWN_FAMILY_ALIAS && input.opusPinned !== true;
 }
 
-const aliasOrMain = (alias: string, input: SubagentModelInput): string =>
-  isModelAlias(alias) && meansMainModel(alias, input) ? input.mainModel : alias;
+const aliasOrParent = (alias: string, input: SubagentModelInput): string =>
+  isModelAlias(alias) && meansParentModel(alias, input) ? parentOf(input).model : alias;
 
 type Pick = (input: SubagentModelInput) => string | undefined;
 
@@ -92,32 +107,32 @@ const PICKS: { readonly [S in ModelSource]: Pick } = {
   // Judgment: a value that is no alias is not something Claude can pass, so it counts as unset.
   invocation: (input) => {
     const mod = written(input.modModel);
-    if (mod !== undefined) return aliasOrMain(mod, input);
+    if (mod !== undefined) return aliasOrParent(mod, input);
     const value = written(input.invocation);
-    return isModelAlias(value) ? aliasOrMain(value, input) : undefined;
+    return isModelAlias(value) ? aliasOrParent(value, input) : undefined;
   },
-  // "the subagent definition's `model` frontmatter, where `inherit` selects the main conversation's model"
+  // The definition's `model`, where `inherit` selects the parent conversation's model (§5.8.2).
   definition: (input) => {
     const value = written(input.definition);
     if (value === undefined) return undefined;
-    return value === INHERIT ? input.mainModel : aliasOrMain(value, input);
+    return value === INHERIT ? parentOf(input).model : aliasOrParent(value, input);
   },
-  // "Setting the variable to `inherit` is the same as leaving it unset."; an alias there is never replaced.
+  // `inherit` there is the same as unset, and an alias selects the version it points to (J5.20).
   env: (input) => {
     const value = written(input.envModel);
     return value === INHERIT ? undefined : value;
   },
-  builtin: (input) => builtinModelAlias(input.builtin, input.mainFamily),
-  main: (input) => input.mainModel,
+  builtin: (input) => builtinModelAlias(input.builtin, parentOf(input).family),
+  main: (input) => parentOf(input).model,
 };
 
 const ORDER: readonly ModelSource[] = ['invocation', 'definition', 'env', 'builtin', 'main'];
 /** "While `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is on, Claude Code ignores the `model` field ... and Claude can't pass a model." */
 const FORCED_ORDER: readonly ModelSource[] = ['env', 'builtin', 'main'];
 
-/** The kind of a chosen model: the main model is `inherit`, whichever source chose it. */
+/** The kind of a chosen model: the parent conversation's model is `inherit`, whichever source chose it. */
 const kindOf = (model: string, input: SubagentModelInput): ModelValueKind =>
-  model === input.mainModel ? 'inherit' : modelValueKind(model);
+  model === parentOf(input).model ? 'inherit' : modelValueKind(model);
 
 /** "Setting `CLAUDE_CODE_SUBAGENT_MODEL` by itself doesn't change the model the built-in Explore and Plan subagents run on" (§5.8.2). */
 const UNMOVED_BY_VARIABLE: ReadonlySet<string> = new Set(['Explore', 'Plan']);
@@ -135,8 +150,15 @@ export function resolveSubagentModel(input: SubagentModelInput): SubagentModel {
     const model = PICKS[from](input);
     if (model !== undefined) return { model, from, kind: kindOf(model, input) };
   }
-  return { model: input.mainModel, from: 'main', kind: 'inherit' };
+  return { model: parentOf(input).model, from: 'main', kind: 'inherit' };
 }
+
+/**
+ * The extended-thinking configuration of a subagent: the main conversation's, as it is ("on in the
+ * session, on for the subagent; off, off"; §5.8.6). There is no per-agent thinking setting, so no
+ * definition field enters.
+ */
+export const subagentThinking = (main: ThinkingConfig): ThinkingConfig => main;
 
 /** What `CLAUDE_CODE_EFFORT_LEVEL` says when "Claude Code send[s] no effort level". */
 const NO_EFFORT = ['auto', 'unset'] as const;
@@ -151,17 +173,32 @@ export interface SubagentEffortInput {
   readonly invocation?: string | undefined;
   /** The definition's `effort`. */
   readonly field?: AgentDefinition['effort'];
+  /**
+   * The `effort` set for the subagent that spawned this one, or a level set for the current turn
+   * only, such as a skill's `effort` (§5.8.7 item 2).
+   */
+  readonly spawner?: string | undefined;
+  /** `CLAUDE_CODE_SUBAGENT_EFFORT`: the default level of subagents and workflow agents (§3.6.7). */
+  readonly subagentDefault?: string | undefined;
+  /** A fork, a forked skill or a teammate: `spawner` and `subagentDefault` do not apply (§5.8.7). */
+  readonly forkOrTeammate?: boolean | undefined;
   /** The level picked in the session (`/effort`, `--effort`, settings). */
   readonly session?: string | undefined;
   /** The subagent runs on the main conversation's model. */
   readonly sameModelAsMain: boolean;
 }
 
+/** Steps 2 and 3 of §5.8.7: the spawning or turn level, then `CLAUDE_CODE_SUBAGENT_EFFORT`. */
+const subagentDefaults = (input: SubagentEffortInput): (EffortLevel | undefined)[] =>
+  input.forkOrTeammate === true ? [] : [asLevel(input.spawner), asLevel(input.subagentDefault)];
+
 /**
- * The effort a subagent runs at: the environment variable, then the invocation parameter, then
- * the `effort` field, then the session level only "on the main conversation's model" ("On another
- * model, that level doesn't apply"). `undefined` sends no level. The variable set to `auto` or
- * `unset` sends none, whatever the others say, because it "takes precedence over both".
+ * The effort a subagent runs at (§5.8.7): the environment variable, then the invocation parameter,
+ * then the `effort` field; with neither of those two, the spawning subagent's or the turn's level,
+ * then `CLAUDE_CODE_SUBAGENT_EFFORT` (not for a fork, a forked skill or a teammate); then the session
+ * level only "on the main conversation's model" ("On another model, that level doesn't apply").
+ * `undefined` sends no level. The variable set to `auto` or `unset` sends none, whatever the others
+ * say, because it "takes precedence over both".
  */
 export function resolveSubagentEffort(
   input: SubagentEffortInput,
@@ -169,7 +206,11 @@ export function resolveSubagentEffort(
   if (NO_EFFORT.some((value) => value === input.env)) return undefined;
   const session = input.sameModelAsMain ? asLevel(input.session) : undefined;
   // Judgment: a variable or parameter that names no level is ignored.
-  return [asLevel(input.env), asLevel(input.invocation), input.field, session].find(
-    (level) => level !== undefined,
-  );
+  return [
+    asLevel(input.env),
+    asLevel(input.invocation),
+    input.field,
+    ...subagentDefaults(input),
+    session,
+  ].find((level) => level !== undefined);
 }

@@ -11,7 +11,7 @@
           "files.exists": 4,
           "files.list": 3,
           "files.readBytes": 2,
-          "files.readText": 13,
+          "files.readText": 14,
           "files.stat": 24
         }
       },
@@ -24,7 +24,7 @@
           "files.exists": 4,
           "files.list": 3,
           "files.readBytes": 2,
-          "files.readText": 25,
+          "files.readText": 26,
           "files.stat": 40
         }
       },
@@ -37,7 +37,7 @@
           "files.exists": 4,
           "files.list": 3,
           "files.readBytes": 2,
-          "files.readText": 49,
+          "files.readText": 50,
           "files.stat": 72
         }
       }

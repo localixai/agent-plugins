@@ -1,4 +1,5 @@
 import type { PluginIssue } from '../format/issues.ts';
+import type { PluginNote } from '../format/plugin-notes.ts';
 import type { PluginSettings } from '../format/plugin-settings.ts';
 import type { LspServer } from '../format/lsp-config.ts';
 import type { PluginManifest, CommandEntry, UserConfigOption } from '../format/manifest-schema.ts';
@@ -93,4 +94,11 @@ export interface LoadedPlugin {
   readonly issues: readonly PluginIssue[];
   /** Debug-only load notices: never shown as validation findings in the Plugin Errors tab. */
   readonly debug?: readonly string[];
+  /**
+   * What a plugin that loads is noted for in `claude plugin list` and `/plugin` (`notes` and
+   * `noteDetails`, spec §17.8.2): an ignored display field, an `engines` range it is outside of but
+   * loads anyway from a local folder or that is not a range, a deprecated `agent` default. Absent
+   * when there is none.
+   */
+  readonly notes?: readonly PluginNote[];
 }

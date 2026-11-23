@@ -28,6 +28,12 @@ export interface SubagentRun {
    * says `ExitWorktree` is "Not available to subagents that already run in their own working directory".
    */
   readonly ownWorkingDirectory?: boolean;
+  /**
+   * The session reads web pages through the built-in `web-fetch` agent (§5.7.1, §5.12.4): the main
+   * conversation then has no `WebFetch`, nor do forks and teammates, while another subagent the
+   * Agent tool starts keeps it under the two filters (`resolveSubagentTools` adds it back).
+   */
+  readonly webFetchAgent?: boolean;
 }
 
 /** The first filter, sub-agents.md "Available tools": removed "even when listed in the `tools` field". */
@@ -35,12 +41,16 @@ const REMOVED_FROM_EVERY_SUBAGENT = [
   'AskUserQuestion',
   'EndConversation',
   'EnterPlanMode',
+  'propose_skills',
   'ScheduleWakeup',
   'WaitForMcpServers',
   'Workflow',
 ] as const satisfies readonly DocumentedTool[];
 
-/** The built-in tools a background subagent keeps (the second filter); every MCP tool stays. */
+/**
+ * The built-in tools a background subagent keeps (the second filter); every MCP tool stays. Every
+ * other built-in tool is removed (§5.7.1, Judgment J5.19).
+ */
 export const BACKGROUND_BUILTIN_TOOLS = [
   'Read',
   'Grep',
@@ -62,6 +72,10 @@ export const BACKGROUND_BUILTIN_TOOLS = [
   'TaskStop',
   'SendMessage',
   'Artifact',
+  'ListPlugins',
+  'ListSkills',
+  'SearchPlugins',
+  'SearchSkills',
 ] as const satisfies readonly DocumentedTool[];
 
 /** What makes the first filter remove a tool of this name: always, or when the run says so. */

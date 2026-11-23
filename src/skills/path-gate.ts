@@ -13,13 +13,20 @@ import { utf8Length } from '../format/utf8.ts';
 /**
  * Whether a skill's `paths` activate it for a file (skills.md, frontmatter reference, `paths`):
  * "Patterns are relative to Claude's current working directory, and files outside that directory
- * don't match. Uses the same glob format as path-specific rules" (memory.md, "Path-specific
+ * don't match"; in the main conversation they stay relative to the primary working directory after
+ * a `cd` into a subdirectory of it (§4.7.3). Uses the same glob format as path-specific rules" (memory.md, "Path-specific
  * rules"): the gitignore syntax of the path rules, plus brace expansion.
  */
 
 export interface PathGateOptions {
   /** The host's path flavour; Windows paths are matched in POSIX form (default `posix`). */
   readonly platform?: Platform;
+  /**
+   * The session's primary working directory, given in the main conversation only: after a `cd`
+   * into a subdirectory of it in the same Git worktree, a skill's patterns stay relative to it
+   * (§4.7.3). Leave it out for a subagent, or when the working directory moved to another worktree.
+   */
+  readonly primaryWorkingDirectory?: string;
 }
 
 /** The index of the `}` closing the `{` at `open`, or -1 when it never closes. */
@@ -155,9 +162,20 @@ function pathsMatch(
   return gitignoreMatches(matcherOf(paths, platform), relative, false);
 }
 
+/** The directory a skill's patterns are relative to: the primary one while `cwd` is inside it. */
+function skillBase(cwd: string, options: PathGateOptions, platform: Platform): string {
+  const primary = options.primaryWorkingDirectory;
+  if (primary === undefined) return cwd;
+  const root = normalizeAbsolute(toPosixPath(primary, platform));
+  const inside = relativeWithin(root, resolvePath(root, toPosixPath(cwd, platform)));
+  return inside === undefined ? cwd : primary;
+}
+
 /**
  * Whether the skill is active for `filePath` when the session's directory is `cwd`. A skill with no
- * `paths` is always active; a file outside `cwd` (a sibling worktree, a parent) never matches.
+ * `paths` is always active; a file outside the base directory (`cwd`, or the primary working
+ * directory while `cwd` is inside it in the main conversation) never matches, such as one in a
+ * sibling worktree.
  */
 export function skillActivatesFor(
   skill: Pick<InvocableFrontmatter, 'paths'>,
@@ -165,7 +183,11 @@ export function skillActivatesFor(
   cwd: string,
   options: PathGateOptions = {},
 ): boolean {
-  return pathsMatch(skill.paths, filePath, cwd, options.platform ?? 'posix');
+  const platform = options.platform ?? 'posix';
+  // A relative file is read from the working directory, whichever directory the patterns use.
+  const here = normalizeAbsolute(toPosixPath(cwd, platform));
+  const file = resolvePath(here, toPosixPath(filePath, platform));
+  return pathsMatch(skill.paths, file, skillBase(cwd, options, platform), platform);
 }
 
 const RULES_FOLDER = '/.claude/rules/';

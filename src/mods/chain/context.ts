@@ -46,5 +46,20 @@ export const GROUP_MS: Readonly<Record<string, number>> = {
 
 export const hookMs = (event: string): number => HOOK_MS[event] ?? MOD_LIMITS.hookMs;
 
+/** How long a hook of an event may wait on `$` calls for one event, and the calls that do not count (§10.11). */
+export interface WaitLimit {
+  readonly ms: number;
+  readonly exempt: ReadonlySet<string>;
+}
+
+/** The events whose hooks may wait on `$` calls only so long: `ui.render` 30 s, `plugin.register` 10 s but `$.ui.ask`. */
+const WAIT_LIMITS: Readonly<Record<string, WaitLimit>> = {
+  'ui.render': { ms: MOD_LIMITS.renderWaitMs, exempt: new Set() },
+  'plugin.register': { ms: MOD_LIMITS.registerWaitMs, exempt: new Set(['ui.ask']) },
+};
+
+export const waitLimit = (event: string): WaitLimit | undefined =>
+  Object.hasOwn(WAIT_LIMITS, event) ? WAIT_LIMITS[event] : undefined;
+
 /** The events whose hook results may nest deeper than the limit: the interface trees are measured by their own limit. */
 export const NESTING_EXEMPT: ReadonlySet<string> = new Set(['ui.render', 'ui.resolve']);

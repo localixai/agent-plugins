@@ -52,7 +52,22 @@ export interface RenderOptions {
   readonly json: boolean;
   /** What the command printed before its result (a marketplace-declared command, for one). */
   readonly before?: readonly string[];
+  /**
+   * Whether stdout and stderr are both a terminal. Then a `Successfully <verb> …` line, the result's
+   * and any printed before it, begins with the capitalised verb instead (spec §17.2.1, J17.33);
+   * unset, the output is taken as not a terminal. The `--json` message keeps `Successfully`.
+   */
+  readonly terminal?: boolean;
 }
+
+const SUCCESSFULLY = /^Successfully ([a-z])/;
+
+/** `Successfully installed plugin: …` as a terminal shows it: `Installed plugin: …`. */
+const terminalLine = (line: string): string =>
+  line.replace(SUCCESSFULLY, (_, first: string) => first.toUpperCase());
+
+const shown = (lines: readonly string[], options: RenderOptions): readonly string[] =>
+  options.terminal === true ? lines.map(terminalLine) : lines;
 
 interface Extras {
   readonly failureCode?: string;
@@ -139,7 +154,7 @@ const HUMAN_STREAM: { readonly [O in CommandOutcome]: 'stdout' | 'stderr' } = {
 
 /** A result's human line goes to stdout on success and stderr on failure; with `--json` both are the last stdout line. */
 function renderResult(found: PluginCommandResult, options: RenderOptions): Rendered {
-  const before = options.before ?? [];
+  const before = shown(options.before ?? [], options);
   const exitCode = EXIT[found.outcome];
   if (options.json) {
     const line = toJsonValue(resultObject(found));
@@ -147,7 +162,7 @@ function renderResult(found: PluginCommandResult, options: RenderOptions): Rende
   }
   const onStderr = HUMAN_STREAM[found.outcome] === 'stderr';
   return {
-    stdout: onStderr ? [...before] : [...before, found.message],
+    stdout: onStderr ? [...before] : [...before, ...shown([found.message], options)],
     stderr: onStderr ? [found.message] : [],
     exitCode,
   };

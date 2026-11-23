@@ -1,6 +1,7 @@
 /**
- * plugins/mods/create.md § Sessions where a mod Claude writes can't load (no one to approve, an
- * untrusted workspace, mods disabled) and § Ask Claude for a mod (the approval, hot reloading);
+ * Agent Plugins Extended §10.8.4 (plugins/mods/create.md § Sessions where a mod Claude writes can't
+ * load: no one to approve, an untrusted workspace, mods disabled; § Sessions that load a mod without
+ * asking) and § Ask Claude for a mod (the approval, hot reloading);
  * plugins/mods/troubleshoot.md § Claude Code stops asking to enable hot reloading and § `This mod's
  * change didn't load` or `the earlier version is no longer running`; plugins/mods/admin.md § Choose
  * how much to allow (`disableSideloadFlags` keeps mods Claude writes from loading). Where the docs are
@@ -11,6 +12,7 @@ import { expect, test } from 'bun:test';
 import {
   changeNotice,
   createHotReloadGate,
+  writtenModAsks,
   writtenModRefusal,
 } from '../../../src/mods/load/index.ts';
 import { inline, modPlugin, policy, registerOf, session } from '../../support/mods-load.ts';
@@ -18,12 +20,20 @@ import { spec } from '../../support/spec.ts';
 
 const interactive = { isInteractive: true } as const;
 
-spec(`mods.create.Sessions where a mod Claude writes can't load.Nobody is there to approve`, () => {
-  test('a `claude -p` run outside auto and bypassPermissions has no one to approve: the mod does not load', () => {
+spec(`mods.create.Sessions where a mod Claude writes can't load`, () => {
+  test('nobody is there to approve: `dontAsk` mode, interactive or not, refuses the mod', () => {
+    for (const isInteractive of [true, false]) {
+      expect(
+        writtenModRefusal(policy(), { isInteractive, permissionMode: 'dontAsk' }),
+      ).toMatchObject({ gate: 'no-approver' });
+    }
+  });
+
+  test('nobody is there to approve: the `claude -p` run that writes the mod, in default or acceptEdits mode, cannot show the question', () => {
     expect(writtenModRefusal(policy(), { isInteractive: false })).toMatchObject({
       gate: 'no-approver',
     });
-    for (const permissionMode of ['default', 'acceptEdits', 'plan', 'dontAsk'] as const) {
+    for (const permissionMode of ['default', 'acceptEdits'] as const) {
       expect(
         writtenModRefusal(policy(), { isInteractive: false, permissionMode }),
         permissionMode,
@@ -31,41 +41,29 @@ spec(`mods.create.Sessions where a mod Claude writes can't load.Nobody is there 
     }
   });
 
-  test('a `claude -p` run in auto or bypassPermissions mode loads the mod', () => {
-    for (const permissionMode of ['auto', 'bypassPermissions'] as const) {
-      expect(
-        writtenModRefusal(policy(), { isInteractive: false, permissionMode }),
-        permissionMode,
-      ).toBeUndefined();
-    }
-  });
-
-  test('`dontAsk` mode cannot show a prompt either; the other modes can', () => {
-    expect(
-      writtenModRefusal(policy(), { ...interactive, permissionMode: 'dontAsk' }),
-    ).toMatchObject({
-      gate: 'no-approver',
-    });
-    for (const permissionMode of ['default', 'acceptEdits', 'plan'] as const) {
+  test('an interactive session can show the question in every mode but dontAsk', () => {
+    for (const permissionMode of ['default', 'acceptEdits', 'plan', 'auto'] as const) {
       expect(writtenModRefusal(policy(), { ...interactive, permissionMode })).toBeUndefined();
     }
   });
-});
 
-spec(
-  `mods.create.Sessions where a mod Claude writes can't load.The workspace isn't trusted`,
-  () => {
-    test('before the trust prompt is accepted nothing Claude wrote loads, and after it the mod can', () => {
-      expect(writtenModRefusal(policy({ isTrusted: false }), interactive)).toMatchObject({
-        gate: 'untrusted',
-      });
-      expect(writtenModRefusal(policy({ isTrusted: true }), interactive)).toBeUndefined();
+  test("an interactive session's workspace isn't trusted: before the trust prompt is accepted nothing Claude wrote loads, and after it the mod can", () => {
+    expect(writtenModRefusal(policy({ isTrusted: false }), interactive)).toMatchObject({
+      gate: 'untrusted',
     });
-  },
-);
+    expect(writtenModRefusal(policy({ isTrusted: true }), interactive)).toBeUndefined();
+  });
 
-spec(`mods.create.Sessions where a mod Claude writes can't load.Mods are disabled`, () => {
-  test('--safe-mode, --bare and disableAllHooks, in the user`s or the managed settings, disable them', () => {
+  test('the trust gate is an interactive session`s: a `claude -p` run in auto mode is not refused by it', () => {
+    expect(
+      writtenModRefusal(policy({ isTrusted: false }), {
+        isInteractive: false,
+        permissionMode: 'auto',
+      }),
+    ).toBeUndefined();
+  });
+
+  test('mods are disabled: --safe-mode, --bare and disableAllHooks, in the user`s or the managed settings', () => {
     const off = [
       policy({ flags: { pluginDirs: [], safeMode: true } }),
       policy({ flags: { pluginDirs: [], bare: true } }),
@@ -77,30 +75,78 @@ spec(`mods.create.Sessions where a mod Claude writes can't load.Mods are disable
     }
   });
 
-  test('managed settings block it: disableSideloadFlags keeps mods Claude writes from loading', () => {
+  test('mods are disabled: managed settings block it, as disableSideloadFlags does', () => {
     expect(
       writtenModRefusal(policy({ managed: { disableSideloadFlags: true } }), interactive),
     ).toMatchObject({ gate: 'disabled' });
   });
 
-  test('judgment: a session where managed settings allow only managed hooks or the guard allows only the organization`s mods refuses it too', () => {
-    expect(
-      writtenModRefusal(policy({ managed: { allowManagedHooksOnly: true } }), interactive),
-    ).toMatchObject({ gate: 'disabled' });
-    const guard = policy({
-      managed: {
-        pluginConfigs: {
-          'cc-plugin-sec-default@builtin': { options: { allowManagedModsOnly: true } },
-        },
-      },
-    });
-    expect(writtenModRefusal(guard, interactive)).toMatchObject({ gate: 'disabled' });
+  test('the client does not ask to load a mod in such a session either', () => {
+    const session = { isInteractive: true, permissionMode: 'dontAsk' } as const;
+    expect(writtenModAsks(policy(), session)).toBe(false);
+    expect(writtenModAsks(policy({ isTrusted: false }), interactive)).toBe(false);
   });
+});
+
+spec('mods.create.Sessions that load a mod without asking', () => {
+  test('auto and bypassPermissions modes enable hot reloading without the question, interactive or not', () => {
+    for (const permissionMode of ['auto', 'bypassPermissions'] as const) {
+      for (const isInteractive of [true, false]) {
+        const session = { isInteractive, permissionMode };
+        expect(writtenModRefusal(policy(), session), permissionMode).toBeUndefined();
+        expect(writtenModAsks(policy(), session), permissionMode).toBe(false);
+      }
+    }
+  });
+
+  test('default and acceptEdits modes ask, so a user who wants the question starts in one of them', () => {
+    for (const permissionMode of ['default', 'acceptEdits'] as const) {
+      expect(writtenModAsks(policy(), { ...interactive, permissionMode })).toBe(true);
+    }
+  });
+
+  test('a resumed session, interactive or `claude -p`, loads the mods already in its folder without asking', () => {
+    for (const isInteractive of [true, false]) {
+      const session = { isInteractive, permissionMode: 'default', isResumed: true } as const;
+      expect(writtenModRefusal(policy(), session)).toBeUndefined();
+      expect(writtenModAsks(policy(), session)).toBe(false);
+    }
+  });
+
+  test('unless the resumed session is one where a mod Claude writes cannot load', () => {
+    const resumed = { isInteractive: true, isResumed: true } as const;
+    expect(writtenModRefusal(policy(), { ...resumed, permissionMode: 'dontAsk' })).toMatchObject({
+      gate: 'no-approver',
+    });
+    expect(writtenModRefusal(policy({ isTrusted: false }), resumed)).toMatchObject({
+      gate: 'untrusted',
+    });
+    expect(writtenModRefusal(policy({ user: { disableAllHooks: true } }), resumed)).toMatchObject({
+      gate: 'disabled',
+    });
+  });
+});
+
+test('judgment: a session where managed settings allow only managed hooks or the guard allows only the organization`s mods refuses it too', () => {
+  expect(
+    writtenModRefusal(policy({ managed: { allowManagedHooksOnly: true } }), interactive),
+  ).toMatchObject({ gate: 'disabled' });
+  const guard = policy({
+    managed: {
+      pluginConfigs: {
+        'cc-plugin-sec-default@builtin': { options: { allowManagedModsOnly: true } },
+      },
+    },
+  });
+  expect(writtenModRefusal(guard, interactive)).toMatchObject({ gate: 'disabled' });
 });
 
 test('judgment: the first gate that closes names the reason; with several closed, no approver comes first, then trust, then the settings', () => {
   const closed = policy({ isTrusted: false, user: { disableAllHooks: true } });
   expect(writtenModRefusal(closed, { isInteractive: false })?.gate).toBe('no-approver');
+  expect(writtenModRefusal(closed, { ...interactive, permissionMode: 'dontAsk' })?.gate).toBe(
+    'no-approver',
+  );
   expect(writtenModRefusal(closed, interactive)?.gate).toBe('untrusted');
 });
 

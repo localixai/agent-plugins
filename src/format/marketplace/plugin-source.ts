@@ -45,15 +45,23 @@ function rootPath(pluginRoot: string, site: SourceSite): string | undefined {
   return bad ? undefined : rootRelative(path);
 }
 
+const unresolvable = (name: string, pluginRoot: string): string =>
+  `Bare source name "${name}" cannot resolve: metadata.pluginRoot ("${pluginRoot}") must be a relative path inside the marketplace (e.g. "./plugins").`;
+
 /** A bare name: "a single directory name with no `/`", resolved under `metadata.pluginRoot`. */
 function bareName(raw: string, site: SourceSite): SourceReading {
   const root = site.pluginRoot === undefined ? undefined : rootPath(site.pluginRoot, site);
   if (site.pluginRoot === undefined || raw.includes('/') || raw === '') {
     return { source: undefined, issues: [error(site.path, MUST_START)] };
   }
-  // A root that climbs out or is absolute leaves the bare name without a base: oracle 2.1.325
-  // reports the bare name like one without `./` (spec J15.6).
-  if (root === undefined) return { source: undefined, issues: [error(site.path, MUST_START)] };
+  // A root that climbs out or is absolute leaves the bare name without a base: oracle 2.1.330
+  // reports the bare name like one without `./`, and why it cannot resolve (spec J15.6).
+  if (root === undefined) {
+    return {
+      source: undefined,
+      issues: [error(site.path, MUST_START), error(site.path, unresolvable(raw, site.pluginRoot))],
+    };
+  }
   const path = root === '.' ? raw : `${root}/${raw}`;
   return { source: { kind: 'relative', path, bare: true }, issues: [] };
 }

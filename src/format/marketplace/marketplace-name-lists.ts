@@ -54,16 +54,6 @@ export const NON_MARKETPLACE_NAMES: ReadonlyMap<string, string> = new Map([
   ['claude-plugin-test', 'is reserved for plugins loaded by claude plugin test'],
 ]);
 
-/** Reserved "in any casing" (requires Claude Code v2.1.275 or later). */
-export const ANY_CASING_NAMES: ReadonlySet<string> = new Set([
-  'npm',
-  'pip',
-  'uv',
-  'cargo',
-  'github',
-  'gh',
-]);
-
 /** Member names every JavaScript object has (requires Claude Code v2.1.296 or later). */
 export const OBJECT_MEMBER_NAMES: ReadonlySet<string> = new Set([
   'constructor',

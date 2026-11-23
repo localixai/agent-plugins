@@ -27,7 +27,7 @@ export const MODS_API_REFERENCE = {
   theme: ['set', 'clear'],
   command: ['register', 'run', 'list'],
   tool: ['register', 'call', 'check', 'list'],
-  agent: ['register', 'spawn', 'list'],
+  agent: ['register', 'spawn', 'call', 'list', 'limits'],
   model: ['complete', 'fork', 'classify'],
   prompt: ['submit', 'read', 'fill', 'suggest', 'compose'],
   turn: ['abort'],
@@ -42,6 +42,7 @@ export const MODS_API_REFERENCE = {
     'surfaces',
     'usage',
     'version',
+    'info',
     'compact',
     'send',
     'append',
@@ -55,8 +56,9 @@ export const MODS_API_REFERENCE = {
   state: ['get', 'set'],
   clock: ['now', 'sleep', 'after', 'every'],
   http: ['fetch'],
-  process: ['run', 'spawn'],
+  process: ['run', 'spawn', 'hookEnv'],
   mcp: ['call', 'connect'],
+  wasm: ['compile'],
   audio: ['play', 'speak'],
   telemetry: ['log', 'mark'],
 } as const satisfies Readonly<Record<string, readonly string[]>>;
@@ -64,13 +66,23 @@ export const MODS_API_REFERENCE = {
 /**
  * The members of `$` the declarations name and the reference page does not (AGENTS.md, E2a: the
  * declarations win): `$.ui.cancelNotify` (claude-code/index.d.ts:2536), `$.prompt.media` (:3143) and
- * `$.prompt.paint` (:3168), `$.session.surface` (:2980) and `$.session.identity` (:3081).
+ * `$.prompt.paint` (:3168), `$.session.surface` (:2980), `$.session.identity` (:3081) and
+ * `$.session.machine` (2.1.330, :3470; Agent Plugins Extended J10.8).
  */
 export const DECLARED_API_MEMBERS = {
   ui: ['cancelNotify'],
   prompt: ['media', 'paint'],
-  session: ['surface', 'identity'],
+  session: ['surface', 'identity', 'machine'],
 } as const satisfies { readonly [N in keyof typeof MODS_API_REFERENCE]?: readonly string[] };
+
+/**
+ * The namespaces of `$` the declarations add and the documentation does not name: `$.vcs`, marked
+ * experimental in the 2.1.330 declarations (claude-code/index.d.ts:4440), which a client SHOULD
+ * offer (Agent Plugins Extended §10.19.8, J10.23), in the specification's order.
+ */
+export const DECLARED_API_NAMESPACES = {
+  vcs: ['detect', 'diff', 'isolate', 'list', 'release', 'status'],
+} as const satisfies Readonly<Record<string, readonly string[]>>;
 
 /**
  * The mods API by namespace and method name: the `$` argument every hook receives, the reference's
@@ -83,6 +95,7 @@ export const MODS_API = {
   ui: [...MODS_API_REFERENCE.ui, ...DECLARED_API_MEMBERS.ui],
   prompt: [...MODS_API_REFERENCE.prompt, ...DECLARED_API_MEMBERS.prompt],
   session: [...MODS_API_REFERENCE.session, ...DECLARED_API_MEMBERS.session],
+  ...DECLARED_API_NAMESPACES,
 } as const;
 
 /**

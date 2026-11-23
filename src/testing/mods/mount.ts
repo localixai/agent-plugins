@@ -5,7 +5,7 @@ import {
   renderEvent,
   type ElementNode,
 } from '../../mods/ui/index.ts';
-import { walkTree } from '../../mods/ui/elements/node.ts';
+import { ENGINE_TYPE, walkTree } from '../../mods/ui/elements/node.ts';
 import type { RenderSite, UiSurface } from '../../protocol/mods-ui-names.ts';
 import type { World } from './world.ts';
 
@@ -48,6 +48,8 @@ export interface MountHandle {
   ): Promise<
     { readonly type: string; readonly props: unknown; readonly children: unknown } | undefined
   >;
+  /** Whether the tree as last drawn holds what `next(e)` answered (claude-code/index.d.ts:21874). */
+  keepsBeneath(): Promise<boolean>;
   unmount(): Promise<void>;
 }
 
@@ -75,6 +77,23 @@ function findIn(tree: ElementNode | undefined, query: FindQuery): ElementNode | 
   return undefined;
 }
 
+/**
+ * What `next(e)` answers at the end of the chain: the test's `ui.render` stub, or, with none,
+ * Claude Code's own drawing (test.md, "Follow the test kit's rules": "the mount succeeds with no
+ * stub", from 2.1.321), as it is when no stub's matcher lets the event through (`stubAdmits`).
+ */
+function beneathOf(world: World, e: unknown): Promise<unknown> {
+  if (!world.stubs.admits('ui.render', e)) {
+    return Promise.resolve({ type: ENGINE_TYPE, ref: e });
+  }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `ui.render` is no stream event, so the stubs answer it with a promise
+  return world.answer('ui.render', e) as Promise<unknown>;
+}
+
+/** Whether `settled` is, or holds at any depth, the value `next(e)` answered. */
+const holds = (settled: unknown, answered: unknown): boolean =>
+  answered !== undefined && [...walkTree(settled)].some(({ node }) => node === answered);
+
 export async function mountUi(world: World, spec: MountSpec): Promise<MountHandle> {
   await world.ensure();
   const host = world.host();
@@ -83,17 +102,25 @@ export async function mountUi(world: World, spec: MountSpec): Promise<MountHandl
     surface: spec.surface,
     ...(spec.props === undefined ? {} : { props: spec.props }),
     ...(spec.requestId === undefined ? {} : { requestId: spec.requestId }),
+    ...(spec.plugin === undefined ? {} : { plugin: spec.plugin }),
     ...(spec.viewport === undefined ? {} : { viewport: { isFullscreen: false, ...spec.viewport } }),
   };
   const built = renderEvent(request);
   if ('problem' in built) throw new Error(built.problem);
   let tree: ElementNode | undefined;
+  /** What `next(e)` answered at the last drawing, and whether the drawing kept it. */
+  let beneath: { readonly answered: unknown; isKept: boolean } | undefined;
   const draw = async (): Promise<void> => {
     world.needsRedraw = false;
+    const answered: unknown[] = [];
     const settled = await host.fire('ui.render', built.event, {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `ui.render` is no stream event, so the stubs answer it with a promise
-      core: (e) => world.answer('ui.render', e) as Promise<unknown>,
+      core: async (e) => {
+        const answer = await beneathOf(world, e);
+        answered.push(answer);
+        return answer;
+      },
     });
+    beneath = { answered: answered[0], isKept: answered.some((one) => holds(settled, one)) };
     const drawn = foldRender(request.site, request.surface, settled);
     if ('refused' in drawn) throw new Error(drawn.line);
     tree = 'tree' in drawn ? drawn.tree : undefined;
@@ -128,6 +155,10 @@ export async function mountUi(world: World, spec: MountSpec): Promise<MountHandl
     async find(query) {
       if (world.needsRedraw) await draw();
       return findIn(tree, query);
+    },
+    async keepsBeneath() {
+      if (world.needsRedraw) await draw();
+      return beneath?.isKept ?? false;
     },
     unmount: () => {
       tree = undefined;

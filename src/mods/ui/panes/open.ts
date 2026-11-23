@@ -13,6 +13,8 @@ export type OpenRequest = {
   readonly rows?: number;
   /** The width to ask for beside the transcript. */
   readonly columns?: number;
+  /** `'widget'`: the Desktop app draws the pane as a widget (2.1.330, claude-code/index.d.ts:9478). */
+  readonly placement?: 'widget';
 };
 
 /** The fields that "accept only `true`": `false` throws `ui.open: focus is true or left out`. */
@@ -61,5 +63,7 @@ export function parseOpen(value: unknown): OpenRequest {
   if (problem !== undefined || typeof value.id !== 'string') {
     throw new Error(`ui.open: ${problem ?? 'the id is not valid'}`);
   }
-  return { id: value.id, ...optionalFields(value), ...flagsOf(value) };
+  // Any `placement` but `'widget'` is ignored (Agent Plugins Extended §10.25.1).
+  const widget = value.placement === 'widget' ? { placement: 'widget' as const } : {};
+  return { id: value.id, ...optionalFields(value), ...flagsOf(value), ...widget };
 }

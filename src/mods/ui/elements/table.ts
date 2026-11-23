@@ -49,6 +49,8 @@ const CONSTRUCTORS: { readonly [N in ElementName]: ElementFn } = Object.freeze({
   Client: construct('Client'),
   Raster: construct('Raster'),
   Image: construct('Image'),
+  Progress: construct('Progress'),
+  Shader: construct('Shader'),
 });
 const NAMES: ReadonlyMap<unknown, ElementName> = new Map(
   ELEMENT_NAMES.map((name) => [CONSTRUCTORS[name], name]),

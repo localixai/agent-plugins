@@ -188,6 +188,30 @@ spec('permissions.rule.Bash(run_in_background:true)', () => {
   });
 });
 
+spec('permissions.behavior.Check the parameters Claude sends', () => {
+  // 2.1.330 (Agent Plugins Extended §13.2.2 item 6): the `input` of the `tool_use` block a
+  // stream-json run prints holds "the field names and literal values a parameter rule matches".
+  const toolUse = {
+    type: 'tool_use',
+    name: 'Agent',
+    input: {
+      description: 'Review',
+      prompt: 'Review the diff',
+      subagent_type: 'reviewer',
+      model: 'opus',
+    },
+  };
+
+  test("a rule written from that block's field and literal value matches the call", () => {
+    expect(matches('Agent(model:opus)', toolUse.name, toolUse.input)).toBe(true);
+    expect(matches('Agent(subagent_type:reviewer)', toolUse.name, toolUse.input)).toBe(true);
+  });
+
+  test('a value the block does not hold literally (an alias resolved later) does not match', () => {
+    expect(matches('Agent(model:claude-opus-5)', toolUse.name, toolUse.input)).toBe(false);
+  });
+});
+
 describe('judgments (spec/judgments.md: how a parameter value is compared)', () => {
   test('a rule that names two parameters reads them as one value and matches neither call shape', () => {
     // The docs only say to write two rules "rather than combining them in one rule"; what a

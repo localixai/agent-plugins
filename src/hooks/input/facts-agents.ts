@@ -46,8 +46,8 @@ export const SubagentStopFacts = z.object({
 }) satisfies z.ZodType<EventFactsOf<'SubagentStop'>>;
 
 /**
- * The error types of a failed turn: the docs' twelve and the SDK's `verification_required`
- * (spec/judgments.md).
+ * The error types of a failed turn: the docs' eleven, the SDK's `verification_required`
+ * (spec/judgments.md), and the SDK's `overloaded`, read as `server_error` below.
  */
 const STOP_FAILURE_ERRORS = [
   'authentication_failed',
@@ -65,8 +65,19 @@ const STOP_FAILURE_ERRORS = [
   'cloud_credential_error',
 ] as const;
 
+type StopFailureError = (typeof STOP_FAILURE_ERRORS)[number];
+
+/**
+ * 2.1.330: "An HTTP `529` overloaded response is reported as `server_error`; there is no
+ * `overloaded` value" (Agent Plugins Extended §7.5.23). The SDK type still has it, so it is read,
+ * not refused, and a hook sees what Claude Code reports.
+ */
+const REPORTED_AS: Partial<Record<StopFailureError, StopFailureError>> = {
+  overloaded: 'server_error',
+};
+
 export const StopFailureFacts = z.object({
-  error: z.enum(STOP_FAILURE_ERRORS),
+  error: z.enum(STOP_FAILURE_ERRORS).transform((error) => REPORTED_AS[error] ?? error),
   error_details: optional(z.string()),
   last_assistant_message: optional(z.string()),
 }) satisfies z.ZodType<EventFactsOf<'StopFailure'>>;

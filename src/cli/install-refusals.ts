@@ -15,3 +15,10 @@ export function closureRefusal(id: string, messages: readonly string[]): Command
     failureCode: 'dependency_error',
   });
 }
+
+/**
+ * An entry whose display field is malformed (spec §15.5.3): its message as the spec quotes it, with
+ * `failureCode` `invalid_entry` (the code is the kit's, spec/judgments.md, J15.15).
+ */
+export const invalidEntryRefusal = (message: string): CommandOutput =>
+  commandFailed('install', message, { failureCode: 'invalid_entry' });

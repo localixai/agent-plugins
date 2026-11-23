@@ -98,10 +98,14 @@ export function createTestKit(): TestKit {
 
 /** The `on` of one test: stubs register until the test first calls `$`, and only for a known event. */
 export function createOn(world: World): On {
-  const on: On = (name, hook) => {
+  const on: On = (name, matcherOrHook, last) => {
     if (world.hasStarted()) throw new Error(`on("${name}") after the test first called $`);
     if (!isKnownEvent(name)) throw new Error(`on("${name}"): "${name}" is not an event`);
-    world.stub(name, hook);
+    if (typeof matcherOrHook === 'function') return world.stub(name, matcherOrHook);
+    if (typeof last !== 'function') {
+      throw new TypeError(`on("${name}", matcher, hook) takes a hook after the matcher`);
+    }
+    world.stub(name, last, matcherOrHook);
   };
   bindOn(on, world);
   return on;

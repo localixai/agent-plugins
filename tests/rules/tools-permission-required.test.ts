@@ -52,3 +52,22 @@ describe('tools-reference.md note: file-access tools marked No still prompt outs
     expect(inManualMode('Bash', { command: 'ls -la' }).outcome).toBe('allow');
   });
 });
+
+/** A host that knows the skill `guarded` sets `hooks`. */
+const guarded = (tool: string, input: unknown): boolean =>
+  tool === 'Skill' &&
+  typeof input === 'object' &&
+  input !== null &&
+  'skill' in input &&
+  input.skill === 'guarded';
+
+spec('tools.tool.Skill', () => {
+  // tools-reference.md (2.1.330): Skill is "Some skills", it "can prompt for a skill that sets
+  // `allowed-tools`, `disallowed-tools` or `hooks`". The host knows its skills; the call's input
+  // reaches `requiresPermission` so it can answer per skill.
+  test('a skill the host says sets hooks prompts; another runs', () => {
+    const ctx = { requiresPermission: guarded };
+    expect(decision('default', 'Skill', { skill: 'guarded' }, ctx).outcome).toBe('ask');
+    expect(decision('default', 'Skill', { skill: 'deploy' }, ctx).outcome).toBe('allow');
+  });
+});

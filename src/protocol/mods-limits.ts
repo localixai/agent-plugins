@@ -14,6 +14,10 @@ export const MOD_LIMITS = {
   catchMs: 1000,
   /** How long a hook may keep running after its `next.signal` aborted before it is reported as lingering (claude-code/index.d.ts:5428, `HookBudget.lingerMs`). */
   lingerMs: 5000,
+  /** How long a `ui.render` hook may wait on `$` calls for one event, all together (from v2.1.326); past it the hook is skipped. */
+  renderWaitMs: 30_000,
+  /** The same for a `plugin.register` hook, not counting `$.ui.ask`. */
+  registerWaitMs: 10_000,
   /** All `session.end` hooks together, unless the SessionEnd hook budget is changed (hooks.md, "SessionEnd input"). */
   sessionEndMs: 1500,
   /** `$.process.run` timeout by default, and at most. */
@@ -42,6 +46,10 @@ export const MOD_LIMITS = {
   hrefChars: 2048,
   /** Nesting depth of one tree, below the root element. */
   treeDepth: 32,
+  /** A tree counted with its prop values: refused when nested deeper than this many lists and objects (from v2.1.326). */
+  propDepth: 100,
+  /** The same tree: refused with more than this many values once written out. */
+  propValues: 1_000_000,
   /** Elements and text children in one tree. */
   treeNodes: 20_000,
   /** `Raster` cells in one tree. */
@@ -59,7 +67,7 @@ export const MOD_LIMITS = {
   /** A pane opened without the user asking: placed from this many terminal columns, and from the second after they opened it once. */
   paneColumns: 144,
   paneColumnsAfterOpen: 110,
-  /** Command, tool, subagent type and pane names, and the `id` of a placed row or a backdrop. */
+  /** Command, tool, subagent type and pane names, the `id` of a placed row, and the `scene` of a backdrop. */
   nameChars: 64,
   /** Rows from `$.ui.place` that one mod has in a conversation at one time. */
   placedRows: 500,

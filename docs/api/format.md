@@ -30,7 +30,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ANSI_COLOR_NAMES` | constant | The ANSI colour names a theme may use, plain and bright |
 | `AnsiColorName` | type | One of `ANSI_COLOR_NAMES` |
 | `AnsiPalette` | type | The 16 ANSI colours as `#rrggbb`, by name: what a terminal draws for `ansi:<name>` |
-| `AUTO_COMPACT_RANGE` | constant | A token count in this range |
+| `AUTO_COMPACT_MIN` | constant | The least `autoCompactWindow` a subagent file may set (100000); the field has no upper bound |
 | `BASH_DENY_TURNS_OFF_POWERSHELL` | constant | The stderr warning when denying the whole Bash tool leaves a Windows session with no shell tool |
 | `BodyReader` | type | Reads the body of a skill or command the catalog holds without it |
 | `boundedMcpErrorText` | function | The text of an error as Claude receives it: "Error text longer than about 11,000 characters keeps only its first 5,000 and last 5,000 characters" |
@@ -60,6 +60,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `CUSTOM_STYLES_NOT_SELECTABLE` | constant | The notice `/output-style` adds over Remote Control or a relayed message |
 | `customThemeId` | function | What `/theme` stores as the preference when the theme is selected: `custom:<slug>`, or `custom:<plugin-name>:<slug>` for a plugin's theme |
 | `cutMcpDescription` | function | "Claude sees only the text before the cut"; the cut keeps a surrogate pair whole |
+| `declaredHosts` | function | The well-formed hosts a manifest `network` declares, in order, each once (spec §2.4) |
 | `DEFAULT_OUTPUT_STYLE_ID` | constant | The id Default has in the `/output-style` list |
 | `DisplayedHeader` | type | One header a surface shows: its name, and its value when the scope shows it |
 | `displayHeaders` | function | What `claude mcp get` shows of a remote server's headers |
@@ -67,6 +68,12 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `droppedServerLogLine` | function | "Claude Code drops that server and records `Invalid MCP server config for <server> in <path>` only in that debug log" |
 | `editFrontmatter` | function | `text` with `changes` set in its frontmatter: a key it has keeps its place, a new one goes after the others in the order given, `undefined` removes one |
 | `ELICITATION_REJECTED` | constant | The message for a Java MCP SDK server that rejects the elicitation capability |
+| `EngineCandidate` | type | One version `newestFittingVersion` weighs: its version and the `engines` it declares |
+| `EngineFacts` | type | The client facts `engineVerdict` reads: its version and whether the plugin is read from a local folder |
+| `engineRefuses` | function | True when an `EngineVerdict` keeps the plugin from installing, updating or loading |
+| `EnginesRead` | type | What `readEngines` returns |
+| `engineVerdict` | function | Whether the running client may install, update or load a plugin given its range: the range that excludes it, and whether a local folder exempts it |
+| `EngineVerdict` | type | What `engineVerdict` returns |
 | `EnvExpansion` | type | What `expandEnvText` returns |
 | `EnvLookup` | type | The environment as a function: a name to its value, `undefined` when it is unset |
 | `escapeAngleBrackets` | function | `<` and `>` in `description` and `when_to_use` "show as `&lt;` and `&gt;`" |
@@ -126,6 +133,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MCP_FAILURE_SKIP_MS` | constant | "A connection to that server failed less than 15 minutes earlier." |
 | `MCP_RESULT_SIZE_CEILING` | constant | "Up to a hard ceiling of 500,000 characters." |
 | `MCP_SOURCE_KINDS` | constant | Where a plugin's MCP servers come from |
+| `MCP_TASK_MIN_RESULT_KEEP_MS` | constant | How long an MCP server keeps a finished task's result at least: an hour |
 | `MCP_TOOL_NAME_LIMIT` | constant | "Claude Code leaves an MCP tool out of the tools it sends to Claude when its full name is over 128 characters." |
 | `MCP_TRANSPORTS` | constant | The transport names of a server's `type`; a server without a `type` is stdio |
 | `mcpAddKey` | function | How the host names a stored server for `McpAddOptions.existing`: the scope and the name, which together make "the same server name at the same scope" |
@@ -162,6 +170,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `McpExpansionOptions` | type | What a host adds to the expansion of one server: more names that read as empty toward a remote server |
 | `McpFirstTurnServer` | type | What keeps its own first-turn wait in a non-interactive session |
 | `mcpFirstTurnWaitMs` | function | `CLAUDE_CODE_MCP_STARTUP_WAIT_MS`: how long the first turn waits for a server that is still connecting |
+| `McpFlagState` | type | Feature-flag fetching: `off`, `pending` (on, the flags not arrived yet) or `arrived` |
 | `McpImageFile` | type | What `mcpImageFiles` returns |
 | `mcpImageFiles` | function | The image files to save beside the inline copy |
 | `mcpJsonUnreadable` | function | The error of a command that finds `.mcp.json` is not a regular file or is over 2 MiB |
@@ -200,11 +209,14 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `mcpStartupWaitsFor` | function | Whether startup waits for one server before the first query. "MCP startup is non-blocking by default"; `MCP_CONNECTION_NONBLOCKING=0` waits for every server |
 | `mcpStdioEnvironment` | function | The environment a stdio MCP server is spawned with, under `CLAUDE_CODE_MCP_ALLOWLIST_ENV` |
 | `McpStdioEnvironmentInput` | type | The `input` argument of `mcpStdioEnvironment` |
+| `McpTaskTiming` | type | What `recommendedMcpTaskTiming` returns: `ttlMs` (or `null`) and the `pollIntervalMs` range |
+| `McpTaskTimingInput` | type | The `input` argument of `recommendedMcpTaskTiming` |
 | `mcpTimeouts` | function | `MCP_TIMEOUT`, `MCP_TOOL_TIMEOUT` and the server's own `timeout` |
 | `McpTimeouts` | type | What `mcpTimeouts` returns |
 | `McpTimeoutServer` | type | The `server` argument of `mcpTimeouts` |
 | `McpToolDeclaration` | type | What Claude Code does with a tool's input schema before the tool goes to the API |
 | `McpToolHints` | type | What a tool's entry declares, read once |
+| `mcpToolPolicy` | function | The `McpToolPolicy` of a session by its feature flags: with fetching off the rewrite runs and the checks apply |
 | `McpToolPolicy` | type | The `policy` argument of `prepareMcpTool` |
 | `McpToolPreparation` | type | What `prepareMcpTool` returns |
 | `mcpToolSendCheck` | function | Whether a tool goes to the model, and the debug line when it does not |
@@ -219,6 +231,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MonitorRead` | type | What `readMonitor` returns |
 | `MonitorsRead` | type | What `readMonitors` returns |
 | `MonitorTrigger` | type | `always`, or the first run of one skill |
+| `newestFittingVersion` | function | The newest semver among the versions a host fetched whose `engines` range lets the client take it (spec §2.4); `undefined` when none fits |
 | `noSuchTool` | function | The error result for a call to a tool that is not in the session's tool list; `hint` follows the name |
 | `organizationSettingsUnavailable` | function | The reasons the page lists for organization settings that could not load, as it names them |
 | `OutputStyle` | type | A custom output style: a Markdown file whose frontmatter is metadata and whose body is the instructions Claude Code sends with every request |
@@ -241,12 +254,15 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `planMcpOAuth` | function | Whether a server signs in with OAuth, and with which headers. "OAuth authentication works with HTTP servers" and the flags apply "to HTTP and SSE transports" |
 | `planMcpReload` | function | What a reload does to each server, by the name the host registers it under |
 | `PLUGIN_IGNORED_FIELDS` | constant | The fields a plugin agent ignores: derived from the registry |
+| `PLUGIN_NOTE_TYPES` | constant | The `noteDetails` types of the notes a plugin loads with (spec §17.8.2) |
 | `PluginChannel` | type | A `channels` entry: a channel bound to one of the plugin's MCP servers |
 | `PluginDependency` | type | The `dependencies` field of `MarketplaceEntry` |
 | `PluginIssue` | type | The `issues` field of `AgentsReload`; The `issues` field of `HookOutcome` |
 | `PluginManifest` | type | A manifest that loaded |
 | `PluginMcpServer` | type | The `mcpServers` field of `Plugin`; The `server` field of `ResolvedMcpServer` |
-| `PluginSettings` | type | A plugin's default settings (`settings.json` or the `settings` manifest key): only `agent` and `subagentStatusLine` take effect |
+| `PluginNote` | type | A note a plugin that loads carries: its `noteDetails` type and the line `claude plugin list` prints; the `notes` field of `LoadedPlugin` |
+| `PluginNoteType` | type | One of `PLUGIN_NOTE_TYPES` |
+| `PluginSettings` | type | A plugin's default settings (`settings.json` or the `settings` manifest key): only `agent` takes effect, a deprecated feature (`subagentStatusLine` was removed in 2.1.323) |
 | `PluginSettingsRead` | type | The `read` argument of `hasAppliedSettings`; What `readPluginSettings` returns |
 | `PluginSource` | type | A component a plugin brought: the plugin's id as the host names it (`name@marketplace`, or the bare name) |
 | `prepareMcpTool` | function | The tool as it goes to the API, or why it does not |
@@ -255,6 +271,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `readCommand` | function | Read a command file |
 | `readCommandEntry` | function | Build a `Command` from one entry of the manifest's `commands` map |
 | `readConfigFlag` | function | `--config <key=value>`: "A key written `<server>.<key>` sets a setting that a bundled MCP server declares in its own `user_config` instead" |
+| `readEngines` | function | The `engines["claude-code"]` range of a manifest or entry, or the value that is not one (spec §2.4) |
 | `readFlagAgents` | function | Reads the parsed `--agents` value |
 | `readHooksFile` | function | Reads `hooks/hooks.json`: `{ "hooks": { <event>: [ { matcher?, hooks: [ <handler> ] } ] } }` |
 | `readHooksJsonModules` | function | Reads `modules` of `hooks/hooks.json`: "an array with one path, relative to this file" (`"modules": ["./register.js"]`) |
@@ -280,6 +297,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `readSkill` | function | Read one `SKILL.md` |
 | `readText` | function | A string, trimmed; a number or boolean is written out; blank is absent |
 | `readTheme` | function | Read a theme file |
+| `recommendedMcpTaskTiming` | function | The `ttlMs` and `pollIntervalMs` an MCP server should send for a job |
 | `RedactedPluginServer` | type | What `claude mcp get` and `claude mcp list` show of a plugin's servers |
 | `redactPluginServer` | function | The redacted view of a plugin's stdio or WebSocket server, or `undefined` for an http or sse server, whose values the docs do not say are hidden |
 | `refusedSchemaFallback` | function | The tool the API refused, resent "with the tool declared without parameters", and the line for the server's log |

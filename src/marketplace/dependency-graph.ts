@@ -77,6 +77,11 @@ export interface CatalogPlugin {
   readonly headersHelper?: string;
   /** The plugin's `defaultEnabled` (the entry's over `plugin.json`'s); absent is `true`. */
   readonly defaultEnabled?: boolean;
+  /**
+   * The entry's `invalid` problems (`MarketplaceEntry.invalid`, spec §15.5.3, J15.15): installing it
+   * fails and nothing is installed. Absent for an entry that installs.
+   */
+  readonly invalid?: readonly string[];
 }
 
 export interface GraphFacts {

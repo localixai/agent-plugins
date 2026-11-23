@@ -38,8 +38,9 @@ export interface McpBundle {
 /**
  * The host's MCP bundle opener. Extracting an archive into `cacheDir` or downloading it is an effect
  * the kit never performs, and reading the MCPB manifest into a server config is the host's too
- * (spec/judgments.md). `cacheDir` is `.mcpb-cache`, relative to the plugin root like every path of a
- * `PluginFiles`. `undefined` means the bundle does not exist; a failed extraction or download is a
+ * (spec/judgments.md). `cacheDir` is `mcpb`, relative to the plugins root (`CLAUDE_CODE_PLUGIN_CACHE_DIR`,
+ * else `~/.claude/plugins`), not to the plugin: bundles are extracted outside the plugin's folder
+ * (spec §2.9, §16.6). An uninstall deletes them with the plugin's options (`uninstallRetention` gives `mcpbDelete`). `undefined` means the bundle does not exist; a failed extraction or download is a
  * `PortFailure`.
  */
 export interface McpBundleReader {

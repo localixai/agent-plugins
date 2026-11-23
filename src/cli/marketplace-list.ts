@@ -81,7 +81,7 @@ const SOURCES: { readonly [K in ListedSource['kind']]: SourceRow<K> } = {
   },
   directory: {
     fields: (source) => ({ source: 'directory', path: source.path }),
-    describe: (source) => `Directory (${source.path})`,
+    describe: (source) => `Folder (${source.path})`,
   },
   file: {
     fields: (source) => ({ source: 'file', path: source.path }),

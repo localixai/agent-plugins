@@ -108,7 +108,16 @@ describe('a fresh copy of a mod the loader does not know', () => {
       tier: 'user',
       isBuiltin: false,
       hooks: [],
-      uses: { events: [], calls: [], envReads: [], envWrites: [], stateReads: [], stateWrites: [] },
+      uses: {
+        events: [],
+        calls: [],
+        envReads: [],
+        envWrites: [],
+        stateReads: [],
+        stateWrites: [],
+        hostsNamed: [],
+        hostsUnread: [],
+      },
       unload: () => Promise.resolve(),
     };
     const outcome = await restartMod(

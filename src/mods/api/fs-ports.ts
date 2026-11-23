@@ -39,16 +39,24 @@ export interface FsAncestorsRequest {
   readonly below?: string;
 }
 
+/** A range of a file in bytes (`$.fs.read`'s `offset` and `length`, v2.1.326): absent `length`, to the end. */
+export interface FsRange {
+  readonly offset: number;
+  readonly length?: number;
+}
+
 /** The host's file system, with the same permissions as the user running Claude Code. Paths are absolute. */
 export interface ModFs {
   /**
    * The file's text and its size in bytes, or `undefined` when there is no such file; asked `as:
-   * 'bytes'`, also its bytes as standard padded `base64` (claude-code/index.d.ts:5216).
+   * 'bytes'`, also its bytes as standard padded `base64` (claude-code/index.d.ts:5216). Given a
+   * `range`, only those bytes, and `bytes` is how many were read.
    */
   read(
     path: string,
     signal: AbortSignal,
     as?: 'text' | 'bytes',
+    range?: FsRange,
   ): Promise<{ text: string; bytes: number; base64?: string } | undefined>;
   write(path: string, text: string, signal: AbortSignal): Promise<void>;
   list(path: string, signal: AbortSignal): Promise<readonly FsEntry[] | undefined>;

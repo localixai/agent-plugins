@@ -22,97 +22,110 @@ import {
 
 const PATH = '/usr/local/bin/claude-policy';
 
-spec(['policy.key.policyHelper', 'policy.server.Current limitations'], () => {
-  test('the object takes path, timeoutMs and refreshIntervalMs', () => {
-    const read = readPolicyHelper({ path: PATH, timeoutMs: 5000, refreshIntervalMs: 300_000 });
-    expect(read).toEqual({ helper: { path: PATH, timeoutMs: 5000, refreshIntervalMs: 300_000 } });
-  });
+spec(
+  [
+    'policy.key.policyHelper',
+    'policy.server.Current limitations',
+    'policy.managed.Choose a delivery mechanism.Delivery controls',
+  ],
+  () => {
+    test('the object takes path, timeoutMs and refreshIntervalMs', () => {
+      const read = readPolicyHelper({ path: PATH, timeoutMs: 5000, refreshIntervalMs: 300_000 });
+      expect(read).toEqual({ helper: { path: PATH, timeoutMs: 5000, refreshIntervalMs: 300_000 } });
+    });
 
-  test('unset, no helper runs', () => {
-    const plan = compose({ file: { model: 'a' } }).helper;
-    expect(plan.helper).toBeUndefined();
-    expect(plan.runsAtLaunch).toBe(false);
-  });
-
-  test('it is read from the macOS plist, the Windows HKLM registry or the managed settings file', () => {
-    for (const source of ['plist', 'hklm', 'file'] as const) {
-      const plan = compose({ [source]: { policyHelper: { path: PATH } } }).helper;
-      expect(plan.helper?.path).toBe(PATH);
-      expect(plan.runsAtLaunch).toBe(true);
-    }
-  });
-
-  test('it is ignored in server-managed settings, the HKCU registry and host-supplied parent settings', () => {
-    const remote = compose({ remote: { policyHelper: { path: PATH } } }).helper;
-    expect(remote.helper).toBeUndefined();
-    expect(remote.runsAtLaunch).toBe(false);
-    const hkcu = compose({ hkcu: { policyHelper: { path: PATH } } }).helper;
-    expect(hkcu.helper).toBeUndefined();
-  });
-
-  test('a host-supplied parent layer that carries it never runs it, beside an admin source that merges parent settings or alone', async () => {
-    const parent = { model: 'x', policyHelper: { path: PATH } };
-    for (const managed of [
-      { file: { base: { value: { model: 'a', parentSettingsBehavior: 'merge' } } } },
-      {},
-    ] satisfies ManagedReads[]) {
-      const sources = {
-        read: (scope: PolicyScope) => Promise.resolve(scope === 'parent' ? parent : undefined),
-        managed: () => Promise.resolve(managed),
-      };
-      const { layers } = await loadSettingsLayers(sources, {
-        signal: new AbortController().signal,
-      });
-      expect(layers.some((layer) => layer.scope === 'parent' || layer.scope === 'managed')).toBe(
-        true,
-      );
-      const plan = composeManagedReads(managed, { parentRestrictive: true }).helper;
+    test('unset, no helper runs', () => {
+      const plan = compose({ file: { model: 'a' } }).helper;
       expect(plan.helper).toBeUndefined();
       expect(plan.runsAtLaunch).toBe(false);
-      expect(helperRunsNow(plan, { remoteStillDelivers: false })).toBe(false);
-    }
-  });
+    });
 
-  test('it is read from the highest-priority source that carries a policy key, which must be one of the three', () => {
-    const lowerFile = compose({
-      plist: { model: 'a' },
-      file: { policyHelper: { path: PATH } },
-    }).helper;
-    expect(lowerFile.helper).toBeUndefined();
-  });
+    test('it is read from the macOS plist, the Windows HKLM registry or the managed settings file', () => {
+      for (const source of ['plist', 'hklm', 'file'] as const) {
+        const plan = compose({ [source]: { policyHelper: { path: PATH } } }).helper;
+        expect(plan.helper?.path).toBe(PATH);
+        expect(plan.runsAtLaunch).toBe(true);
+      }
+    });
 
-  test('server-managed settings that deliver the policy at launch shadow the helper, so it does not run', () => {
-    const plan = compose({ remote: { model: 'a' }, file: { policyHelper: { path: PATH } } }).helper;
-    expect(plan.helper?.path).toBe(PATH);
-    expect(plan.shadowedByRemote).toBe(true);
-    expect(plan.runsAtLaunch).toBe(false);
-    expect(helperRunsNow(plan, { remoteStillDelivers: true })).toBe(false);
-  });
+    test('it is ignored in server-managed settings, the HKCU registry and host-supplied parent settings', () => {
+      const remote = compose({ remote: { policyHelper: { path: PATH } } }).helper;
+      expect(remote.helper).toBeUndefined();
+      expect(remote.runsAtLaunch).toBe(false);
+      const hkcu = compose({ hkcu: { policyHelper: { path: PATH } } }).helper;
+      expect(hkcu.helper).toBeUndefined();
+    });
 
-  test('a fetch that reports the server-managed settings removed runs the helper at that point', () => {
-    const plan = compose({ remote: { model: 'a' }, file: { policyHelper: { path: PATH } } }).helper;
-    expect(helperRunsNow(plan, { remoteStillDelivers: false })).toBe(true);
-  });
+    test('a host-supplied parent layer that carries it never runs it, beside an admin source that merges parent settings or alone', async () => {
+      const parent = { model: 'x', policyHelper: { path: PATH } };
+      for (const managed of [
+        { file: { base: { value: { model: 'a', parentSettingsBehavior: 'merge' } } } },
+        {},
+      ] satisfies ManagedReads[]) {
+        const sources = {
+          read: (scope: PolicyScope) => Promise.resolve(scope === 'parent' ? parent : undefined),
+          managed: () => Promise.resolve(managed),
+        };
+        const { layers } = await loadSettingsLayers(sources, {
+          signal: new AbortController().signal,
+        });
+        expect(layers.some((layer) => layer.scope === 'parent' || layer.scope === 'managed')).toBe(
+          true,
+        );
+        const plan = composeManagedReads(managed, { parentRestrictive: true }).helper;
+        expect(plan.helper).toBeUndefined();
+        expect(plan.runsAtLaunch).toBe(false);
+        expect(helperRunsNow(plan, { remoteStillDelivers: false })).toBe(false);
+      }
+    });
 
-  test('a helper that runs at launch needs no fetch', () => {
-    const plan = compose({ file: { policyHelper: { path: PATH } } }).helper;
-    expect(helperRunsNow(plan, { remoteStillDelivers: true })).toBe(true);
-  });
+    test('it is read from the highest-priority source that carries a policy key, which must be one of the three', () => {
+      const lowerFile = compose({
+        plist: { model: 'a' },
+        file: { policyHelper: { path: PATH } },
+      }).helper;
+      expect(lowerFile.helper).toBeUndefined();
+    });
 
-  test('an invalid value, such as a bare path, is a dropped entry and no helper runs', () => {
-    const composed = compose({ file: { model: 'a', policyHelper: PATH } });
-    expect(composed.helper.helper).toBeUndefined();
-    expect(composed.layer.settings.model).toBe('a');
-    expect(composed.layer.settings.policyHelper).toBeUndefined();
-    expect(composed.issues.some((issue) => issue.path.endsWith('policyHelper'))).toBe(true);
-    const read = readPolicyHelper(PATH);
-    expect('issue' in read && read.issue.severity).toBe('warning');
-  });
+    test('server-managed settings that deliver the policy at launch shadow the helper, so it does not run', () => {
+      const plan = compose({
+        remote: { model: 'a' },
+        file: { policyHelper: { path: PATH } },
+      }).helper;
+      expect(plan.helper?.path).toBe(PATH);
+      expect(plan.shadowedByRemote).toBe(true);
+      expect(plan.runsAtLaunch).toBe(false);
+      expect(helperRunsNow(plan, { remoteStillDelivers: true })).toBe(false);
+    });
 
-  test('turning a helper off is removing the key', () => {
-    expect(compose({ file: { model: 'a' } }).helper.helper).toBeUndefined();
-  });
-});
+    test('a fetch that reports the server-managed settings removed runs the helper at that point', () => {
+      const plan = compose({
+        remote: { model: 'a' },
+        file: { policyHelper: { path: PATH } },
+      }).helper;
+      expect(helperRunsNow(plan, { remoteStillDelivers: false })).toBe(true);
+    });
+
+    test('a helper that runs at launch needs no fetch', () => {
+      const plan = compose({ file: { policyHelper: { path: PATH } } }).helper;
+      expect(helperRunsNow(plan, { remoteStillDelivers: true })).toBe(true);
+    });
+
+    test('an invalid value, such as a bare path, is a dropped entry and no helper runs', () => {
+      const composed = compose({ file: { model: 'a', policyHelper: PATH } });
+      expect(composed.helper.helper).toBeUndefined();
+      expect(composed.layer.settings.model).toBe('a');
+      expect(composed.layer.settings.policyHelper).toBeUndefined();
+      expect(composed.issues.some((issue) => issue.path.endsWith('policyHelper'))).toBe(true);
+      const read = readPolicyHelper(PATH);
+      expect('issue' in read && read.issue.severity).toBe('warning');
+    });
+
+    test('turning a helper off is removing the key', () => {
+      expect(compose({ file: { model: 'a' } }).helper.helper).toBeUndefined();
+    });
+  },
+);
 
 spec('policy.key.policyHelper.path', () => {
   test('an absolute path in normalized form is valid', () => {

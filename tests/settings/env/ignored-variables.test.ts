@@ -6,7 +6,7 @@
  * Each case reads a settings file the way a host does and checks what is left of its `env`.
  */
 import { describe, expect, test } from 'bun:test';
-import { ignoredBecause } from '../../../src/settings/env/index.ts';
+import { codeModeOn, ignoredBecause } from '../../../src/settings/env/index.ts';
 import { issuesOf, layerOf } from '../../support/settings-layers.ts';
 import { spec } from '../../support/spec.ts';
 
@@ -74,7 +74,9 @@ const EVERY_FILE = [
   'CLAUDE_CODE_DISABLE_DANGEROUS_RM_TIMEOUT',
   'CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT',
   'CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT',
+  'CLAUDE_CODE_STRICT_INLINE_SHELL_RM_PROMPT',
   'CLAUDE_CODE_DISABLE_MOUNTED_DRIVE_RM_PROMPT',
+  'CLAUDE_CODE_DISABLE_ULTRAREVIEW_TRUST_CHECK',
   'CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS',
   'CLAUDE_CODE_WARN_DISK_FREE_GIB',
   'CLAUDE_CODE_WARN_MEMORY_FREE_GIB',
@@ -93,6 +95,7 @@ const TELEMETRY = [
   'OTEL_EXPORTER_OTLP_INSECURE',
   'OTEL_EXPORTER_PROMETHEUS_HOST',
   'OTEL_EXPORTER_PROMETHEUS_PORT',
+  'OTEL_RESOURCE_INCLUDE_HOST',
 ];
 
 spec('settings.reference.Variables Claude Code ignores in env', () => {
@@ -176,6 +179,43 @@ spec('settings.reference.Variables Claude Code ignores in env', () => {
         expect(names(envOf(scope, { ...ALL(EVERY_FILE), KEEP_ME: '1' }))).toEqual(['KEEP_ME']);
       });
     }
+  });
+
+  describe('CLAUDE_CODE_EXPERIMENTAL_CODE_MODE (spec §12.7.4 item 3)', () => {
+    test('project and local settings never set it', () => {
+      for (const scope of ['project', 'local'] as const) {
+        for (const value of ['1', '0']) {
+          expect(envOf(scope, { CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: value })).toEqual({});
+        }
+      }
+    });
+
+    test('user, --settings and managed settings keep it, for codeModeOn to judge', () => {
+      for (const scope of ['user', 'flag', 'managed'] as const) {
+        expect(envOf(scope, { CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' })).toEqual({
+          CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1',
+        });
+      }
+    });
+
+    test('it turns on only from the launch environment, user settings or --settings', () => {
+      expect(codeModeOn({ user: '1' })).toBe(true);
+      expect(codeModeOn({ flag: '1' })).toBe(true);
+      expect(codeModeOn({ launch: '1' })).toBe(true);
+      expect(codeModeOn({ managed: '1' })).toBe(false);
+      expect(codeModeOn({})).toBe(false);
+    });
+
+    test('a 0 in any of those three or in managed settings keeps it off whatever the others say', () => {
+      for (const off of ['launch', 'user', 'flag', 'managed'] as const) {
+        expect(codeModeOn({ launch: '1', user: '1', flag: '1', [off]: '0' })).toBe(false);
+      }
+    });
+
+    test('under a managed 1 a 1 in the launch environment is ignored; the user settings 1 still applies', () => {
+      expect(codeModeOn({ managed: '1', launch: '1' })).toBe(false);
+      expect(codeModeOn({ managed: '1', user: '1' })).toBe(true);
+    });
   });
 
   test('ignoredBecause answers per scope, name and value', () => {

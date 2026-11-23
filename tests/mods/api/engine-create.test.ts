@@ -8,6 +8,7 @@
  * and `$.prompt.submit` rejects while the turn is waiting on that hook").
  */
 import { expect, test } from 'bun:test';
+import { mayWithhold } from '../../../src/mods/api/engine-create.ts';
 import { MODS_API } from '../../../src/protocol/mods-api-names.ts';
 import { fn, record } from '../../support/mods-chain.ts';
 import { apiHarness } from '../../support/mods-api.ts';
@@ -137,5 +138,19 @@ spec('mods.event.engine.create', () => {
     await h.mod('odd', 'user', [fn('engine.create', () => 'nothing')]);
     const b = await h.mod('b', 'user', []);
     expect(Object.keys(b.api)).toEqual(Object.keys(MODS_API));
+  });
+});
+
+// §10.19.5 (2.1.330): "a mod in the `prepend` or `append` tier MAY also withhold a namespace".
+spec('mods.event.engine.create', () => {
+  test('only a prepend or append mod may withhold a namespace; a user or built-in mod may not', () => {
+    expect(
+      (['prepend', 'append', 'user', 'builtin'] as const).map((tier) => [tier, mayWithhold(tier)]),
+    ).toEqual([
+      ['prepend', true],
+      ['append', true],
+      ['user', false],
+      ['builtin', false],
+    ]);
   });
 });

@@ -1,9 +1,11 @@
 /**
- * How a seed's marketplaces enter the registry (plugins/org.md, "Seed containers and CI"): "Claude
- * Code registers the marketplace from these directories at startup"; "Claude Code uses the first seed
- * that contains a given marketplace"; "a marketplace declared in the seed overwrites the user's entry
- * of the same name"; the seed is read-only and "forces `autoUpdate` off for seed marketplaces".
- * Pure: the host reads `known_marketplaces.json` of each directory and applies the result.
+ * How a seed's marketplaces enter the registry (spec §14.8.4; plugins/org.md, "Seed containers and
+ * CI"): "Claude Code registers the marketplace from these directories at startup"; "Claude Code uses
+ * the first seed that contains a given marketplace"; the seed is read-only and "forces `autoUpdate`
+ * off for seed marketplaces". The operator builds a seed marketplace from the source and `ref` user
+ * or managed settings declare for its name; when the two still differ, the spec leaves open which
+ * applies (J14.16) and the kit keeps the seed's entry (spec/judgments.md). Pure: the host reads
+ * `known_marketplaces.json` of each directory and applies the result.
  */
 
 /** What the kit needs of a registry entry. */

@@ -83,8 +83,8 @@ export function enumField<T extends string>(allowed: readonly T[]): AgentCoercer
 /** sub-agents.md, "Choose an effort level": `low`, `medium`, `high`, `xhigh` or `max`. */
 export const effortField = enumField(EFFORT_LEVELS);
 
-/** sub-agents.md, "Set the auto-compact window for one subagent": a token count in this range. */
-export const AUTO_COMPACT_RANGE = { min: 100_000, max: 1_000_000 } as const;
+/** sub-agents.md, "Set the auto-compact window for one subagent": a token count of at least this; no upper bound (§5.5). */
+export const AUTO_COMPACT_MIN = 100_000;
 
 const LEADING_INTEGER = /^\s*[+-]?\d+(?!\.\d)/;
 
@@ -103,19 +103,18 @@ function windowTokens(raw: unknown): number | undefined {
 }
 
 /**
- * `autoCompactWindow`: from 100000 to 1000000. A value out of that range (or not a number) leaves
- * the subagent loading "as if the field were absent", reported with the words the docs tell the
- * author to search the debug log for: `invalid autoCompactWindow`.
+ * `autoCompactWindow`: a whole number of 100000 or more, with no upper bound (§5.5). A value below
+ * the minimum (or not a number) leaves the subagent loading "as if the field were absent", reported
+ * with the words the docs tell the author to search the debug log for: `invalid autoCompactWindow`.
  */
 export const autoCompactWindow: AgentCoercer<number> = (path, key, raw) => {
   if (raw === undefined || raw === null) return { value: undefined, issues: [] };
   const tokens = windowTokens(raw);
-  const { min, max } = AUTO_COMPACT_RANGE;
-  if (tokens !== undefined && Number.isSafeInteger(tokens) && tokens >= min && tokens <= max) {
+  if (tokens !== undefined && Number.isSafeInteger(tokens) && tokens >= AUTO_COMPACT_MIN) {
     return { value: tokens, issues: [] };
   }
   const read = tokens === undefined ? 'not a number' : `read as ${tokens}`;
-  const message = `invalid ${key} ${JSON.stringify(raw)}: ${read}, outside ${min} to ${max}; the field is ignored`;
+  const message = `invalid ${key} ${JSON.stringify(raw)}: ${read}, below ${AUTO_COMPACT_MIN}; the field is ignored`;
   return { value: undefined, issues: [warning(path, message)] };
 };
 

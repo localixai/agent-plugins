@@ -91,6 +91,13 @@ export const timedOut = (ms: number): Failure => ({
   skip: 'timeout',
 });
 
+/** A hook that waited on `$` calls past what its event allows (§10.11: `ui.render`, `plugin.register`). */
+export const waitedOut = (ms: number): Failure => ({
+  kind: 'timeout',
+  reason: `timed out: waited on $ calls past its ${ms} ms limit`,
+  skip: 'timeout',
+});
+
 /** The hooks of one event that used up the time they share. */
 export const groupTimedOut = (event: string, ms: number): Failure => ({
   kind: 'timeout',

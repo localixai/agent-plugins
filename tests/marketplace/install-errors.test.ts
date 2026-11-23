@@ -1,10 +1,10 @@
 /**
  * plugins/troubleshooting.md § Install a plugin (not found, with and without a hint, in any
  * marketplace, already installed globally, `Marketplace "<name>" is already added from a different
- * source`, `Failed to install: <plugin> (<reason>)`), § Plugin installed but not working (`Run
+ * source`, `Couldn't install: <plugin> (<reason>)`), § Plugin installed but not working (`Run
  * /reload-plugins to apply.`, `Plugin "<name>" not cached at <path>`, `Plugin directory does not
- * exist: <path>`, `Plugin "<name>" is enabled in project settings but isn't installed here`), §
- * No plugins available or No marketplaces configured, § Plugin directory not found at path. Quoted
+ * exist: <path>`, `Plugin "<name>" is on in project settings but isn't installed here`), §
+ * No plugins yet or No marketplaces configured, § Plugin directory not found at path. Quoted
  * texts are asserted verbatim; the joins the docs do not show are in spec/judgments.md.
  */
 import { closePanel } from '../../src/marketplace/install-plans.ts';
@@ -113,9 +113,9 @@ spec(
   },
 );
 
-spec('install.troubleshooting.No plugins available or No marketplaces configured', () => {
+spec('install.troubleshooting.No plugins yet or No marketplaces configured', () => {
   test('with no marketplace, Discover is empty and the list command says none are configured', () => {
-    expect(noMarketplaces([], 'discover')?.message).toBe('No plugins available');
+    expect(noMarketplaces([], 'discover')?.message).toBe('No plugins yet');
     expect(noMarketplaces([], 'marketplace-list')?.message).toBe('No marketplaces configured');
   });
 
@@ -130,32 +130,35 @@ spec('install.troubleshooting.No plugins available or No marketplaces configured
   });
 });
 
-spec('install.troubleshooting.Failed to install: <plugin> (<reason>)', () => {
-  test('names each plugin and its reason', () => {
-    expect(failedToInstall([{ plugin: 'formatter', reason: 'network down' }])).toBe(
-      'Failed to install: formatter (network down)',
-    );
-  });
+spec(
+  "install.troubleshooting.Couldn't install: <plugin> (<reason>) or Failed to install: <plugin> (<reason>)",
+  () => {
+    test('names each plugin and its reason', () => {
+      expect(failedToInstall([{ plugin: 'formatter', reason: 'network down' }])).toBe(
+        "Couldn't install: formatter (network down)",
+      );
+    });
 
-  test('a reason of several lines shows its first, and the summary points to the details', () => {
-    expect(
-      failedToInstall([
-        { plugin: 'formatter', reason: 'git clone failed\nfatal: unable to access' },
-      ]),
-    ).toBe(
-      'Failed to install: formatter (git clone failed) Installing a plugin from its details (Enter) in /plugin shows its full error.',
-    );
-  });
+    test('a reason of several lines shows its first, and the summary points to the details', () => {
+      expect(
+        failedToInstall([
+          { plugin: 'formatter', reason: 'git clone failed\nfatal: unable to access' },
+        ]),
+      ).toBe(
+        "Couldn't install: formatter (git clone failed) Installing a plugin from its details (Enter) in /plugin shows its full error.",
+      );
+    });
 
-  test('without a shortened reason there is no pointer', () => {
-    expect(
-      failedToInstall([
-        { plugin: 'a', reason: 'x' },
-        { plugin: 'b', reason: 'y' },
-      ]),
-    ).not.toContain('Enter');
-  });
-});
+    test('without a shortened reason there is no pointer', () => {
+      expect(
+        failedToInstall([
+          { plugin: 'a', reason: 'x' },
+          { plugin: 'b', reason: 'y' },
+        ]),
+      ).not.toContain('Enter');
+    });
+  },
+);
 
 spec('install.troubleshooting.Run /reload-plugins to apply.', () => {
   test('an install that activated ends "Plugin is now active."', () => {
@@ -203,11 +206,11 @@ spec(`install.troubleshooting.Plugin "<name>" not cached at <path>`, () => {
 });
 
 spec(
-  `install.troubleshooting.Plugin "<name>" is enabled in project settings but isn't installed here`,
+  `install.troubleshooting.Plugin "<name>" is on in project settings but isn't installed here`,
   () => {
     test('the Errors tab entry and its guidance line', () => {
       expect(enabledNotInstalled('formatter', 'acme')).toEqual({
-        message: `Plugin "formatter" is enabled in project settings but isn't installed here`,
+        message: `Plugin "formatter" is on in project settings but isn't installed here`,
         guidance:
           'Run claude plugin install formatter@acme --scope project to install it for this project',
       });

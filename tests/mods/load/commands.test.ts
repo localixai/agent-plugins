@@ -12,6 +12,9 @@ import { memoryFiles } from '../../support/ports.ts';
 import { inline, modPlugin, session } from '../../support/mods-load.ts';
 import { spec } from '../../support/spec.ts';
 
+/** What a module with one `prompt.submit` hook and no calls uses (`e.uses`, §17.13.4 `modules`). */
+const SUBMIT_USES = { events: ['prompt.submit'], calls: [] };
+
 const FIRST_MOD = `
 let calls = 0
 export function register(on) {
@@ -117,6 +120,8 @@ export function register(on) {
             hasCatch: false,
           },
         ],
+        wasm: [],
+        modules: [{ module: 'hooks/register.js', hooks: ['prompt.submit'], uses: SUBMIT_USES }],
       },
     ]);
   });
@@ -279,7 +284,8 @@ export function register(on) {
       (line) => line.includes('register.js') && !line.includes('✘'),
     );
     expect(lines).toEqual([
-      '  ❯ ./register.js hooks: ui.render',
+      // Claude Code 2.1.330 notes the default matcher keys a bare ui.render leaves out (§10.4.3).
+      '  ❯ ./register.js hooks: ui.render (default matcher key: plugin, component)',
       '  ❯ ./register.js calls: $.env.get, $.state.get',
       '  ❯ ./register.js env writes: nothing',
       '  ❯ ./register.js env reads: HOME',

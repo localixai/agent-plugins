@@ -9,8 +9,9 @@ import { scanSourceOf, type CompileResult } from '../compile-output.ts';
 import { thrownByCompiler } from '../engine-faults.ts';
 import { declaredState, missingTypes, readTypes } from '../types-decl.ts';
 import { scanHooksModule, type ModScan } from '../scan/index.ts';
-import { hookLabel } from '../scan/uses.ts';
-import { ledEntry } from './scan-lead.ts';
+import { ledEntry, ledRule } from './scan-lead.ts';
+import { checkWasmFiles, wasmLines } from '../wasm-files.ts';
+import { gatingHooksOf, moduleFacts } from './module-facts.ts';
 import { scanLines, typesNotes } from './scan-lines.ts';
 import { readJson } from '../../../format/read-json.ts';
 import { isRecord } from '../../../protocol/is-record.ts';
@@ -134,6 +135,7 @@ async function checkModule(
         warnings: [],
         notes: [],
         gatingHooks: [],
+        modules: null,
       },
       lines: [],
     };
@@ -148,25 +150,31 @@ async function checkModule(
   const issues = [...scan.issues, ...(await missingSurfaces(input, written, scan))];
   const needed = types === undefined ? missingTypes(scan, written, typesPath) : undefined;
   if (needed !== undefined) issues.push(error(typesPath ?? JSON_PATH, needed));
-  const lines = scanLines(written, scan, plugin);
   const place = { written, entry, root: input.root ?? input.target };
+  const wasm = await checkWasmFiles(input.files, scan.wasmFiles, {
+    ...place,
+    signal: input.signal,
+  });
+  const lines = [...scanLines(written, scan, plugin), ...wasmLines(written, wasm.files)];
+  const led = (severity: 'error' | 'warning') =>
+    wasm.problems
+      .filter((problem) => problem.severity === severity)
+      .map((problem) => ledRule(place, problem.line, problem.message));
   return {
     lines,
     report: {
       file: written,
-      errors: issues
-        .filter((issue) => issue.severity === 'error')
-        .map((issue) => ledEntry(issue, place)),
-      warnings: [],
+      errors: [
+        ...issues
+          .filter((issue) => issue.severity === 'error')
+          .map((issue) => ledEntry(issue, place)),
+        ...led('error'),
+      ],
+      warnings: led('warning'),
       notes: lines.map((line) => line.replace(/^ {2}❯ /, '')),
-      gatingHooks: scan.hooks
-        .filter((hook) => hook.isGating)
-        .map((hook) => ({
-          module: written,
-          pattern: hook.event,
-          hook: hookLabel(hook),
-          hasCatch: hook.hasCatch,
-        })),
+      gatingHooks: gatingHooksOf(written, scan),
+      wasm: wasm.files,
+      modules: [moduleFacts(entry, scan)],
     },
   };
 }
@@ -267,7 +275,7 @@ export async function validateMod(
   const lines = [
     `Validating plugin manifest: ${input.target}/${JSON_PATH}`,
     ...all.flatMap((file) => file.errors.map((entry) => `  ✘ ${printed(entry)}`)),
-    ...manifest.warnings.map((entry) => `  ⚠ ${printed(entry)}`),
+    ...all.flatMap((file) => file.warnings.map((entry) => `  ⚠ ${printed(entry)}`)),
     ...manifest.notes.map((line) => `  ❯ ${line}`),
     ...modules.lines,
     done.line,

@@ -1,6 +1,7 @@
 /**
  * plugins/mods/test.md § Test a drawing (`$.ui.mount`, the hello-tabs example, the handle's methods,
- * the stub for a `ui.render` hook that returns `next(e)`).
+ * the stub for a `ui.render` hook that returns `next(e)`, which from 2.1.321 mounts with no stub;
+ * `keepsBeneath`, claude-code/index.d.ts:21874 of 2.1.330; Agent Plugins Extended §10.12).
  */
 import { expect, test } from 'bun:test';
 import { registerOf } from '../../support/mods-load.ts';
@@ -23,6 +24,7 @@ type Handle = {
   input(t: { key: string; text: string; kind?: 'change' }): Promise<void>;
   select(t: { key: string; value: string }): Promise<void>;
   find(q: { key?: string; type?: string; text?: string | RegExp }): Promise<unknown>;
+  keepsBeneath(): Promise<boolean>;
   unmount(): Promise<void>;
 };
 const mounter = (claude: unknown) =>
@@ -133,21 +135,27 @@ spec('mods.command.claude plugin test [directory]', () => {
     expect(result.lines.join('\n')).toContain('(pass) find');
   });
 
-  test('a ui.render hook that returns next(e) fails the mount with `no implementation for ui.render` until a stub answers', async () => {
+  test('a ui.render hook that returns next(e) mounts with no stub (2.1.321 or later); a stub chooses what next(e) returns', async () => {
     const result = await run(({ test, expect }) => {
       test('other pane, no stub', async (claude) => {
-        await mounter(claude)({ ...PANE, requestId: 'other', surface: 'terminal' });
+        const ui = await mounter(claude)({ ...PANE, requestId: 'other', surface: 'terminal' });
+        expect(await ui.find({ type: 'Text' })).toBeUndefined();
+        expect(await ui.keepsBeneath()).toBe(true);
       });
       test('other pane, stubbed', async (claude, on) => {
         on('ui.render', () => ({ type: 'Text', props: {}, children: ['drawn by Claude Code'] }));
         const ui = await mounter(claude)({ ...PANE, requestId: 'other', surface: 'terminal' });
-        expect(await ui.find({ type: 'Text' })).toBeDefined();
+        expect(await ui.find({ type: 'Text', text: 'drawn by Claude Code' })).toBeDefined();
+        expect(await ui.keepsBeneath()).toBe(true);
+      });
+      test('own pane: the tree leaves out what next(e) gave', async (claude) => {
+        const ui = await mounter(claude)({ ...PANE, surface: 'terminal' });
+        expect(await ui.keepsBeneath()).toBe(false);
       });
     });
-    const text = result.lines.join('\n');
-    expect(text).toContain('no implementation for ui.render');
-    expect(result.passed).toBe(1);
-    expect(result.failed).toBe(1);
+    expect(result.lines.join('\n')).not.toContain('no implementation for ui.render');
+    expect(result.passed).toBe(3);
+    expect(result.failed).toBe(0);
   });
 
   test('input types into an Input and presses Enter, kind change does not; select picks an option', async () => {
@@ -184,7 +192,7 @@ spec('mods.command.claude plugin test [directory]', () => {
       tests: {
         'tests/form.test.ts': ({ test, expect }) => {
           test('gestures', async (claude) => {
-            const ui = await mounter(claude)({ ...PANE, surface: 'terminal' });
+            const ui = await mounter(claude)({ ...PANE, plugin: 'form', surface: 'terminal' });
             await ui.input({ key: 'new-note', text: 'buy milk', kind: 'change' });
             await ui.input({ key: 'new-note', text: 'buy milk' });
             await ui.select({ key: 'size', value: 'large' });

@@ -100,6 +100,8 @@ export interface VerdictOptions {
   readonly effectsIgnored?: boolean;
   /** The limit the hook ran under, in milliseconds (what the dispatch computes). */
   readonly timeoutMs?: number;
+  /** The call the hook checks was made by Code Mode's code. */
+  readonly fromCode?: boolean;
 }
 
 /** One run of a hook on `event`, read the way the engine reads it. */
@@ -118,5 +120,6 @@ export function verdictOf(
     parse: fakeParse,
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     ...(options.effectsIgnored === true ? { effectsIgnored: true } : {}),
+    ...(options.fromCode === true ? { fromCode: true } : {}),
   });
 }

@@ -80,9 +80,11 @@ export {
 export {
   decideEnabledFetch,
   overriddenUserDisable,
+  type EnableMoment,
   type EnableSource,
   type EnabledFacts,
   type EnabledFetchDecision,
+  type MarketplaceOnMachine,
   type TrueIn,
   type UserDisableOverridden,
 } from './enablement-notes.ts';
@@ -102,6 +104,7 @@ export {
   type FailedPluginDirectory,
   type InitPluginFacts,
   type LoadedPluginRow,
+  type ManagedLock,
   type MarketplaceInstallOutcome,
   type PluginInstallStamp,
   type PluginLoadError,
@@ -152,3 +155,10 @@ export {
 } from './copy-sweep.ts';
 export * from './version-index.ts';
 export * from './install-index.ts';
+export { managedTakeBack, type TakeBack, type TakeBackFacts } from './managed-take-back.ts';
+export {
+  addDirReads,
+  type AddDirFacts,
+  type AddDirFile,
+  type AddDirReads,
+} from '../format/add-dir-gate.ts';

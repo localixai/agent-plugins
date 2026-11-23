@@ -1,4 +1,4 @@
-import type { ModTier } from '../../protocol/mods-events.ts';
+import { ENGINE_ORIGIN, type ModTier } from '../../protocol/mods-events.ts';
 import { GUARD_ID } from '../../protocol/mods-settings.ts';
 import type { HookAccess } from '../types.ts';
 import { once } from './guard.ts';
@@ -6,6 +6,7 @@ import type { LoadedMod } from './loader.ts';
 import { protectedHookNotes } from './guard-notes.ts';
 import { GUARDED_DOORS, GUARDED_EVENTS } from './guard-surfaces.ts';
 import { isRecord } from '../../protocol/is-record.ts';
+import { offersManagedTool, type ManagedToolInfo } from './guard-tools.ts';
 
 /** Identity facts the embedding host knows before it emits an event. */
 export interface ManagedModData {
@@ -13,6 +14,12 @@ export interface ManagedModData {
   readonly isManagedTool?: (input: unknown) => boolean;
   /** Additional protected conversation rows, such as the stored text of a skill. */
   readonly isProtectedRow?: (input: unknown) => boolean;
+  /**
+   * The tools of the managed MCP servers connected now, as the host lists them in the client's tool
+   * pool (`mcp__<server>__<tool>`): the guard keeps them in the pool the client's own `tool.list`
+   * resolves, and a user's `tool.offer` hook does not run for one (§14.9.2 item 3).
+   */
+  readonly managedTools?: () => readonly ManagedToolInfo[];
 }
 
 const USER_TIER: Record<ModTier, boolean> = {
@@ -37,9 +44,12 @@ export interface GuardProtection {
 /** admin.md § Know which hooks of a user's mod don't run; Enforce on the original event. */
 export function createGuardProtection(given: ManagedModData): GuardProtection {
   let current: object | undefined;
-  const conditional: Readonly<Record<string, ((input: unknown) => boolean) | undefined>> = {
-    'session.append': (input) => protectedRow(input, given),
-    'tool.describe': (input) => given.isManagedTool?.(input) ?? false,
+  const conditional: Readonly<Record<string, ((access: HookAccess) => boolean) | undefined>> = {
+    'session.append': ({ input }) => protectedRow(input, given),
+    'tool.describe': ({ input }) => given.isManagedTool?.(input) ?? false,
+    'tool.offer': ({ input }) => offersManagedTool(input, given.managedTools?.() ?? []),
+    // The client's own requests reach only the organization's mods (§10.19.7, 2.1.321 on).
+    'http.fetch': ({ origin }) => origin.plugin === ENGINE_ORIGIN.plugin,
   };
   return {
     admit: (access) => {
@@ -49,7 +59,7 @@ export function createGuardProtection(given: ManagedModData): GuardProtection {
         const check = Object.hasOwn(conditional, access.event)
           ? conditional[access.event]
           : undefined;
-        return !(check?.(access.input) ?? false);
+        return !(check?.(access) ?? false);
       } catch {
         // Judgment: an unavailable identity fact cannot establish that an untrusted hook is safe.
         return false;

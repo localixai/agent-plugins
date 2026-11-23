@@ -26,8 +26,8 @@ export interface FoldOptions {
   readonly mods?: number;
 }
 
-/** The refusal line: `hooks: ui.render (AbovePrompt) refused: deeper than 32; nothing was drawn`. */
-const refusal = (site: RenderSite, reason: string, mods: number): string =>
+/** The refusal line, the site and then the reason: `hooks: ui.render (Pane) refused: deeper than 32; nothing was drawn`. */
+export const refusal = (site: RenderSite, reason: string, mods: number): string =>
   `${mods > 1 ? 'hooks: ' : ''}ui.render (${site}) refused: ${reason}`;
 
 /**

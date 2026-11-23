@@ -33,7 +33,7 @@ export interface PaneRegistryOptions {
 }
 
 export interface PaneRegistry {
-  /** Opens (or reopens) a pane and says whether it appears. */
+  /** Opens (or reopens) a pane and says whether it appears; throws for an id another mod has open. */
   open(plugin: string, request: OpenRequest, origin: OpenOrigin, context: PaneContext): Placement;
   /** Removes a pane: the effect of a close. Whether it existed. */
   remove(id: string): boolean;
@@ -76,6 +76,10 @@ export function createPaneRegistry(options: PaneRegistryOptions): PaneRegistry {
   };
   return {
     open(plugin, request, origin, context) {
+      // "opening an id another mod has open MUST reject (2.1.330)" (§10.25.1); the wording is the kit's.
+      if ((panes.get(request.id)?.plugin ?? plugin) !== plugin) {
+        throw new Error(`ui.open: the pane ${request.id} is open in another mod`);
+      }
       const placement = place(request.id, origin, context);
       if (origin === 'user') userOpened.add(request.id);
       panes.set(request.id, {

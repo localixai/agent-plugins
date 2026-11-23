@@ -16,6 +16,7 @@ import {
   announceSessionStart,
   dispatchOptionsFor,
   runCommandThrough,
+  stopSession,
   sessionEndInput,
   type FireSettings,
   type RunCommandOptions,
@@ -23,7 +24,12 @@ import {
 import { createModSet, type ModLoadReport } from './mod-set.ts';
 import { modLineChannel } from './line-channel.ts';
 import { createReplayLedger, replayedLine } from '../api/replay.ts';
-import { pluginDirsOf, watchesPluginDirs } from './plugin-dirs.ts';
+import {
+  pluginDirsOf,
+  reloadsOnSave,
+  type ReloadSession,
+  type ReloadSource,
+} from './plugin-dirs.ts';
 import { wire } from './wiring.ts';
 import type { ModsHostOptions } from './host-options.ts';
 
@@ -80,6 +86,14 @@ export interface ModsHost {
    * `resume: { id }` (claude-code/index.d.ts:12106). `options.core` is the host's own ending.
    */
   endSession(reason: SessionEndReason, options?: FireOptions): Promise<ResultOf<'session.end'>>;
+  /**
+   * The user stops Claude (Esc or Ctrl+C on a turn, an app's Stop, Ctrl+C at an idle prompt that
+   * stops running scripts): holds the session's input as `input.interrupt()` does, then fires
+   * `session.stop` with `isTurnRunning`, before the host aborts anything (§10.19.2). It waits on no
+   * hook and returns at once, so the host aborts right after; what a hook queues in it is refused
+   * with `the session was stopped and nobody has sent input since` (§10.33.1).
+   */
+  stop(isTurnRunning: boolean, options?: FireOptions): void;
   fireStream<N extends StreamEventName>(
     name: N,
     input: EventOf<N>,
@@ -100,8 +114,12 @@ export interface ModsHost {
    * then `CLAUDE_CODE_PLUGIN_DIRS` (none when `disableSideloadFlags` is on).
    */
   pluginDirs(): readonly string[];
-  /** Whether a save in a `--plugin-dir` directory reloads its mod (`reloadMod`): always interactively, otherwise with `CLAUDE_CODE_PLUGIN_DIR_WATCH=1`. */
-  watchesPluginDirs(isInteractive: boolean): boolean;
+  /**
+   * Whether a save of a mod's file reloads it (`reloadMod`) in a session with these facts: a
+   * `--plugin-dir` mod in an interactive terminal session, a skills-directory mod in any session of
+   * more than one prompt; `CLAUDE_CODE_PLUGIN_DIR_WATCH` on or off changes that (§10.8.2).
+   */
+  reloadsOnSave(source: ReloadSource, session: ReloadSession): boolean;
   /**
    * Tells the session what happened to its input, which decides what its mods' calls return: after
    * `interrupt` the calls that start new work are refused until `userInput`; after `endInput` they are
@@ -237,6 +255,8 @@ export function createModsHost(options: ModsHostOptions): ModsHost {
         await sessionEndInput(ports.session, reason),
         dispatchOptions(opts),
       ),
+    stop: (isTurnRunning, opts = {}) =>
+      stopSession({ gate: wired.gate, chain, dispatchOptions, debug }, isTurnRunning, opts),
     fireStream: (name, input, opts = {}) =>
       chain.dispatchStream(name, input, dispatchOptions(opts)),
     registerBuiltIn: async (name, tier, hooks) => {
@@ -245,7 +265,7 @@ export function createModsHost(options: ModsHostOptions): ModsHost {
       return mod;
     },
     pluginDirs: () => pluginDirsOf(policy),
-    watchesPluginDirs: (isInteractive) => watchesPluginDirs(policy, isInteractive),
+    reloadsOnSave: (source, facts) => reloadsOnSave(policy, source, facts),
     ...lifetime({ wired, mods, builtIns, background, stopListening }),
   };
 }

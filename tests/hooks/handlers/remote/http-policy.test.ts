@@ -14,15 +14,18 @@ import type { HttpHookPolicy } from '../../../../src/hooks/handlers/index.ts';
 import { urlAllowed } from '../../../../src/hooks/handlers/remote/http-policy.ts';
 import { httpEntry, remoteContext } from '../../../support/hooks-remote.ts';
 import { fakeEnvironment, recordingHttp } from '../../../support/ports.ts';
+import { spec } from '../../../support/spec.ts';
 
 const send = async (
   hook: { url: string; headers?: Record<string, string>; allowedEnvVars?: string[] },
   httpPolicy: HttpHookPolicy | undefined,
   variables: Record<string, string> = {},
+  managed = false,
 ) => {
   const http = recordingHttp({ body: '' });
+  const entry = httpEntry(hook, 'PreToolUse');
   const result = await runHandler(
-    httpEntry(hook, 'PreToolUse'),
+    managed ? { ...entry, source: { ...entry.source, managed: true } } : entry,
     remoteContext({
       http,
       environment: fakeEnvironment(variables),
@@ -130,5 +133,35 @@ describe('httpHookAllowedEnvVars (judgments)', () => {
       { A: 'one' },
     );
     expect(requests[0]?.headers['x-a']).toBe('');
+  });
+});
+
+spec('hooks.behavior.Limit HTTP hooks', () => {
+  // 2.1.330 (Agent Plugins Extended §7.3.4 item 3, §12.7.1, J12.18): set in managed settings the
+  // lists cover the hooks of managed settings; set in any settings file they cover every other.
+  // The host passes both merged lists: the top level for other hooks, `managed` for managed ones.
+  const evil = { url: 'https://evil.example.net/hook' };
+
+  test('a list that covers other hooks does not cover a hook of managed settings', async () => {
+    const policy = { allowedUrls: ['https://hooks.example.com/*'] };
+    expect((await send(evil, policy)).requests).toHaveLength(0);
+    expect((await send(evil, policy, {}, true)).requests).toHaveLength(1);
+  });
+
+  test('a managed hook is checked against the lists for managed hooks', async () => {
+    const policy = { managed: { allowedUrls: ['https://hooks.example.com/*'] } };
+    expect((await send(evil, policy, {}, true)).requests).toHaveLength(0);
+    expect((await send(evil, policy)).requests).toHaveLength(1);
+    const ok = { url: 'https://hooks.example.com/a' };
+    expect((await send(ok, policy, {}, true)).requests).toHaveLength(1);
+  });
+
+  test("httpHookAllowedEnvVars for managed hooks cuts only a managed hook's variables", async () => {
+    const hook = { url: 'http://h/x', headers: { 'X-A': '$A' }, allowedEnvVars: ['A'] };
+    const policy = { managed: { allowedEnvVars: [] } };
+    const managed = await send(hook, policy, { A: 'one' }, true);
+    expect(managed.requests[0]?.headers['x-a']).toBe('');
+    const other = await send(hook, policy, { A: 'one' });
+    expect(other.requests[0]?.headers['x-a']).toBe('one');
   });
 });

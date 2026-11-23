@@ -15,6 +15,8 @@ export interface KeyContext {
   readonly surface: UiSurface;
   /** The drawing is the band above the prompt. */
   readonly isBand: boolean;
+  /** The band's rows, each mod's tree, as `HotkeyContext.rows`. */
+  readonly rows?: HotkeyContext['rows'] | undefined;
   readonly isCollapsed: boolean;
   /** The pane or band has keyboard focus. */
   readonly hasFocus: boolean;

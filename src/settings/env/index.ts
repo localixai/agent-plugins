@@ -1,4 +1,5 @@
 /** The `env` block of settings files: the ignored variables, what the files come to and when it applies. */
+export { codeModeOn, type CodeModeValues } from './code-mode.ts';
 export { ignoredBecause, type IgnoreReason } from './ignored-variables.ts';
 export {
   isUnsetForProvider,

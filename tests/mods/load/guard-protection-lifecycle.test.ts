@@ -8,6 +8,7 @@ import { GUARD_ID } from '../../../src/protocol/mods-settings.ts';
 import { createGuardProtection } from '../../../src/mods/load/guard-protection.ts';
 import { managed, session } from '../../support/mods-load.ts';
 import { spec } from '../../support/spec.ts';
+import { ENGINE_ORIGIN } from '../../../src/protocol/mods-events.ts';
 
 async function guardModule() {
   const s = session({}, { policy: managed({}), firesSessionStart: false });
@@ -28,7 +29,13 @@ spec("policy.mods.Know which hooks of a user's mod don't run.classic.<Event>", (
     const protection = createGuardProtection({});
     protection.bind(fixture.mod);
     for (const event of CLASSIC_EVENT_NAMES) {
-      const access = { event, input: {}, tier: 'user', isBuiltin: false } as const;
+      const access = {
+        event,
+        input: {},
+        tier: 'user',
+        isBuiltin: false,
+        origin: ENGINE_ORIGIN,
+      } as const;
       expect(protection.admit(access)).toBe(false);
       expect(protection.admit({ ...access, isBuiltin: true })).toBe(true);
       for (const tier of ['prepend', 'append', 'builtin'] as const) {
@@ -42,7 +49,13 @@ spec("policy.mods.Know which hooks of a user's mod don't run.classic.<Event>", (
 test('an older guard unload cannot deactivate a newer binding; every unload runs once', async () => {
   const fixture = await guardModule();
   const protection = createGuardProtection({});
-  const access = { event: 'settings.read', input: {}, tier: 'user', isBuiltin: false } as const;
+  const access = {
+    event: 'settings.read',
+    input: {},
+    tier: 'user',
+    isBuiltin: false,
+    origin: ENGINE_ORIGIN,
+  } as const;
   expect(protection.admit(access)).toBe(true);
   const older = protection.bind(fixture.mod);
   const current = protection.bind(fixture.mod);
@@ -64,7 +77,13 @@ test('a failed identity lookup skips the untrusted hook without granting it the 
     },
   });
   protection.bind(fixture.mod);
-  const access = { event: 'tool.describe', input: {}, tier: 'user', isBuiltin: false } as const;
+  const access = {
+    event: 'tool.describe',
+    input: {},
+    tier: 'user',
+    isBuiltin: false,
+    origin: ENGINE_ORIGIN,
+  } as const;
   expect(protection.admit(access)).toBe(false);
   expect(protection.admit({ ...access, isBuiltin: true })).toBe(true);
   await fixture.host.dispose();

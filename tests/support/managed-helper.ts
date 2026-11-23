@@ -18,6 +18,7 @@ export interface Setup {
   readonly phase?: HelperPhase;
   readonly path?: string;
   readonly slow?: number;
+  readonly managedEnv?: Readonly<Record<string, string>>;
 }
 
 /** One run of the helper over a scripted process. */
@@ -35,6 +36,7 @@ export async function run(setup: Setup = {}) {
       }),
       clock,
       env: { HOME: '/home/dev' },
+      ...(setup.managedEnv === undefined ? {} : { managedEnv: setup.managedEnv }),
       cwd: '/work',
       version: '2.1.319',
     },

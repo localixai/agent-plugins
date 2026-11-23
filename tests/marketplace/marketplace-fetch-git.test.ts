@@ -42,6 +42,21 @@ spec(['marketplace.sourceField.ref', 'marketplace.sourceField.path'], () => {
       lfs: 'pointer-files',
     });
   });
+
+  test('a full lower-case commit SHA pins the marketplace to that commit (2.1.324)', () => {
+    const sha = 'a'.repeat(40);
+    expect(planMarketplaceFetch(github({ ref: sha }))).toEqual({
+      kind: 'git',
+      repo: { shorthand: 'acme/tools' },
+      ref: sha,
+      pinned: true,
+      path: FILE,
+      lfs: 'pointer-files',
+    });
+    for (const ref of ['main', 'A'.repeat(40), 'a'.repeat(39)]) {
+      expect(planMarketplaceFetch(git({ ref }))).not.toHaveProperty('pinned');
+    }
+  });
 });
 
 describe('judgments: what a git marketplace source refuses before the clone', () => {

@@ -18,6 +18,16 @@ spec('policy.reference.Write the helper output', () => {
     expect(call?.env.CLAUDE_CODE_VERSION).toBe('2.1.319');
   });
 
+  test("the helper's environment is the launching shell's and the managed env, never a user or --settings env (2.1.323)", async () => {
+    const { runner } = await run({ managedEnv: { HTTPS_PROXY: 'http://org:1', HOME: '/org' } });
+    const [call] = runner.calls;
+    expect(call?.env).toEqual({
+      HOME: '/org',
+      HTTPS_PROXY: 'http://org:1',
+      CLAUDE_CODE_VERSION: '2.1.319',
+    });
+  });
+
   test('settings under a managedSettings key are the helper output', async () => {
     const { result } = await run({
       reply: envelope({ permissions: { deny: ['Read(//etc/secrets/**)'] } }),

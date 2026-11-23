@@ -40,6 +40,7 @@ export type {
   Settings,
   SlashCommand,
   SyncHookJSONOutput,
+  ThinkingConfig,
 } from '@anthropic-ai/claude-agent-sdk';
 /** The MCP protocol's own shapes: a tool, a prompt and its arguments, the client's declared capabilities. */
 export type {

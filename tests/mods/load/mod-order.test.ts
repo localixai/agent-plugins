@@ -118,8 +118,8 @@ spec(
     test('the built-in guard sec-default@builtin is first of all, ahead of the organization mods: it answers before an organization mod sees the registration', async () => {
       const seen: string[] = [];
       const watcher = registerOf((on) => {
-        on('plugin.register', async (_$: unknown, e: { plugin: string }, next: Next) => {
-          seen.push(e.plugin);
+        on('plugin.register', async (_$: unknown, e: { name: string }, next: Next) => {
+          seen.push(e.name);
           return next(e);
         });
       });

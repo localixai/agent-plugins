@@ -2,10 +2,10 @@
  * plugins/manifest-reference.md § Standard layout: each component type has one default location
  * and contents ("One `<name>/SKILL.md` per skill", "Flat Markdown command files", "Subfolders are
  * part of the agent name", "Workflow `.js` files", "Theme JSON files", "Files here are on the Bash
- * tool's `PATH`", "`agent` and `subagentStatusLine` defaults"). One block per row: the component is
+ * tool's `PATH`", the `agent` default; spec §12.6: only `agent` takes effect). One block per row: the component is
  * found at its location, not at another, and a file that is not what the row says is not loaded.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { loadPlugin } from '../../src/index.ts';
 import { memoryFiles } from '../support/ports.ts';
 import { hooksFile, json, namesOf } from '../support/plugin-folder.ts';
@@ -37,10 +37,7 @@ const MONITORS: Tree = {
     },
   ]),
 };
-const SETTINGS = {
-  agent: 'reviewer',
-  subagentStatusLine: { type: 'command' as const, command: 'echo' },
-};
+const SETTINGS = { agent: 'reviewer' };
 
 spec('layout.Skills', () => {
   test('a skill is skills/<name>/SKILL.md, found there and nowhere else', async () => {
@@ -157,13 +154,17 @@ spec('layout.Executables', () => {
   });
 });
 
-spec('layout.Settings', () => {
-  test('settings.json at the root gives the agent and subagentStatusLine defaults, and nothing else applies', async () => {
+describe('settings.json at the root (spec §1.4, §12.6; Judgment J1.3)', () => {
+  test('settings.json at the root gives the agent default, and nothing else applies', async () => {
     const here: Tree = { 'settings.json': json(SETTINGS) };
     expect((await load(here))?.settings).toEqual(SETTINGS);
     expect((await load(misplaced(here)))?.settings).toEqual({});
     const extra: Tree = {
-      'settings.json': json({ ...SETTINGS, permissions: { allow: ['Bash'] } }),
+      'settings.json': json({
+        ...SETTINGS,
+        subagentStatusLine: { type: 'command', command: 'echo' },
+        permissions: { allow: ['Bash'] },
+      }),
     };
     expect((await load(extra))?.settings).toEqual(SETTINGS);
   });

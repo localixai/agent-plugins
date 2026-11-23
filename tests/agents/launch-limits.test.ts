@@ -32,9 +32,15 @@ spec('agents.frontmatter.autoCompactWindow', () => {
     expect(window(300_000, { inherited: 200_000 })).toBe(200_000);
   });
 
-  test('CLAUDE_CODE_AUTO_COMPACT_WINDOW wins and the field has no effect', () => {
-    expect(window(200_000, { env: 400_000, inherited: 400_000 })).toBe(400_000);
-    expect(window(150_000, { env: 600_000, inherited: 600_000 })).toBe(600_000);
+  test('with CLAUDE_CODE_AUTO_COMPACT_WINDOW set, the lowest of the field, the model window and the variable window (§5.10)', () => {
+    expect(window(200_000, { env: 400_000, inherited: 400_000 })).toBe(200_000);
+    expect(window(700_000, { env: 600_000, inherited: 600_000 })).toBe(600_000);
+    expect(window(700_000, { env: 900_000, modelWindow: 500_000 })).toBe(500_000);
+    expect(window(undefined, { env: 900_000, modelWindow: 500_000 })).toBe(500_000);
+  });
+
+  test('a value at or above 1000000 is no longer out of range: it lowers a larger window', () => {
+    expect(window(1_500_000, { inherited: 2_000_000 })).toBe(1_500_000);
   });
 
   test('...unless Claude Code ignores the variable (no usable size): then the field applies', () => {
@@ -44,14 +50,14 @@ spec('agents.frontmatter.autoCompactWindow', () => {
 
   test('a variable below the minimum or above the maximum is treated as 100000 or 1000000', () => {
     expect(window(undefined, { env: 200 })).toBe(100_000);
-    expect(window(undefined, { env: 5_000_000 })).toBe(1_000_000);
+    expect(window(undefined, { env: 5_000_000, modelWindow: 2_000_000 })).toBe(1_000_000);
   });
 
   test('running the whole session as the subagent (--agent, `agent` setting): the field has no effect', () => {
     expect(window(200_000, { asMainSession: true })).toBe(967_000);
   });
 
-  test('`200k` reads as 200, out of range: the field is dropped with `invalid autoCompactWindow` and the subagent compacts as if it were absent', () => {
+  test('`200k` reads as 200, below the minimum: the field is dropped with `invalid autoCompactWindow` and the subagent compacts as if it were absent', () => {
     const result = readWith('autoCompactWindow: 200k');
     expect(result.issues.map((issue) => issue.message).join('\n')).toContain(
       'invalid autoCompactWindow',
@@ -131,9 +137,9 @@ spec('agents.frontmatter.experimental', () => {
 });
 
 describe('judgments (spec/judgments.md)', () => {
-  test('a field outside 100000 to 1000000 has no effect, however it got here', () => {
+  test('a field below 100000 has no effect, however it got here', () => {
     expect(window(99_999, { inherited: 967_000 })).toBe(967_000);
-    expect(window(1_000_001, { inherited: 2_000_000 })).toBe(2_000_000);
+    expect(window(99_999, { env: 400_000, inherited: 400_000 })).toBe(400_000);
   });
 
   test('a turn count that is no positive whole number sets no limit', () => {

@@ -16,6 +16,12 @@ export interface SettingsEdit {
   readonly key?: string;
   /** The edit removes the key rather than setting it. */
   readonly removed?: boolean;
+  /**
+   * The running session saved it itself ("Yes, and don't ask again", `/permissions`, `/model`): it is
+   * in force there at once and without the `ConfigChange` hook; another open session that loads the
+   * same file is owed the hook (Agent Plugins Extended §7.5.25).
+   */
+  readonly savedHere?: boolean;
 }
 
 export type Applies =
@@ -66,8 +72,15 @@ const LIFTED_ON_RESTART: ReadonlySet<string> = new Set([
   'permissions.blockReadsOutsideWorkingDirectories',
 ]);
 
-/** What an edit is owed: the arrival's effect, unless the key waits for a restart. */
+/** What the session that saved a rule or setting is owed: it made the change itself. */
+const SAVED_HERE: EditEffect = { applies: 'now', configChangeHook: false };
+
+/**
+ * What an edit is owed: the arrival's effect, unless the key waits for a restart; in the session
+ * that saved it, nothing more than being in force.
+ */
 export function editEffect(edit: SettingsEdit): EditEffect {
+  if (edit.savedHere === true) return SAVED_HERE;
   const arrival = BY_ARRIVAL[edit.arrival];
   const { key } = edit;
   if (key === undefined) return arrival;

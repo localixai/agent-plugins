@@ -68,8 +68,11 @@ for (const field of ['hooks', 'mcpServers', 'lspServers'] as const) {
         expect(loads({ [field]: value }).manifest?.[field]).toEqual(value);
       }
     });
-    test('a path with .. fails', () => {
-      expect(loads({ [field]: './../x.json' }).manifest).toBeUndefined();
+    // Spec §2.5 item 2, §17.18.12: a server file path with `..` is not read and the plugin loads.
+    test(field === 'hooks' ? 'a path with .. fails' : 'a path with .. is not read', () => {
+      const result = loads({ [field]: './../x.json' });
+      if (field === 'hooks') expect(result.manifest).toBeUndefined();
+      else expect(result.manifest).toEqual({ name: 'demo' });
     });
   });
 }

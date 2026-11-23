@@ -1,4 +1,5 @@
 import {
+  mayWithhold,
   createModsApi,
   createRegistries,
   createRunGate,
@@ -29,7 +30,12 @@ import type { ReplayLedger } from '../api/replay.ts';
 import { forgetMod, guardHooks, once, type ApprovalLedger } from './guard.ts';
 import type { LoaderEnv, LoadedMod } from './loader.ts';
 import { pluginOptions, type ModsPolicyInput } from './policy-input.ts';
-import { tagRefusals, REGISTER_RULES, type RefusalBook } from './register-call.ts';
+import {
+  createRefusalBook,
+  registerRules,
+  tagRefusals,
+  type RefusalBook,
+} from './register-call.ts';
 import { forgettingChain, skipReports, type SkipReports } from './skip-reports.ts';
 import { withUnanswered } from './unanswered.ts';
 import { GUARD_NAME } from '../../protocol/mods-settings.ts';
@@ -101,8 +107,13 @@ const savedOptions = (policy: ModsPolicyInput) => (id: string) => {
 };
 
 /** The chain of the mods runtime, over the ports the host gave: the skipped-hook lines it reports go through `reports`. */
-function chainOf(given: Wires, reports: SkipReports, protection: GuardProtection): ModChain {
-  const rules = [EVENT_RULES, API_RULES, uiRules(), REGISTER_RULES];
+function chainOf(
+  given: Wires,
+  reports: SkipReports,
+  protection: GuardProtection,
+  book: RefusalBook,
+): ModChain {
+  const rules = [EVENT_RULES, API_RULES, uiRules(), registerRules(book)];
   const chain = forgettingChain(
     createModChain({
       clock: given.ports.clock,
@@ -152,6 +163,7 @@ const guardHooksOf = (given: Wires, ledger: ApprovalLedger, book: RefusalBook) =
     ledger,
     debug: given.debug,
     told: new Set(),
+    ...(given.managedTools ? { managedTools: given.managedTools } : {}),
     ...(given.guardNotice ? { notice: given.guardNotice } : {}),
   }).map((hook) => tagRefusals(hook, GUARD_NAME, book));
 
@@ -186,7 +198,16 @@ async function nativeMod(
     ...at,
     isBuiltin: true,
     hooks: [],
-    uses: { events: [], calls: [], envReads: [], envWrites: [], stateReads: [], stateWrites: [] },
+    uses: {
+      events: [],
+      calls: [],
+      envReads: [],
+      envWrites: [],
+      stateReads: [],
+      stateWrites: [],
+      hostsNamed: [],
+      hostsUnread: [],
+    },
     unload: once(() => {
       env.chain.unregister(name);
       handle.dispose();
@@ -201,7 +222,8 @@ export function wire(given: Wires): Wired {
   const reports = skipReports(debug, given.report);
   const { report } = reports;
   const protection = createGuardProtection(given);
-  const chain = chainOf(given, reports, protection);
+  const book = createRefusalBook();
+  const chain = chainOf(given, reports, protection, book);
   const calls = given.unanswered ? withUnanswered(chain, given.unanswered) : chain;
   const state = createStateStore();
   const ui = createModsUi({
@@ -223,10 +245,9 @@ export function wire(given: Wires): Wired {
     ui: ui.api,
     registries,
   });
-  const book: RefusalBook = { refusers: new Map() };
   const ledger: ApprovalLedger = { approvers: [] };
   const createApi: LoaderEnv['createApi'] = (ref) =>
-    createModsApi({ ...shared, canWithhold: ref.tier !== 'user' }, ref);
+    createModsApi({ ...shared, canWithhold: mayWithhold(ref.tier) }, ref);
   const env: LoaderEnv = {
     chain,
     compiler: given.compiler,
@@ -239,6 +260,8 @@ export function wire(given: Wires): Wired {
     debug,
     book,
     ledger,
+    pluginRoot: (id) => ports.locations.pluginRoot(id),
+    keptOut: [],
     onLoaded: (name) => ui.loadMod(name),
   };
   const registerNative: Wired['registerNative'] = (name, tier, hooks) =>

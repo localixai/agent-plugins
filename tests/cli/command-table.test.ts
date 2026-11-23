@@ -37,6 +37,7 @@ spec('cli.command.claude plugin', () => {
         'list',
         'details',
         'configure',
+        'restore-set-aside',
         'prune',
         'eval',
         'tag',

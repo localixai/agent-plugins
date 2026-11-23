@@ -23,7 +23,15 @@ export interface ReloadCounts {
   readonly errors: number;
   /** Plugin dependencies this reload installed because they were missing. */
   readonly resolvedDependencies?: readonly string[];
+  /**
+   * Dependencies this reload installed that the session did not take in (spec §16.12 item 1,
+   * **Dependencies**): `/reload-plugins --force` applies them.
+   */
+  readonly unappliedDependencies?: readonly string[];
 }
+
+const listed = (names: readonly string[]): string =>
+  `(+ ${names.length} dependencies: ${names.join(', ')})`;
 
 /** "The skills count covers every skill a plugin provides, both its `commands/` entries and its `SKILL.md` skills." */
 export const skillCount = (plugin: {
@@ -44,10 +52,13 @@ export function reloadSummary(
     `${counts.lspServers} plugin LSP servers`,
   ];
   const resolved = counts.resolvedDependencies ?? [];
-  const dependencies =
-    resolved.length === 0
+  const unapplied = counts.unappliedDependencies ?? [];
+  const dependencies = [
+    ...(resolved.length === 0 ? [] : [`${listed(resolved)} resolved`]),
+    ...(unapplied.length === 0
       ? []
-      : [`(+ ${resolved.length} dependencies: ${resolved.join(', ')}) resolved`];
+      : [`${listed(unapplied)} installed but not applied. Run /reload-plugins --force to apply.`]),
+  ];
   const errors =
     counts.errors > 0 ? [`${counts.errors} errors during load. Run /plugin for details.`] : [];
   return [`Reloaded: ${parts.join(' · ')}`, ...dependencies, ...errors].join(' ');

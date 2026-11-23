@@ -81,16 +81,37 @@ export function sideloadRefusal(policy: ModsPolicyInput): string | undefined {
   return refusals.length === 0 ? undefined : refusals.join('\n');
 }
 
+/** Where a mod that reloads on save was loaded from: `--plugin-dir`, or a skills-directory plugin (§4.5.1). */
+export type ReloadSource = 'plugin-dir' | 'skills-dir';
+
+/** The facts of a session that decide whether a mod reloads on save (§10.8.2). */
+export interface ReloadSession {
+  /** An interactive session in the terminal (not the Desktop app or an IDE). */
+  readonly isInteractiveTerminal: boolean;
+  /** The session takes more than one prompt, a non-interactive one included. */
+  readonly takesMorePrompts: boolean;
+}
+
+/** Whether a mod of each source reloads on save while the variable is unset (§10.8.2 item 1, 2.1.330). */
+const RELOADS_BY_DEFAULT: Readonly<Record<ReloadSource, (session: ReloadSession) => boolean>> = {
+  'plugin-dir': (session) => session.isInteractiveTerminal,
+  'skills-dir': (session) => session.takesMorePrompts,
+};
+
 /**
- * Whether a session reloads `--plugin-dir` mods when a file changes: "Claude Code watches a
- * directory loaded with `--plugin-dir`" in an interactive session, and the variable on makes "a
- * long-running non-interactive session" do the same; off turns watching off in either.
+ * Whether a session reloads a mod when one of its files is saved (§10.8.2 item 1, §10.12.2):
+ * unset, a skills-directory mod reloads in any session that takes more than one prompt and a
+ * `--plugin-dir` mod only in an interactive terminal session; `CLAUDE_CODE_PLUGIN_DIR_WATCH` on
+ * makes `--plugin-dir` mods reload as skills-directory mods do, off turns reloading off everywhere.
  */
-export function watchesPluginDirs(policy: ModsPolicyInput, isInteractive: boolean): boolean {
-  // An on/off variable: an on spelling turns watching on everywhere, an off one off everywhere,
-  // unset leaves the default (spec §3.6.1, J3.16).
+export function reloadsOnSave(
+  policy: ModsPolicyInput,
+  source: ReloadSource,
+  session: ReloadSession,
+): boolean {
+  // An on/off variable: unset or another value leaves the default (spec §3.6.1, J3.16).
   const value = policy.env.CLAUDE_CODE_PLUGIN_DIR_WATCH;
-  if (isTruthyEnv(value)) return true;
   if (isFalsyEnv(value)) return false;
-  return isInteractive;
+  if (isTruthyEnv(value)) return RELOADS_BY_DEFAULT['skills-dir'](session);
+  return RELOADS_BY_DEFAULT[source](session);
 }

@@ -23,6 +23,7 @@ const NOT_INHERITED: ReadonlySet<string> = new Set([
   'AskUserQuestion',
   'EndConversation',
   'EnterPlanMode',
+  'propose_skills',
   'ScheduleWakeup',
   'WaitForMcpServers',
   'Workflow',

@@ -3,30 +3,21 @@ import { installClosure, type InstallStep } from '../marketplace/dependency-inst
 import type { InstallScope } from '../marketplace/install-scopes.ts';
 import type { RegisteredMarketplace } from '../format/marketplace/marketplace-names.ts';
 import type { Sha256 } from '../ports/marketplace.ts';
-import {
-  decideAcceptance,
-  type CommandAcceptance,
-  type DisplayedCommand,
-  type ShownCommand,
-} from './command-acceptance.ts';
+import { stopAtCommand } from './install-command-step.ts';
 import type { SavedValues } from './configure-plan.ts';
+import { applyConfig, type ConfigOutcome, type InstallOptions } from './install-config.ts';
+import { closureRefusal, configRefusal, invalidEntryRefusal } from './install-refusals.ts';
+import { invalidEntryMessage } from '../format/marketplace/entry-display.ts';
 import {
-  applyConfig,
-  notAppliedLines,
-  notYetSetLine,
-  type ConfigOutcome,
-  type InstallOptions,
-} from './install-config.ts';
-import { closureRefusal, configRefusal } from './install-refusals.ts';
+  installEngineCheck,
+  type InstallEngineCheck,
+  type InstallEngineFacts,
+} from './install-engines.ts';
+import { successLines } from './install-success.ts';
 import { recordsRefusal } from './records-refusal.ts';
 import type { PendingInstall } from './install-start.ts';
-import { beforeLines, displayedOf, locate, marketplaceRefusal } from './install-lookup.ts';
-import {
-  commandFailed,
-  commandSucceeded,
-  type CommandOutput,
-  type ResultFields,
-} from './result.ts';
+import { beforeLines, locate, marketplaceRefusal } from './install-lookup.ts';
+import { commandSucceeded, type CommandOutput, type ResultFields } from './result.ts';
 
 /**
  * The second half of `claude plugin install <plugin>` (plugins/cli-reference.md, "plugin install",
@@ -71,6 +62,11 @@ export interface InstallFound {
    * cannot read, or a format it does not know; the command then refuses (§16.6.2 item 1).
    */
   readonly unreadableRecords?: string;
+  /**
+   * The `engines` of the version to install and the running client's version (spec §2.4): absent,
+   * the range is not checked.
+   */
+  readonly engines?: InstallEngineFacts;
 }
 
 /** What the host carries out for a successful install. */
@@ -110,30 +106,6 @@ const ended = (output: CommandOutput, before: readonly string[]): InstallRun => 
 
 const fieldsOf = (id: string, scope: InstallScope): ResultFields => ({ pluginId: id, scope });
 
-const shownFields = (shown: ShownCommand, id: string, scope: InstallScope): ResultFields => ({
-  ...fieldsOf(id, scope),
-  shownCommand: { ...shown },
-});
-
-/** A run that printed the command and did not run it. */
-function notRun(
-  acceptance: Extract<CommandAcceptance, { ask: false }>,
-  context: {
-    readonly id: string;
-    readonly scope: InstallScope;
-    readonly before: readonly string[];
-    readonly command: string;
-  },
-): InstallRun {
-  return ended(
-    commandFailed('install', acceptance.line, {
-      failureCode: 'command_not_accepted',
-      fields: shownFields(acceptance.shownCommand, context.id, context.scope),
-    }),
-    [...context.before, context.command],
-  );
-}
-
 function alreadyInstalled(
   id: string,
   pending: PendingInstall,
@@ -166,77 +138,20 @@ function alreadyInstalled(
 const isInstalledAt = (id: string, scope: InstallScope, graph: GraphFacts): boolean =>
   graph.installed.some((record) => record.id === id && record.scope === scope);
 
-interface Succeeded {
-  readonly id: string;
-  readonly scope: InstallScope;
-  readonly steps: readonly InstallStep[];
-  readonly config: ConfigOutcome;
-  readonly options: InstallOptions;
-  readonly leftOut: readonly string[];
-}
-
-/** "The success message lists them": ` (+ N dependencies: <ids>)` (wording: spec/judgments.md). */
-const dependencyList = (steps: readonly InstallStep[]): string =>
-  steps.length === 0
-    ? ''
-    : ` (+ ${steps.length} dependencies: ${steps.map((step) => step.id).join(', ')})`;
-
-/** The success lines: the install, what `--config` did not apply, the options still unset, dependencies left to the user. */
-function successLines(done: Succeeded): string {
-  const unset = notYetSetLine(done.id, done.config);
-  return [
-    `Successfully installed plugin: ${done.id} (scope: ${done.scope})${dependencyList(done.steps)}`,
-    ...notAppliedLines(done.config, done.options),
-    ...(unset === undefined ? [] : [unset]),
-    ...done.leftOut,
-  ].join('\n');
-}
-
-const acceptanceOf = (
-  shown: DisplayedCommand,
+/** The entry's validity, the `engines` range and the `--config` values, checked before the closure. */
+function checkedInput(
+  { id, entry }: { readonly id: string; readonly entry: CatalogPlugin },
   pending: PendingInstall,
   found: InstallFound,
-  sha256: Sha256,
-): Promise<CommandAcceptance> =>
-  decideAcceptance(
-    {
-      shown,
-      catalog: found.catalog,
-      flags: {
-        ...(pending.yes ? { yes: true } : {}),
-        ...(pending.acceptCommand === undefined ? {} : { acceptCommand: pending.acceptCommand }),
-      },
-      session: pending.session,
-      tty: pending.tty,
-      ...(found.answer === undefined ? {} : { answer: found.answer }),
-    },
-    sha256,
-  );
-
-interface Shown {
-  readonly id: string;
-  readonly entry: CatalogPlugin;
-  readonly before: readonly string[];
-}
-
-/** The run that ends the install at its command: the question, or the refusal. `undefined` when the command runs or the entry has none. */
-async function stopAtCommand(
-  at: Shown,
-  pending: PendingInstall,
-  found: InstallFound,
-  sha256: Sha256,
-): Promise<InstallRun | undefined> {
-  const shown = displayedOf(at.id, at.entry);
-  if (shown === undefined) return undefined;
-  const acceptance = await acceptanceOf(shown, pending, found, sha256);
-  if (acceptance.run) return undefined;
-  if (acceptance.ask) return { before: [...at.before, shown.command], prompt: acceptance.prompt };
-  return notRun(acceptance, {
-    id: at.id,
-    scope: pending.scope,
-    before: at.before,
-    command: shown.command,
-  });
+):
+  | { readonly refusal: CommandOutput }
+  | { readonly engine: InstallEngineCheck; readonly config: ConfigOutcome } {
+  const invalid = invalidEntryMessage(entry);
+  if (invalid !== undefined) return { refusal: invalidEntryRefusal(invalid) };
+  const engine = installEngineCheck(id, found.engines);
+  if (engine.refusal !== undefined) return { refusal: engine.refusal };
+  const config = applyConfig(pending.given, found.options);
+  return config.refused.length > 0 ? { refusal: configRefusal(config) } : { engine, config };
 }
 
 /** What `claude plugin install` prints and does, once the host added the marketplace and refreshed. */
@@ -257,8 +172,9 @@ export async function planInstall(
   if (isInstalledAt(id, scope, found.graph) && found.installedCopyPresent !== false) {
     return alreadyInstalled(id, pending, found, before);
   }
-  const config = applyConfig(pending.given, found.options);
-  if (config.refused.length > 0) return ended(configRefusal(config), before);
+  const checked = checkedInput({ id, entry }, pending, found);
+  if ('refusal' in checked) return ended(checked.refusal, before);
+  const { engine, config } = checked;
   const closure = installClosure({ root: id, scope, operation: 'install' }, found.graph);
   if (closure.needs.length > 0) return { before, needs: closure.needs };
   if (!closure.ok) {
@@ -277,7 +193,15 @@ export async function planInstall(
     before,
     output: commandSucceeded(
       'install',
-      successLines({ id, scope, steps: closure.steps, config, options: found.options, leftOut }),
+      successLines({
+        id,
+        scope,
+        steps: closure.steps,
+        config,
+        options: found.options,
+        leftOut,
+        engineNote: engine.suffix,
+      }),
       {
         fields: fieldsOf(id, scope),
       },

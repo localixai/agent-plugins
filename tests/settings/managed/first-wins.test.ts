@@ -1,17 +1,24 @@
 /**
  * managed-settings.md § How Claude Code combines managed sources ("first-wins", the default) and
  * § Keys read from every admin source: under the default only the highest-ranked source that
- * delivers a policy key applies, apart from the keys read from every admin source.
+ * delivers a policy key applies, apart from the keys read from every admin source. Spec §14.2.1 item
+ * 4, "When endpoint-managed settings take over": a helper of the MDM policy or file waits while
+ * server-managed settings deliver a policy key and runs at once when a fetch finds them removed; a
+ * cleared configuration leaves the cached copy in force until the next successful fetch.
  */
 import { describe, expect, test } from 'bun:test';
-import { composeManaged } from '../../../src/settings/managed/index.ts';
+import {
+  cacheAfterFetch,
+  composeManaged,
+  helperRunsNow,
+} from '../../../src/settings/managed/index.ts';
 import { compose, document, policyOf } from '../../support/managed.ts';
 import { spec } from '../../support/spec.ts';
 
 const COMBINES = 'settingsMerge.managed.How Claude Code combines managed sources';
 const CROSS = 'settingsMerge.managed.Keys read from every admin source';
 
-spec([`${COMBINES}."first-wins", the default`, 'policy.server.Settings precedence'], () => {
+spec(`${COMBINES}."first-wins", the default`, () => {
   const held = {
     remote: { model: 'sonnet', permissions: { allow: ['Bash(remote)'] } },
     file: { model: 'opus', cleanupPeriodDays: 7, permissions: { allow: ['Bash(file)'] } },
@@ -265,5 +272,26 @@ describe('what is read from the documents the host hands over', () => {
     const low = document('file', { model: 'low' });
     const high = document('remote', { model: 'high' });
     expect(composeManaged([low, high]).layer.settings.model).toBe('high');
+  });
+});
+
+spec('policy.server.When endpoint-managed settings take over', () => {
+  const helper = { policyHelper: { path: '/usr/local/bin/claude-policy' } };
+
+  test('while server-managed settings deliver a policy key, the helper the file names is not consulted', () => {
+    const plan = compose({ remote: { model: 'a' }, file: helper }).helper;
+    expect(plan.shadowedByRemote).toBe(true);
+    expect(helperRunsNow(plan, { remoteStillDelivers: true })).toBe(false);
+  });
+
+  test('a later fetch that finds the server-managed settings removed runs the helper at once', () => {
+    const plan = compose({ remote: { model: 'a' }, file: helper }).helper;
+    expect(helperRunsNow(plan, { remoteStillDelivers: false })).toBe(true);
+  });
+
+  test('a cleared configuration leaves the cached copy in force until the next successful fetch', () => {
+    const cached = { model: 'org' };
+    expect(cacheAfterFetch(cached, { ok: false })).toEqual(cached);
+    expect(cacheAfterFetch(cached, { ok: true, settings: undefined })).toBeUndefined();
   });
 });

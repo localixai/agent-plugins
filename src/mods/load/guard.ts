@@ -3,12 +3,14 @@ import type { ModNext, ModsApi, RegisteredHook } from '../types.ts';
 import { guardOption, type ModsPolicyInput } from './policy-input.ts';
 import type { RefusalBook } from './register-call.ts';
 import { isRecord } from '../../protocol/is-record.ts';
+import { isClientsOwn, keepManagedTools, type ManagedToolInfo } from './guard-tools.ts';
 
 /**
  * The built-in guard `sec-default@builtin` (plugins/mods/admin.md, "Know what happens by default",
  * "Set options on the built-in guard"; troubleshoot.md, "Messages from the built-in guard"). It is
- * a mod that loads ahead of every mod a person installs and answers two events: `plugin.register`
- * (`allowManagedModsOnly`) and `tool.check` (a user's mod approving a call a deny rule refuses).
+ * a mod that loads ahead of every mod a person installs and answers three events: `plugin.register`
+ * (`allowManagedModsOnly`), `tool.check` (a user's mod approving a call a deny rule refuses) and
+ * the client's own `tool.list` (a managed MCP server's tools stay in the pool, §14.9.2 item 3).
  */
 
 /** The text after `refused by cc-plugin-sec-default:` (troubleshoot.md quotes it). */
@@ -17,13 +19,13 @@ const MODS_LIMITED = "mods are limited to your organization's by policy (allowMa
 const MANAGED_UNREADABLE =
   "managed settings could not be read, so mods that are not your organization's are refused";
 /**
- * "Each message names the option your organization's administrator sets to change the rule"
- * (§10.42.2): the table quotes what each contains; the option follows in parentheses, as in
- * `MODS_LIMITED` (judgment: the docs quote that form for one message only).
+ * The two messages about the rules in the user's settings (§10.42.2): in 2.1.330 only the
+ * `allowManagedModsOnly` message names the setting that changes the rule, so these two name none.
+ * Before 2.1.330 the second began `the deny rules in your settings`.
  */
-const OVERRIDE_OPTION = ' (allowModsToOverrideDenyRules)';
-const LIFT_ATTEMPT = `tried to lift a deny rule in your settings${OVERRIDE_OPTION}`;
-const CHECK_FAILED = `the deny rules in your settings could not be checked for this call, so it is refused${OVERRIDE_OPTION}`;
+const LIFT_ATTEMPT = 'tried to lift a deny rule in your settings';
+const CHECK_FAILED =
+  'the rules and hooks in your settings could not be checked for this call, so it is refused';
 
 type Any = Promise<unknown> | AsyncGenerator<unknown, unknown>;
 type Next = ModNext<unknown, Any>;
@@ -49,6 +51,8 @@ export interface GuardOptions {
   readonly notice?: (line: string) => void;
   /** The mods the guard already said it refused a lift for: "once for each mod in a session". */
   readonly told?: Set<string>;
+  /** The tools of the managed MCP servers connected now (`ManagedModData.managedTools`). */
+  readonly managedTools?: () => readonly ManagedToolInfo[];
 }
 
 const decisionOf = (result: unknown): unknown => (isRecord(result) ? result.decision : undefined);
@@ -121,6 +125,15 @@ export function guardHooks(options: GuardOptions): readonly RegisteredHook[] {
       event: 'tool.check',
       isGenerator: false,
       run: (_$: ModsApi, e: unknown, next: Next): unknown => guardToolCheck(options, e, next),
+    },
+    {
+      event: 'tool.list',
+      isGenerator: false,
+      run: async (_$: ModsApi, e: unknown, next: Next): Promise<unknown> => {
+        const result = await next(e);
+        if (!isClientsOwn(next.origin)) return result;
+        return keepManagedTools(result, options.managedTools?.() ?? []);
+      },
     },
   ];
 }

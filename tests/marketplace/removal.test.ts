@@ -3,7 +3,7 @@
  * `forceRemoveDeletedPlugins: true` does at each session start: compare what users installed from
  * the marketplace with the entries and the `renames` map, treat a plugin that is neither listed nor
  * renamed as removed, uninstall it from the user, project and local scopes, leave what only managed
- * settings installed, flag it `Removed from marketplace`; without the field a removed plugin stays
+ * settings installed, list it under **Needs attention** (spec §16.21.1); without the field a removed plugin stays
  * installed) and § Work around what a marketplace can't do ("Mark a plugin deprecated": remove the entry, map
  * its name to `null`, optionally set the flag). The kit decides; the host uninstalls. What the docs
  * leave open (a null entry, a broken chain, a managed-only install, other marketplaces) is outside
@@ -41,7 +41,7 @@ const installed = (
   from = NAME,
 ): InstalledPlugin => ({ name, marketplace: from, scopes });
 
-const FLAGGED = 'Removed from marketplace';
+const FLAGGED = 'Needs attention';
 
 spec('marketplace.field.forceRemoveDeletedPlugins', () => {
   test('a plugin that is neither listed nor renamed is removed, flagged and uninstalled', () => {
@@ -50,7 +50,7 @@ spec('marketplace.field.forceRemoveDeletedPlugins', () => {
       marketplace(['code-formatter']),
     );
     expect(found).toEqual([
-      { id: `legacy-linter@${NAME}`, status: FLAGGED, uninstallFrom: ['user', 'project'] },
+      { id: `legacy-linter@${NAME}`, listedUnder: FLAGGED, uninstallFrom: ['user', 'project'] },
     ]);
   });
 
@@ -94,7 +94,7 @@ spec('marketplace.field.forceRemoveDeletedPlugins', () => {
 describe('what the docs leave open (spec/judgments.md)', () => {
   test('a plugin that only managed settings installed is still reported as flagged', () => {
     const found = removedPlugins([installed('gone', ['managed'])], marketplace([]));
-    expect(found).toEqual([{ id: `gone@${NAME}`, status: FLAGGED, uninstallFrom: [] }]);
+    expect(found).toEqual([{ id: `gone@${NAME}`, listedUnder: FLAGGED, uninstallFrom: [] }]);
   });
 
   test('removed plugins come in the order they were installed', () => {

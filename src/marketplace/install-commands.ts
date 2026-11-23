@@ -90,12 +90,21 @@ export function shellInstallLines(input: {
   readonly scope: ChosenScope;
   /** The name of the marketplace the command added; absent when it reused one or none was named. */
   readonly addedMarketplace?: string;
+  /**
+   * Whether stdout and stderr are both a terminal: the lines then drop `Successfully` and begin
+   * with the capitalised verb (spec §17.2.1, J17.33). Unset, the output is not a terminal.
+   */
+  readonly terminal?: boolean;
 }): readonly string[] {
-  const added =
+  const [added, installed] =
+    input.terminal === true
+      ? ['Added', 'Installed']
+      : ['Successfully added', 'Successfully installed'];
+  const addLine =
     input.addedMarketplace === undefined
       ? []
-      : [`Successfully added marketplace: ${input.addedMarketplace} (declared in user settings)`];
-  return [...added, `Successfully installed plugin: ${input.pluginId} (scope: ${input.scope})`];
+      : [`${added} marketplace: ${input.addedMarketplace} (declared in user settings)`];
+  return [...addLine, `${installed} plugin: ${input.pluginId} (scope: ${input.scope})`];
 }
 
 /**

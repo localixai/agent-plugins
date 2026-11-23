@@ -1,8 +1,8 @@
 /**
- * A plugin's default `agent` applied to the session's main-thread agent (plugins/components.md,
- * "Default settings": "Set `agent` to run one of the plugin's own agents as the main thread", "User
- * settings over plugin defaults", "Two plugins set the same key"; settings-reference.md, `agent`:
- * "`--agent` takes precedence over this key for one session"). End to end over the loader, the host
+ * A plugin's default `agent` applied to the session's main-thread agent (spec §12.6, deprecated but
+ * still applied, Judgment J12.14: "A default `agent` names one of the plugin's own agents and runs
+ * the main thread as it", "User settings over plugin defaults", "Two plugins set the key"; §12.7.1
+ * `agent`: "Any file; deprecated plugin default", "`--agent` wins for a session"). End to end over the loader, the host
  * and `session.selectAgent`. Oracle 2.1.322 (`claude -p --plugin-dir`, the `init` event's `tools` and
  * `model` of the main thread): a plugin `settings.json` `{"agent":"solo"}` runs `pp:solo`; a user
  * `agent` or `--agent` wins over it; a user agent named `solo` wins over the plugin's own `pp:solo`.
@@ -30,7 +30,7 @@ async function pluginWith(name: string, settings: unknown, agents: readonly stri
 
 const userSettings = (raw: Record<string, unknown>) => createPolicyView([layerOf('user', raw)]);
 
-spec('settings.components.Default settings.User settings over plugin defaults', () => {
+spec('settings.key.agent', () => {
   test('a plugin settings.json agent runs that plugin agent as the main thread', async () => {
     const plugins = [await pluginWith('pp', { agent: 'solo' }, ['solo', 'other'])];
     const { session } = folderHostOf({}, { plugins });
@@ -84,7 +84,7 @@ spec('settings.key.agent', () => {
   });
 });
 
-spec('settings.components.Default settings.Two plugins set the same key', () => {
+describe('two plugins set the key (spec §12.6 item 5, Judgment J12.14)', () => {
   test('the plugin loaded last applies, and the debug line says it overrides the other', async () => {
     const plugins = [
       await pluginWith('first', { agent: 'a' }, ['a']),
@@ -97,6 +97,10 @@ spec('settings.components.Default settings.Two plugins set the same key', () => 
     expect(defaults.owners.agent?.id).toBe('second@market');
     expect(defaults.debug).toEqual([
       'Plugin "second" overrides setting "agent" set by plugin "first"',
+    ]);
+    expect(defaults.warnings.map((warning) => warning.plugin.id)).toEqual([
+      'first@market',
+      'second@market',
     ]);
   });
 });
@@ -128,43 +132,6 @@ describe('the plugin default names an agent as the setting does (oracle 2.1.322,
       ok: false,
       message: 'No subagent named "ghost"',
       candidates: [],
-    });
-  });
-});
-
-describe('the plugin default subagentStatusLine', () => {
-  const line = (command: string) => ({ type: 'command' as const, command });
-
-  spec('settings.components.Default settings.User settings over plugin defaults', () => {
-    test('a plugin line runs when no settings source sets one, naming the plugin; a user line wins', async () => {
-      const plugins = [await pluginWith('pp', { subagentStatusLine: line('plugin') }, [])];
-      const alone = folderHostOf({}, { plugins }).session.subagentStatusLine();
-      expect(alone).toEqual({
-        runs: { value: line('plugin'), plugin: expect.objectContaining({ id: 'pp@market' }) },
-      });
-      const user = userSettings({ subagentStatusLine: line('mine') });
-      const mine = folderHostOf({}, { plugins, settings: user }).session.subagentStatusLine();
-      expect(mine).toEqual({ runs: { value: line('mine'), scope: 'user' } });
-    });
-  });
-
-  spec('settings.reference.Status line and file suggestion gates', () => {
-    test("plugin values don't run under allowManagedHooksOnly, even when the plugin is force-enabled", async () => {
-      const plugins = [await pluginWith('pp', { subagentStatusLine: line('plugin') }, [])];
-      const settings = createPolicyView([
-        layerOf('managed', { allowManagedHooksOnly: true, enabledPlugins: { 'pp@market': true } }),
-      ]);
-      const { session } = folderHostOf({}, { plugins, settings });
-      expect(session.subagentStatusLine()).toEqual({ runs: undefined, skippedBecause: 'narrowed' });
-    });
-
-    test('an untrusted folder turns it off entirely', async () => {
-      const plugins = [await pluginWith('pp', { subagentStatusLine: line('plugin') }, [])];
-      const { session } = folderHostOf({}, { plugins, session: { trusted: false } });
-      expect(session.subagentStatusLine()).toEqual({ runs: undefined, skippedBecause: 'off' });
-      expect(session.subagentStatusLine({ folderTrusted: true }).runs?.value).toEqual(
-        line('plugin'),
-      );
     });
   });
 });

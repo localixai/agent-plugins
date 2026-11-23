@@ -33,10 +33,11 @@ import type { NormalizedDependency } from './types.ts';
  */
 
 /**
- * The operations that install any missing declared dependency (plugins/dependencies.md, "Constrain
- * a dependency that has a non-git source"): `claude plugin install`, `/reload-plugins`, auto-update
- * of the dependent plugin's marketplace, re-running `claude plugin install` on the dependent, and
- * `claude plugin marketplace add`. The docs give the five one behaviour, so the plan does not depend
+ * The operations that install any missing declared dependency (spec §16.24.1; plugins/
+ * dependencies.md, "When a dependency installs automatically"): `claude plugin install`,
+ * `/reload-plugins`, auto-update of the dependent plugin's marketplace, re-running `claude plugin
+ * install` on the dependent, updating the dependent (`claude plugin update`, **Update now**) and
+ * `claude plugin marketplace add`. The docs give the six one behaviour, so the plan does not depend
  * on which runs (judgment, spec/judgments.md); the plan only names it, for the host's report.
  */
 export const DEPENDENCY_INSTALL_OPERATIONS = [
@@ -44,6 +45,7 @@ export const DEPENDENCY_INSTALL_OPERATIONS = [
   'reload-plugins',
   'auto-update',
   'reinstall',
+  'update',
   'marketplace-add',
 ] as const;
 export type DependencyInstallOperation = (typeof DEPENDENCY_INSTALL_OPERATIONS)[number];

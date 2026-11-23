@@ -25,22 +25,29 @@ export const DOCUMENTED_TOOLS = [
   'Grep',
   'ListAgents',
   'ListMcpResourcesTool',
+  'ListPlugins',
+  'ListSkills',
   'LSP',
   'Monitor',
   'NotebookEdit',
   'PowerShell',
+  'propose_skills',
   'PushNotification',
   'Read',
   'ReadMcpResourceTool',
   'RemoteTrigger',
   'ReportFindings',
   'ScheduleWakeup',
+  'SearchPlugins',
+  'SearchSkills',
   'SendFeedback',
   'SendMessage',
   'SendUserFile',
   'ShareOnboardingGuide',
   'Skill',
   'SubagentHandback',
+  'SuggestPluginInstall',
+  'SuggestSkills',
   'TaskCreate',
   'TaskGet',
   'TaskList',
@@ -66,15 +73,30 @@ export const SDK_ONLY_TOOLS = [
   'ClaudeDesign',
   'OfferChromeSetup',
   'Projects',
-  'propose_skills',
-  'ProposeGoal',
   'ReadMcpResourceDirTool',
   'ReadNotifications',
   'SendUserMessage',
+  'SetGoal',
   'ShowOnboardingRolePicker',
 ] as const;
 
 export type SdkOnlyTool = (typeof SDK_ONLY_TOOLS)[number];
+
+/**
+ * Tools the tools-reference table lists that the SDK's `BUILTIN_TOOL_NAMES` does not: the claude.ai
+ * account tools, offered "only in a cloud session or the desktop app" (tools-reference.md,
+ * `ListPlugins`). They are documented names a rule or a hook may match like any other.
+ */
+export const DOCS_ONLY_TOOLS = [
+  'ListPlugins',
+  'ListSkills',
+  'SearchPlugins',
+  'SearchSkills',
+  'SuggestPluginInstall',
+  'SuggestSkills',
+] as const satisfies readonly DocumentedTool[];
+
+export type DocsOnlyTool = (typeof DOCS_ONLY_TOOLS)[number];
 
 /**
  * Tools Claude Code removed but a rule may still name: the table says `TaskOutput` was "Removed in
@@ -86,9 +108,9 @@ export const REMOVED_TOOLS = ['TaskOutput'] as const satisfies readonly Document
 export type RemovedTool = (typeof REMOVED_TOOLS)[number];
 
 /**
- * @public A compile-time drift guard: a tool the SDK adds, or the table drops, fails the typecheck
- * until the lists are updated.
+ * @public A compile-time drift guard: a tool the SDK adds or drops, or the table adds or drops,
+ * fails the typecheck until the lists are updated.
  */
 export type ToolNamesMatchSdk = Assert<
-  Equal<Exclude<DocumentedTool, RemovedTool> | SdkOnlyTool, BuiltinToolName>
+  Equal<Exclude<DocumentedTool, RemovedTool | DocsOnlyTool> | SdkOnlyTool, BuiltinToolName>
 >;

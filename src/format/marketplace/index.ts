@@ -27,7 +27,6 @@ export {
   type IdPart,
 } from './ids.ts';
 export {
-  ANY_CASING_NAMES,
   COMMUNITY_NAMES,
   DIRECTORY_NAMES,
   NON_MARKETPLACE_NAMES,
@@ -55,6 +54,7 @@ export {
 } from './marketplace.ts';
 export { parsePluginSource } from './plugin-source.ts';
 export { createEntryReader, readEntry, type SourceParser, type SourceReading } from './entries.ts';
+export { invalidEntryMessage } from './entry-display.ts';
 export { ENTRY_KEYS } from './entry-schema.ts';
 export { effectiveDisplayName, mergeEntryWithManifest, type EntryMerge } from './entry-merge.ts';
 export { effectiveTopic } from './relevance.ts';

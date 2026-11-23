@@ -207,7 +207,6 @@ spec(['settings.key.disableAllHooks', 'hooks.behavior.Disable or remove hooks'],
       const policy = hookPolicyOf([managed(off)]);
       expect(policy.commandsDisabled.statusLine).toBe(true);
       expect(policy.commandsDisabled.fileSuggestion).toBe(true);
-      expect(policy.commandsDisabled.subagentStatusLine).toBe(true);
     });
 
     test('true outside managed settings narrows them to managed settings instead', () => {

@@ -26,7 +26,7 @@ const formatter = pluginSource('formatter');
 const guard = (event: 'PreToolUse' | 'UserPromptSubmit', name: string) =>
   entry(event, { source: pluginSource(name), pluginId: `${name}@acme-tools` });
 
-spec('hooks.troubleshooting.A plugin hook blocks a tool call or prompt', () => {
+spec('install.troubleshooting.A plugin hook blocks a tool call or prompt', () => {
   test('a plugin hook that exits 2 with its stderr as the message: the error ends with "This hook comes from the <plugin> plugin."', () => {
     const verdict = verdictOf('PreToolUse', exited(2, 'rm is not allowed'), {
       entry: guard('PreToolUse', 'safety'),
@@ -136,7 +136,7 @@ describe('Hook loads but never fires', () => {
     return runner.calls.length;
   };
 
-  spec(['hooks.troubleshooting.Hook loads but never fires', 'cli.debug.Check hooks'], () => {
+  spec(['install.troubleshooting.Hook loads but never fires', 'cli.debug.Check hooks'], () => {
     test('1. event names are case-sensitive: "posttooluse" loads, warns and never fires; "PostToolUse" fires', async () => {
       const wrong = readHooksFile(
         file({ posttooluse: [{ hooks: [{ type: 'command', command: './fmt.sh' }] }] }),

@@ -7,7 +7,8 @@
  * "Completed agent() calls with unchanged (prompt, opts) return their cached results".
  */
 
-export const SAVED_STATUSES = ['completed', 'failed', 'running'] as const;
+/** `failed-at-limit`: the agent failed at a usage limit (§11.9), which a relaunch treats apart. */
+export const SAVED_STATUSES = ['completed', 'failed', 'failed-at-limit', 'running'] as const;
 export type SavedStatus = (typeof SAVED_STATUSES)[number];
 
 /** One agent of the earlier run, in the order it started. */
@@ -36,6 +37,7 @@ export const RERUN_CAUSES = [
   'options-differ',
   'after-change',
   'failed',
+  'failed-at-limit',
   'after-failed',
   'was-running',
   'not-saved',
@@ -59,6 +61,8 @@ interface Step {
   readonly cascade?: ReplayState['cascade'];
 }
 
+const COMPLETED: ReadonlySet<SavedStatus> = new Set(['completed']);
+
 const rerun = (cause: RerunCause, cascade?: ReplayState['cascade']): Step => ({
   replay: { saved: false, cause },
   ...(cascade === undefined ? {} : { cascade }),
@@ -74,8 +78,17 @@ const rerun = (cause: RerunCause, cascade?: ReplayState['cascade']): Step => ({
  *   so the agents after it are not dragged along unless its prompt changed (judgment: the docs say the
  *   rule for a changed prompt only of completed agents; it is applied here too).
  */
+/**
+ * - failed at a usage limit: runs again, and the agents that completed keep their saved results; only
+ *   when an agent the script started after it returned a result does every agent after it run again
+ *   (§11.8, "Failed at a usage limit").
+ */
 const RULES: {
-  readonly [S in SavedStatus]: (record: SavedAgent, call: AgentCall) => Step;
+  readonly [S in SavedStatus]: (
+    record: SavedAgent,
+    call: AgentCall,
+    later: readonly SavedAgent[],
+  ) => Step;
 } = {
   completed: (record, call) => {
     if (record.prompt !== call.prompt) return rerun('prompt-differs', 'after-change');
@@ -83,6 +96,11 @@ const RULES: {
     return { replay: { saved: true, result: record.result } };
   },
   failed: () => rerun('failed', 'after-failed'),
+  'failed-at-limit': (_record, _call, later) =>
+    rerun(
+      'failed-at-limit',
+      later.some((agent) => COMPLETED.has(agent.status)) ? 'after-failed' : undefined,
+    ),
   running: (record, call) =>
     rerun(
       'was-running',
@@ -107,7 +125,7 @@ export function replayAgent(
   if (record === undefined) {
     return { replay: { saved: false, cause: 'not-saved' }, state: { next, cascade: undefined } };
   }
-  const step = RULES[record.status](record, call);
+  const step = RULES[record.status](record, call, saved.slice(next));
   return { replay: step.replay, state: { next, cascade: step.cascade } };
 }
 

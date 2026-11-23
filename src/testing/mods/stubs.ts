@@ -8,6 +8,8 @@ import {
 import type { RegisteredHook } from '../../mods/types.ts';
 import { ExpectationError } from './expect.ts';
 import { noImplementation } from './fake-ports.ts';
+import { stubAdmits } from './stub-matcher.ts';
+import type { ModMatcher } from '../../protocol/mods-matcher.ts';
 
 /**
  * The stubs of a test (plugins/mods/test.md, "Stub what Claude Code would answer"): hooks the test
@@ -35,8 +37,16 @@ export const isKnownEvent = (name: string): name is AnyModEventName => NAMES.has
 /** Whether a mod can call it: a mods API call, whether or not Claude Code fires an event of that name too. */
 const isCall = (name: string): boolean => API_EVENT_NAMES.includes(name);
 
+/** One stub: the hook and the matcher it was registered with. */
+interface Stub {
+  readonly hook: StubHook;
+  readonly matcher: ModMatcher | undefined;
+}
+
 export interface StubBook {
-  add(name: AnyModEventName, hook: StubHook): void;
+  add(name: AnyModEventName, hook: StubHook, matcher?: ModMatcher): void;
+  /** Whether a stub of `name` answers `e`: its matcher lets it through. */
+  admits(name: string, e: unknown): boolean;
   /** The names that have a stub. */
   names(): readonly string[];
   /** The answer of the stubs of `name` to `e`, in Claude Code's place. */
@@ -48,22 +58,27 @@ export interface StubBook {
 const missing = (name: string): Promise<never> => Promise.reject(new Error(noImplementation(name)));
 
 export function createStubBook(): StubBook {
-  const stubs = new Map<string, StubHook[]>();
-  /** `index`th stub of `name`, with `next` leading to the one after it, then to `no implementation`. */
+  const stubs = new Map<string, Stub[]>();
+  /** The stubs of `name` from `index` on whose matcher lets `e` through, in the order registered. */
+  const from = (name: string, e: unknown, index: number): number =>
+    (stubs.get(name) ?? []).findIndex((stub, at) => at >= index && stubAdmits(stub.matcher, e));
+  /** The first stub of `name` at or after `index` that answers `e`, with `next` leading to the one after it, then to `no implementation`. */
   const run = (name: string, e: unknown, $: unknown, index: number): unknown => {
-    const hook = stubs.get(name)?.[index];
+    const at = from(name, e, index);
+    const hook = at < 0 ? undefined : stubs.get(name)?.[at]?.hook;
     if (!hook) return STREAMS.has(name) ? emptyStream(name) : missing(name);
     return Reflect.apply(hook, undefined, [
       $,
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the stub was written for this event's input, which the chain hands it as it is
       e as never,
-      (next: unknown) => run(name, next, $, index + 1),
+      (next: unknown) => run(name, next, $, at + 1),
     ]);
   };
   return {
-    add(name, hook) {
-      stubs.set(name, [...(stubs.get(name) ?? []), hook]);
+    add(name, hook, matcher) {
+      stubs.set(name, [...(stubs.get(name) ?? []), { hook, matcher }]);
     },
+    admits: (name, e) => from(name, e, 0) >= 0,
     names: () => [...stubs.keys()],
     answer: (name, e, $) =>
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a stub of a stream is an async generator, any other is a promise or a value

@@ -15,7 +15,7 @@ export type HookPolicyContext = ParentSettingsContext & CommandSessionFacts;
 /**
  * The keys that decide which hooks run, as one object over a view (docs/API.md, "Settings"): the
  * hooks engine asks `runs(origin)` before it runs any hook and `httpHook(url, allowedEnvVars)` before
- * it sends an HTTP request. The same decision as `hookSessionGates`, in the shape of questions.
+ * it sends an HTTP request, saying whether the hook is one of managed settings (J12.18). The same decision as `hookSessionGates`, in the shape of questions.
  */
 export interface HookPolicy extends CommandGates {
   runs(origin: PolicyHookSource): HookVerdict;
@@ -28,7 +28,7 @@ export function hookPolicyOver(effective: PolicyView, facts: CommandSessionFacts
   return {
     ...createCommandGates(gate, facts),
     runs: (origin) => gate.runs(origin),
-    httpHook: (url, hookAllowedEnvVars) => http.check(url, hookAllowedEnvVars),
+    httpHook: (url, hookAllowedEnvVars, hook) => http.check(url, hookAllowedEnvVars, hook),
   };
 }
 

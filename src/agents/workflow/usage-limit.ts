@@ -1,11 +1,19 @@
 /**
- * When a run hits your usage limit (workflows.md, "When a run hits your usage limit"): the run pauses
- * instead of failing the agent, when all of the conditions hold; when one does not, the affected agent
- * fails. Pure over facts the host holds.
+ * When a run hits your usage limit (workflows.md, "When a run hits your usage limit"; §11.9): the run
+ * pauses instead of failing the agent, when all of the conditions hold; when one does not, the
+ * affected agent fails, and the run is finished by relaunching it after the reset (§11.8, a saved
+ * `failed-at-limit` agent). Pure over facts the host holds.
  */
 
+/**
+ * `interactive` is an interactive terminal session; `desktop-code-tab` a local session started in
+ * the desktop app's Code tab; `desktop-other` a desktop session that is not one (SSH, WSL, Dispatch,
+ * a scheduled task, one started from Remote Control or through a corporate launcher).
+ */
 export const SESSION_KINDS = [
   'interactive',
+  'desktop-code-tab',
+  'desktop-other',
   'non-interactive',
   'background',
   'remote-control',
@@ -13,9 +21,22 @@ export const SESSION_KINDS = [
 ] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
-/** "The session is interactive": a run does not pause in `claude -p` or the Agent SDK, a background session, Remote Control or an agent team teammate. */
+/** §11.9 item 1: only an interactive terminal session or a local Code tab session pauses. */
 const SESSION_PAUSES: { readonly [K in SessionKind]: boolean } = {
   interactive: true,
+  'desktop-code-tab': true,
+  'desktop-other': false,
+  'non-interactive': false,
+  background: false,
+  'remote-control': false,
+  'agent-team-teammate': false,
+};
+
+/** The Code tab, whose own rules are item 1's traffic switch and item 3's auto-continue choice. */
+const CODE_TAB: { readonly [K in SessionKind]: boolean } = {
+  interactive: false,
+  'desktop-code-tab': true,
+  'desktop-other': false,
   'non-interactive': false,
   background: false,
   'remote-control': false,
@@ -25,7 +46,10 @@ const SESSION_PAUSES: { readonly [K in SessionKind]: boolean } = {
 export const NO_WAIT_CAUSES = [
   'session-not-interactive',
   'no-subscription',
+  'usage-based-billing',
+  'nonessential-traffic-off',
   'auto-continue-off',
+  'code-tab-auto-continue-off',
   'reset-too-far',
   'waited-twice',
   'old-release',
@@ -42,8 +66,16 @@ export interface UsageLimitFacts {
   readonly session: SessionKind;
   /** Signed in with a claude.ai subscription. */
   readonly subscription: boolean;
+  /** The subscription has usage-based billing: the run does not pause (§11.9 item 1). */
+  readonly usageBasedBilling?: boolean;
+  /** `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set: a Code tab session does not pause. */
+  readonly nonessentialTrafficDisabled?: boolean;
   /** `autoContinueAtUsageLimit` is on. */
   readonly autoContinue: boolean;
+  /** The Code tab's session-limit card leaves auto-continue on (the default; item 3). */
+  readonly codeTabAutoContinue?: boolean;
+  /** Managed settings set `autoContinueAtUsageLimit` to `true`, over the Code tab's choice. */
+  readonly managedAutoContinue?: boolean;
   /** Milliseconds until the limit resets. A weekly limit can reset further out. */
   readonly msUntilReset: number;
   /** How many times the run has already waited. */
@@ -64,7 +96,14 @@ export type UsageLimitDecision =
 const CONDITIONS: { readonly [C in NoWaitCause]: (facts: UsageLimitFacts) => boolean } = {
   'session-not-interactive': (facts) => !SESSION_PAUSES[facts.session],
   'no-subscription': (facts) => !facts.subscription,
+  'usage-based-billing': (facts) => facts.usageBasedBilling === true,
+  'nonessential-traffic-off': (facts) =>
+    CODE_TAB[facts.session] && facts.nonessentialTrafficDisabled === true,
   'auto-continue-off': (facts) => !facts.autoContinue,
+  'code-tab-auto-continue-off': (facts) =>
+    CODE_TAB[facts.session] &&
+    facts.codeTabAutoContinue === false &&
+    facts.managedAutoContinue !== true,
   'reset-too-far': (facts) => facts.msUntilReset > DAY_MS,
   'waited-twice': (facts) => facts.waitsSoFar >= MAX_USAGE_WAITS,
   'old-release': (facts) => !facts.releaseHasWait,

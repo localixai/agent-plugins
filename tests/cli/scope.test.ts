@@ -4,8 +4,9 @@
  * command's `--scope` row (the defaults), § plugin enable (the auto-detect order local, project,
  * user; an override at a scope that takes precedence; the refusal at any other scope), § plugin
  * update (local, project, user, then managed) and § claude plugin marketplace commands (their
- * `--scope` has no `-s`). The requirement ids of those sections belong to the commands' own tests;
- * these tests sit outside `spec(...)`.
+ * `--scope` has no `-s`). Spec §17.1.1 "Scopes" (`cli.plugin.claude plugin commands.Scopes`):
+ * `user`, `project`, `local`, `managed` for `update` only, `-s` on the plugin commands, and any other
+ * value a usage error (§17.2.3). The defaults and auto-detection are the commands' own ids.
  */
 import { describe, expect, test } from 'bun:test';
 import {
@@ -15,6 +16,7 @@ import {
   writeScope,
   type ScopedCommand,
 } from '../../src/cli/scope.ts';
+import { spec } from '../support/spec.ts';
 
 describe('the scope a command takes', () => {
   test('install, uninstall, prune and marketplace add default to user', () => {
@@ -32,7 +34,9 @@ describe('the scope a command takes', () => {
   test('marketplace remove without --scope removes from every scope', () => {
     expect(chooseScope('marketplace-remove', undefined)).toEqual({ allScopes: true });
   });
+});
 
+spec('cli.plugin.claude plugin commands.Scopes', () => {
   test('user, project and local are accepted by every command', () => {
     for (const scope of ['user', 'project', 'local'] as const) {
       expect(chooseScope('install', scope)).toEqual({ scope });
@@ -54,7 +58,7 @@ describe('the scope a command takes', () => {
   });
 });
 
-describe('the flag spelling', () => {
+spec('cli.plugin.claude plugin commands.Scopes', () => {
   test('plugin commands take -s, --scope; the marketplace commands take --scope only', () => {
     expect(scopeFlagSpelling('install')).toBe('-s, --scope <scope>');
     expect(scopeFlagSpelling('marketplace-add')).toBe('--scope <scope>');

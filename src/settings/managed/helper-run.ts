@@ -102,7 +102,7 @@ export async function runPolicyHelper(input: HelperRunInput): Promise<HelperRun>
   const result = await host.runner.run({
     spec: { form: 'exec', command: helper.path, args: [] },
     cwd: host.cwd,
-    env: { ...host.env, CLAUDE_CODE_VERSION: host.version },
+    env: { ...host.env, ...host.managedEnv, CLAUDE_CODE_VERSION: host.version },
     timeoutMs: remaining,
     signal,
   });

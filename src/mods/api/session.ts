@@ -50,6 +50,21 @@ const data = (value: unknown, label: string): EventData => {
   return value;
 };
 
+const MESSAGES = '$.session.messages';
+/**
+ * `messages({ last?, after? })` (2.1.330, claude-code/index.d.ts:15081): `last` the newest entries,
+ * 1 to 4,096; `after` a row's `uuid` to read on from; the two are exclusive. Other fields
+ * (`agentId`, `as`) ride on the event as given.
+ */
+const messagesQuery = z
+  .looseObject({
+    last: z.number().int().min(1).max(MOD_LIMITS.messages).optional(),
+    after: z.string().optional(),
+  })
+  .refine((query) => query.last === undefined || query.after === undefined, {
+    message: 'last and after cannot be given together',
+  });
+
 /**
  * `$.session.identity()` answers "to a mod the organization's managed settings install; `{ deny }`
  * to any other. No request is made" (claude-code/index.d.ts:3070): the mods of managed
@@ -66,11 +81,18 @@ export function sessionApi(deps: Deps): ModsNamespaceApi<'session'> {
     async (): Promise<unknown> =>
       call(deps, name, {}, read);
   return {
-    // The newest 4,096 entries (reference.md, "Limits").
-    messages: async () =>
-      call(deps, 'session.messages', {}, async () =>
-        (await session.messages(deps.signal)).slice(-MOD_LIMITS.messages),
-      ),
+    // The newest 4,096 entries (reference.md, "Limits"), or `last` of them; `after` reads on from a row.
+    messages: async (...args) =>
+      call(deps, 'session.messages', parse(MESSAGES, messagesQuery, args[0] ?? {}), async (e) => {
+        const query = parse(MESSAGES, messagesQuery, e);
+        const { last, after } = query;
+        const read = {
+          ...(last === undefined ? {} : { last }),
+          ...(after === undefined ? {} : { after }),
+        };
+        const rows = await session.messages(deps.signal, read);
+        return rows.slice(-(last ?? MOD_LIMITS.messages));
+      }),
     cwd: ask('session.cwd', () => session.cwd()),
     root: ask('session.root', () => session.root()),
     model: ask('session.model', () => session.model()),
@@ -82,6 +104,9 @@ export function sessionApi(deps: Deps): ModsNamespaceApi<'session'> {
     surface: ask('session.surface', async () => (await session.surfaces())[0] ?? null),
     usage: ask('session.usage', () => session.usage()),
     version: ask('session.version', async () => versionOf(await session.version())),
+    // `SessionInfo` (claude-code/index.d.ts:14833) and `SessionMachine` (:14888), the host's.
+    info: ask('session.info', () => deps.ports.sessionFacts.info()),
+    machine: ask('session.machine', () => deps.ports.sessionFacts.machine()),
     compact: async () =>
       // A plugin's compaction is `trigger: 'plugin'` (`SessionCompactTrigger`, claude-code/index.d.ts:11913).
       call(deps, 'session.compact', { trigger: 'plugin' }, () => session.compact(deps.signal)),

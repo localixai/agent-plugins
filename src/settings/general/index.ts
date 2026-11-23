@@ -98,18 +98,9 @@ export {
   type WorktreeConsumer,
   type WorktreeFolderFacts,
 } from './worktree-block.ts';
+export { COMMAND_LINE_KEYS, readCommandLine } from './command-lines.ts';
 export {
-  COMMAND_LINE_KEYS,
-  readCommandLine,
-  readSubagentStatusLine,
-  type SubagentLineRead,
-} from './command-lines.ts';
-export {
-  readSubagentStatusRows,
-  runSubagentStatusLine,
-  subagentStatusLineInput,
-  type SubagentStatusLineInput,
-  type SubagentStatusLineRun,
-  type SubagentStatusTask,
-} from './subagent-status-line.ts';
-export { type PluginDefaults, type PluginWithDefaults } from './plugin-defaults.ts';
+  type PluginDefaults,
+  type PluginDefaultWarning,
+  type PluginWithDefaults,
+} from './plugin-defaults.ts';

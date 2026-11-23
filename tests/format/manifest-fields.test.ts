@@ -1,7 +1,9 @@
 /**
- * plugins/manifest-reference.md § Fields, § Unrecognized fields, § Validate the manifest: every
- * top-level key with its documented type. A key of the wrong type fails validation ("Validation
- * failed: the manifest has a type mismatch"), and the plugin does not load.
+ * plugins/manifest-reference.md § Fields, § Unrecognized fields, § Validate the manifest; spec §2.1
+ * item 3, §2.2 and Judgment J2.6: every top-level key with its documented type. A key of the wrong
+ * type fails validation ("Validation failed: the manifest has a type mismatch"), and the plugin does
+ * not load, except a display field (`$schema`, `displayName`, `description`, `author`, `homepage`,
+ * `repository`, `license`, `keywords`), which loading ignores with a `manifest-field-ignored` note.
  */
 import { describe, expect, test } from 'bun:test';
 import { readManifest } from '../../src/format/index.ts';
@@ -13,23 +15,93 @@ const errorsOf = (raw: Record<string, unknown>) =>
 
 /** Each field, a value of its documented type, and a value of another type. */
 const FIELDS: readonly [field: string, valid: unknown, invalid: unknown][] = [
-  ['displayName', 'Deploy Tools', 3],
   ['version', '1.2.0', 1.2],
-  ['description', 'Deployment commands', ['x']],
-  ['repository', 'not even a url', {}],
-  ['license', 'MIT', true],
-  ['keywords', ['deployment', 'ci'], 'deployment'],
-  ['metadata', { catalogId: 'cat-123' }, 'cat-123'],
-  ['icon', './logo.png', 1],
   ['documentationUrl', 'https://example.com/docs', 1],
   ['supportUrl', 'https://example.com/support', 1],
   ['privacyPolicyUrl', 'https://example.com/privacy', 1],
   ['termsOfServiceUrl', 'https://example.com/terms', 1],
   ['defaultEnabled', false, 'yes'],
-  ['settings', { agent: 'reviewer' }, 'reviewer'],
   ['types', './types/index.d.ts', 1],
-  ['$schema', 'https://example.com/schema.json', 1],
 ];
+
+/** The display fields of §2.1 item 3: a wrong type is ignored at load, with a note. */
+const DISPLAY: readonly [field: string, valid: unknown, invalid: unknown][] = [
+  ['$schema', 'https://example.com/schema.json', 1],
+  ['displayName', 'Deploy Tools', 3],
+  ['description', 'Deployment commands', ['x']],
+  ['repository', 'not even a url', {}],
+  ['license', 'MIT', true],
+  ['keywords', ['deployment', 'ci'], 'deployment'],
+];
+
+const ignoredNote = (field: string) => ({
+  type: 'manifest-field-ignored' as const,
+  message: `"${field}" in plugin.json is malformed and ignored. Earlier versions of Claude Code refused this plugin`,
+});
+
+for (const [field, valid, invalid] of DISPLAY) {
+  spec(`manifest.field.${field}`, () => {
+    test('accepts a value of the documented type', () => {
+      expect(errorsOf({ [field]: valid })).toEqual([]);
+      expect(loads({ [field]: valid }).manifest).toMatchObject({ [field]: valid });
+      expect(loads({ [field]: valid }).notes).toEqual([]);
+    });
+    test('a value of another type is ignored with a note, and the plugin loads', () => {
+      const result = loads({ [field]: invalid });
+      expect(result.manifest).toEqual({ name: 'demo' });
+      expect(errorsOf({ [field]: invalid })).toEqual([]);
+      expect(result.notes).toEqual([ignoredNote(field)]);
+    });
+  });
+}
+
+describe('judgment J2.6: fields a malformed value of which loading ignores without a note', () => {
+  for (const [field, invalid] of [
+    ['metadata', 'cat-123'],
+    ['icon', 1],
+  ] as const) {
+    test(`${field}`, () => {
+      const result = loads({ [field]: invalid });
+      expect(result.manifest).toEqual({ name: 'demo' });
+      expect(result.notes).toEqual([]);
+    });
+  }
+});
+
+spec(['manifest.field.metadata', 'manifest.field.icon'], () => {
+  test('metadata and icon of the documented type load', () => {
+    expect(loads({ metadata: { catalogId: 'cat-123' }, icon: './logo.png' }).manifest).toEqual({
+      name: 'demo',
+      metadata: { catalogId: 'cat-123' },
+      icon: './logo.png',
+    });
+  });
+});
+
+describe('judgment J2.9: the deprecated settings key', () => {
+  test('an object loads; any other type fails, and the plugin does not load', () => {
+    expect(loads({ settings: { agent: 'reviewer' } }).manifest).toMatchObject({
+      settings: { agent: 'reviewer' },
+    });
+    const result = loads({ settings: 'reviewer' });
+    expect(result.manifest).toBeUndefined();
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'error', path: 'settings' }),
+    );
+  });
+});
+
+spec('manifest.field.description', () => {
+  test('two malformed display fields share one note', () => {
+    expect(loads({ description: 5, license: 5 }).notes).toEqual([
+      {
+        type: 'manifest-field-ignored' as const,
+        message:
+          '"description" and "license" in plugin.json are malformed and ignored. Earlier versions of Claude Code refused this plugin',
+      },
+    ]);
+  });
+});
 
 for (const [field, valid, invalid] of FIELDS) {
   spec(`manifest.field.${field}`, () => {
@@ -65,8 +137,12 @@ spec('manifest.field.author', () => {
     const author = { name: 'Example Team', email: 'dev@example.com', url: 'https://example.com' };
     expect(loads({ author }).manifest?.author).toEqual(author);
   });
-  test('an author without a name fails', () => {
-    expect(errorsOf({ author: { email: 'dev@example.com' } })).not.toEqual([]);
+  test('an author without a name, or a string, is ignored with a note', () => {
+    for (const author of [{ email: 'dev@example.com' }, 'Ada <ada@example.com>']) {
+      const result = loads({ author });
+      expect(result.manifest).toEqual({ name: 'demo' });
+      expect(result.notes).toEqual([ignoredNote('author')]);
+    }
   });
 });
 
@@ -76,8 +152,10 @@ spec('manifest.field.homepage', () => {
       'https://example.com/docs',
     );
   });
-  test('a value that does not parse as a URL keeps the plugin from loading', () => {
-    expect(loads({ homepage: 'example dot com' }).manifest).toBeUndefined();
+  test('a value that does not parse as a URL is ignored with a note, and the plugin loads', () => {
+    const result = loads({ homepage: 'example dot com' });
+    expect(result.manifest).toEqual({ name: 'demo' });
+    expect(result.notes).toEqual([ignoredNote('homepage')]);
   });
 });
 
@@ -101,12 +179,12 @@ spec('manifest.field.experimental', () => {
     expect(loads({ experimental }).manifest?.experimental).toEqual(experimental);
   });
 
-  test('is an object: any other type fails, and the plugin does not load', () => {
+  test('is an object: any other type is ignored with a warning, and the plugin loads (J2.6)', () => {
     for (const experimental of ['themes', 1, ['themes'], null]) {
       const result = loads({ experimental });
-      expect(result.manifest, JSON.stringify(experimental)).toBeUndefined();
+      expect(result.manifest, JSON.stringify(experimental)).toEqual({ name: 'demo' });
       expect(result.issues).toContainEqual(
-        expect.objectContaining({ severity: 'error', path: 'experimental' }),
+        expect.objectContaining({ severity: 'warning', path: 'experimental' }),
       );
     }
   });

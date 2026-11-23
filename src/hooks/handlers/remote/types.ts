@@ -24,7 +24,16 @@ export interface McpRun {
   readonly kind: 'mcp';
   readonly isError: boolean;
   readonly text: string;
+  /**
+   * The client could not read the answer (hooks.md, "How the tool's result is read", 2.1.330): the
+   * server's message was too large, or the result came without its text. `text` is then the hook
+   * error, and the hook gives no verdict.
+   */
+  readonly unreadable?: McpUnreadable;
 }
+
+/** Why an `mcp_tool` hook's answer could not be read: the port failure kinds of `McpCaller.callTool`. */
+export type McpUnreadable = 'message-too-large' | 'missing-text';
 
 /** The model's verdict, validated against the response schema (hooks.md, "Response schema"). */
 export interface ModelRun {

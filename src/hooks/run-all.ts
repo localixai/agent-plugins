@@ -166,6 +166,7 @@ export async function runAll<E extends HookEvent>(
       effectsIgnored: selection.monitor.get(entry)?.effectsApply === false,
       gitBashMissing: config.windows && config.defaultShell === 'powershell',
       teammateStopped: request.taskCompletedBy === 'teammate-turn',
+      fromCode: request.fromCode === true,
     });
     return settled(request, config, {
       ...verdict,

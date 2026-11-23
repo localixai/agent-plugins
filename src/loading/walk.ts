@@ -173,11 +173,11 @@ async function scanNested(
  * (the plugin root, named after the plugin: judgment, the frontmatter `name` decides the rest);
  * otherwise each child folder with a `SKILL.md` is a skill.
  */
-const skills: Walker = async (context, path, stat, declared) => {
+const skills: Walker = async (context, path, stat) => {
   if (!stat.isDirectory) return { found: [], issues: [] };
   const own = await holdsSkill(context, path);
-  // Oracle 2.1.319: the default `skills/` folder is only a parent, a `SKILL.md` directly in it is no skill.
-  if (own && (declared || path === '.')) {
+  // J4.2 (oracle 2.1.330): a `SKILL.md` directly in the default `skills/` makes it the one skill too.
+  if (own) {
     const name = path === '.' ? context.pluginName : baseName(path);
     const skill = {
       path: childPath(path, SKILL_FILE),

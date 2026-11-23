@@ -1,5 +1,5 @@
 /**
- * sub-agents.md § Available tools: the first filter removes eight tools from every subagent "even
+ * sub-agents.md § Available tools: the first filter removes nine tools from every subagent "even
  * when listed in the `tools` field", each with its own condition (`Agent` at the depth limit,
  * `ExitPlanMode` unless the subagent's `permissionMode` is `plan`); § Restrict which tools a
  * subagent can use: the MCP server entries of `disallowedTools` (`mcp__github`, `mcp__github__*`,
@@ -49,6 +49,20 @@ spec('agents.behavior.Available tools.ScheduleWakeup', () => {
   test('ScheduleWakeup is not inherited either', () => {
     expect(names({})).not.toContain('ScheduleWakeup');
     expect(listed('ScheduleWakeup')).toEqual(['Read']);
+  });
+});
+
+spec('agents.behavior.Available tools.propose_skills', () => {
+  test('propose_skills is withheld from every subagent, foreground or background, even when listed', () => {
+    expect(names({})).not.toContain('propose_skills');
+    expect(listed('propose_skills')).toEqual(['Read']);
+    expect(listed('propose_skills', background())).toEqual(['Read']);
+  });
+
+  test('a subagent that lists propose_skills alone is refused, naming it not available to subagents', () => {
+    const outcome = resolve({ tools: ['propose_skills'] });
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.refusal.notAvailableToSubagents).toEqual(['propose_skills']);
   });
 });
 

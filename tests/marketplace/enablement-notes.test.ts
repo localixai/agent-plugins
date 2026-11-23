@@ -72,6 +72,8 @@ const facts = (overrides: Partial<EnabledFacts> = {}): EnabledFacts => ({
   installed: false,
   relativePath: false,
   seeded: false,
+  marketplaceOnMachine: 'remote',
+  moment: 'session-start',
   ...overrides,
 });
 
@@ -106,10 +108,36 @@ spec('install.loading.Enabled in project settings but not installed', () => {
     expect(decision.error?.message).toContain("isn't installed here");
   });
 
-  test('a relative-path entry needs no install record: it loads from the marketplace itself', () => {
+  test('a relative-path entry of a marketplace added from a local path loads at session start, with no install record', () => {
+    expect(
+      decideEnabledFetch(facts({ relativePath: true, marketplaceOnMachine: 'local-path' })),
+    ).toEqual({ fetch: false, inPlace: true });
+  });
+
+  test('a relative-path entry of a git marketplace does not load at session start: it is not installed here', () => {
     expect(decideEnabledFetch(facts({ relativePath: true }))).toEqual({
       fetch: false,
-      inPlace: true,
+      inPlace: false,
+      error: enabledNotInstalled('formatter', 'acme'),
+    });
+  });
+
+  test.each(['reload', 'sync-print'] as const)(
+    'a relative-path entry of a git marketplace loads for this session only on %s',
+    (moment) => {
+      expect(decideEnabledFetch(facts({ relativePath: true, moment }))).toEqual({
+        fetch: false,
+        inPlace: true,
+        sessionOnly: true,
+      });
+    },
+  );
+
+  test('with its marketplace not on the machine there is no Errors tab entry: the user adds the marketplace first', () => {
+    expect(decideEnabledFetch(facts({ marketplaceOnMachine: 'absent' }))).toEqual({
+      fetch: false,
+      inPlace: false,
+      addMarketplaceFirst: true,
     });
   });
 
@@ -133,12 +161,12 @@ spec('install.loading.Enabled in project settings but not installed', () => {
 });
 
 spec(
-  `install.troubleshooting.Plugin "<name>" is enabled in project settings but isn't installed here`,
+  `install.troubleshooting.Plugin "<name>" is on in project settings but isn't installed here`,
   () => {
     test('the entry appears for a plugin the project enables, with the install guidance', () => {
       const error = decideEnabledFetch(facts()).error;
       expect(error?.message).toBe(
-        `Plugin "formatter" is enabled in project settings but isn't installed here`,
+        `Plugin "formatter" is on in project settings but isn't installed here`,
       );
       expect(error?.guidance).toBe(
         'Run claude plugin install formatter@acme --scope project to install it for this project',

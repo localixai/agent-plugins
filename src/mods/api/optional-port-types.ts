@@ -12,26 +12,53 @@ export interface ModAudio {
    * loop plays until it aborts), the caller's own or the call's.
    */
   play(request: EventData, signal?: AbortSignal): Promise<void>;
-  speak(text: string): Promise<void>;
+  /** Speaks `text` in `voice` when given; `signal` stops the utterance, the caller's own or the call's. */
+  speak(
+    text: string,
+    options?: { readonly voice?: string; readonly signal?: AbortSignal },
+  ): Promise<void>;
+}
+
+/** How a surface frosts its panels over a scene, defaults filled in, or `false` where they stay as they are. */
+export type BackdropGlass =
+  | { readonly blur: number; readonly tint?: string; readonly opacity: number }
+  | false;
+
+/**
+ * The session's backdrop (`ThemeBackdrop`, claude-code/index.d.ts:16859): a scene the mod's
+ * `Backdrop` hook draws, with its glass, or a still ground no hook draws, `{ color }`,
+ * `{ gradient }` or `{ vector }` (`ThemeGround`, :17128), passed to the surface as given.
+ */
+export type ThemeBackdrop =
+  | { readonly scene: string; readonly glass: BackdropGlass }
+  | { readonly color: string }
+  | { readonly gradient: Readonly<Record<string, unknown>> }
+  | { readonly vector: Readonly<Record<string, unknown>> };
+
+/**
+ * The session's one theme (Agent Plugins Extended §10.25.6 item 3): what the last `$.theme.set`
+ * gave, and `plugin`, the mod that set it. `colors`, `sound` and `style` are the Desktop app's,
+ * passed as given (J10.113).
+ */
+export interface SessionTheme {
+  readonly plugin: string;
+  readonly backdrop?: ThemeBackdrop;
+  /** Overrides the user's light or dark mode, so a surface draws its own text to suit. */
+  readonly overrideColorScheme?: 'light' | 'dark';
+  readonly colors?: Readonly<Record<string, unknown>>;
+  readonly sound?: Readonly<Record<string, unknown>>;
+  readonly style?: Readonly<Record<string, unknown>>;
 }
 
 /**
- * The session's backdrop, as the `Backdrop` render site's props (reference.md, "Render sites"):
- * the fields `$.theme.set` was given and `plugin`, the mod that set it.
+ * The `Backdrop` render site's props (reference.md, "Render sites"): the scene, the mod that set
+ * it, its glass with the defaults filled in or `false`, and `overrideColorScheme` when given.
  */
 export interface SessionBackdrop {
-  readonly id: string;
+  readonly scene: string;
   readonly plugin: string;
-  /** Whether the drawing is light or dark. */
-  readonly colorScheme?: 'light' | 'dark';
-  /**
-   * How the surface frosts its panels over the drawing, defaults filled in (`blur` 16, `opacity`
-   * 0.6), or `false` where they stay as they are (`RenderPropsOf` `Backdrop`, claude-code/index.d.ts:11396).
-   * `$.theme.set` always fills it; a backdrop a host builds without it draws with the default glass.
-   */
-  readonly glass?:
-    | { readonly blur: number; readonly tint?: string; readonly opacity: number }
-    | false;
+  readonly glass?: BackdropGlass;
+  readonly overrideColorScheme?: 'light' | 'dark';
 }
 
 /** What `$.theme.set` resolves to (interface.md, "Put a backdrop behind the conversation"). */
@@ -46,8 +73,11 @@ export interface ModTheme {
    * backdrops; otherwise `isDrawn: false` and the reason, such as no such app being connected.
    */
   drawn(): Promise<BackdropDrawn>;
-  /** The session's backdrop is now `backdrop`, or none: the apps draw it at the `Backdrop` site, or take it off. */
-  changed(backdrop: SessionBackdrop | undefined): void;
+  /**
+   * The session's theme is now `theme`, or none: the apps paint it, raising the `Backdrop` site for
+   * a scene (`sceneBackdrop` gives its props), or take it off.
+   */
+  changed(theme: SessionTheme | undefined): void;
 }
 /**
  * How the session is signed in (`SessionIdentity`, claude-code/index.d.ts:12152): `kind`
@@ -60,6 +90,8 @@ export interface SessionIdentity {
   readonly organizationId?: string;
   readonly organizationType?: string;
   readonly email?: string;
+  /** The email of the account the session's context belongs to, where the host tells it (2.1.330). */
+  readonly contextEmail?: string;
   readonly isVerified: boolean;
 }
 

@@ -1,15 +1,17 @@
 /**
- * plugins/mods/events.md § Filter which events a hook handles and § Filter a `tool.check` hook by
- * whether the call is read-only. Each test is the docs' own example.
+ * Spec §10.13.3, "Matchers and patterns" (plugins/mods/events.md § Filter which events a hook
+ * handles), and § Filter a `tool.check` hook by whether the call is read-only. Each test is the docs'
+ * own example. The 2.1.330 spec states the matcher rules without a requirement id of their own, so
+ * those tests run outside `spec(...)` (E3).
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { EVENT_RULES } from '../../../src/mods/events/index.ts';
 import { fn, harness, record, type Ev } from '../../support/mods-chain.ts';
 import { spec } from '../../support/spec.ts';
 
 const typed = () => harness([EVENT_RULES]);
 
-spec('mods.events.Filter which events a hook handles', () => {
+describe('matchers (spec §10.13.3)', () => {
   /** The documented example: the same function registered three times, each for a narrower set of tools. */
   async function callsSeen(tools: readonly string[]): Promise<string[]> {
     const h = typed();

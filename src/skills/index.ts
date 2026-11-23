@@ -157,6 +157,7 @@ export {
   type ReferenceBase,
 } from './file-references.ts';
 export { findInjections, type Injection, type InjectionKind } from './shell-scan.ts';
+export { looksLikeBareRepository } from './bare-repository.ts';
 export {
   runInjections,
   type InjectionContext,

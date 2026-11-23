@@ -6,7 +6,7 @@
  * local marketplace the file must be inside that marketplace too. The same sentence reads
  * `commands path escapes plugin directory: <path>` for a declared path.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { loadPlugin } from '../../src/index.ts';
 import { json, messagesOf } from '../support/plugin-folder.ts';
 import { memoryFiles } from '../support/ports.ts';
@@ -53,7 +53,8 @@ spec('cli.errors.Path escapes plugin directory.monitors/monitors.json', () => {
   });
 });
 
-spec('cli.errors.Path escapes plugin directory.settings.json', () => {
+/** Spec §17.18.2 and J1.3: the 2.1.330 docs no longer list a root `settings.json`; it still loads. */
+describe('judgment J1.3: a root settings.json that escapes', () => {
   test('is reported by its full path under `settings`', async () => {
     expect(await issuesOf('settings.json')).toContain(message('settings', 'settings.json'));
   });

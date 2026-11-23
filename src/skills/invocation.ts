@@ -87,9 +87,10 @@ const DENIAL_CLAUSE: { readonly [R in DenialReason]: string } = {
 };
 
 /**
- * What the refused party is told. Judgment (spec/judgments.md): the docs say Claude "is told ... not
- * to reproduce the deploy steps another way", so it suggests `/deploy`, and that the `skillOverrides`
- * error is returned, but they quote neither text. A scheduled fire withheld from a skill "reaches
+ * What the refused party is told. Judgment (spec/judgments.md): the refusal of Claude's call carries
+ * no fixed text (spec J4.30): the docs say only that the call is blocked and that Claude is expected
+ * to suggest the user run the command, so the kit's text asks it to, and keeps telling it not to
+ * carry out the steps another way; the `skillOverrides` error is returned, its text not quoted. A scheduled fire withheld from a skill "reaches
  * Claude as plain text instead of executing" (scheduled-tasks.md), so its text says that; a preload
  * is simply not injected.
  */

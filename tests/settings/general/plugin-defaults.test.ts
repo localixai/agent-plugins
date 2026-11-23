@@ -1,10 +1,13 @@
 /**
- * plugins/components.md § Default settings ("Two keys take effect, `agent` and `subagentStatusLine`";
- * the three rules for a key set in more than one place: File over manifest, User settings over plugin
- * defaults, Two plugins set the same key; "`claude --debug` logs `overrides setting`").
+ * Spec §12.6, Plugin default settings, a deprecated feature: "Only `agent` takes effect"; the rules
+ * the 2.1.321 documentation stated (File over manifest, User settings over plugin defaults, Two
+ * plugins set the key, "`claude --debug` logs `overrides setting`") stay in force (Judgment J12.14),
+ * so they are tested as judgments; the startup deprecation warning (§12.6 item 2). §12.7.1 `agent`:
+ * "Any file; deprecated plugin default".
  */
 import { describe, expect, test } from 'bun:test';
 import { loadPlugin } from '../../../src/index.ts';
+import { PLUGIN_AGENT_DEPRECATED } from '../../../src/format/plugin-settings.ts';
 
 import { hooksFile, json } from '../../support/plugin-folder.ts';
 import { memoryFiles } from '../../support/ports.ts';
@@ -20,17 +23,14 @@ const load = async (tree: Record<string, string>) => {
   return plugin?.settings ?? {};
 };
 
-spec('settings.components.Default settings.File over manifest', () => {
+describe('file over manifest (spec §12.6 item 3, Judgments J12.10, J12.14)', () => {
   const manifest = (settings: unknown) => ({
     '.claude-plugin/plugin.json': json({ name: 'p', settings }),
   });
 
-  test('when both exist and settings.json sets at least one supported key, settings.json applies and the manifest settings is ignored', async () => {
+  test('when both exist and settings.json sets a valid agent, settings.json applies and the manifest settings is ignored', async () => {
     const settings = await load({
-      ...manifest({
-        agent: 'from-manifest',
-        subagentStatusLine: { type: 'command', command: 'm' },
-      }),
+      ...manifest({ agent: 'from-manifest' }),
       'settings.json': json({ agent: 'from-file' }),
     });
     expect(settings).toEqual({ agent: 'from-file' });
@@ -53,16 +53,27 @@ spec('settings.components.Default settings.File over manifest', () => {
     });
   });
 
-  test('keys of the manifest are never mixed into the file: a key only the manifest sets is dropped', async () => {
+  test('a settings.json that holds only subagentStatusLine sets no supported key: the manifest applies', async () => {
     const settings = await load({
-      ...manifest({ subagentStatusLine: { type: 'command', command: 'm' } }),
-      'settings.json': json({ agent: 'from-file' }),
+      ...manifest({ agent: 'from-manifest' }),
+      'settings.json': json({ subagentStatusLine: { type: 'command', command: 'f' } }),
     });
-    expect(settings.subagentStatusLine).toBeUndefined();
+    expect(settings).toEqual({ agent: 'from-manifest' });
+  });
+
+  test('subagentStatusLine never applies from a plugin, in the file or the manifest', async () => {
+    const line = { type: 'command', command: 'm' };
+    expect(await load(manifest({ subagentStatusLine: line }))).toEqual({});
+    expect(
+      await load({
+        'settings.json': json({ subagentStatusLine: line }),
+        'hooks/hooks.json': hooksFile('x'),
+      }),
+    ).toEqual({});
   });
 });
 
-spec('settings.components.Default settings.User settings over plugin defaults', () => {
+spec('settings.key.agent', () => {
   const defaults = pluginDefaultsOf([{ name: 'p', settings: { agent: 'plugin-agent' } }]);
 
   test('plugin defaults apply when no settings source sets the key, naming the plugin', () => {
@@ -90,19 +101,6 @@ spec('settings.components.Default settings.User settings over plugin defaults', 
     }
   });
 
-  test('the same holds for subagentStatusLine', () => {
-    const line = { type: 'command', command: 'plugin' } as const;
-    const withLine = pluginDefaultsOf([{ name: 'p', settings: { subagentStatusLine: line } }]);
-    expect(valueWithPluginDefaults(viewOf(), 'subagentStatusLine', withLine)?.value).toEqual(line);
-    expect(
-      valueWithPluginDefaults(
-        viewOf(['user', { subagentStatusLine: { type: 'command', command: 'mine' } }]),
-        'subagentStatusLine',
-        withLine,
-      ),
-    ).toEqual({ value: { type: 'command', command: 'mine' } });
-  });
-
   test('a key a source holds with an invalid value is dropped on read, so the plugin default shows through', () => {
     expect(valueWithPluginDefaults(viewOf(['user', { agent: 3 }]), 'agent', defaults)?.value).toBe(
       'plugin-agent',
@@ -110,7 +108,7 @@ spec('settings.components.Default settings.User settings over plugin defaults', 
   });
 });
 
-spec('settings.components.Default settings.Two plugins set the same key', () => {
+describe('two plugins set the key (spec §12.6 item 5, Judgments J12.11, J12.12, J12.14)', () => {
   test('the value from the plugin loaded last applies', () => {
     const defaults = pluginDefaultsOf([
       { name: 'first', settings: { agent: 'a' } },
@@ -118,19 +116,6 @@ spec('settings.components.Default settings.Two plugins set the same key', () => 
     ]);
     expect(defaults.settings).toEqual({ agent: 'b' });
     expect(valueWithPluginDefaults(viewOf(), 'agent', defaults)?.plugin?.name).toBe('second');
-  });
-
-  test('the other key still comes from the plugin that set it', () => {
-    const line = { type: 'command', command: 'x' } as const;
-    const defaults = pluginDefaultsOf([
-      { name: 'first', settings: { agent: 'a', subagentStatusLine: line } },
-      { name: 'second', settings: { agent: 'b' } },
-    ]);
-    expect(defaults.settings).toEqual({ agent: 'b', subagentStatusLine: line });
-    expect([defaults.owners.agent?.name, defaults.owners.subagentStatusLine?.name]).toEqual([
-      'second',
-      'first',
-    ]);
   });
 
   describe('claude --debug logs overrides setting', () => {
@@ -150,10 +135,9 @@ spec('settings.components.Default settings.Two plugins set the same key', () => 
     });
 
     test('no line when no plugin overrides another', () => {
-      const line = { type: 'command', command: 'x' } as const;
       const defaults = pluginDefaultsOf([
         { name: 'first', settings: { agent: 'a' } },
-        { name: 'second', settings: { subagentStatusLine: line } },
+        { name: 'second', settings: {} },
       ]);
       expect(defaults.debug).toEqual([]);
     });
@@ -164,6 +148,7 @@ spec('settings.components.Default settings.Two plugins set the same key', () => 
       settings: {},
       owners: {},
       debug: [],
+      warnings: [],
     });
   });
 
@@ -176,5 +161,30 @@ spec('settings.components.Default settings.Two plugins set the same key', () => 
       expect(pluginDefaultsOf(plugins).settings.agent).toBe('2');
       expect(pluginDefaultsOf(plugins.toReversed()).settings.agent).toBe('1');
     });
+  });
+});
+
+describe('the startup deprecation warning (spec §12.6 item 2, Judgment J12.14)', () => {
+  test('one warning per enabled plugin that sets agent, in load order, with the validator text', () => {
+    const first = { name: 'first', settings: { agent: 'a' } };
+    const second = { name: 'second', settings: { agent: 'b' } };
+    const defaults = pluginDefaultsOf([first, { name: 'none', settings: {} }, second]);
+    expect(defaults.warnings).toEqual([
+      { plugin: first, message: PLUGIN_AGENT_DEPRECATED },
+      { plugin: second, message: PLUGIN_AGENT_DEPRECATED },
+    ]);
+    expect(PLUGIN_AGENT_DEPRECATED).toBe(
+      "A plugin's `agent` setting is deprecated and will stop applying in a future release. Tell people to set `agent` in their own settings or pass --agent.",
+    );
+  });
+
+  test('the warning is given even when a settings source overrides the plugin', () => {
+    const defaults = pluginDefaultsOf([{ name: 'p', settings: { agent: 'plugin-agent' } }]);
+    expect(valueWithPluginDefaults(viewOf(['user', { agent: 'mine' }]), 'agent', defaults)).toEqual(
+      {
+        value: 'mine',
+      },
+    );
+    expect(defaults.warnings).toHaveLength(1);
   });
 });

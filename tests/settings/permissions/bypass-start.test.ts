@@ -131,3 +131,16 @@ spec('permissions.modes.Bypass permissions ignored in a background session', () 
     ]);
   });
 });
+
+spec('permissions.modes.Restricted mode refuses bypassPermissions', () => {
+  // permission-modes.md (2.1.330), Agent Plugins Extended §13.9.6 item 2: the error, verbatim.
+  test('a bypass start under --restricted is refused with the documented error', () => {
+    const start = permissionsOf([]).startingMode(
+      terminal({ dangerouslySkipPermissions: true, restricted: true }),
+    );
+    expect(start).toEqual({
+      outcome: 'refused',
+      reason: 'Error: bypassPermissions not supported in restricted mode',
+    });
+  });
+});

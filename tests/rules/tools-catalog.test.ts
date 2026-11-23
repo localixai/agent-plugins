@@ -17,9 +17,9 @@ const warnings = (text: string, behavior: 'deny' | 'ask' = 'deny') =>
   ruleIssues([parsed(text, behavior)], KNOWN_TOOLS);
 
 describe('the table copied into the tests lists the documented tools', () => {
-  test('46 rows, the names of DOCUMENTED_TOOLS in the table order', () => {
+  test('53 rows, the names of DOCUMENTED_TOOLS in the table order', () => {
     expect(TOOL_TABLE.map((row) => row.tool)).toEqual([...DOCUMENTED_TOOLS]);
-    expect(TOOL_TABLE).toHaveLength(46);
+    expect(TOOL_TABLE).toHaveLength(53);
   });
 });
 
@@ -37,11 +37,13 @@ for (const { tool } of TOOL_TABLE) {
       expect(isKnownTool(tool)).toBe(!removed);
     });
 
-    test(`a misspelling of ${tool} is a typo, a label is not its name`, () => {
+    // permissions.md § Tool name wildcards: a name holding `_` (`propose_skills`) is exempt.
+    const exempt = tool.includes('_');
+    test(`a misspelling of ${tool} is ${exempt ? 'exempt, as its name holds "_"' : 'a typo'}`, () => {
       const typo = `${tool}x`;
-      expect(warnings(typo)).toHaveLength(1);
-      expect(warnings(typo)[0]?.message).toContain(`"${typo}" matches no known tool`);
-      expect(warnings(typo, 'ask')).toHaveLength(1);
+      expect(warnings(typo)).toHaveLength(exempt ? 0 : 1);
+      if (!exempt) expect(warnings(typo)[0]?.message).toContain(`"${typo}" matches no known tool`);
+      expect(warnings(typo, 'ask')).toHaveLength(exempt ? 0 : 1);
     });
   });
 }

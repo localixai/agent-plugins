@@ -38,7 +38,6 @@ export const GENERAL_KEYS = [
   'sandbox.network.allowedDomains',
   'spinnerTipsEnabled',
   'statusLine',
-  'subagentStatusLine',
   'teammateMode',
   'theme',
   'worktree',
@@ -57,7 +56,6 @@ export interface GeneralValues {
   readonly outputStyle: Settings['outputStyle'];
   readonly processWrapper: Settings['processWrapper'];
   readonly statusLine: Settings['statusLine'];
-  readonly subagentStatusLine: Settings['subagentStatusLine'];
   readonly teammateMode: Settings['teammateMode'];
   readonly theme: Settings['theme'];
   readonly 'worktree.location': NonNullable<Settings['worktree']>['location'];

@@ -68,10 +68,14 @@ export function ledEntry(issue: PluginIssue, place: LeadPlace): ReportEntry {
   if (!isScanIssue(issue) || issue.rule === undefined || !IN_THE_TABLE[issue.code]) {
     return { path: issue.path, message: issue.message };
   }
+  return ledRule(place, issue.line ?? 1, issue.rule);
+}
+
+/** A rule of the table broken at `line` of the module, printed with the lead and the reminder. */
+export function ledRule(place: LeadPlace, line: number, rule: string): ReportEntry {
   const file = `${place.root.replace(/\/+$/, '')}/${place.entry}`;
-  const line = String(issue.line ?? 1);
   return {
     path: `modules.${place.written}`,
-    message: `${lastSegment(place.root)}: ${file}:${line}: ${issue.rule}; ${REMINDER}`,
+    message: `${lastSegment(place.root)}: ${file}:${String(line)}: ${rule}; ${REMINDER}`,
   };
 }

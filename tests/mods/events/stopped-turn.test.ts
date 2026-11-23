@@ -1,6 +1,7 @@
 /**
- * A turn that was stopped, and a call whose input a hook changed. plugins/mods/troubleshoot.md §
- * `Stopped: type a message to continue; a mod cannot resume work after Stop` and § `a hook changed this
+ * A turn that was stopped, and a call whose input a hook changed. Spec §10.43.2, `stopped · type a
+ * message to continue` (troubleshoot.md of 2.1.330; the toast's wording before 2.1.330 was `Stopped:
+ * type a message to continue; a mod cannot resume work after Stop`), and § `a hook changed this
  * call's input after the model wrote it`. What the user stops and what a reviewer saw are the host's.
  */
 
@@ -49,32 +50,27 @@ describe('a turn that was stopped', () => {
   const toasts = (s: ReturnType<typeof resuming>['s']) =>
     s.host.ui.toasts.visible().map((toast) => toast.text);
 
-  spec(
-    'mods.troubleshoot.Stopped: type a message to continue; a mod cannot resume work after Stop',
-    () => {
-      test('after the user stops the turn, a mod that starts work on its own is refused and the toast says so', async () => {
-        const { s, submitted, resumer } = resuming();
-        await s.host.load([modPlugin(inline('resumer'), resumer)]);
-        s.host.input.interrupt();
-        await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
-        expect(submitted).toEqual([]);
-        expect(toasts(s)).toEqual([STOPPED_TOAST]);
-        expect(STOPPED_TOAST).toBe(
-          'Stopped: type a message to continue; a mod cannot resume work after Stop',
-        );
-      });
+  spec('mods.troubleshoot.stopped · type a message to continue', () => {
+    test('after the user stops the turn, a mod that starts work on its own is refused and the toast says so', async () => {
+      const { s, submitted, resumer } = resuming();
+      await s.host.load([modPlugin(inline('resumer'), resumer)]);
+      s.host.input.interrupt();
+      await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
+      expect(submitted).toEqual([]);
+      expect(toasts(s)).toEqual([STOPPED_TOAST]);
+      expect(STOPPED_TOAST).toBe('stopped · type a message to continue');
+    });
 
-      test('nothing needs fixing: after the next message the mod can start work again, and no toast appears', async () => {
-        const { s, submitted, resumer } = resuming();
-        await s.host.load([modPlugin(inline('resumer'), resumer)]);
-        s.host.input.interrupt();
-        await s.host.input.userInput();
-        await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
-        expect(submitted).toEqual(['keep going']);
-        expect(toasts(s)).toEqual([]);
-      });
-    },
-  );
+    test('nothing needs fixing: after the next message the mod can start work again, and no toast appears', async () => {
+      const { s, submitted, resumer } = resuming();
+      await s.host.load([modPlugin(inline('resumer'), resumer)]);
+      s.host.input.interrupt();
+      await s.host.input.userInput();
+      await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
+      expect(submitted).toEqual(['keep going']);
+      expect(toasts(s)).toEqual([]);
+    });
+  });
 });
 
 describe('a hook changed the input of a call after the model wrote it', () => {

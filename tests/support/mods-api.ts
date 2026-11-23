@@ -101,6 +101,18 @@ function ports(
     account: { identity: never('account.identity') },
     promptBox: { paint: never('promptBox.paint'), media: never('promptBox.media') },
     notifications: { cancel: never('notifications.cancel') },
+    agentCalls: { call: never('agentCalls.call'), limits: never('agentCalls.limits') },
+    sessionFacts: { info: never('sessionFacts.info'), machine: never('sessionFacts.machine') },
+    hookEnv: { of: never('hookEnv.of') },
+    wasm: { compile: never('wasm.compile') },
+    vcs: {
+      detect: never('vcs.detect'),
+      diff: never('vcs.diff'),
+      isolate: never('vcs.isolate'),
+      list: never('vcs.list'),
+      release: never('vcs.release'),
+      status: never('vcs.status'),
+    },
   };
   return { ...defaults, ...overrides };
 }

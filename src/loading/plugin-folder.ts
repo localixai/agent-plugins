@@ -56,7 +56,8 @@ export interface PluginDirectoryReading {
 /**
  * A folder passed as `--plugin-dir` and the plugins it loads: "Each immediate subfolder that has a
  * `.claude-plugin/plugin.json` manifest then loads as a separate plugin. Everything else in the
- * folder is skipped without an error, including a subfolder that has no manifest."
+ * folder is skipped without an error, including a subfolder that has no manifest", and one whose
+ * name starts with `.` (spec §16.8 item 4).
  */
 export async function readPluginDirectory(
   files: PluginFiles,
@@ -66,8 +67,10 @@ export async function readPluginDirectory(
     return { isFolder: false, plugins: [] };
   const plugins: string[] = [];
   for (const entry of (await listSorted(files, '.', signal)) ?? []) {
+    // A dot-named subfolder is skipped even with a manifest (spec §16.8 item 4, 2.1.330).
     if (
       entry.isDirectory &&
+      !entry.name.startsWith('.') &&
       (await files.exists(`${entry.name}/.claude-plugin/plugin.json`, signal))
     )
       plugins.push(entry.name);

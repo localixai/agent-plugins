@@ -113,13 +113,14 @@ spec('layout.Manifest', () => {
   test('a manifest that fails validation means the plugin does not load, whatever the layout holds', async () => {
     const { plugin, issues } = await load(
       {
-        '.claude-plugin/plugin.json': json({ name: 'p', homepage: 'not a url' }),
+        // `version` is not a display field (J2.6), so a value of the wrong type stops the load.
+        '.claude-plugin/plugin.json': json({ name: 'p', version: 1.2 }),
         'commands/a.md': 'A.',
       },
       'p',
     );
     expect(plugin).toBeUndefined();
-    expect(issues.some((found) => found.severity === 'error' && found.path === 'homepage')).toBe(
+    expect(issues.some((found) => found.severity === 'error' && found.path === 'version')).toBe(
       true,
     );
   });

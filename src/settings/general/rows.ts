@@ -88,7 +88,6 @@ export const GENERAL_SPECS: { readonly [K in GeneralKey]: ValueSpec<GeneralValue
   // "User or managed" (settings-reference.md, `processWrapper`): a repository's file "never" supplies it.
   processWrapper: { scopes: 'userOrManaged', merge: MERGES.highestWins },
   statusLine: { scopes: 'anyAndParent', merge: MERGES.highestWins },
-  subagentStatusLine: { scopes: 'anyAndParent', merge: MERGES.highestWins },
   teammateMode: { scopes: 'anyAndParent', merge: MERGES.highestWins },
   theme: { scopes: 'anyAndParent', merge: MERGES.highestWins },
   // "Any file"; blocks merge by the general rule (the object form of `false` takes the highest file).

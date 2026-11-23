@@ -8,6 +8,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | --- | --- | --- |
 | `Acceptance` | type | "Claude Code shows them the new command and asks them to accept it." |
 | `ACCEPTED_SOURCE_FORMS` | constant | The accepted forms a bare name or hostname is told about (`Invalid marketplace source format`) |
+| `AddDirFacts` | type | The `facts` argument of `addDirReads` |
+| `AddDirFile` | type | One of the two settings files of a `--add-dir` directory |
+| `addDirReads` | function | Which of `enabledPlugins` and `extraKnownMarketplaces` one file of a `--add-dir` directory gives: the file's setting sources must load, and the directory's workspace trust be saved (spec §16.4.6) |
+| `AddDirReads` | type | What `addDirReads` returns |
 | `AddFailure` | type | The `failure` argument of `addFailureMessage` |
 | `addFailureMessage` | function | The line a failed add ends with |
 | `afterBackgroundCheck` | function | "After the check, Claude Code does one of the following." |
@@ -21,7 +25,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `alreadyInstalledAtScope` | function | What `claude plugin install` prints for a plugin already installed at the target scope (exit 0) |
 | `alreadyInstalledGlobally` | function | `/plugin install` refuses a plugin already installed globally: `Plugin '<name>@<marketplace>' is already installed globally. Use '/plugin' to manage existing plugins.` |
 | `answerEffect` | function | What an answer to a plugin hint does |
-| `ANY_CASING_NAMES` | constant | Reserved "in any casing" (requires Claude Code v2.1.275 or later) |
 | `ApplyMoment` | type | When an install takes effect in a session |
 | `ApplyOrigin` | type | Where an install was made: `claude plugin install` in a shell, or the host's own install surface |
 | `applySeeds` | function | The registry after the seeds: every user entry, replaced where a seed declares the same name, and every seed marketplace the user has no entry for |
@@ -154,6 +157,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `enabledNotInstalled` | function | A project's settings enable the plugin, but it was never installed on this machine |
 | `EnabledPlugins` | type | `enabledPlugins` of each scope: the value written for a plugin id, if any |
 | `EnableIssue` | type | One dependency that stops the enable, with what the user can do about it |
+| `EnableMoment` | type | When an enabled plugin is decided: at session start, at `/reload-plugins`, or in a `-p` run with `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` (spec §16.4.2) |
 | `enablePlan` | function | What enabling `id` at `target` does to its dependencies, transitively: the ones installed but disabled are enabled, dependencies first |
 | `EnablePlan` | type | What `enablePlan` returns |
 | `EnableSource` | type | The sources an `enabledPlugins` entry can come from (the table of "Find where a plugin is enabled") |
@@ -168,7 +172,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ErrorsTabEntry` | type | An entry of the `/plugin` **Errors** tab: "Each entry pairs a message with a guidance line." |
 | `escapedPathIssue` | function | The issue that drops the path, or `undefined` when it stays inside the plugin |
 | `FailedPluginDirectory` | type | The `failedDirectories` field of `InitPluginFacts`: a `--plugin-dir`, SDK or synced entry that failed before it had a name |
-| `failedToInstall` | function | The summary the `/plugin` menu closes with when none of the selected plugins installed: `Failed to install: <plugin> (<reason>)` |
+| `failedToInstall` | function | The summary the `/plugin` menu closes with when none of the selected plugins installed: `Couldn't install: <plugin> (<reason>)` |
 | `failedToInstallPlugin` | function | `Failed to install plugin "<name>@<marketplace>": <message>`: the shell's prefix, with the plugin's real name |
 | `failureOnce` | function | The returned function says whether this event and command have not failed yet this session, and remembers that they have |
 | `fetchArchive` | function | Downloads the archive and judges it; the verified zip and its plugin root, or the issue that refuses it |
@@ -268,6 +272,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `InstallSurface` | type | Where an install was typed: `/plugin install` in a session, or `claude plugin install` in a shell |
 | `installWith` | function | What to use to install and manage plugins on the host |
 | `InstallWith` | type | What to use to install and manage plugins on a host |
+| `invalidEntryMessage` | function | Why installing an entry with a malformed display field fails: `This plugin's marketplace entry is invalid: <field>: <problem>[, …]` (spec §15.5.3, J15.15); `undefined` for an entry that installs |
 | `isBlockedHost` | function | True when `hostname` (as `URL.hostname` writes it, IPv6 in brackets) is loopback, link-local or a metadata host |
 | `isCredentialVariable` | function | True for a variable name that looks like a credential, by the pattern or the fixed list |
 | `isEnabled` | function | Whether an installed plugin is on: the value the winning scope writes, else its `defaultEnabled` ( |
@@ -306,6 +311,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `LockfileFacts` | type | The `lockfiles` field of `NodeDepsInput`; What `readLockfile` returns |
 | `LockfileName` | type | One of `LOCKFILE_NAMES` |
 | `lookupPlugin` | function | Installing looks a plugin up by its entry name only |
+| `ManagedLock` | type | The managed `enabledPlugins` entry that dropped a directory copy, carried as `managed_lock` in `plugin_errors` (spec §17.15.2) |
+| `managedTakeBack` | function | Whether to replace a user's marketplace with the one managed settings declare under its name, or the line that says why it stays: `installed_plugins.json` unreadable, or the declared source unreachable (spec §16.31) |
 | `ManifestFact` | type | The `manifests` field of `SessionFacts` |
 | `manifestFailureMessage` | function | The message of a plugin whose manifest is corrupt or invalid |
 | `ManifestProblem` | type | What is wrong with `.claude-plugin/plugin.json` of a plugin that was fetched: not JSON, or JSON that fails the schema |
@@ -325,6 +332,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `MarketplaceLoadStatus` | type | What `extraKnownMarketplaces` does with a source when the marketplace is added: the docs name two that parse and then fail to load |
 | `MarketplaceMetadata` | type | The `metadata` field of `Marketplace` |
 | `marketplaceNameIssues` | function | Every refusal a marketplace's name can draw: `validate`'s and adding or loading's |
+| `MarketplaceOnMachine` | type | How a plugin's marketplace is on the machine at session start: added from a local path, from elsewhere, or absent (spec §16.4.2) |
 | `MarketplaceResult` | type | What `readMarketplace` returns; What `readMarketplaceDirectory` returns |
 | `marketplacesAddedAtStart` | function | The marketplaces Claude Code adds on its own at start |
 | `MarketplaceSource` | type | A marketplace source (`MarketplaceSourceKind`); the `path` of git sources defaults to `.claude-plugin/marketplace.json` |
@@ -349,6 +357,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `NameOrigin` | type | The `where` argument of `loadNameIssues`; The `where` argument of `marketplaceNameIssues` |
 | `namesMarketplace` | function | Whether a `dependencies` item names its marketplace |
 | `nameTheMarketplace` | function | The fix for the lookup that found nothing: name the marketplace, so Claude Code refreshes it first |
+| `NEEDS_ATTENTION` | constant | The group of the **Installed** tab of `/plugin` a removed plugin is listed under (spec §16.21.1) |
 | `nextStep` | function | The next step: the first check that fails, else what to do when the plugin loads with no error and still shows no skills |
 | `NodeDepsFailureCause` | type | Why a plugin's Node dependency install failed |
 | `NodeDepsInput` | type | The `input` argument of `planNodeDepsInstall` |
@@ -361,7 +370,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `NodeDepsSkip` | type | Why a plugin's Node dependency install was skipped |
 | `NodeDepsSkipOf` | type | The skip of one reason, with the fields that reason carries |
 | `NodeDepsSkipReason` | type | The `skipped` field of `TreePlan` |
-| `noMarketplaces` | function | `No plugins available` on the Discover tab, `No marketplaces configured` from the list command: both mean no marketplace is registered, so there is no catalog |
+| `noMarketplaces` | function | `No plugins yet` on the Discover tab, `No marketplaces configured` from the list command: both mean no marketplace is registered, so there is no catalog |
 | `NON_MARKETPLACE_NAMES` | constant | Names Claude Code gives plugins that come from no marketplace, and what each one means |
 | `NormalizedDependency` | type | A dependency with its defaults applied: the marketplace is the declaring one when omitted |
 | `normalizeDependency` | function | Reads one `dependencies` item |
@@ -505,7 +514,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RemotePluginPlan` | type | What `planRemotePlugins` returns |
 | `RemoteState` | type | What the host sees of the remote when the check runs |
 | `RemoteTarget` | type | The `target` argument of `planRemotePlugins` |
-| `REMOVED_STATUS` | constant | The status `/plugin` shows under its **Flagged** heading |
 | `RemovedPlugin` | type | What `removedPlugins` returns |
 | `removedPlugins` | function | The installed plugins a marketplace update removes or renames |
 | `renameNotice` | function | The notice a user sees for `name` in `marketplace`, or nothing when it is current or unknown |
@@ -614,6 +622,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SummaryFacts` | type | The `facts` argument of `installSummary` |
 | `sweepAgedCopies` | function | Lists the root, looks up the age of each dated copy, and removes those that aged out |
 | `SwitchPlan` | type | What `channelSwitch` returns |
+| `TakeBack` | type | What `managedTakeBack` returns |
+| `TakeBackFacts` | type | The `facts` argument of `managedTakeBack` |
 | `TelemetryEvent` | type | One of `PLUGIN_TELEMETRY_EVENTS` |
 | `TelemetryNameFacts` | type | The `facts` argument of `reportedNames` |
 | `toggleDecision` | function | The Enable or Disable auto-update toggle: hidden when the pass is off; refused when a managed entry sets the field |

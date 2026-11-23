@@ -137,7 +137,7 @@ describe('every source is told from the others by its shape', () => {
 });
 
 spec('mcp.source.MCP bundle path', () => {
-  test('hands a .mcpb or .dxt path to the host with the .mcpb-cache folder, rooted at the plugin', async () => {
+  test('hands a .mcpb or .dxt path to the host with the mcpb folder under the plugins root (spec §2.9, 2.1.324)', async () => {
     const bundles = fakeBundles({ 'servers/db.mcpb': bundle('db'), 'old.dxt': bundle('legacy') });
     const { servers, issues } = await collectMcpServers(
       memoryFiles({}),
@@ -148,8 +148,8 @@ spec('mcp.source.MCP bundle path', () => {
     );
     expect(issues).toEqual([]);
     expect(bundles.opens).toEqual([
-      { source: { kind: 'path', path: 'servers/db.mcpb' }, cacheDir: '.mcpb-cache' },
-      { source: { kind: 'path', path: 'old.dxt' }, cacheDir: '.mcpb-cache' },
+      { source: { kind: 'path', path: 'servers/db.mcpb' }, cacheDir: 'mcpb' },
+      { source: { kind: 'path', path: 'old.dxt' }, cacheDir: 'mcpb' },
     ]);
     expect(Object.keys(servers)).toEqual(['db', 'legacy']);
   });
@@ -214,12 +214,12 @@ spec('mcp.source.MCP bundle path', () => {
 });
 
 spec('mcp.source.MCP bundle URL', () => {
-  test('hands an https URL ending in .mcpb to the host with the .mcpb-cache folder', async () => {
+  test('hands an https URL ending in .mcpb to the host with the mcpb folder under the plugins root', async () => {
     const url = 'https://example.com/server.mcpb';
     const bundles = fakeBundles({ [url]: bundle('remote-db') });
     const { servers, issues } = await collectMcpServers(memoryFiles({}), url, { bundles });
     expect(issues).toEqual([]);
-    expect(bundles.opens).toEqual([{ source: { kind: 'url', url }, cacheDir: '.mcpb-cache' }]);
+    expect(bundles.opens).toEqual([{ source: { kind: 'url', url }, cacheDir: 'mcpb' }]);
     expect(Object.keys(servers)).toEqual(['remote-db']);
   });
 

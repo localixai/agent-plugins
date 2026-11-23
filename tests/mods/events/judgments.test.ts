@@ -17,8 +17,12 @@ describe('the event table', () => {
       ...MOD_EVENT_GROUPS.turns,
       ...MOD_EVENT_GROUPS.session,
       ...MOD_EVENT_GROUPS.subagents,
-      // The engine event the declarations add (claude-code/index.d.ts:4416).
+      // The engine events the declarations add (claude-code/index.d.ts of 2.1.330; spec J10.22).
       'prompt.change',
+      'tool.offer',
+      'agent.report',
+      // The backdrop's click: the interface part draws no site for it, so its rule is this part's.
+      'ui.pointer',
     ];
     expect(Object.keys(EVENT_SPECS).toSorted()).toEqual(owned.toSorted());
   });
@@ -73,7 +77,7 @@ describe("eventInputProblem (the kit's own helper: no chain rule calls it, the h
   const misfits: readonly (readonly [string, unknown, string])[] = [
     ['tool.call', { command: 'ls' }, 'tool'],
     ['tool.check', { ...check, isReadOnly: false }, 'isReadOnly'],
-    ['tool.check', { ...check, ceiling: 'deny' }, 'ceiling'],
+    ['tool.check', { ...check, ceiling: 'never' }, 'ceiling'],
     ['tool.check', { tool: 'Bash' }, 'input'],
     ['agent.spawn', { resume: {} }, 'resume'],
     ['session.end', { reason: 'branch' }, 'reason'],

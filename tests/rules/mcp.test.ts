@@ -223,3 +223,43 @@ describe('the Cowork tools (permissions.md § MCP)', () => {
     expect(covers('deny', 'Bash', ...tool('mcp__workspace__other'))).toBe(false);
   });
 });
+
+/** What an MCP allow rule from the command line says of a create_issue call. */
+const verdictOf = (text: string, input: unknown) => {
+  const { rule } = write(text, 'cli', 'allow');
+  return evaluateRules(
+    rule === undefined ? [] : [rule],
+    call('mcp__github__create_issue', input),
+    matchContext,
+  ).behavior;
+};
+
+spec('permissions.behavior.MCP', () => {
+  // 2.1.330 (Agent Plugins Extended §13.7 item 5): "An allow rule for an MCP tool takes no
+  // specifier ...: an MCP allow rule with one matches no call."
+  test('an MCP allow rule with a specifier matches no call, not even the one it names', () => {
+    expect(verdictOf('mcp__github__create_issue(title:Bug*)', { title: 'Bug in parser' })).toBe(
+      undefined,
+    );
+    expect(verdictOf('mcp__github__create_issue(title:Bug*)', { title: 'Feature' })).toBe(
+      undefined,
+    );
+  });
+
+  test('so does one a hook adds with ruleContent (hooks.md, permission update entries)', () => {
+    const { rule } = parseRule('mcp__github__create_issue(title:x)', {
+      behavior: 'allow',
+      source: { kind: 'session' },
+    });
+    const verdict = evaluateRules(
+      rule === undefined ? [] : [rule],
+      call('mcp__github__create_issue', { title: 'x' }),
+      matchContext,
+    ).behavior;
+    expect(verdict).toBe(undefined);
+  });
+
+  test('without the specifier the allow rule approves every call of the tool', () => {
+    expect(verdictOf('mcp__github__create_issue', { title: 'Feature' })).toBe('allow');
+  });
+});

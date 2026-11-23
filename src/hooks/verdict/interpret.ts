@@ -6,6 +6,7 @@ import { textFactOf } from '../input/fact-read.ts';
 import { deliveryOf } from './background.ts';
 import { interpretExited } from './exited.ts';
 import { interpretHttp, interpretHttpFailed } from './http-response.ts';
+import { interpretMcp } from './mcp-answer.ts';
 import { interpretModel, interpretModelFailed } from './model-verdict.ts';
 import { TIMED_OUT, timedOutDiscarded } from './notices.ts';
 import { failureVerdict } from './on-failure.ts';
@@ -90,13 +91,9 @@ const READERS: { readonly [K in RawRun['kind']]: Reader } = {
   })),
   http: readerOf('http', interpretHttp),
   'http-failed': readerOf('http-failed', interpretHttpFailed),
-  // "Claude Code reads the tool's text content the same way it reads command-hook stdout ... If the
-  // tool returns `isError: true`, the hook produces a non-blocking error and execution continues."
-  mcp: readerOf('mcp', (subject, run) =>
-    run.isError
-      ? failureVerdict(subject, { cause: 'tool-error', text: run.text, detail: run.text })
-      : interpretExited(subject, { exitCode: 0, stdout: run.text, stderr: '' }),
-  ),
+  // "Claude Code reads the tool's text content the same way it reads command-hook stdout"; the
+  // failures and `onFailure` are `mcp-answer.ts`.
+  mcp: readerOf('mcp', interpretMcp),
   model: readerOf('model', interpretModel),
   'model-failed': readerOf('model-failed', interpretModelFailed),
 };
@@ -115,6 +112,8 @@ export interface InterpretContext {
   readonly gitBashMissing?: boolean;
   /** `TaskCompleted` fired because a teammate finished its turn. */
   readonly teammateStopped?: boolean;
+  /** `PreToolUse` of a call Code Mode's code made (`DispatchRequest.fromCode`). */
+  readonly fromCode?: boolean;
 }
 
 export function interpretRun(
@@ -132,6 +131,7 @@ export function interpretRun(
     effectsIgnored: context.effectsIgnored === true,
     gitBashMissing: context.gitBashMissing === true,
     teammateStopped: context.teammateStopped === true,
+    fromCode: context.fromCode === true,
   };
   const verdict = READERS[run.kind](subject, run);
   return isRunOf('exited', run) ? { ...verdict, exitCode: run.exitCode } : verdict;

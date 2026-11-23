@@ -7,6 +7,8 @@ import {
 import type { EventRuleBook } from '../types.ts';
 import { treeProblem } from './elements/validate.ts';
 import { bandProblem } from './sites/band.ts';
+import { rowsChangeProblem } from './sites/band-list.ts';
+import { agentRowChangeProblem } from './sites/agent-row.ts';
 import { tableProblem } from './tables.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
@@ -39,6 +41,8 @@ export function uiRules(): EventRuleBook {
         );
       },
       shapeDebug: 'a hook returned a tree that does not validate',
+      changeProblem: (original, changed) =>
+        rowsChangeProblem(original, changed) ?? agentRowChangeProblem(original, changed),
       settle(result) {
         if (typeof result === 'object' && result !== null) inner.add(result);
         return result;

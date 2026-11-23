@@ -47,6 +47,13 @@ export interface ModeStrategy {
   acceptsInScopeWrite(ctx: DecideContext): boolean;
   /** The rules in force in this mode. */
   rules(rules: readonly PermissionRule[], ctx: DecideContext): readonly PermissionRule[];
+  /**
+   * Whether the classifier reviews a `SendMessage` to another agent before delivery (§13.9.4 item
+   * 5): in auto mode, and in plan mode while the classifier reviews commands.
+   */
+  reviewsMessages(ctx: DecideContext): boolean;
+  /** Whether a call Code Mode's code makes runs where the mode would review it: the code was reviewed (§7.6.11.2). */
+  readonly runsCodeCalls: boolean;
 }
 
 /** Manual mode: reads in scope only; everything else asks. The other modes change what they must. */
@@ -64,6 +71,8 @@ const PROMPTING: ModeStrategy = {
   reviewsCommandHosts: false,
   acceptsInScopeWrite: () => false,
   rules: (rules) => rules,
+  reviewsMessages: () => false,
+  runsCodeCalls: false,
 };
 
 /**
@@ -138,6 +147,7 @@ export const MODES: { readonly [M in PermissionMode]: ModeStrategy } = {
     acceptsInScopeWrite: (ctx) => autoInPlan(ctx) || bypassInPlan(ctx),
     modMayApprove: planLifts,
     hookMayAllow: planLifts,
+    reviewsMessages: (ctx) => autoInPlan(ctx) && !bypassInPlan(ctx),
   },
   auto: {
     ...PROMPTING,
@@ -154,6 +164,8 @@ export const MODES: { readonly [M in PermissionMode]: ModeStrategy } = {
     },
     rules: (rules, ctx) =>
       rules.filter((rule) => !isDroppedInAuto(rule, ctx.classifyAllShell === true)),
+    reviewsMessages: () => true,
+    runsCodeCalls: true,
   },
   dontAsk: {
     ...PROMPTING,

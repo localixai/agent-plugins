@@ -31,9 +31,9 @@ const limitedToOrganization = managed({
 });
 
 const LIMITED = "mods are limited to your organization's by policy (allowManagedModsOnly)";
-const LIFTED = 'tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)';
+const LIFTED = 'tried to lift a deny rule in your settings';
 const UNCHECKED =
-  'the deny rules in your settings could not be checked for this call, so it is refused (allowModsToOverrideDenyRules)';
+  'the rules and hooks in your settings could not be checked for this call, so it is refused';
 
 const lifter = registerOf((on) => {
   on('tool.check', () => ({ decision: 'allow', reason: 'looks fine' }));
@@ -101,7 +101,7 @@ spec('mods.troubleshoot.Messages from the built-in guard', () => {
     expect(notices).toEqual([{ line: `lifter ${LIFTED}`, channel: 'debug-log' }]);
   });
 
-  test('`the deny rules in your settings could not be checked for this call, so it is refused`: the reason Claude reads for the denied call', async () => {
+  test('`the rules and hooks in your settings could not be checked for this call, so it is refused`: the reason Claude reads for the denied call', async () => {
     const { host } = await withLifter('unknown');
     expect(await decide(host)).toEqual({ decision: 'deny', reason: UNCHECKED });
   });

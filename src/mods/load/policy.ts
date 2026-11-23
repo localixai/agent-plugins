@@ -30,6 +30,12 @@ export interface ModCandidate {
     readonly marketplaceDirectory?: string;
     /** The marketplace lists the plugin by a relative path, so Claude Code loads it in place. */
     readonly isLoadedInPlace: boolean;
+    /**
+     * Managed `extraKnownMarketplaces` declares the plugin's marketplace: with the plugin's id in a
+     * managed `prependPlugins` or `appendPlugins`, a mod from a remote marketplace counts as the
+     * organization's (§14.9.5, Claude Code 2.1.324 or later).
+     */
+    readonly isMarketplaceManaged?: boolean;
   };
   /** The plugin reaches a cloud session (overview.md, "Where mods run"): only then do its hooks run there. */
   readonly reachesCloudSession?: boolean;
@@ -48,42 +54,76 @@ const isAbsolute = (path: string, platform: 'posix' | 'windows'): boolean =>
   platform === 'windows' ? /^(?:[A-Za-z]:[\\/]|\\\\)/.test(path) : path.startsWith('/');
 
 /**
- * A mod "counts as your organization's" only when managed `enabledPlugins` enables it, managed
- * settings name its marketplace as a directory by absolute path, and the marketplace lists it by
- * a relative path, so it loads in place (admin.md, "Install your organization's mods and set the
- * order"). A plugin copied into Claude Code's cache counts as a user's.
+ * A mod from a directory on the machine counts as the organization's when managed `enabledPlugins`
+ * enables it, managed settings name its marketplace as a directory by absolute path, and the
+ * marketplace lists it by a relative path, so it loads in place (§14.9.5, the second case).
  */
-export function countsAsOrganizations(
-  candidate: ModCandidate,
-  platform: 'posix' | 'windows',
-): boolean {
+function isOrganizationsDirectory(candidate: ModCandidate, platform: 'posix' | 'windows'): boolean {
   const managed = candidate.managed;
-  if (candidate.isBuiltin || managed === undefined) return false;
-  const directory = managed.marketplaceDirectory;
+  const directory = managed?.marketplaceDirectory;
   return (
-    managed.isEnabled &&
+    managed?.isEnabled === true &&
     managed.isLoadedInPlace &&
     directory !== undefined &&
     isAbsolute(directory, platform)
   );
 }
 
+/** Whether a managed `prependPlugins` or `appendPlugins` lists `id`. */
+const managedListNames = (policy: ModsPolicyInput, id: string): boolean =>
+  (['prependPlugins', 'appendPlugins'] as const).some((name) => {
+    const list = listSetting(policy, name);
+    return list?.isManaged === true && list.ids.includes(id);
+  });
+
+/**
+ * A mod from a remote marketplace (a GitHub repository, for one) counts as the organization's when
+ * managed settings enable its plugin, declare the marketplace in `extraKnownMarketplaces` and list the
+ * mod's id in `prependPlugins` or `appendPlugins` (§14.9.5, the first case; Claude Code 2.1.324).
+ */
+function isOrganizationsRemote(candidate: ModCandidate, policy: ModsPolicyInput): boolean {
+  const managed = candidate.managed;
+  return (
+    managed?.isEnabled === true &&
+    managed.isMarketplaceManaged === true &&
+    managedListNames(policy, candidate.id)
+  );
+}
+
+/**
+ * Whether a mod counts as the organization's, in the two cases of §14.9.5 and no other; a plugin
+ * managed settings enable that meets neither counts as a user's.
+ */
+export function countsAsOrganizations(candidate: ModCandidate, policy: ModsPolicyInput): boolean {
+  if (candidate.isBuiltin) return false;
+  return (
+    isOrganizationsDirectory(candidate, policy.platform) || isOrganizationsRemote(candidate, policy)
+  );
+}
+
+/** Why a plugin managed settings enable counts as a user's: the words after `but` are ours (judgment). */
+function whyUsers(managed: NonNullable<ModCandidate['managed']>): string {
+  if (managed.isMarketplaceManaged === true) {
+    return 'no managed prependPlugins or appendPlugins lists it';
+  }
+  return managed.isLoadedInPlace
+    ? 'managed settings name no marketplace directory for it by absolute path'
+    : 'it is copied into the plugin cache and managed settings do not declare its marketplace';
+}
+
 /**
  * The debug line of a plugin managed settings enable whose mod still counts as a user's: it starts
- * with the plugin's id and `is enabled by managed settings, but` (Agent Plugins Extended §14.9.5
- * item 1); the words after `but` are ours (judgment). `undefined` for any other plugin.
+ * with the plugin's id and `is enabled by managed settings, but`, saying why (§14.9.5 item 1).
+ * `undefined` for any other plugin.
  */
 export function managedButUsers(
   candidate: ModCandidate,
-  platform: 'posix' | 'windows',
+  policy: ModsPolicyInput,
 ): string | undefined {
   const { managed } = candidate;
   if (candidate.isBuiltin || managed?.isEnabled !== true) return undefined;
-  if (countsAsOrganizations(candidate, platform)) return undefined;
-  const why = managed.isLoadedInPlace
-    ? 'managed settings name no marketplace directory for it by absolute path'
-    : 'it is copied into the plugin cache, not loaded in place';
-  return `${candidate.id} is enabled by managed settings, but ${why}, so its mod counts as a user's`;
+  if (countsAsOrganizations(candidate, policy)) return undefined;
+  return `${candidate.id} is enabled by managed settings, but ${whyUsers(managed)}, so its mod counts as a user's`;
 }
 
 /** The guard's id in either form `prependPlugins` accepts. */
@@ -151,7 +191,7 @@ function installedRefusal(
 
 /** Where an installed plugin's hooks module runs: the lists in settings, else the organization's before users'. */
 function installedTier(policy: ModsPolicyInput, candidate: ModCandidate): RegisterTier {
-  const isOrganizations = countsAsOrganizations(candidate, policy.platform);
+  const isOrganizations = countsAsOrganizations(candidate, policy);
   const append = listSetting(policy, 'appendPlugins');
   const prepend = listSetting(policy, 'prependPlugins');
   // A list in managed settings names organization mods only: "Claude Code skips an id whose plugin
@@ -184,11 +224,7 @@ export function decideModLoad(policy: ModsPolicyInput, candidate: ModCandidate):
         : { reason: 'the built-in guard loads only where an organization manages Claude Code' }),
     };
   }
-  const reason = installedRefusal(
-    policy,
-    candidate,
-    countsAsOrganizations(candidate, policy.platform),
-  );
+  const reason = installedRefusal(policy, candidate, countsAsOrganizations(candidate, policy));
   const tier = installedTier(policy, candidate);
   return reason === undefined ? { load: true, tier } : { load: false, tier, reason };
 }

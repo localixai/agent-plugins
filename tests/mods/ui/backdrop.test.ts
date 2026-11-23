@@ -1,10 +1,11 @@
 /**
  * The `Backdrop` render site, raised for the session's backdrop.
- * plugins/mods/reference.md § Render sites (`Backdrop`: `e.props` `id`, `plugin`, `glass`,
- * `colorScheme`; `e.requestId` `backdrop`; "`desktop` and `mobile` surfaces. Your hook runs when the
+ * plugins/mods/reference.md § Render sites (`Backdrop`: `e.props` `scene`, `plugin`, `glass`,
+ * `overrideColorScheme`, "Before v2.1.323, `scene` was `id` and `overrideColorScheme` was
+ * `colorScheme`"; `e.requestId` `backdrop`; "`desktop` and `mobile` surfaces. Your hook runs when the
  * Desktop or mobile app asks to draw a backdrop"); plugins/mods/interface.md § Put a backdrop behind
  * the conversation (the example's hook: "This hook runs for every mod's backdrop, and another mod
- * can use the same id", so it checks `e.props.plugin` and `e.props.id`). When the app asks is the
+ * can use the same id", so it checks `e.props.plugin` and `e.props.scene`). When the app asks is the
  * host's: the kit builds the event from the backdrop `$.theme.set` set. What the mobile app draws
  * there is a judgment (tests/mods/ui/mobile.test.ts).
  */
@@ -14,7 +15,7 @@ import { fn } from '../../support/mods-chain.ts';
 import { recordOf, text, uiChain } from '../../support/mods-ui.ts';
 import { spec } from '../../support/spec.ts';
 
-const NIGHT_SKY = { id: 'night-sky', plugin: 'night-sky', colorScheme: 'dark' } as const;
+const NIGHT_SKY = { scene: 'night-sky', plugin: 'night-sky', overrideColorScheme: 'dark' } as const;
 const core = (e: unknown) => Promise.resolve({ type: 'engine', ref: e });
 
 spec('mods.site.Backdrop', () => {
@@ -54,7 +55,7 @@ spec('mods.site.Backdrop', () => {
     h.mod('night-sky', 'user', [
       fn('ui.render', (_$, e, next) => {
         const props = recordOf(e.props);
-        if (props.plugin !== 'night-sky' || props.id !== 'night-sky') return next(e);
+        if (props.plugin !== 'night-sky' || props.scene !== 'night-sky') return next(e);
         return text('Night sky');
       }),
     ]);

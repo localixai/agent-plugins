@@ -65,9 +65,10 @@ export const OUTPUT_CAPS: { readonly [E in HookEvent]: OutputCap } = {
   PostCompact: capOf(['continue', 'systemMessage', 'decision']),
   // "Run for notification and logging purposes only": only `terminalSequence` counts.
   StopFailure: capOf(['continue', 'systemMessage', 'decision', 'specific']),
-  // "continue: false stops the teammate entirely"; no top-level decision.
-  TeammateIdle: capOf(NO_DECISION),
-  TaskCompleted: capOf(NO_DECISION),
+  // 2.1.330: a top-level `decision: "block"` keeps the teammate working or the task open, and
+  // `continue: false` lets the teammate go idle (Agent Plugins Extended §7.5.21, §7.5.24, J7.121).
+  TeammateIdle: capOf([]),
+  TaskCompleted: capOf([]),
   // "Claude Code ignores `continue: false` from this event".
   TaskCreated: capOf(['continue']),
   // "Claude Code acts on the blocking decision ... and discards `systemMessage` and `continue`."

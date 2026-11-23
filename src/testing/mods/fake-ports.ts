@@ -39,6 +39,18 @@ const optionalPorts = (): ModOptionalPorts => ({
   account: { identity: missing('session.identity') },
   promptBox: { paint: missing('prompt.paint'), media: missing('prompt.media') },
   notifications: { cancel: missing('ui.cancelNotify') },
+  agentCalls: { call: missing('agent.call'), limits: missing('agent.limits') },
+  sessionFacts: { info: missing('session.info'), machine: missing('session.machine') },
+  hookEnv: { of: missing(`${PROCESS}.hookEnv`) },
+  wasm: { compile: missing('wasm.compile') },
+  vcs: {
+    detect: missing('vcs.detect'),
+    diff: missing('vcs.diff'),
+    isolate: missing('vcs.isolate'),
+    list: missing('vcs.list'),
+    release: missing('vcs.release'),
+    status: missing('vcs.status'),
+  },
 });
 
 export interface FakePorts {

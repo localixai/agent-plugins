@@ -65,6 +65,11 @@ export interface Exit2Rule {
   readonly stopsTeammate?: boolean;
   /** The event's own exception to blocking (`ConfigChange`: "`policy_settings` changes can't be blocked"). */
   readonly cannotBlockWhen?: (facts: object) => boolean;
+  /**
+   * A failing hook shows no `hook error` notice (2.1.330, Agent Plugins Extended §7.4.1.3 item 2:
+   * "on events such as `Notification`"); the run is still recorded for the debug log.
+   */
+  readonly noFailureNotice?: boolean;
 }
 
 const row = (
@@ -110,7 +115,7 @@ export const EXIT2_RULES: { readonly [E in HookEvent]: Exit2Rule } = {
   PostToolUseFailure: ignored('claude'),
   PostToolBatch: blocks('stops-agentic-loop', 'user-and-claude'),
   PermissionDenied: ignored('discarded'),
-  Notification: ignored('discarded'),
+  Notification: row(false, 'none', 'discarded', { noFailureNotice: true }),
   SubagentStart: ignored('user'),
   SessionStart: ignored('user'),
   Setup: ignored('discarded'),

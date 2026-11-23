@@ -61,11 +61,11 @@ spec('agents.frontmatter.autoCompactWindow', () => {
     expect(result.issues).toEqual([]);
   });
 
-  test.each([100_000, 1_000_000])('%d, an end of the allowed range, is kept', (tokens) => {
+  test.each([100_000, 1_000_000, 5_000_000])('%d is kept: no upper bound (§5.5)', (tokens) => {
     expect(loaded(read(`autoCompactWindow: ${tokens}`)).definition.autoCompactWindow).toBe(tokens);
   });
 
-  test('200k reads as 200, outside the range: the subagent still loads as if the field were absent', () => {
+  test('200k reads as 200, below the minimum: the subagent still loads as if the field were absent', () => {
     const result = read('autoCompactWindow: 200k');
     const agent = loaded(result);
     expect(agent.definition).not.toHaveProperty('autoCompactWindow');
@@ -74,8 +74,8 @@ spec('agents.frontmatter.autoCompactWindow', () => {
     expect(result.issues[0]?.message).toContain('invalid autoCompactWindow');
   });
 
-  test.each([99_999, 1_000_001, 200])(
-    '%d is outside 100000 to 1000000 and is ignored with the same report',
+  test.each([99_999, 200, 0])(
+    '%d is below 100000 and is ignored with the same report',
     (tokens) => {
       const result = read(`autoCompactWindow: ${tokens}`);
       expect(loaded(result).definition).not.toHaveProperty('autoCompactWindow');

@@ -1,5 +1,6 @@
 import {
   BORDER_STYLES,
+  BOX_OVERFLOW_X,
   FLEX_DIRECTIONS,
   SPACING_STEPS,
   type SpacingStep,
@@ -70,11 +71,15 @@ export const BOX: ElementDef = {
     'right',
     'bottom',
     'overflow',
+    'overflowX',
     'display',
     'hover',
   ],
   children: 'any',
-  check: (props) => oneOf('Box', props, 'flexDirection', FLEX_DIRECTIONS) ?? spacingProblem(props),
+  check: (props) =>
+    oneOf('Box', props, 'flexDirection', FLEX_DIRECTIONS) ??
+    oneOf('Box', props, 'overflowX', BOX_OVERFLOW_X) ??
+    spacingProblem(props),
 };
 
 /** Whether `node` is a `Box`. */

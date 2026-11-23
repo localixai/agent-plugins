@@ -35,7 +35,7 @@ describe('top-level decision: block, as the Decision control table lists it', ()
 });
 
 describe.each(['TeammateIdle', 'TaskCompleted'] as const)('%s', (event) => {
-  test('continue: false stops the teammate entirely, and stopReason is shown to the user', () => {
+  test('continue: false lets the teammate go idle, with the stopReason', () => {
     const outcome = merged(event, [{ continue: false, stopReason: 'Build artifact missing' }]);
     expect(outcome.continue).toBe(false);
     expect(outcome.stopReason).toBe('Build artifact missing');
@@ -45,8 +45,11 @@ describe.each(['TeammateIdle', 'TaskCompleted'] as const)('%s', (event) => {
     expect(merged(event, [{}]).continue).toBe(true);
   });
 
-  test('it has no top-level decision: a block is discarded, not acted on', () => {
-    expect(merged(event, [{ decision: 'block', reason: 'r' }]).block).toBeUndefined();
+  test('2.1.330: a top-level decision block holds, with its reason', () => {
+    expect(merged(event, [{ decision: 'block', reason: 'r' }]).block).toMatchObject({
+      via: 'decision',
+      reason: 'r',
+    });
   });
 });
 

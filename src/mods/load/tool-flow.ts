@@ -112,7 +112,21 @@ async function checked(flow: ModToolFlow, call: Call): Promise<ToolDecision> {
   return NEEDS_REVIEW[resolved.decision] ? flow.afterCheck(resolved, call) : resolved;
 }
 
-/** Managed PreToolUse → tool.call → other PreToolUse → tool.check → review/prompt → execution. */
+/**
+ * `tool.run` (spec §10.16.6): the allowed call, in Claude Code's names, before it runs; `next(e)`
+ * runs it. A hook's `{ deny }` is the call's error, read by Claude as the tool's own, so the call
+ * ends as a failed one with the reason as its text (judgment, spec/judgments.md).
+ */
+async function ran(flow: ModToolFlow, call: Call): Promise<unknown> {
+  const naming = namingOf(flow);
+  const output = await flow.host.fire('tool.run', naming.claude(call), {
+    core: () => flow.execute(call),
+  });
+  const denied = ANSWER.safeParse(output);
+  return denied.success ? { isError: true, text: denied.data.deny } : output;
+}
+
+/** Managed PreToolUse → tool.call → other PreToolUse → tool.check → review/prompt → tool.run → execution. */
 export async function runModToolCall(flow: ModToolFlow): Promise<ModToolFlowResult> {
   let succeeded = false;
   const naming = namingOf(flow);
@@ -126,7 +140,7 @@ export async function runModToolCall(flow: ModToolFlow): Promise<ModToolFlowResu
       const decision = await checked(flow, pass.call);
       if (!ALLOWED[decision.decision])
         return { deny: decision.reason ?? 'Permission was not granted' };
-      const output = await flow.execute(pass.call);
+      const output = await ran(flow, pass.call);
       succeeded = !FAILED.safeParse(output).success;
       return output;
     },

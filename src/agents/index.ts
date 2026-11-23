@@ -44,6 +44,7 @@ export {
   forkModeOn,
   mainSessionFirstTurn,
   runsInBackground,
+  spawnerWaitsForNested,
   turnLimitOutcome,
   worktreeDisposition,
   type AutoCompactInput,
@@ -55,11 +56,13 @@ export {
 export {
   resolveSubagentEffort,
   resolveSubagentModel,
+  subagentThinking,
   type ModelSource,
   type SubagentEffortInput,
   type SubagentModel,
   type SubagentModelInput,
 } from './launch-model.ts';
+export { offersSubagentHistory, subagentTaskRow, type SubagentTaskRow } from './task-list.ts';
 export {
   planAgentMemory,
   truncateMemoryIndex,

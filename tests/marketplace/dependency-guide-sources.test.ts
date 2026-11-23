@@ -129,9 +129,9 @@ spec('dependencies.guide.Constrain a dependency that has a non-git source', () =
       plugin('gated', { source: archive, headersHelper: './h.sh' }),
     ]);
 
-    test('the docs name install plus four more, each distinct', () => {
-      expect(DEPENDENCY_INSTALL_OPERATIONS).toHaveLength(5);
-      expect(new Set(DEPENDENCY_INSTALL_OPERATIONS).size).toBe(5);
+    test('the docs name install plus five more, each distinct (§16.24.1)', () => {
+      expect(DEPENDENCY_INSTALL_OPERATIONS).toHaveLength(6);
+      expect(new Set(DEPENDENCY_INSTALL_OPERATIONS).size).toBe(6);
     });
 
     test.each(DEPENDENCY_INSTALL_OPERATIONS)(

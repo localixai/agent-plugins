@@ -12,7 +12,7 @@ import type { FileStat, PluginFiles } from '../ports/index.ts';
 
 /**
  * What stops a plugin before anything of it is read (spec §17.18.3, §17.18.5): its own directory
- * that the system could not check (`plugin path could not be checked: . (<code>)`), and a
+ * that the system could not check (`plugin path couldn't be checked: . (<code>)`), and a
  * `.claude-plugin/plugin.json` the kit cannot confirm is inside the plugin, or for a plugin of a
  * marketplace inside that marketplace: `Plugin not loaded: its manifest <path> was not read,
  * because <reason>`, the reason ending in the error code when the path could not be checked. The

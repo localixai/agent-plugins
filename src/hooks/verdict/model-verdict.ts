@@ -75,4 +75,4 @@ export function interpretModel(subject: Subject, run: ModelRun): HandlerVerdict 
 
 /** The model did not answer, or answered something that is not the response schema. */
 export const interpretModelFailed = (subject: Subject, run: ModelFailedRun): HandlerVerdict =>
-  failureVerdict(subject, { cause: 'tool-error', text: run.message, detail: run.message });
+  failureVerdict(subject, { cause: 'no-decision', text: run.message, detail: run.message });

@@ -22,7 +22,7 @@ const DIRECTORY_LISTING_FIELDS = [
 type ListingField = (typeof DIRECTORY_LISTING_FIELDS)[number];
 
 /** Keys of a manifest that an entry reads with a reader of its own (`entries.ts`). */
-type ReadApart = 'name' | 'metadata' | 'experimental';
+type ReadApart = 'name' | 'metadata' | 'experimental' | 'engines' | 'network' | 'homepage';
 
 /** The manifest's schemas for the fields an entry shares; a new manifest key fails to compile until it is placed. */
 const SHARED: {
@@ -33,7 +33,6 @@ const SHARED: {
   version: MANIFEST_SCHEMAS.version,
   description: MANIFEST_SCHEMAS.description,
   author: MANIFEST_SCHEMAS.author,
-  homepage: MANIFEST_SCHEMAS.homepage,
   repository: MANIFEST_SCHEMAS.repository,
   license: MANIFEST_SCHEMAS.license,
   keywords: MANIFEST_SCHEMAS.keywords,
@@ -58,6 +57,8 @@ const SHARED: {
 /** The entry's own fields (the field table of "Plugin entries"), beyond `source`, `relevance` and `metadata`. */
 const OWN = {
   name: z.string(),
+  /** A `homepage` that is not a URL is the schema check's `Invalid URL` (spec §15.5.3, J15.15). */
+  homepage: z.url(),
   category: z.string(),
   tags: z.array(z.string()),
   strict: z.boolean(),
@@ -77,6 +78,8 @@ export const ENTRY_KEYS: readonly string[] = [
   'relevance',
   'metadata',
   'experimental',
+  'engines',
+  'network',
   ...Object.keys(FIELD_SCHEMAS),
 ];
 

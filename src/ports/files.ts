@@ -26,7 +26,7 @@ export interface FileStat {
    * "not found" (`ELOOP`, `EIO`, `ESTALE`, `EACCES`, on the path or a folder above it); `isFile` and
    * `isDirectory` are then false. A host that cannot tell answers `undefined` as for a missing path,
    * and the path is then simply absent. The kit refuses what such a path names and reports
-   * `<component> path could not be checked: <path> (<code>)` (errors.md, "Path could not be checked").
+   * `<component> path couldn't be checked: <path> (<code>)` (errors.md, "Path could not be checked").
    */
   readonly checkFailed?: string;
 }

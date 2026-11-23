@@ -17,7 +17,13 @@ import type { HandlerVerdict } from './types.ts';
  * (`Stop`, `SubagentStop`, `TaskCompleted`, `TeammateIdle`), where blocking would loop.
  */
 
-const SUSPECT_CAPTURE = 'refusing to honor the suspect capture';
+/**
+ * 2.1.330: "a hook error that includes `stdio went quiet` and `refusing to honor the suspect
+ * capture`" (Agent Plugins Extended §7.4.2 item 5). Judgment (spec/judgments.md): the two joined
+ * by "; " after the hook's own process exited.
+ */
+const SUSPECT_CAPTURE =
+  "stdio went quiet after the hook's process exited, but a background process still holds it open; refusing to honor the suspect capture";
 
 function blocksHere(subject: Subject): boolean {
   const rule = EXIT2_RULES[subject.event];

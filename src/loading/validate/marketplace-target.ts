@@ -11,6 +11,8 @@ import { isRecord } from '../../protocol/is-record.ts';
 import type { PluginFiles } from '../../ports/index.ts';
 import { readJson, invalidJsonSyntax } from '../../format/read-json.ts';
 import { isLink } from './links.ts';
+import { hooksFileIssues } from './json-files.ts';
+import { manifestPaths } from './components.ts';
 import { childOf, pluginPath } from './paths.ts';
 import { claimIssues } from './plugin-target.ts';
 
@@ -180,14 +182,39 @@ async function readEntryManifests(
   files: PluginFiles,
   raw: unknown,
   signal?: AbortSignal,
-): Promise<{ entries: readonly unknown[]; manifests: EntryManifest[] }> {
+): Promise<{
+  entries: readonly unknown[];
+  manifests: EntryManifest[];
+  dirs: readonly (string | undefined)[];
+}> {
   const entries = isRecord(raw) && Array.isArray(raw.plugins) ? raw.plugins : [];
   const metadata = isRecord(raw) && isRecord(raw.metadata) ? raw.metadata : {};
   const root = typeof metadata.pluginRoot === 'string' ? metadata.pluginRoot : undefined;
-  const manifests = await Promise.all(
-    entries.map((entry, index) => readEntryManifest(files, localDir(entry, index, root), signal)),
-  );
-  return { entries, manifests };
+  const dirs = entries.map((entry, index) => localDir(entry, index, root));
+  const manifests = await Promise.all(dirs.map((dir) => readEntryManifest(files, dir, signal)));
+  return { entries, manifests, dirs };
+}
+
+/**
+ * The hooks files of a plugin the marketplace lists by relative path: `hooks/hooks.json` and the
+ * files its manifest's `hooks` names, reported as a plugin run reports them (spec §17.13.3, J17.35).
+ */
+async function entryHooksIssues(
+  files: PluginFiles,
+  dir: string | undefined,
+  manifest: EntryManifest,
+  signal?: AbortSignal,
+): Promise<ValidationIssue[]> {
+  if (dir === undefined || manifest.found === 'linked' || manifest.found === 'not-a-directory') {
+    return [];
+  }
+  const declared =
+    manifest.found === 'manifest' && isRecord(manifest.value)
+      ? manifestPaths(manifest.value.hooks)
+      : [];
+  const paths = [...new Set(['hooks/hooks.json', ...declared])].map((path) => childOf(dir, path));
+  const found = await Promise.all(paths.map((path) => hooksFileIssues(files, path, signal)));
+  return found.flat();
 }
 
 export async function validateMarketplaceFolder(
@@ -202,7 +229,7 @@ export async function validateMarketplaceFolder(
     };
   }
   const raw = read.value;
-  const { entries, manifests } = await readEntryManifests(files, raw, signal);
+  const { entries, manifests, dirs } = await readEntryManifests(files, raw, signal);
   const found = new Map(
     manifests.flatMap((manifest, index) =>
       manifest.found === 'manifest' ? [[index, manifest.value] as const] : [],
@@ -223,6 +250,7 @@ export async function validateMarketplaceFolder(
         ...(entryName === undefined ? {} : { entryName }),
         ...(signal && { signal }),
       })),
+      ...(await entryHooksIssues(files, dirs[index], manifest, signal)),
     );
   }
   return { issues: [...own, ...nested], official };

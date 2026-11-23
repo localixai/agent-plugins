@@ -14,6 +14,22 @@ const usage = z.looseObject({
   model: text.optional(),
 });
 
+/** The two cache-write parts of a turn's usage (2.1.330): present together or not at all (:19084). */
+const EPHEMERAL = ['ephemeral_5m_input_tokens', 'ephemeral_1h_input_tokens'] as const;
+const turnUsage = z
+  .looseObject({
+    ephemeral_5m_input_tokens: count.optional(),
+    ephemeral_1h_input_tokens: count.optional(),
+  })
+  .refine(
+    (given) =>
+      EPHEMERAL.every((key) => given[key] === undefined) ||
+      EPHEMERAL.every((key) => given[key] !== undefined),
+    {
+      error: 'ephemeral_5m_input_tokens and ephemeral_1h_input_tokens come together or not at all',
+    },
+  );
+
 export const TURN_SPECS: { readonly [N in TurnEvent]: EventSpec } = {
   // `e.turnId` identifies the turn in the other two events (events.md, "Follow a turn").
   'turn.start': { input: fields({ turnId: text }), result: passThrough },
@@ -41,7 +57,7 @@ export const TURN_SPECS: { readonly [N in TurnEvent]: EventSpec } = {
       isAborted: flag.optional(),
       answer: text.optional(),
       durationMs: count.optional(),
-      usage: z.unknown().optional(),
+      usage: turnUsage.optional(),
       agentId: text.optional(),
     }),
     result: answer({ text: text.optional() }),

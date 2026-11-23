@@ -1,5 +1,7 @@
 import type { PluginFiles } from '../../../ports/index.ts';
 import type { ModCompiler } from '../../ports.ts';
+import type { WasmFacts } from '../wasm-files.ts';
+import type { ModuleFacts } from './module-facts.ts';
 
 /** What `validateMod` reads and what it reports (plugins/cli-reference.md, "Output and exit codes"). */
 
@@ -36,6 +38,13 @@ export interface FileReport {
     readonly hook: string;
     readonly hasCatch: boolean;
   }[];
+  /**
+   * The hooks module's result only: the WebAssembly files its `$.wasm.compile` calls name (§17.13.4,
+   * `wasm`); `imports` and `exports` absent for a file that does not parse.
+   */
+  readonly wasm?: readonly WasmFacts[];
+  /** The hooks module's result only: the module (§17.13.4), `null` when its code could not be read. */
+  readonly modules?: readonly ModuleFacts[] | null;
 }
 
 /** The `--json` object (cli-reference.md, "Output and exit codes"). */

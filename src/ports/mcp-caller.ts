@@ -36,5 +36,12 @@ export interface McpToolResult {
 export interface McpCaller {
   /** Wait up to `waitMs` for a server (a plugin's own server may still be starting). */
   ensureConnected(server: string, waitMs: number, signal: AbortSignal): Promise<McpAvailability>;
+  /**
+   * The tool's answer, or why there is none. Besides `timeout` and `aborted`, two failure kinds say
+   * the answer could not be read (hooks.md, "How the tool's result is read", 2.1.330):
+   * `message-too-large` (a message from the server was too large to read) and `missing-text` (the
+   * result arrived without its text). An `mcp_tool` hook then gives no verdict, and on `PreToolUse`
+   * the call it checks is refused.
+   */
   callTool(call: McpToolCall): Promise<McpToolResult | PortFailure>;
 }

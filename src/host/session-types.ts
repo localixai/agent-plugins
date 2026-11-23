@@ -47,6 +47,13 @@ export interface SessionOptions {
   readonly effort?: { readonly level: EffortLevel };
   /** False with `-p` or through the Agent SDK. Default true. */
   readonly interactive?: boolean;
+  /**
+   * The session reads web pages through the built-in `web-fetch` agent: signed in with a claude.ai
+   * account, feature flags fetched, no LLM gateway (Agent Plugins Extended §5.12.4, §7.6.3 item 8).
+   * Only the host knows these, so it says; the session then registers `web-fetch` (the deny rule
+   * `Agent(web-fetch)` still removes it). Default false: no `web-fetch` agent.
+   */
+  readonly webFetchAgent?: boolean;
   /** Settings-file hooks may run (workspace trust). Default true. */
   readonly trusted?: boolean;
   /** Extra folders path rules in a hook's `if` treat as inside the project. */

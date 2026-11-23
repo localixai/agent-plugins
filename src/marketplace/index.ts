@@ -105,7 +105,7 @@ export {
   type ScopedSettings,
 } from './renames.ts';
 export {
-  REMOVED_STATUS,
+  NEEDS_ATTENTION,
   removedPlugins,
   type InstalledPlugin,
   type RemovedPlugin,

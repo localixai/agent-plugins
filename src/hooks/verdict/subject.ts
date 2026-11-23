@@ -20,4 +20,6 @@ export interface Subject {
   readonly gitBashMissing: boolean;
   /** `TaskCompleted` fired because a teammate finished its turn, not because the `TaskUpdate` tool completed a task. */
   readonly teammateStopped?: boolean;
+  /** The `PreToolUse` call the hook checks was made by Code Mode's code (§7.6.11.4). */
+  readonly fromCode?: boolean;
 }

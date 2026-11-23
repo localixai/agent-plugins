@@ -140,7 +140,15 @@ describe('what the docs leave open', () => {
   });
 });
 
-describe('exit codes', () => {
+spec('cli.plugin.claude plugin commands.Exit codes', () => {
+  test('0 on success and 1 on failure, with or without --json', () => {
+    for (const json of [false, true]) {
+      expect(renderCommand(commandSucceeded('enable', 'ok'), { json }).exitCode).toBe(0);
+      expect(renderCommand(commandFailed('enable', 'no'), { json }).exitCode).toBe(1);
+      expect(renderCommand(usageError('Invalid scope: x'), { json }).exitCode).toBe(1);
+    }
+  });
+
   test('an unexpected error exits 2 with the reason on stderr and no result line (validate only)', () => {
     expect(renderCommand(unexpectedError('boom'), { json: true })).toEqual({
       stdout: [],

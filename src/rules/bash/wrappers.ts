@@ -78,6 +78,9 @@ const NO_HOST_VARIABLES: ReadonlySet<string> = new Set();
 const isWrapper = (name: string | undefined): name is WrapperName =>
   name !== undefined && Object.hasOwn(WRAPPERS, name);
 
+/** Whether `name` is one of the built-in wrappers. */
+export const isWrapperName = (name: string): boolean => isWrapper(name);
+
 /** Index of the command a wrapper at `words[from]` runs, or `undefined` when it runs none. */
 function commandIndex(
   words: readonly ShellWord[],

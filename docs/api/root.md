@@ -53,6 +53,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `Decision` | type | The outcome of a permission check |
 | `DefaultsPlugin` | type | A plugin whose `settings.json` holds defaults: its id, name and applied settings |
 | `DirectoryEntry` | type | What `PluginFiles.list` returns |
+| `DOCS_ONLY_TOOLS` | constant | Tools the tools-reference table lists that the SDK's `BUILTIN_TOOL_NAMES` does not (the claude.ai account tools) |
+| `DocsOnlyTool` | type | One of `DOCS_ONLY_TOOLS` |
 | `DOCUMENTED_TOOLS` | constant | The tools of tools-reference.md ("Tool" column of the first table), in the table's order |
 | `DocumentedTool` | type | One of `DOCUMENTED_TOOLS` |
 | `EFFORT_LEVELS` | constant | The named reasoning-effort levels, lowest first (skills and agents `effort` frontmatter, the `effortLevel` setting, `CLAUDE_CODE_EFFORT_LEVEL`) |
@@ -201,6 +203,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `PluginHostOptions` | type | The `options` argument of `createPluginHost` |
 | `PluginIssue` | type | The `issues` field of `AgentsReload`; The `issues` field of `HookOutcome` |
 | `PluginManifest` | type | A manifest that loaded |
+| `PluginNote` | type | A note a plugin that loads carries: its `noteDetails` type and the line `claude plugin list` prints; the `notes` field of `LoadedPlugin` |
 | `PluginSession` | type | One session over the host's plugins: what to list and expand, the hooks to dispatch, and the components to resolve |
 | `PluginSource` | type | A component a plugin brought: the plugin's id as the host names it (`name@marketplace`, or the bare name) |
 | `pluginsWithDependencies` | function | The load-time dependency verdict without a host or a session |
@@ -315,6 +318,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `TaskUpdateInput` | type | The input of Claude Code's `TaskUpdate` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |
 | `TaskUpdateOutput` | type | The output of Claude Code's `TaskUpdate` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |
 | `TextFileReader` | type | The narrowest read: a text file |
+| `ThinkingConfig` | type | Claude Code's official `ThinkingConfig` (`@anthropic-ai/claude-agent-sdk`) |
 | `TodoWriteInput` | type | The input of Claude Code's `TodoWrite` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |
 | `TodoWriteOutput` | type | The output of Claude Code's `TodoWrite` tool (official, `@anthropic-ai/claude-agent-sdk/sdk-tools`) |
 | `Tool` | type | Claude Code's official `Tool` (`@modelcontextprotocol/sdk/types.js`) |

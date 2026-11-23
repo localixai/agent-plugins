@@ -1,4 +1,5 @@
 import { textPatternOf } from '../bash/text-pattern.ts';
+import { isWrapperName } from '../bash/wrappers.ts';
 import type { PermissionRule } from '../types.ts';
 import { isAllowRule } from './behavior.ts';
 
@@ -6,7 +7,8 @@ import { isAllowRule } from './behavior.ts';
  * permission-modes.md, "How the classifier evaluates actions": "On entering auto mode, broad allow
  * rules that grant arbitrary code execution are dropped": a blanket `Bash(*)` or `PowerShell(*)`,
  * wildcarded interpreters like `Bash(python*)`, package-manager run commands, `Agent` allow rules
- * and `Monitor` allow rules. "Narrow rules like `Bash(npm test)` stay in effect", and the dropped
+ * and `Monitor` allow rules; from 2.1.330 also a wrapper followed only by a wildcard, a shell rule
+ * that starts with a wildcard and some wildcarded paths (Agent Plugins Extended §13.9.4 item 3). "Narrow rules like `Bash(npm test)` stay in effect", and the dropped
  * rules come back when auto mode is left (they are only left out of this view of the rules).
  */
 
@@ -34,6 +36,31 @@ const PACKAGE_RUN = /^(?:npm|yarn|pnpm|bun) run\b/;
 
 const SHELL_TOOLS: ReadonlySet<string> = new Set(['Bash', 'PowerShell']);
 
+/** 2.1.330: "a wrapper followed only by a wildcard (`Bash(timeout *)`)", the legacy `:*` included. */
+function bareWrapper(pattern: string): boolean {
+  const parts = /^(\S+?)(?::\*| \*)$/.exec(pattern);
+  return parts !== null && isWrapperName(parts[1] ?? '');
+}
+
+/**
+ * 2.1.330: "some wildcarded paths (`Bash($HOME/bin/*)`, `PowerShell(C:\tools\x.exe *)`)". Judgment
+ * (spec/judgments.md): a rule whose program is an absolute or home-anchored path (`/`, `~`, `$HOME`,
+ * a drive letter) and that holds a wildcard; a relative path stays.
+ */
+const ANCHORED_PATH = /^(?:\/|~|\$HOME\b|\$\{HOME\}|[A-Za-z]:[\\/])/;
+
+const wildcardedPath = (pattern: string): boolean =>
+  pattern.includes('*') && ANCHORED_PATH.test(pattern);
+
+/** Whether a Bash or PowerShell allow pattern is one auto mode drops (J13.24, §13.9.4 item 3). */
+const broadShellPattern = (pattern: string): boolean =>
+  pattern === '*' ||
+  pattern.startsWith('*') ||
+  wildcardedInterpreter(pattern) ||
+  PACKAGE_RUN.test(pattern) ||
+  bareWrapper(pattern) ||
+  wildcardedPath(pattern);
+
 function wildcardedInterpreter(pattern: string): boolean {
   const program = pattern.split(' ')[0]?.replace(/:?\*+$/, '') ?? '';
   return pattern.includes('*') && INTERPRETERS.has(program);
@@ -49,9 +76,5 @@ export function isDroppedInAuto(rule: PermissionRule, classifyAllShell = false):
   if (classifyAllShell && SHELL_TOOLS.has(tool)) return true;
   if (rule.specifier === undefined) return BARE_TOOLS.has(tool);
   const pattern = textPatternOf(rule);
-  return (
-    SHELL_TOOLS.has(tool) &&
-    pattern !== undefined &&
-    (pattern === '*' || wildcardedInterpreter(pattern) || PACKAGE_RUN.test(pattern))
-  );
+  return SHELL_TOOLS.has(tool) && pattern !== undefined && broadShellPattern(pattern);
 }

@@ -28,7 +28,7 @@ export interface UpdateArguments {
 
 export interface RegisteredForUpdate {
   readonly name: string;
-  /** The branch or tag it was added with. */
+  /** The branch, tag or full commit SHA it was added with. */
   readonly ref?: string;
   /** `CLAUDE_CODE_PLUGIN_SEED_DIR` supplied it: the directory; it is read-only. */
   readonly seeded?: string;
@@ -42,7 +42,12 @@ export interface RefreshTarget {
   readonly name: string;
   /** "Updates to the latest commit of that ref, not the repository's default branch." */
   readonly ref?: string;
+  /** `ref` is a full commit SHA: the marketplace stays on that commit (spec §15.7, §17.14.4). */
+  readonly pinnedCommit?: true;
 }
+
+/** The full lower-case SHA of a commit (spec §15.7 `ref`, 2.1.324 or later). */
+const FULL_SHA = /^[0-9a-f]{40}$/;
 
 export interface MarketplaceUpdatePlan {
   readonly output: CommandOutput;
@@ -60,6 +65,9 @@ const nothing = (output: CommandOutput): MarketplaceUpdatePlan => ({
 const targetOf = (marketplace: RegisteredForUpdate): RefreshTarget => ({
   name: marketplace.name,
   ...(marketplace.ref === undefined ? {} : { ref: marketplace.ref }),
+  ...(marketplace.ref !== undefined && FULL_SHA.test(marketplace.ref)
+    ? { pinnedCommit: true as const }
+    : {}),
 });
 
 const plural = (count: number): string =>

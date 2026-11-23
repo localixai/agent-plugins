@@ -33,13 +33,23 @@ function replacement(merged: MergedOutput, handlerId: string): string | undefine
     : undefined;
 }
 
+/**
+ * Agent Plugins Extended §7.4.1.2 (2.1.330): on these events an exit-2 hook's own `continue: false`
+ * wins over the exit code, so Claude or the subagent ends its turn instead of being sent back.
+ */
+const STOP_WINS_OVER_EXIT2: ReadonlySet<HookEvent> = new Set<HookEvent>(['Stop', 'SubagentStop']);
+
+const blocksHere = (event: HookEvent, verdict: HandlerVerdict): boolean =>
+  verdict.block !== undefined &&
+  !(STOP_WINS_OVER_EXIT2.has(event) && verdict.output?.continue === false);
+
 /** The verdict-level block of the first hook that has one, its reason replaced by its own JSON decision's. */
 function exitBlock(
   event: HookEvent,
   verdicts: readonly HandlerVerdict[],
   merged: MergedOutput,
 ): Blocked {
-  const found = verdicts.find((verdict) => verdict.block !== undefined);
+  const found = verdicts.find((verdict) => blocksHere(event, verdict));
   if (found?.block === undefined) return undefined;
   const decision = replacement(merged, found.handler.id);
   const block =

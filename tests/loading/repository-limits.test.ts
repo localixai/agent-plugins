@@ -97,14 +97,13 @@ spec('trust.loading.Trust check and component limits for repository plugins', ()
       ]);
     });
 
-    test('a declared path with .. names a file outside the directory: the manifest is refused', async () => {
+    test('a declared path with .. is not read (spec §17.18.12): the rest of the plugin loads', async () => {
       const loaded = await loadWith({
         '.claude-plugin/plugin.json': manifest({ mcpServers: '../shared/mcp.json' }),
       });
-      expect(loaded.plugin).toBeUndefined();
+      expect(loaded.plugin?.mcpServers).toEqual({});
       expect(messagesOf(loaded.issues)).toEqual([
-        'Invalid string: must start with "./"',
-        'Path contains ".." which could be a path traversal attempt: ../shared/mcp.json',
+        'mcp-servers path not read: ../shared/mcp.json is absolute or has a ".." part',
       ]);
     });
 

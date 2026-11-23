@@ -71,6 +71,23 @@ async function listCommands(deps: Deps): Promise<readonly CommandListing[]> {
   return [...host, ...registered];
 }
 
+/**
+ * A `command.run` answer as the model may read it (Agent Plugins Extended §10.30.1, "Hiding command
+ * text from Claude", 2.1.326): `isTextDisplayOnly: true` stands only when a hook answered without
+ * calling `next` (`answeredByHook`) for a command registered without `immediate`; otherwise it is
+ * dropped, so the host gives the text to the model too. A host prints `text` and keeps it from the
+ * model when the answer still carries the flag.
+ */
+export function displayOnlyReply(
+  reply: unknown,
+  facts: { readonly answeredByHook: boolean; readonly immediate: boolean },
+): unknown {
+  if (typeof reply !== 'object' || reply === null || !('isTextDisplayOnly' in reply)) return reply;
+  if (facts.answeredByHook && !facts.immediate && reply.isTextDisplayOnly === true) return reply;
+  const { isTextDisplayOnly: _dropped, ...rest } = reply;
+  return rest;
+}
+
 /** The core of `$.command.run`: the host's command body, marked as running so a nested `runCommand` for it does not fire again. */
 async function runCommandBody(deps: Deps, e: unknown): Promise<unknown> {
   const command = parse('$.command.run', run, e);
@@ -99,14 +116,17 @@ export function commandApi(deps: Deps): ModsNamespaceApi<'command'> {
         origin: pluginOrigin(deps),
         presentation: deps.presentation?.() ?? commandPresentation(undefined),
       };
-      return deps.replay.once(deps.plugin, 'command.run', () =>
+      let reached = false;
+      const answer = await deps.replay.once(deps.plugin, 'command.run', () =>
         call(
           deps,
           'command.run',
           request,
-          refusing(deps, 'command.run', (e) => runCommandBody(deps, e)),
+          refusing(deps, 'command.run', (e) => ((reached = true), runCommandBody(deps, e))),
         ),
       );
+      const immediate = deps.registries.commands.get(request.command)?.immediate === true;
+      return displayOnlyReply(answer, { answeredByHook: !reached, immediate });
     },
     list: async () => call(deps, 'command.list', {}, () => listCommands(deps)),
   };

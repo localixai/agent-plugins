@@ -1,5 +1,6 @@
 import type { ValidationIssue } from '../format/validate/finding.ts';
 import type { ExitCode } from './result.ts';
+import type { ValidationHosts, ValidationProvides } from './validate-lists.ts';
 
 /**
  * What `claude plugin validate` reports and how it exits (plugins/cli-reference.md, "plugin
@@ -97,6 +98,10 @@ export interface ValidationJson {
   readonly manifest: ValidationFileResult | null;
   readonly contents: readonly ValidationFileResult[];
   readonly advice: readonly ValidationAdvice[];
+  /** The plugin's components by kind; `null` when the run cannot list them (spec §17.13.4). */
+  readonly provides: ValidationProvides | null;
+  /** The hosts the plugin can reach; `null` when the run cannot list them (spec §17.13.4). */
+  readonly hosts: ValidationHosts | null;
 }
 
 function resultOf(
@@ -123,6 +128,12 @@ function resultOf(
  * marketplace result and the plugin's go in `contents`. The shape inside a result is a judgment
  * (spec/judgments.md): the docs name `file`, `errors`, `warnings` and `notes`, not what an entry holds.
  */
+/** `provides` and `hosts` of a run that listed them, else `null` for both. */
+const listedOf = (
+  lists: { readonly provides: ValidationProvides; readonly hosts: ValidationHosts } | undefined,
+): Pick<ValidationJson, 'provides' | 'hosts'> =>
+  lists === undefined ? { provides: null, hosts: null } : lists;
+
 export function validationJson(input: {
   readonly target: 'marketplace' | 'plugin' | 'components' | 'none';
   /** The resolved path Claude Code validated. */
@@ -134,6 +145,11 @@ export function validationJson(input: {
   readonly gatingHooks?: Readonly<Record<string, readonly GatingHook[]>>;
   /** The mods validator's lines, by the file they belong to. */
   readonly notes?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * What a plugin run lists (`pluginProvides`, `pluginHosts` over the plugin `loadPlugin` gives);
+   * absent for a run that cannot list them, whose report then carries `null`.
+   */
+  readonly lists?: { readonly provides: ValidationProvides; readonly hosts: ValidationHosts };
 }): ValidationJson {
   const manifestFile = MANIFEST_FILES[input.target];
   const gates = input.gatingHooks ?? {};
@@ -156,6 +172,7 @@ export function validationJson(input: {
     manifest: manifestFile === undefined ? null : resultFor(manifestFile),
     contents,
     advice: input.advice ?? [],
+    ...listedOf(input.lists),
   };
 }
 

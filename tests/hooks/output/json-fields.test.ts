@@ -76,6 +76,16 @@ spec(['hooks.output.common.continue', 'hooks.output.JSON.continue'], () => {
     expect(merged('PostToolUse', []).continue).toBe(true);
   });
 
+  test('2.1.330: it does not block a PreToolUse call; a hook that must block it also denies', () => {
+    const stops = merged('PreToolUse', [{ continue: false, stopReason: 'done' }]);
+    expect(stops.continue).toBe(false);
+    expect(stops.block).toBeUndefined();
+    const denies = merged('PreToolUse', [
+      { continue: false, ...specific('PreToolUse', { permissionDecision: 'deny' }) },
+    ]);
+    expect(denies.effects.permissionDecision).toBe('deny');
+  });
+
   test('one hook that stops is enough, whatever the others say', () => {
     expect(merged('PreToolUse', [{ continue: true }, { continue: false }]).continue).toBe(false);
   });

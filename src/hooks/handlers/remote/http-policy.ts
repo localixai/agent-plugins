@@ -2,12 +2,20 @@ import { warning, type PluginIssue } from '../../../format/issues.ts';
 import { matchesWildcard } from '../../../format/wildcard.ts';
 
 /**
- * The two outer limits on `http` hooks (hooks.md, "Hook locations"; settings-reference.md,
- * `allowedHttpHookUrls` and `httpHookAllowedEnvVars`). They "apply to hooks from every source,
- * including managed policy settings", and the merged lists are the settings stream's: the host
- * passes them, already merged, in `RunContext.httpPolicy`.
+ * The two outer limits on `http` hooks (hooks.md, "Hook locations", "Limit HTTP hooks";
+ * settings-reference.md, `allowedHttpHookUrls` and `httpHookAllowedEnvVars`). From 2.1.330 (Agent
+ * Plugins Extended §7.3.4 item 3, J12.18) a list set in managed settings covers the hooks of managed
+ * settings and a list set in any file covers every other hook, each checked against the list merged
+ * across files. The settings stream merges them; the host passes them in `RunContext.httpPolicy`:
+ * the top-level lists for the other hooks, `managed` for the hooks of managed settings.
  */
-export interface HttpHookPolicy {
+export interface HttpHookPolicy extends HttpHookLimits {
+  /** The lists that cover the hooks of managed settings; absent: no limit on them. */
+  readonly managed?: HttpHookLimits;
+}
+
+/** One pair of merged lists. */
+export interface HttpHookLimits {
   /**
    * "When you define this key, Claude Code runs an HTTP hook only if its URL matches one of the
    * patterns and blocks the rest without running them; an empty array blocks every HTTP hook."
@@ -44,10 +52,16 @@ export function urlAllowed(url: string, allowedUrls: readonly string[] | undefin
   return allowedUrls.some((pattern) => matchesWildcard(normalizeUrl(pattern), target));
 }
 
+/** The lists that cover a hook: `managed` for a hook of managed settings, the top level for any other. */
+export const limitsFor = (
+  policy: HttpHookPolicy | undefined,
+  managedHook: boolean,
+): HttpHookLimits | undefined => (managedHook ? policy?.managed : policy);
+
 /** The variables a hook may interpolate: its own list, cut to the settings list when one is set. */
 export function permittedEnvVars(
   own: readonly string[] | undefined,
-  policy: HttpHookPolicy | undefined,
+  policy: HttpHookLimits | undefined,
 ): readonly string[] | undefined {
   const outer = policy?.allowedEnvVars;
   if (outer === undefined) return own;

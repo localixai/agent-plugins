@@ -57,7 +57,8 @@ spec('mods.hookArgument.$', () => {
       overrides,
     );
     await h.fire('tool.call');
-    expect(Object.keys(MODS_API)).toHaveLength(22);
+    // The 23 namespaces of the page (`wasm` from 2.1.330) and the declarations' `vcs`.
+    expect(Object.keys(MODS_API)).toHaveLength(24);
     expect(keys).toEqual(
       Object.fromEntries(namespaces.map(([name, methods]) => [name, [...methods]])),
     );

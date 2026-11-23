@@ -141,9 +141,13 @@ spec('agents.behavior.Write subagent files', () => {
     ]);
   });
 
-  test('a scope with no agents directory when the session starts is not watched: its first file needs a restart', async () => {
-    const outcome = await scan({ [`${HOME}/.claude/agents/a.md`]: agent('a') });
-    expect(outcome.watch).toEqual([`${HOME}/.claude/agents`]);
+  test('an agents directory created after the session started is watched too, so its first file loads (§5.4.1)', async () => {
+    const outcome = await scan({
+      [`${HOME}/.claude/agents/a.md`]: agent('a'),
+      [`${PROJECT}/README.md`]: '# A project with no agents directory yet\n',
+    });
+    expect(outcome.watch).toContain(`${HOME}/.claude/agents`);
+    expect(outcome.watch).toContain(`${PROJECT}/.claude/agents`);
   });
 
   test('the agents directory of a --add-dir directory is read but not watched', async () => {

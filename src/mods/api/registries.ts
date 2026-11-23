@@ -1,7 +1,7 @@
 import type { AgentDefinition } from '../../protocol/official.ts';
 import { asyncSlot } from '../async-slot.ts';
 import type { AsyncContextFactory } from '../ports.ts';
-import type { SessionBackdrop } from './ports.ts';
+import type { SessionTheme } from './ports.ts';
 
 /** A command a mod registered with `$.command.register`. */
 export interface CommandDef {
@@ -88,31 +88,30 @@ function createListeners(): {
 }
 
 /**
- * The session's one backdrop (interface.md, "Put a backdrop behind the conversation"): a
- * `$.theme.set` replaces it and `$.theme.clear` removes it, whichever mod set it. The host reads it
- * to raise the `Backdrop` site.
+ * The session's one theme (Agent Plugins Extended §10.25.6, "One theme for each session"): a
+ * `$.theme.set` replaces all of it and `$.theme.clear` removes it, whichever mod set it.
  */
-export interface BackdropBoard {
-  current(): SessionBackdrop | undefined;
-  set(backdrop: SessionBackdrop): void;
-  /** Takes the backdrop off; `true` when there was one. */
+export interface ThemeBoard {
+  current(): SessionTheme | undefined;
+  set(theme: SessionTheme): void;
+  /** Takes the theme off; `true` when there was one. */
   clear(): boolean;
-  /** Takes the backdrop off when `plugin` set it (its module unloaded); `true` when it did. */
+  /** Takes the theme off when `plugin` set it (its module unloaded); `true` when it did. */
   removePlugin(plugin: string): boolean;
 }
 
-function createBackdropBoard(): BackdropBoard {
-  let backdrop: SessionBackdrop | undefined;
+function createThemeBoard(): ThemeBoard {
+  let theme: SessionTheme | undefined;
   const clear = (): boolean => {
-    const had = backdrop !== undefined;
-    backdrop = undefined;
+    const had = theme !== undefined;
+    theme = undefined;
     return had;
   };
   return {
-    current: () => backdrop,
-    set: (next) => void (backdrop = next),
+    current: () => theme,
+    set: (next) => void (theme = next),
     clear,
-    removePlugin: (plugin) => backdrop?.plugin === plugin && clear(),
+    removePlugin: (plugin) => theme?.plugin === plugin && clear(),
   };
 }
 
@@ -120,7 +119,7 @@ export interface ModRegistries {
   readonly commands: Registry<CommandDef>;
   readonly tools: Registry<ToolDef>;
   readonly agents: Registry<AgentType>;
-  readonly backdrop: BackdropBoard;
+  readonly theme: ThemeBoard;
   /** Calls `listener` after each change of `commands`, `tools` or `agents`; answers the call that stops it. */
   readonly onChange: (listener: (kind: RegisteredKind) => void) => () => void;
   /** The commands whose body runs now, past their `command.run` chain (`CommandRuns`). */
@@ -163,7 +162,7 @@ export function createRegistries(asyncContext?: AsyncContextFactory): ModRegistr
     commands: createRegistry(() => listeners.tell('commands')),
     tools: createRegistry(() => listeners.tell('tools')),
     agents: createRegistry(() => listeners.tell('agents')),
-    backdrop: createBackdropBoard(),
+    theme: createThemeBoard(),
     onChange: listeners.add,
   };
 }

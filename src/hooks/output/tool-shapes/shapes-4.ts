@@ -163,7 +163,14 @@ export const SHAPES_4: ShapeTable = {
       'cancelledWakeups?': 'number',
     },
   },
-  Monitor: { object: { taskId: 'string', timeoutMs: 'number', 'persistent?': 'boolean' } },
+  Monitor: {
+    object: {
+      taskId: 'string',
+      timeoutMs: 'number',
+      'persistent?': 'boolean',
+      'keptInSandboxByCheck?': 'boolean',
+    },
+  },
   ProposeSkills: { object: { proposalCount: 'number' } },
   ProposeGoal: { object: { condition: 'string', askUser: 'boolean' } },
   EnterPlanMode: { object: { message: 'string' } },
@@ -189,6 +196,10 @@ export const SHAPES_4: ShapeTable = {
       recurring: 'boolean',
       'durable?': 'boolean',
       'nextFireAt?': 'number',
+      'maxAgeMs?': 'number',
+      'otherOneShots?': {
+        array: { object: { id: 'string', humanSchedule: 'string', prompt: 'string' } },
+      },
     },
   },
   CronDelete: { object: { id: 'string', 'endedLoopWakeup?': { literal: true } } },

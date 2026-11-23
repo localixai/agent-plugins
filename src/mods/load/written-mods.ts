@@ -2,9 +2,10 @@ import type { PermissionMode } from '../../protocol/official.ts';
 import { guardOption, flagSetting, type ModsPolicyInput } from './policy-input.ts';
 
 /**
- * A mod Claude writes in a session (plugins/mods/create.md, "Ask Claude for a mod" and "Sessions
- * where a mod Claude writes can't load"; troubleshoot.md, "Claude Code stops asking to enable hot
- * reloading"): it loads only after the person approves it, in a trusted workspace where mods may run.
+ * A mod Claude writes in a session (Agent Plugins Extended §10.8.4; plugins/mods/create.md, "Ask
+ * Claude for a mod", "Sessions that load a mod without asking" and "Sessions where a mod Claude
+ * writes can't load"; troubleshoot.md, "Claude Code stops asking to enable hot reloading"): it loads
+ * only after the person approves it, in a trusted workspace where mods may run.
  */
 
 /** The three ways the page lists a session where it cannot load. */
@@ -14,6 +15,11 @@ export interface WrittenModSession {
   /** False for a session that cannot show a prompt, such as a `claude -p` run. */
   readonly isInteractive: boolean;
   readonly permissionMode?: PermissionMode;
+  /**
+   * A resumed session: the mods already in its folder were written before, so it is not the `claude
+   * -p` run that writes them, and they load without asking (§10.8.4).
+   */
+  readonly isResumed?: boolean;
 }
 
 export interface WrittenModRefusal {
@@ -25,37 +31,35 @@ export interface WrittenModRefusal {
 type Check = (policy: ModsPolicyInput, session: WrittenModSession) => string | undefined;
 
 /**
- * The permission modes whose sessions cannot show the prompt: `dontAsk` answers nothing itself.
- * A non-interactive run (`claude -p`) still loads a written mod in `auto` and `bypassPermissions`
- * (create.md, "Nobody is there to approve"; Agent Plugins Extended §10.8.4).
+ * Who can answer the question in each mode, for the `claude -p` run that writes the mod: `dontAsk`
+ * answers nothing anywhere; `default` and `acceptEdits` would ask, and a `claude -p` run cannot
+ * show the question; `auto` and `bypassPermissions` enable hot reloading without it (§10.8.4).
  */
-const CANNOT_ASK: { readonly [M in PermissionMode]: boolean } = {
-  default: false,
-  acceptEdits: false,
-  bypassPermissions: false,
-  plan: false,
-  dontAsk: true,
-  auto: false,
+type Approver = 'nobody' | 'person' | 'unasked';
+const APPROVER: { readonly [M in PermissionMode]: Approver } = {
+  default: 'person',
+  acceptEdits: 'person',
+  bypassPermissions: 'unasked',
+  plan: 'unasked',
+  dontAsk: 'nobody',
+  auto: 'unasked',
 };
 
-/** The modes in which a session that cannot show a prompt still loads a mod Claude wrote. */
-const LOADS_UNATTENDED: { readonly [M in PermissionMode]: boolean } = {
-  default: false,
-  acceptEdits: false,
-  bypassPermissions: true,
-  plan: false,
-  dontAsk: false,
-  auto: true,
-};
+const approverOf = (session: WrittenModSession): Approver =>
+  APPROVER[session.permissionMode ?? 'default'];
 
 const noApprover: Check = (_policy, session) => {
-  const mode = session.permissionMode ?? 'default';
-  const cannotAsk = session.isInteractive ? CANNOT_ASK[mode] : !LOADS_UNATTENDED[mode];
-  return cannotAsk ? 'nobody is there to approve it: the session cannot show a prompt' : undefined;
+  const approver = approverOf(session);
+  const writingRunCannotAsk =
+    approver === 'person' && !session.isInteractive && session.isResumed !== true;
+  return approver === 'nobody' || writingRunCannotAsk
+    ? 'nobody is there to approve it: the session cannot show a prompt'
+    : undefined;
 };
 
-const untrusted: Check = (policy) =>
-  policy.isTrusted === false
+/** The trust prompt is an interactive session's (§10.8.4: "an interactive session's workspace isn't trusted"). */
+const untrusted: Check = (policy, session) =>
+  session.isInteractive && policy.isTrusted === false
     ? 'the workspace is not trusted: accept the trust prompt first'
     : undefined;
 
@@ -100,6 +104,17 @@ export function writtenModRefusal(
     if (reason !== undefined) return { gate, reason };
   }
   return undefined;
+}
+
+/**
+ * Whether the client asks before it loads the mods Claude writes in this session: never where they
+ * cannot load (§10.8.4: "MUST NOT ask to load it"), never in `auto` and `bypassPermissions` modes,
+ * which enable hot reloading without the question, and never in a resumed session, whose mods load
+ * without asking. Plan mode writes no file, so it never asks either.
+ */
+export function writtenModAsks(policy: ModsPolicyInput, session: WrittenModSession): boolean {
+  if (writtenModRefusal(policy, session) !== undefined || session.isResumed === true) return false;
+  return approverOf(session) === 'person';
 }
 
 /** What became of the hot-reloading question (create.md, "Approve the mod"). */

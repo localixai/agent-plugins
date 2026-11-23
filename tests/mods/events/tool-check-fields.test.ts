@@ -188,9 +188,12 @@ describe('agent and organization fields on tool.check', () => {
       expect(seen).toEqual(['agent-7']);
     });
 
-    test('e.ceiling is ask for a connector tool the organization set to ask, and no other value', () => {
+    test('e.ceiling is ask for a connector tool the organization set to ask; deny comes on a mod own call a managed deny rule covers (2.1.330); no other value', () => {
       expect(eventInputProblem('tool.check', { ...check, ceiling: 'ask' })).toBeUndefined();
-      expect(eventInputProblem('tool.check', { ...check, ceiling: 'deny' })).toContain(
+      expect(
+        eventInputProblem('tool.check', { ...check, ceiling: 'deny', op: 'fs.read' }),
+      ).toBeUndefined();
+      expect(eventInputProblem('tool.check', { ...check, ceiling: 'never' })).toContain(
         'tool.check input: ceiling',
       );
     });

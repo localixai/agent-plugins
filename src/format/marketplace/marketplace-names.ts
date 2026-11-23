@@ -1,6 +1,5 @@
 import { error, type PluginIssue } from '../issues.ts';
 import {
-  ANY_CASING_NAMES,
   COMMUNITY_NAMES,
   DIRECTORY_NAMES,
   NON_MARKETPLACE_NAMES,
@@ -93,24 +92,9 @@ export function impersonates(name: string): boolean {
   return besideOfficial(words) || leadsWithBrand(words);
 }
 
-const reservedIssue = (name: string): PluginIssue =>
-  error(PATH, `Marketplace name "${name}" is reserved`);
-
 function reservedVariantIssues(name: string): PluginIssue[] {
   const reason = NON_MARKETPLACE_NAMES.get(name);
-  if (reason !== undefined) return [error(PATH, `Marketplace name "${name}" ${reason}`)];
-  return ANY_CASING_NAMES.has(name) ? [reservedIssue(name)] : [];
-}
-
-/**
- * The six package-manager names are reserved in any letter case, but a validator reports only the
- * lower case; adding or loading refuses the other casings (spec J15.3: the 2.1.321 table for the
- * verdict, oracle 2.1.325 passes `NPM`).
- */
-function otherCasingIssues(name: string): PluginIssue[] {
-  return name !== name.toLowerCase() && ANY_CASING_NAMES.has(name.toLowerCase())
-    ? [reservedIssue(name)]
-    : [];
+  return reason === undefined ? [] : [error(PATH, `Marketplace name "${name}" ${reason}`)];
 }
 
 /** What `claude plugin validate` reports about a marketplace's name beyond the id grammar. */
@@ -206,6 +190,21 @@ function claudeAiIssues(name: string, hostedOnClaudeAi: boolean): PluginIssue[] 
   ];
 }
 
+/** A full lower-case commit SHA, which pins a marketplace's `ref` (spec §15.7, 2.1.324). */
+export const isCommitSha = (ref: string): boolean => /^[0-9a-f]{40}$/.test(ref);
+
+/** A reserved name is never pinned to a commit (§15.7 `ref`); the wording is the kit's (spec/judgments.md). */
+function pinnedIssues(name: string, origin: MarketplaceSource | undefined): PluginIssue[] {
+  const ref = origin !== undefined && 'ref' in origin ? origin.ref : undefined;
+  if (!OFFICIAL_LISTS.has(name) || ref === undefined || !isCommitSha(ref)) return [];
+  return [
+    error(
+      PATH,
+      `The name '${name}' is reserved for official Anthropic marketplaces, which cannot be pinned to a commit. Use a branch or tag as "ref".`,
+    ),
+  ];
+}
+
 export interface NameOrigin {
   /** Where the marketplace came from; only a `github` or `git` source under `github.com/anthropics/` may use an official name. */
   readonly origin?: MarketplaceSource;
@@ -216,8 +215,8 @@ export interface NameOrigin {
 /** What adding or loading a marketplace refuses about its name, on top of `validationNameIssues`. */
 export function loadNameIssues(name: string, where: NameOrigin = {}): PluginIssue[] {
   return [
-    ...otherCasingIssues(name),
     ...officialNameIssues(name, where.origin),
+    ...pinnedIssues(name, where.origin),
     ...spellingIssues(name),
     ...memberIssues(name),
     ...claudeAiIssues(name, where.hostedOnClaudeAi === true),

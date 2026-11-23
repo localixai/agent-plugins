@@ -1,6 +1,11 @@
 /** The keys that decide which hooks run: the two locks, the HTTP hook allowlists and what follows the hooks. */
 export { type CommandGates, type CommandSessionFacts } from './custom-commands.ts';
-export { type HttpHookUrlPolicy, type HttpHookVerdict } from './http-policy.ts';
+export {
+  type HttpHookLists,
+  type HttpHookOrigin,
+  type HttpHookUrlPolicy,
+  type HttpHookVerdict,
+} from './http-policy.ts';
 export {
   HOOK_BLOCK_REASONS,
   type HookBlockReason,

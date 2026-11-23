@@ -7,8 +7,8 @@ import type { Viewport } from './viewport.ts';
 /**
  * The `ui.render` event of the `Backdrop` site when the Desktop or mobile app asks to draw the
  * session's backdrop (reference.md, "Render sites"; interface.md, "Put a backdrop behind the
- * conversation"): `e.props` holds `id`, `plugin`, `glass` with its defaults filled in or `false`,
- * and `colorScheme` when it was set; `e.requestId` is `backdrop`. With no backdrop set there is
+ * conversation"): `e.props` holds `scene`, `plugin`, `glass` with its defaults filled in or `false`,
+ * and `overrideColorScheme` when it was set (2.1.323 or later); `e.requestId` is `backdrop`. With no backdrop set there is
  * nothing to draw.
  */
 export function backdropRender(

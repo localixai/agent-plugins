@@ -282,9 +282,9 @@ const HANDBACK_TOOL = 'SubagentHandback';
 /** What `call` is, in the session `ctx` describes. */
 export function factsOf(call: PreparedCall, ctx: DecideContext): CallFacts {
   const built = { ...NONE, ...BUILDERS.get(call.toolName)?.(call, ctx) };
-  // tools-reference.md: file-access tools marked No "still prompt for paths outside the working
-  // directory", so the column never overrides what the path facts of a file read decided.
-  const noPermission = ctx.requiresPermission?.(call.toolName) === false && !built.readsFiles;
+  // tools-reference.md: file tools marked No "still prompt for paths outside the working directory".
+  const asks = ctx.requiresPermission?.(call.toolName, call.input);
+  const noPermission = asks === false && !built.readsFiles;
   return {
     ...built,
     readOnly: built.readOnly || noPermission,

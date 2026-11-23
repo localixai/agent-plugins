@@ -10,6 +10,8 @@ import { selects } from '../../chain/select.ts';
 const GATING_EVENTS: readonly string[] = [
   'tool.call',
   'tool.check',
+  'tool.judge',
+  'tool.run',
   'prompt.submit',
   'config.set',
   'plugin.register',

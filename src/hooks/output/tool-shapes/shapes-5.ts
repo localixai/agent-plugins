@@ -47,7 +47,15 @@ export const SHAPES_5: ShapeTable = {
           'notice?': 'string',
           rag: 'boolean',
           'hits?': {
-            array: { object: { 'name?': 'string', 'doc_uuid?': 'string', 'text?': 'string' } },
+            array: {
+              object: {
+                'name?': 'string',
+                'doc_uuid?': 'string',
+                'text?': 'string',
+                'image_attached?': 'boolean',
+                'page?': 'number',
+              },
+            },
           },
           'docs?': { array: 'string' },
         },

@@ -40,6 +40,7 @@ export const STORE_NAMES = {
   cache: 'cache',
   data: 'data',
   marketplaces: 'marketplaces',
+  mcpb: 'mcpb',
   synced: 'synced',
   trash: '.trash',
   installedPlugins: 'installed_plugins.json',
@@ -62,6 +63,9 @@ export interface StoreLayout {
   pluginData(dataId: string): string;
   /** `marketplaces/<name>/`: the clone or download of a GitHub, git or URL marketplace. */
   marketplace(name: string): string;
+  /** `mcpb/`: the files extracted from the MCP bundles plugins declare (spec §2.9, §16.6). */
+  mcpb(): string;
+  /** `synced/` and `.trash/` are under the default root even when `CLAUDE_CODE_PLUGIN_CACHE_DIR` moves the rest. */
   synced(): string;
   trash(): string;
   installedPlugins(): string;
@@ -76,10 +80,16 @@ export interface StoreLayout {
 }
 
 /**
- * The layout under `root`. Judgment (spec/judgments.md): `<date>` and `<hash>` of the dated copies
+ * The layout under `root`. `defaultRoot` is the root without `CLAUDE_CODE_PLUGIN_CACHE_DIR`
+ * (`~/.claude/plugins`), where `synced/` and `.trash/` stay (spec §16.6 item 1); it is `root` when
+ * the override is not set. Judgment (spec/judgments.md): `<date>` and `<hash>` of the dated copies
  * are the caller's text (the docs give the shape, not the date format or the hash input).
  */
-export function createStoreLayout(root: string, join: PathJoin): StoreLayout {
+export function createStoreLayout(
+  root: string,
+  join: PathJoin,
+  defaultRoot: string = root,
+): StoreLayout {
   const under = (...parts: readonly string[]): string => join(root, parts.join('/'));
   return {
     root,
@@ -89,8 +99,9 @@ export function createStoreLayout(root: string, join: PathJoin): StoreLayout {
       under(STORE_NAMES.cache, marketplace, plugin, version),
     pluginData: (dataId) => under(STORE_NAMES.data, dataId),
     marketplace: (name) => under(STORE_NAMES.marketplaces, name),
-    synced: () => under(STORE_NAMES.synced),
-    trash: () => under(STORE_NAMES.trash),
+    mcpb: () => under(STORE_NAMES.mcpb),
+    synced: () => join(defaultRoot, STORE_NAMES.synced),
+    trash: () => join(defaultRoot, STORE_NAMES.trash),
     installedPlugins: () => under(STORE_NAMES.installedPlugins),
     knownMarketplaces: () => under(STORE_NAMES.knownMarketplaces),
     knownMarketplacesClaudeAi: () => under(STORE_NAMES.knownMarketplacesClaudeAi),
@@ -105,6 +116,7 @@ export type StoreEntry =
   | 'cache'
   | 'data'
   | 'marketplaces'
+  | 'mcpb'
   | 'synced'
   | 'trash'
   | 'installed-plugins'
@@ -122,6 +134,7 @@ const EXACT: Readonly<Record<string, StoreEntry>> = {
   [STORE_NAMES.cache]: 'cache',
   [STORE_NAMES.data]: 'data',
   [STORE_NAMES.marketplaces]: 'marketplaces',
+  [STORE_NAMES.mcpb]: 'mcpb',
   [STORE_NAMES.synced]: 'synced',
   [STORE_NAMES.trash]: 'trash',
   [STORE_NAMES.installedPlugins]: 'installed-plugins',

@@ -218,12 +218,20 @@ describe('a skill folder named by a manifest path', () => {
     expect(namesOf(plugin?.skills ?? [])).toEqual(['found', 'only']);
   });
 
-  test('a SKILL.md directly in the default skills/ folder is no skill', async () => {
+  test('a SKILL.md directly in the default skills/ folder makes skills/ the one skill, named by its frontmatter (J4.2, oracle 2.1.330)', async () => {
     const { plugin } = await load({
-      'skills/SKILL.md': skill,
-      'skills/child/SKILL.md': skill,
+      'skills/SKILL.md': skillOf('direct'),
+      'skills/b/SKILL.md': skill,
     });
-    expect(namesOf(plugin?.skills ?? [])).toEqual(['child']);
+    expect(namesOf(plugin?.skills ?? [])).toEqual(['direct']);
+  });
+
+  test('without a frontmatter name that one skill is named skills, and its children do not load (J4.2)', async () => {
+    const { plugin } = await load({
+      'skills/SKILL.md': '---\ndescription: d\n---\nbody\n',
+      'skills/c/SKILL.md': skill,
+    });
+    expect(namesOf(plugin?.skills ?? [])).toEqual(['skills']);
   });
 });
 

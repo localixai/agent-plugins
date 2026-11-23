@@ -29,6 +29,8 @@ import { telemetryApi } from './telemetry.ts';
 import { themeApi } from './theme.ts';
 import { toolApi } from './tool.ts';
 import { turnApi } from './turn.ts';
+import { vcsApi } from './vcs.ts';
+import { wasmApi } from './wasm.ts';
 
 /** What every mod's `$` shares: the chain its calls fire events through, the ports they reach, what mods registered. */
 export interface ModsApiOptions {
@@ -71,7 +73,7 @@ export interface ModsApiHandle {
   /** The `$` the mod's hooks receive, after the hooks of other mods on `engine.create` changed it. */
   readonly api: ModsApi;
   readonly scope: Scope;
-  /** Unloads the mod: its timers stop, what it registered and the backdrop it set go, its scope leaves the book. */
+  /** Unloads the mod: its timers stop, what it registered and the theme it set go, its scope leaves the book. */
   dispose(): void;
 }
 
@@ -164,8 +166,10 @@ export async function createModsApi(
     http: httpApi(deps),
     process: processApi(deps),
     mcp: mcpApi(deps),
+    wasm: wasmApi(deps),
     audio: audioApi(deps),
     telemetry: telemetryApi(deps),
+    vcs: vcsApi(deps),
   });
   const api = await fireEngineCreate(deps, built, {
     book: options.scopes,
@@ -177,8 +181,8 @@ export async function createModsApi(
     dispose() {
       background.abort(new Error(`${name} was unloaded`));
       options.scopes.delete(name);
-      // A reload of the mod does not keep its backdrop (interface.md, "Put a backdrop behind the conversation").
-      if (options.registries.backdrop.removePlugin(name)) options.ports.theme.changed(undefined);
+      // A mod that unloads takes its own theme with it (§10.25.6 item 3); a reload does not keep it.
+      if (options.registries.theme.removePlugin(name)) options.ports.theme.changed(undefined);
       for (const registry of [
         options.registries.commands,
         options.registries.tools,

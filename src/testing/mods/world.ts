@@ -1,3 +1,4 @@
+import type { ModMatcher } from '../../protocol/mods-matcher.ts';
 import { readHooksJsonModules } from '../../format/mod-files.ts';
 import type { PluginFiles } from '../../ports/index.ts';
 import type { ModCompiler, ModRuntime } from '../../mods/ports.ts';
@@ -55,7 +56,7 @@ export interface World {
   needsRedraw: boolean;
   /** True from the test's first call on `$`: no stub can be registered after it. */
   hasStarted(): boolean;
-  stub(name: string, hook: StubHook): void;
+  stub(name: string, hook: StubHook, matcher?: ModMatcher): void;
   /** Gives the test a clock it moves: `$.clock` is answered from it from now on. */
   takeClock(clock: MockClock): void;
   /** Loads the mods, once; every later call waits for the same load or throws what it threw. */
@@ -172,11 +173,12 @@ export function createWorld(options: WorldOptions): World {
     failures,
     appended: fake.appended,
     hasStarted: () => started,
-    stub: (name, hook) => {
+    stub: (name, hook, matcher) => {
       if (isKnownEvent(name))
         stubs.add(
           name,
           noting(name, hook, (message) => failures.push(message)),
+          matcher,
         );
     },
     takeClock: (clock) => {

@@ -8,7 +8,6 @@
  */
 import { describe, expect, test } from 'bun:test';
 import {
-  ANY_CASING_NAMES,
   COMMUNITY_NAMES,
   DIRECTORY_NAMES,
   OBJECT_MEMBER_NAMES,
@@ -43,7 +42,6 @@ spec(
     'marketplace.rule.Reserved names.Another spelling of a reserved name',
     'marketplace.rule.Reserved names.Community marketplace names',
     'marketplace.rule.Reserved names.Names starting with claudeai-',
-    'marketplace.rule.Reserved names.npm, pip, uv, cargo, github, and gh',
     'marketplace.rule.Reserved names.Official marketplace names',
     'marketplace.rule.Reserved names.Plugin directory names',
     'marketplace.troubleshooting.Cannot add marketplace "<name>": Claude Code reserves this name and cannot register a marketplace under it',
@@ -175,29 +173,6 @@ spec(
       }
     });
 
-    test('npm, pip, uv, cargo, github and gh are reserved in any casing: validate reports the lower case, adding refuses every casing (J15.3)', () => {
-      expect([...ANY_CASING_NAMES].toSorted()).toEqual([
-        'cargo',
-        'gh',
-        'github',
-        'npm',
-        'pip',
-        'uv',
-      ]);
-      for (const name of ANY_CASING_NAMES) {
-        expect(messages(validationNameIssues(name))).toEqual([
-          `Marketplace name "${name}" is reserved`,
-        ]);
-        for (const spelled of [name.toUpperCase(), name[0]?.toUpperCase() + name.slice(1)]) {
-          expect(validationNameIssues(spelled)).toEqual([]);
-          expect(messages(loadNameIssues(spelled))).toEqual([
-            `Marketplace name "${spelled}" is reserved`,
-          ]);
-        }
-      }
-      expect(validationNameIssues('npm-tools')).toEqual([]);
-    });
-
     test('another spelling: a trailing dot or a symbol other than an underscore in place of a hyphen', () => {
       expect(spellingOf('claude.code.plugins')).toBe('claude-code-plugins');
       expect(spellingOf('claude-code-plugins.')).toBe('claude-code-plugins');
@@ -295,5 +270,28 @@ describe('how the two entry points split the rules', () => {
     ]) {
       expect(marketplaceNameIssues(name)).toEqual([]);
     }
+  });
+});
+
+/** Spec §15.3.2 item 5 and J15.3: 2.1.325 and later accept the six package-manager names. */
+describe('judgment J15.3: npm, pip, uv, cargo, github and gh are ordinary names', () => {
+  test('neither validate nor adding refuses them, in any letter case', () => {
+    for (const name of ['npm', 'pip', 'uv', 'cargo', 'github', 'gh']) {
+      for (const spelled of [name, name.toUpperCase(), name[0]?.toUpperCase() + name.slice(1)]) {
+        expect(marketplaceNameIssues(spelled)).toEqual([]);
+      }
+    }
+  });
+});
+
+spec('marketplace.sourceField.ref', () => {
+  test('a reserved name cannot be pinned to a commit SHA, even from github.com/anthropics/', () => {
+    const pinned = { ...anthropicsGithub, ref: 'c'.repeat(40) };
+    expect(messages(loadNameIssues('claude-plugins-official', { origin: pinned }))).toEqual([
+      'The name \'claude-plugins-official\' is reserved for official Anthropic marketplaces, which cannot be pinned to a commit. Use a branch or tag as "ref".',
+    ]);
+    const branch = { ...anthropicsGithub, ref: 'main' };
+    expect(loadNameIssues('claude-plugins-official', { origin: branch })).toEqual([]);
+    expect(loadNameIssues('my-tools', { origin: pinned })).toEqual([]);
   });
 });

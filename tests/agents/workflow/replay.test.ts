@@ -27,6 +27,7 @@ const done = (prompt: string, result: unknown = `${prompt}-result`): SavedAgent 
 });
 const failed = (prompt: string): SavedAgent => ({ prompt, status: 'failed' });
 const running = (prompt: string): SavedAgent => ({ prompt, status: 'running' });
+const atLimit = (prompt: string): SavedAgent => ({ prompt, status: 'failed-at-limit' });
 
 const saved = (replay: Replay): boolean => replay.saved;
 const calls = (prompts: readonly string[]): AgentCall[] => prompts.map((prompt) => ({ prompt }));
@@ -113,6 +114,42 @@ spec('workflows.behavior.Which agents run again.Completed', () => {
 
   test('a script that starts fewer agents than the record returns saved results for the ones it starts', () => {
     expect(planReplay([done('A'), done('B')], calls(['A'])).map(saved)).toEqual([true]);
+  });
+});
+
+spec('workflows.behavior.Which agents run again', () => {
+  describe('an agent that failed at a usage limit (§11.8, §11.9)', () => {
+    test('runs again, and the agents that completed return their saved results', () => {
+      const run = [done('A'), atLimit('B'), atLimit('C')];
+      expect(planReplay(run, calls(['A', 'B', 'C']))).toEqual([
+        { saved: true, result: 'A-result' },
+        { saved: false, cause: 'failed-at-limit' },
+        { saved: false, cause: 'failed-at-limit' },
+      ]);
+    });
+
+    test('only when an agent the script called after it returned a result does everything after it run again', () => {
+      const run = [done('A'), atLimit('B'), done('C'), done('D')];
+      expect(planReplay(run, calls(['A', 'B', 'C', 'D']))).toEqual([
+        { saved: true, result: 'A-result' },
+        { saved: false, cause: 'failed-at-limit' },
+        { saved: false, cause: 'after-failed' },
+        { saved: false, cause: 'after-failed' },
+      ]);
+    });
+
+    test('a failure other than at a usage limit still drags every agent after it', () => {
+      const run = [done('A'), failed('B'), atLimit('C')];
+      expect(planReplay(run, calls(['A', 'B', 'C'])).map(saved)).toEqual([true, false, false]);
+    });
+
+    test('as the first agent: alone it just runs again; with later results it drags them along', () => {
+      expect(planReplay([atLimit('A')], calls(['A']))).toEqual([
+        { saved: false, cause: 'failed-at-limit' },
+      ]);
+      const run = [atLimit('A'), done('B'), done('C')];
+      expect(planReplay(run, calls(['A', 'B', 'C'])).map(saved)).toEqual([false, false, false]);
+    });
   });
 });
 

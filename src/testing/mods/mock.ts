@@ -1,5 +1,6 @@
 import { createMockClock, type MockClock } from './mock-clock.ts';
 import type { StubHook } from './stubs.ts';
+import type { ModMatcher } from '../../protocol/mods-matcher.ts';
 import type { World } from './world.ts';
 
 /**
@@ -7,8 +8,8 @@ import type { World } from './world.ts';
  * Each takes the test's `on`, so it answers for that test's world and no other.
  */
 
-/** The test's `on`, as `mock.*` finds the world behind it. */
-export type On = (name: string, hook: StubHook) => void;
+/** The test's `on`: `on(name, hook)` or `on(name, matcher, hook)`, as `mock.*` finds the world behind it. */
+export type On = (name: string, matcherOrHook: StubHook | ModMatcher, hook?: StubHook) => void;
 
 const worlds = new WeakMap<On, World>();
 

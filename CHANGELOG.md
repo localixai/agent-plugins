@@ -2,6 +2,392 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-23
+
+- The kit follows Agent Plugins Extended `28f235d` (`1.1.0+claude-code.2.1.330`): Claude Code
+  2.1.330, after 2.1.321, and the Agent SDK types 0.3.330 (the peer range is now
+  `>=0.3.330 <0.4.0`). `bun run compat`: 100%, 2,803 of 2,803 requirements proven, over 17,505
+  tests. The spec now leaves out of scope thirteen sections about Claude Code's own session, apps
+  and built-in content (four of Code Mode's limits, the Desktop app's colour flows, the built-in
+  charts mod). The `PostToolUse` `updatedToolOutput` shapes are regenerated from the 0.3.330
+  `sdk-tools.d.ts`.
+
+### Breaking
+
+What a host changes, old → new.
+
+- Removed with `subagentStatusLine`, which 2.1.323 dropped (§12.6, §12.7.1, J12.17):
+  `session.subagentStatusLine()`, and from `./settings` `readSubagentStatusLine`,
+  `runSubagentStatusLine`, `readSubagentStatusRows`, `subagentStatusLineInput` and the types
+  `SubagentLineRead`, `SubagentStatusLineInput`, `SubagentStatusLineRun`, `SubagentStatusTask`.
+  `COMMAND_LINE_KEYS` holds only `statusLine` and `fileSuggestion`, and `PluginSettings` is
+  `Pick<Settings, 'agent'>`. A settings file that still holds the key loads with no issue; a
+  plugin's copy is dropped at load like any other key.
+- `AUTO_COMPACT_RANGE` → `AUTO_COMPACT_MIN` (`./format`): `autoCompactWindow` takes any whole
+  number of 100000 or more, with no upper bound (§5.10).
+- `ANY_CASING_NAMES` is gone (`./marketplace`): marketplaces named `npm`, `pip`, `uv`, `cargo`,
+  `github` or `gh` are accepted like any other name (§15.3.2 item 5, J15.3).
+- `REMOVED_STATUS` → `NEEDS_ATTENTION`, and `RemovedPlugin.status` → `listedUnder`: plugins a
+  marketplace removed are listed under **Needs attention** (§16.21.1).
+- `UninstallOption.key` is removed: the uninstall question for a plugin the project turns on is a
+  list with no single-letter answers (§16.4.4).
+- Mods' theme (§10.25.6, §10.25.7, J10.113): `BackdropBoard` → `ThemeBoard`,
+  `ModRegistries.backdrop` → `ModRegistries.theme`, and `ModTheme.changed(backdrop)` →
+  `changed(theme)`, which hears a `SessionTheme`. `SessionBackdrop`, the `Backdrop` site's props,
+  is `{ scene, plugin, glass?, overrideColorScheme? }`; `sceneBackdrop(theme)` gives it for a
+  scene and nothing for a still ground.
+- `REGISTER_RULES` → `registerRules(createRefusalBook())`, which also checks a `provides` a hook
+  passes to `next` (§10.19.5).
+- `ModsHost.watchesPluginDirs(isInteractive)` and `watchesPluginDirs` → `reloadsOnSave(source,
+  { isInteractiveTerminal, takesMorePrompts })`, `source` being `plugin-dir` or `skills-dir`
+  (§10.8.2).
+- `ModApprovalFacts` is `{ guardLoaded }`: `permissionPromptTool` and `canUseTool` are gone, since
+  where the built-in guard loads a user's mod's approval never skips auto mode's classifier
+  (§14.9.2 item 4).
+- `DecideContext.requiresPermission(toolName)` → `requiresPermission(toolName, input)`, for the
+  conditional cells of the 2.1.330 tools table: `Skill` "Some skills" and `EnterWorktree` "Some
+  worktrees" are No, `ExitWorktree` is Yes (§7.6.2). A host that answered from the old column
+  answers these three again.
+- `RunContext.httpPolicy` (`HttpHookPolicy`) gains `managed`: the top-level lists now cover every
+  HTTP hook but those of managed settings, and `managed` covers those (§7.3.4 item 3, §12.7.1,
+  J12.18). A host that passes only the top level leaves managed hooks unlimited.
+  `hookSessionGates` returns `managedHttpPolicy` beside `httpPolicy`, and
+  `HookPolicy.httpHook(url, vars, { managed })` takes the hook's origin.
+- In the test kit, a `ui.render` stub at the band needs `{ plugin: '<mod>' }` (or `'*'`) to answer a
+  mod's row: stubs take a matcher, `on(name, matcher, hook)` (§10.12).
+
+### New host duties
+
+Optional ports and fields: the kit applies the 2.1.330 behaviour each serves only when the host
+fills it.
+
+- Mods' ports `agentCalls`, `sessionFacts`, `hookEnv`, `wasm` and `vcs` (`ModOptionalPorts`,
+  `DeclaredOptionalPorts`) for the new members of `$`; each has a declared default (docs/API.md,
+  "Mods declarations").
+- The mod runtime's globals (`ModRuntime`): `performance.now()`, and a frozen `WebAssembly` that
+  instantiates only the modules the `wasm` port compiled; `inlineRuntime` is for tests, not a
+  sandbox (docs/API.md, "Mods"; docs/SECURITY.md, "Running a mod's code").
+- `ModsHost.stop(isTurnRunning)` on the user's Esc, Ctrl+C or Stop, before the host aborts;
+  `ModPlugin.register` with a plugin's other parts for `plugin.register`; `FireOptions.answered` to
+  learn which mod held back a server in `mcp.connect`; `ManagedModData.managedTools` where the
+  guard loads (docs/API.md, "Mods", "Managed hook filtering").
+- `SessionOptions.webFetchAgent` (and `AgentOverrides.webFetchAgent`) when the session reads web
+  pages through the built-in `web-fetch` agent; `BuiltinPolicy.webFetch` for `builtinAgents`
+  (docs/API.md, "Host and sessions", "Sub-agents: the catalog").
+- `dispatch(..., { failedCall, fromCode, webFetchAgent, coworkCloud })` and
+  `PreparedCall.fromCode` for Code Mode and the cases below (docs/API.md, "Host and sessions",
+  "Hooks", "Permission settings").
+- `SubagentModelInput.parentModel` and `parentFamily`, `checkAgainstAllowlist`'s `inherited` and
+  `nested`, and `resolveSubagentEffort`'s `spawner`, `subagentDefault` and `forkOrTeammate` for a
+  nested subagent (docs/API.md, "Sub-agents: how it is launched").
+- `reloadAgents`' `watch` lists agents folders that do not exist yet: the host watches for their
+  creation (§5.4.1).
+- `loadPlugin({ clientVersion, localFolder })` to apply `engines` (docs/API.md, "Loading");
+  `createStoreLayout(root, join, defaultRoot)` when `CLAUDE_CODE_PLUGIN_CACHE_DIR` moves the
+  plugins root; `McpBundleReader` extracts into `mcpb/` under the plugins root (docs/API.md,
+  "Install", "MCP servers").
+- `HelperHost.managedEnv` for the policy helper's environment;
+  `McpSessionFacts.connectorsAbovePlugins` for a `claude -p`, Agent SDK or VS Code session
+  (docs/API.md, "Settings", "MCP settings").
+- `facts.graph` for `claude plugin update` to install missing dependencies (docs/API.md, "CLI").
+
+### Packages and manifest
+
+- A `plugin.json` display field of the wrong type (`$schema`, `displayName`, `description`,
+  `author`, `homepage`, `repository`, `license`, `keywords`), and a malformed `metadata`,
+  `experimental` or `icon`, is dropped and the plugin loads, with a `manifest-field-ignored` note in
+  the new `LoadedPlugin.notes` (`PLUGIN_NOTE_TYPES`; §2.1 item 3, J2.6). The validator still
+  reports each as an error.
+- `engines` (§2.4): given `clientVersion`, `loadPlugin` refuses a plugin outside its
+  `engines["claude-code"]` range unless `localFolder`, which loads with `engine-range-exempt`; an
+  invalid range loads with `engine-range-invalid`. `readEngines`, `engineVerdict`, `engineRefuses`
+  and `newestFittingVersion` are in `./format`.
+- `network` (§2.4): `declaredHosts` gives the hosts of `{ hosts: [...] }`.
+- An `mcpServers` or `lspServers` path that is absolute or has a `..` part is not read: the plugin
+  loads without that file's servers, with `mcp-servers path not read: <path> is absolute or has a
+  ".." part` (§17.18.12). Before, the whole plugin failed.
+- `readPluginDirectory` skips subfolders whose name starts with `.`, even with a manifest (§16.8
+  item 4). A path the system could not check reads `<component> path couldn't be checked: <path>
+  (<code>)` (§17.18).
+- A plugin that sets the deprecated `agent` default loads with a `plugin-agent-setting-deprecated`
+  note (§12.6 item 2, J2.9).
+
+### Skills, agents and output styles
+
+- A `SKILL.md` directly in a plugin's default `skills/` folder makes `skills/` itself the one
+  skill, named by its frontmatter `name` or else `skills`; its child folders no longer load
+  (§4.2.1, J4.2).
+- A skill's injected commands in a repository that looks bare (`looksLikeBareRepository`: a `HEAD`
+  file beside `refs` or `commondir`): a Bash command that contains `git` or does not parse is
+  checked without the skill's `allowed-tools`, so it aborts unless a rule allows it.
+  `session.expandSkill` finds out by itself through `HostPorts.folders` for a body with `!`;
+  `bareRepository` on the request overrides it (§4.8.5 item 3).
+- A skill's `paths` stay relative to the main conversation's start directory after a `cd` into a
+  subdirectory of it (`PathGateOptions.primaryWorkingDirectory`, §4.7.3).
+- A skill's hooks end with the conversation: removed after a `SessionEnd` of any reason and before a
+  `SessionStart` of source `clear` or `resume`, kept over a compaction; their share of the
+  per-session limits goes with them (§7.1.4 item 2).
+- A nested subagent runs on the spawning subagent's model, which stands where the main model stands
+  for `inherit`, an unset `model`, the family alias rule and the Explore rule (§5.8.2, §5.8.3); an
+  alias in `CLAUDE_CODE_SUBAGENT_MODEL` still selects its version and `inherit` there is unset
+  (J5.20). `checkAgainstAllowlist` falls back to that model, warns `replaced` only for a top-level
+  subagent, and does not check `web-fetch`, which runs on the starting conversation's model when
+  its own is blocked (§5.8.4).
+- `resolveSubagentEffort` adds the spawner's level, then `CLAUDE_CODE_SUBAGENT_EFFORT`, after the
+  field and the parameter and before the session level; neither applies to a fork, a forked skill
+  or a teammate (§5.8.7).
+- With `CLAUDE_CODE_AUTO_COMPACT_WINDOW` set, a subagent's window is the lowest of the field, its
+  model's (`AutoCompactInput.modelWindow`) and the variable's (§5.10).
+- New `subagentThinking(main)` (§5.8.6; `ThinkingConfig` re-exported from the root),
+  `subagentTaskRow({ model, effort })` and `offersSubagentHistory(env)`
+  (`CLAUDE_CODE_SUBAGENT_HISTORY=0`; §5.8.2, §5.12.3), and `spawnerWaitsForNested`: in `-p` and the
+  SDK a spawner waits only for a foreground nested subagent (§5.12.2).
+- `propose_skills` is withheld from every subagent; a background subagent keeps `ListPlugins`,
+  `ListSkills`, `SearchPlugins` and `SearchSkills`, and every other built-in leaves it (§5.7.1,
+  J5.19).
+- The built-in `web-fetch` agent (`haiku`, `WebFetch` only, no CLAUDE.md) always runs in the
+  foreground; the session's catalog holds it with `webFetchAgent`, `Agent(web-fetch)` still denies
+  it, and with `SubagentRun.webFetchAgent` a subagent the Agent tool starts gets `WebFetch` back
+  while forks and teammates have none (§5.7.1, §5.12.4, §7.6.3 item 8).
+
+### Hooks
+
+- `mcp_tool` hooks take `onFailure` (2.1.328): `isError: true`, a server not connected and an
+  answer the client could not read are failures, and `"block"` turns them into a block; under
+  `"block"` on an event that can block, a non-empty answer setting no output field (`reason` alone
+  does not count) fails too (§7.3.5, §7.4.3, J7.212). An unreadable answer (`callTool` failing with
+  `message-too-large` or `missing-text`) is a hook error naming the tool and the server, which
+  refuses a `PreToolUse` call whatever `onFailure` says (§7.3.5 item 3).
+- `TaskCompleted` and `TeammateIdle` read a top-level `decision: "block"`: the task stays open or
+  the teammate keeps working, the reason going to Claude (§7.5.21, §7.5.24, J7.121).
+- `failedCall` dispatches `PostToolUse` for a failed call with the error text as `tool_response`;
+  only managed settings' hooks run for it (§7.5.11, J7.215).
+- Code Mode (J7.213, J7.214): with `fromCode`, a `PreToolUse` hook that times out, or an agent hook
+  that ends without a decision, refuses the call with `the hook did not finish` when `onFailure` is
+  unset; a `PostToolUse` rewrite of `REPL` output is accepted only in code-mode.md's shape, with
+  `refusedCalls` put back from the original. A `UserPromptSubmit` with `fromCode` runs no hook,
+  managed ones included, and lets the code output through (§7.6.11.3 items 4 and 5).
+- `webFetchAgent` on `SubagentStart` and `SubagentStop` runs only managed settings' hooks; the
+  `PreToolUse` and `PostToolUse` hooks matching `WebFetch` still run for its fetches (§7.5.18,
+  §7.5.19).
+- With `coworkCloud`, a `PostToolUse` `updatedToolOutput` for `AskUserQuestion` or `ExitPlanMode`
+  is left out of the outcome (§7.5.13).
+- A `Stop` or `SubagentStop` hook that exits 2 and prints `continue: false` ends the turn; on
+  `PreToolUse` the call stays blocked (§7.4.1.2). A failing command hook on `Notification` shows no
+  `hook error` notice (§7.4.1.3 item 2).
+- `StopFailure` has no `overloaded` value: the SDK's `overloaded` reaches the hook as
+  `server_error` and is no longer a documented matcher value (§7.5.23).
+- The suspect-capture refusal includes `stdio went quiet` (§7.4.2 item 5).
+
+### MCP
+
+- `mcpToolPolicy('off' | 'pending' | 'arrived')`: with feature-flag fetching off the root-level
+  rewrite runs and the input-schema checks exclude a tool; only while flags are pending is a
+  combinator tool skipped and an invalid one sent (§8.8).
+- `recommendedMcpTaskTiming` gives the `ttlMs` and `pollIntervalMs` a plugin's server should send
+  (§8.10).
+- `rankMcpServers` and `mcpLoadPlan` take `connectorsAbovePlugins`: claude.ai connectors rank above
+  plugin servers (§8.11.1).
+- MCP bundles are extracted into `mcpb/` under the plugins root, not `.mcpb-cache/` in the plugin
+  (`StoreLayout.mcpb()`); an uninstall deletes them with the plugin's options unless another plugin
+  uses an identical bundle (`uninstallRetention` `bundles`, `mcpbDelete`; §2.9, §16.6, §17.5.1).
+
+### Mods
+
+- New members of `$` (§10.7.1): `$.agent.call` (a tool run as the agent's own call through
+  `agent.call`; `Workflow` refused) and `$.agent.limits`; `$.session.info` and
+  `$.session.machine` (J10.8); `$.process.hookEnv`; `$.wasm.compile` (up to 64 MiB, through
+  `wasm.compile`; §10.35); `$.vcs` (experimental: `detect`, `diff`, `isolate`, `list`, `release`,
+  `status` over `vcs.*` events; §10.19.8, J10.23). `$.fs.read(path, { offset, length })` reads a
+  range, held to 4 MiB; `$.session.messages({ last, after })` returns entries with their `uuid`;
+  `$.audio.speak(text, { voice, signal })`; `SessionIdentity.contextEmail`.
+- `$.theme.set` takes the 2.1.330 theme: a backdrop is a scene (`{ scene, glass? }`) or a still
+  ground (`{ color }`, `{ gradient }`, `{ vector }`), `overrideColorScheme` beside it, and the
+  Desktop app's `colors`, `sound` and `style` passed as given. A set replaces the whole theme, an
+  unknown attribute is refused by name, and `backdrop.id` and `backdrop.colorScheme` are refused.
+  Turning off a mod stops it setting its colours again (§10.25.7 item 4).
+- New events: `tool.judge` (auto mode's classifier asked; `next(e)` asks it once, `{ decision }`
+  decides in its place; §10.16.5), `tool.run` (an allowed call about to run; `{ result }` answers
+  for the tool, `{ deny }` fails the call; `runModToolCall` fires it after `tool.check`;
+  §10.16.6), `session.stop` with `isTurnRunning` (§10.19.2), and the declarations' `tool.offer`,
+  `agent.report` and `ui.pointer` (J10.22).
+- `plugin` is a default matcher key: a hook on `ui.press`, `ui.input`, `ui.select`, `ui.focus` or
+  `ui.render` without it runs only for its own mod's controls and drawings; `{ plugin: '<name>' }`
+  names another mod, `'*'` every mod (§10.13.3). A `tool.check` for a mod's own `$` call (`e.op`)
+  reaches only hooks whose matcher names `op`; `e.ceiling` may be `deny` (§10.16.3).
+  `tool.describe`'s `mcpServer` is pinned (§10.16.4).
+- Event fields of 2.1.330: `agent.offer` `agentId`, `session.compact` messages' `uuid`,
+  `turn.complete` `usage` `ephemeral_5m_input_tokens` and `ephemeral_1h_input_tokens`,
+  `session.measure` `cost.hasUnknownPrice`, and `mcp.connect` `provider` (`{ plugin, tier }`;
+  §10.18, §10.19).
+- `plugin.register` carries `name`, `root`, `version`, `tier`, `provenance`,
+  `requiredByOrganization`, `uses` (with `hosts` a module's `$.http.fetch` and `$.audio.play`
+  spell), `provides`, `unread` and `hosts`, and fires for a plugin with no hooks module too
+  (§10.8.1, §10.19.5). A policy mod keeps parts out by removing entries from `e.provides`;
+  emptying `modules` logs `<plugin>: hooks module left out by <mod>`, and the load report's
+  `keptOut` lists what was kept out (§14.9.8).
+- `isTextDisplayOnly` stays on a command's answer only when a hook answered without `next` for a
+  command registered without `immediate` (`displayOnlyReply`), for `$.command.run` and
+  `ModsHost.runCommand` alike (§10.30.1).
+- `CLAUDE_CODE_PLUGIN_DIR_WATCH`: unset, a skills-directory mod reloads on save in any session of
+  more than one prompt and a `--plugin-dir` mod only in an interactive terminal; `1` makes
+  `--plugin-dir` mods reload as skills-directory ones; `0` turns reloading off (§10.8.2). A reload
+  that leaves no version running writes `<mod>: reload failed: <reason>` (§10.41.7).
+- A mod Claude writes is refused for having no approver in `dontAsk` mode or in the `claude -p` run
+  that writes it in `default` or `acceptEdits`; the untrusted-workspace gate is for interactive
+  sessions only. `writtenModAsks(policy, session)` says whether the client asks first (§10.8.4).
+- Only a `prepend` or `append` mod may withhold a namespace at `engine.create` (`mayWithhold`,
+  §10.19.5).
+- A `ui.render` hook is skipped after waiting 30 seconds on `$` calls for one event, a
+  `plugin.register` hook after 10 (`$.ui.ask` not counted): `timed out: waited on $ calls past its
+  <ms> ms limit` (§10.11). `MOD_LIMITS` adds `renderWaitMs`, `registerWaitMs`, `propDepth` and
+  `propValues`: a tree past 100 nested lists and objects or 1,000,000 values is refused.
+- The band above the prompt draws one row per mod (2.1.323): `ModsUi.drawBand(request, mods)` asks
+  `AbovePrompt` once for each mod that hooks `ui.render` and stacks the rows through the new
+  `AbovePromptList` site, whose hooks may hide, reorder or wrap them (`BandDrawn`, `BandRequest`,
+  `BandRow`; §10.21). The rows share one tree's limits, and a row past them is left out while the
+  others draw; two rows on the same hotkey press neither (§10.10.5 item 4).
+- New render sites `AgentRow` and `ContextMenu` (declarations only, J10.24); elements `Progress`
+  and `Shader` (in a `Backdrop` only, over one `Svg`), `Text` `maxLines` and `wrap` `end`, `middle`
+  and `clip`, `Box` `overflowX` (§10.9, §10.10). `$.ui.open({ placement: 'widget' })` asks the
+  Desktop app for a widget, and opening a pane another mod has open rejects (§10.25.1). A `Pane`'s
+  `ui.render` carries its mod as `e.plugin`; the drawn rows' sites take the row's id.
+- The stopped-turn toast reads `stopped · type a message to continue` (§10.43.2).
+- The static analysis reads the files `$.wasm.compile` names by a literal (`ModScan.wasmFiles`):
+  a missing one is an error that keeps the module from loading, one that does not parse a warning
+  (§10.4.2).
+
+### Workflows
+
+- An agent saved as `failed-at-limit` runs again on a relaunch while completed agents keep their
+  results, unless an agent after it returned a result (§11.8). `usageLimitDecision` adds the
+  desktop Code tab (`desktop-code-tab` pauses, `desktop-other` does not), usage-based billing, the
+  non-essential traffic switch and the Code tab's auto-continue (§11.9). Workflow agents resolve
+  effort in the subagents' order.
+
+### Settings
+
+- A plugin's `agent` default still applies; `PluginDefaults.warnings` (and
+  `session.pluginDefaults().warnings`) gives one startup warning per enabled plugin that sets it. A
+  plugin `settings.json` holding only `subagentStatusLine` no longer wins over the manifest's
+  `settings` (§12.6, J12.10, J12.14).
+- `OTEL_RESOURCE_INCLUDE_HOST` is dropped from project and local `env`, and
+  `CLAUDE_CODE_STRICT_INLINE_SHELL_RM_PROMPT` and `CLAUDE_CODE_DISABLE_ULTRAREVIEW_TRUST_CHECK`
+  from every file's (§12.7.4). `codeModeOn`: `CLAUDE_CODE_EXPERIMENTAL_CODE_MODE` turns Code Mode
+  on only from the launch environment, user settings or `--settings`; project and local files never
+  set it.
+- `editEffect({ ..., savedHere: true })`: in the session that saved a rule or setting itself the
+  change is in force at once and `ConfigChange` does not run; other sessions still get the hook
+  (§7.5.25).
+- `readAddDirLayer`: a `--add-dir` directory's settings give `enabledPlugins` and
+  `extraKnownMarketplaces` only when its setting sources load, an interactive terminal skips an
+  untrusted directory's entries, and its marketplaces wait for saved trust (`addDirReads`;
+  §16.4.6).
+
+### Permissions and trust
+
+- The tools table follows 2.1.330: `ListPlugins`, `ListSkills`, `propose_skills`,
+  `SearchPlugins`, `SearchSkills`, `SuggestPluginInstall` and `SuggestSkills` are added, the new
+  `DOCS_ONLY_TOOLS` lists the documented tools the SDK lacks, and `SetGoal` replaces `ProposeGoal`
+  among the SDK-only names (§7.6.2).
+- In auto mode, and in plan mode while the classifier reviews commands, a `SendMessage` goes to the
+  classifier unless an allow rule matches it or a `PreToolUse` hook allows it (§13.9.4 item 5).
+- Entering auto mode also suspends a wrapper followed only by a wildcard (`Bash(timeout *)`), a
+  shell rule that starts with a wildcard (`Bash(* --version)`) and a wildcarded absolute or home
+  path (`Bash($HOME/bin/*)`) (§13.9.4 item 3).
+- Code Mode: a call with `PreparedCall.fromCode` meets deny and ask rules under its usual name and,
+  in auto mode, runs without its own classifier review; actions no mode auto-approves still prompt
+  (§7.6.11).
+- `--restricted` refuses `bypassPermissions` with `Error: bypassPermissions not supported in
+  restricted mode` (§13.9.6 item 2).
+
+### Policy
+
+- `enforceAnthropicSignIn` (2.1.329) is read only from the managed settings file or the MDM
+  policy, even beneath server-managed settings and beside a `policyHelper`; never from
+  server-managed settings, HKCU or the helper (§14.2.8, §14.3.5). The policy helper's environment
+  is the launching shell's plus the managed `env`, never user settings' or `--settings`' (§14.2.5).
+- `startupOnFailedFetch` and `SERVER_CACHE_LIFETIME_MS`: after a failed startup fetch the
+  server-managed cache applies only within 24 hours of the last successful fetch (`using cached
+  policy`); later the session starts without it, or exits under `forceRemoteSettingsRefresh`.
+  `serverFetchProxy` gives the fetch's `HTTPS_PROXY` (§14.3.2).
+- `deliveredConfiguration`: the server-managed group configuration a member receives (the
+  highest-ranked of their groups, else the catch-all, else none) (§14.3.7).
+- Where the built-in guard loads: a user's mod's approval no longer skips auto mode's classifier
+  (§14.9.2 item 4); a user's `telemetry.log` hooks do not run (§14.9.4); Claude Code's own
+  `http.fetch` requests (`next.origin` `engine`, `HookAccess.origin`) reach only the organization's
+  mods (§10.19.7); managed MCP servers' tools stay in the client's `tool.list` pool and a user's
+  `tool.offer` hook does not run for them (§14.9.2 item 3). Its messages drop the
+  `(allowModsToOverrideDenyRules)` suffix (§10.42.2).
+- A mod from a remote marketplace counts as the organization's when managed settings enable it,
+  declare its marketplace (`ModCandidate.managed.isMarketplaceManaged`) and list it in
+  `prependPlugins` or `appendPlugins` (§14.9.5).
+
+### Marketplaces, install, dependencies and updates
+
+- A marketplace entry with a display field of the wrong type, or a `homepage` that is not a URL,
+  stays listed and its install fails with `This plugin's marketplace entry is invalid: <field>:
+  <problem>, ...` (`failureCode: "invalid_entry"`, `MarketplaceEntry.invalid`,
+  `invalidEntryMessage`; §15.5.3, J15.15).
+- An entry's `engines` is read and validated, and ignored at load when malformed (§15.4, §15.7).
+  `planInstall` refuses a plugin outside its range (`InstallFound.engines`, `failureCode:
+  "engine_range"`) and adds a note to a local-folder install; `planPluginUpdate` does not move to a
+  version outside it (`UpdatableInstall.engines`).
+- A source `ref` that is a full commit SHA pins the marketplace (`pinned: true` on the git fetch
+  plan; `pinnedCommit` in `planMarketplaceUpdate`), and is refused for an official reserved name
+  (§15.7, §17.14.4).
+- A plugin only the repository's settings turn on, listed by a relative path in a git marketplace,
+  no longer loads at session start: it loads at `/reload-plugins`, or for one `-p` run with
+  `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1`; from a local-path marketplace it still loads at start
+  (`EnabledFacts.marketplaceOnMachine`, `moment`; `EnabledFetchDecision.sessionOnly`,
+  `addMarketplaceFirst`; §16.4.2).
+- The `/plugin` texts: `Couldn't install: <plugin> (<reason>)`, `No plugins yet` on an empty
+  Discover tab, and `Plugin "<name>" is on in project settings but isn't installed here` (§16.31,
+  §16.4.2).
+- `managedTakeBack`: whether managed settings' marketplace replaces a user's of the same name, or
+  why it stays (§16.31). `plugin_errors` entries a managed `enabledPlugins` entry dropped carry
+  `managed_lock` (`PluginNotLoaded.managedLock`; §17.15.2).
+- `claude plugin update` installs the declared dependencies a plugin is missing
+  (`UpdateRun.dependencies`), names the rest on `Dependencies still unresolved: <ids>`, and installs
+  none while `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set; `DEPENDENCY_INSTALL_OPERATIONS`
+  gains `update` (§16.24.1, §16.30). `reloadSummary` reports dependencies installed but not applied
+  (`ReloadCounts.unappliedDependencies`; §16.12 item 1).
+- `synced/` and `.trash/` stay under `~/.claude/plugins` when `CLAUDE_CODE_PLUGIN_CACHE_DIR` moves
+  the plugins root (§16.6).
+- A bare source name under a `metadata.pluginRoot` that leaves the marketplace also reports why it
+  cannot resolve (J15.6).
+
+### CLI and validator
+
+- `renderCommand(output, { terminal: true })` and `shellInstallLines` print success lines as a
+  2.1.330 terminal does (`Installed plugin: ...`, `Added marketplace: ...` and the rest); piped
+  output and the `--json` `message` keep `Successfully ...` (§17.2.1, J17.33).
+- New `planRestoreSetAside` for `claude plugin restore-set-aside <plugin>@<marketplace>
+  [--discard]`, in `COMMAND_TABLE` (§17.10.1, J17.34), and `concludeCommandInstall` for the end of
+  an install whose entry runs a command: `commandPrinted`, and `commandFailed` with `failureCode:
+  "command_failed"` (§17.2.2).
+- `planMarketplaceList` prints a directory source as `Source: Folder (<path>)` (J17.18).
+- `claude plugin validate` lists after a plugin's findings what it provides and the hosts it can
+  reach (`pluginProvides`, `pluginHosts`, `validationLists`, `validationListLines`, `provides` and
+  `hosts` in `validationJson`; §17.13.4, J17.36). It checks `engines["claude-code"]` and warns
+  about a malformed `engines` or `network` and the deprecated `agent` and `subagentStatusLine`
+  plugin defaults (§2.4, J2.9). On a marketplace it reads the hooks files of the plugins it lists by
+  relative path (§17.13.3, J17.35).
+- `validateMod` prints `wasm <path>: <n> bytes, sha256 <hex>` and the file's imports and exports;
+  its `--json` result carries `wasm` and `modules` (§10.4.3). It marks a hook on another mod's
+  controls that leaves out a default matcher key with ` (default matcher key: plugin, component)`
+  and lists `tool.run` and `tool.judge` as gating hooks.
+
+### Testing kit
+
+- `expect` offers every check of the declarations' `Matchers` (`toStrictEqual`, `toHaveLength`,
+  `toHaveProperty`, `toThrow` by class or message and the rest), `.resolves`, `.rejects`, a leading
+  message, and `expect.any`, `anything`, `stringContaining`, `stringMatching`, `objectContaining`
+  and `arrayContaining` (§10.12).
+- A mount whose `ui.render` hook returns `next(e)` succeeds without a stub: `next(e)` answers Claude
+  Code's own drawing (before, it failed `no implementation for ui.render`). A mounted drawing's
+  `keepsBeneath()` says whether the tree holds what `next(e)` answered.
+
 ## [0.2.0] - 2026-11-23
 
 - The kit follows Agent Plugins Extended `0ed968b`, where the 48 disagreements its judgments

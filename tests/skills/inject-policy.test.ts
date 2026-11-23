@@ -104,6 +104,40 @@ spec('skills.behavior.When only managed permission rules apply', () => {
   });
 });
 
+spec('skills.behavior.Permission checks on injected commands.Managed-only rules', () => {
+  const policy = { managedPermissionRulesOnly: true };
+
+  test("the skill's allowed-tools are ignored, and the expansion lists them for /status", async () => {
+    const run = await expandWith(skillFrom(commit, '!`git status`'), { request: { policy } });
+    expect(abortOf(run.expansion)).toContain('Shell command permission check failed');
+    const listed = await expandWith(skillFrom(commit, 'x'), { request: { policy } });
+    expect(listed.expansion).toMatchObject({
+      ok: true,
+      grants: [],
+      ignoredGrants: ['Bash(git add *)', 'Bash(git commit *)', 'Bash(git status *)'],
+    });
+  });
+
+  test('a command a managed rule allows runs', async () => {
+    const run = await expandWith(skillFrom(commit, '!`git status`'), {
+      request: { policy },
+      rules: { allow: ['Bash(git status *)'] },
+      replies: [{ stdout: 'clean' }],
+    });
+    expect(run.expansion.ok).toBe(true);
+  });
+});
+
+spec('skills.behavior.Permission checks on injected commands.Bare repository folders', () => {
+  test('through expandSkill: in a bare-looking repository a git command is not covered by the grant', async () => {
+    const skill = skillFrom(commit, '!`git status`');
+    const bare = await expandWith(skill, { request: { bareRepository: true } });
+    expect(abortOf(bare.expansion)).toContain('Shell command permission check failed');
+    const normal = await expandWith(skill, { replies: [{ stdout: 'clean' }] });
+    expect(normal.expansion.ok).toBe(true);
+  });
+});
+
 spec('skills.behavior.When managed settings lock hooks to plugins', () => {
   test('"strictPluginOnlyCustomization" locking hooks: a personal or project skill that declares hooks loses its grant', async () => {
     const hooks =

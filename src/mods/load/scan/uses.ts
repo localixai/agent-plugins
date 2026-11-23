@@ -1,4 +1,5 @@
 import type { SurfaceModuleSpan } from './client-modules.ts';
+import type { ScannedWasm } from './wasm-paths.ts';
 import type { EngineFold } from './engine-fold.ts';
 import type { ModScanIssue } from './issue-codes.ts';
 
@@ -34,6 +35,11 @@ export interface ModScan {
   readonly envWrites: readonly string[];
   readonly stateReads: readonly string[];
   readonly stateWrites: readonly string[];
+  /** The hosts `$.http.fetch` and `$.audio.play` calls spell, and the methods called with a URL the scan cannot read. */
+  readonly hostsNamed: readonly string[];
+  readonly hostsUnread: readonly string[];
+  /** The files its `$.wasm.compile` calls name by a literal path (`ScannedWasm`). */
+  readonly wasmFiles: readonly ScannedWasm[];
   /** Relative import specifiers, which the walker follows. */
   readonly imports: readonly string[];
   /** The surface modules its `Client` elements name, as paths from the plugin root (`clientModules`). */
@@ -57,6 +63,8 @@ export interface ModUses {
   readonly envWrites: readonly string[];
   readonly stateReads: readonly string[];
   readonly stateWrites: readonly string[];
+  readonly hostsNamed: readonly string[];
+  readonly hostsUnread: readonly string[];
 }
 
 const unique = <T>(items: readonly T[]): T[] => [...new Set(items)];
@@ -82,5 +90,7 @@ export function combineScans(scans: readonly ModScan[]): ModUses {
     envWrites: unique(scans.flatMap((scan) => scan.envWrites)),
     stateReads: unique(scans.flatMap((scan) => scan.stateReads)),
     stateWrites: unique(scans.flatMap((scan) => scan.stateWrites)),
+    hostsNamed: sortedUnique(scans.flatMap((scan) => scan.hostsNamed)),
+    hostsUnread: sortedUnique(scans.flatMap((scan) => scan.hostsUnread)),
   };
 }

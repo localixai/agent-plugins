@@ -48,6 +48,9 @@ const VIA_LINK: { readonly [O in Decision['outcome']]: (decision: Decision) => D
 
 const DENIED: Decision = { outcome: 'deny', reason: 'deny-rule' };
 
+/** The tool whose messages to other agents the classifier reviews (§13.9.4 item 5). */
+const MESSAGE_TOOLS: ReadonlySet<string> = new Set(['SendMessage']);
+
 /** The tools whose sandboxed command can carry its own allowed domains (sandboxing.md). */
 const HOSTED_COMMANDS: ReadonlySet<string> = new Set(['Bash', 'PowerShell', 'Monitor']);
 
@@ -159,8 +162,19 @@ const GATES: readonly Gate[] = [
     hookSkipsPrompt(call, facts, ctx, strategy)
       ? pending({ outcome: 'allow', reason: 'hook' }, 'any')
       : undefined,
+  // "A message Claude sends to another agent with `SendMessage` is reviewed before delivery ...
+  // unless an allow rule matches `SendMessage` or a `PreToolUse` hook returns allow" (§13.9.4 item 5).
+  ({ call, ctx, strategy }) =>
+    MESSAGE_TOOLS.has(call.toolName) && call.fromCode !== true && strategy.reviewsMessages(ctx)
+      ? pending({ outcome: 'classify', reason: 'mode-auto' }, BASELINE_REACH.classify)
+      : undefined,
   ({ facts }) =>
     facts.readOnly ? pending({ outcome: 'allow', reason: facts.readReason }, 'any') : undefined,
+  // Code Mode: "the code goes to the classifier once before it runs and the tool calls inside it do not".
+  ({ call, facts, strategy }) =>
+    call.fromCode === true && strategy.runsCodeCalls && !facts.escapesViaLink
+      ? pending({ outcome: 'allow', reason: 'mode-auto' }, 'any')
+      : undefined,
 ];
 
 /**

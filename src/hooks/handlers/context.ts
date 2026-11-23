@@ -86,7 +86,10 @@ export interface RunContext {
    * Plugin directory does not exist` (plugins/troubleshooting.md). The engine turns it on unless the host sets `checkPluginDirectories: false`.
    */
   readonly checkPluginDirectory?: boolean;
-  /** The merged `allowedHttpHookUrls` and `httpHookAllowedEnvVars` of the settings; unset: no limit. */
+  /**
+   * The merged `allowedHttpHookUrls` and `httpHookAllowedEnvVars`: the top level covers every hook
+   * but those of managed settings, `managed` covers those (J12.18); unset: no limit.
+   */
   readonly httpPolicy?: HttpHookPolicy;
   readonly signal: AbortSignal;
 }

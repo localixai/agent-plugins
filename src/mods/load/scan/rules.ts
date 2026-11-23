@@ -21,6 +21,8 @@ import { ATOM_UNREADABLE, atomOf, type TopLevel } from './top-level.ts';
 import type { Found } from './found.ts';
 import { engineFold } from './engine-fold.ts';
 import { walk } from './walk.ts';
+import { recordHost } from './hosts.ts';
+import { recordWasm } from './wasm-paths.ts';
 import {
   AS_VALUE,
   DOLLAR_BOUND,
@@ -94,6 +96,8 @@ function recordUse(run: Run, name: string, call: CallExpression): void {
   if (name === 'env.set') found.envWrites.add(literalArg(call));
   if (name === 'state.get') found.stateReads.add(refArg(call));
   if (name === 'state.set') found.stateWrites.add(refArg(call));
+  recordHost(found, name, call);
+  recordWasm(found, name, call, run.on.lineOf);
 }
 
 /** One `$.ns.method` the module calls, once per function it is reached through. */

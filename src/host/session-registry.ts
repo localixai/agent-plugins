@@ -148,3 +148,15 @@ export function dropSpent(core: SessionCore): void {
   const kept = withoutSpent(registry, core.onceClaims);
   if (kept !== registry) core.registry.set(kept);
 }
+
+/**
+ * Leaving the conversation (Agent Plugins Extended §7.1.4 item 2: exit, `/clear`, `/resume`) removes
+ * every skill's hooks, found by the prefixes the skill ledger recorded (a host's own `addHooks`
+ * stays); what they used of the limits on skill hooks goes with them, as it does for a skill whose
+ * plugin no longer runs, so the next conversation counts afresh.
+ */
+export function dropSkillRegistrations(core: SessionCore): void {
+  for (const prefix of core.skillHooks.counted.keys()) dropRegistration(core, prefix);
+  core.skillHooks.counted.clear();
+  core.skillHooks.used.clear();
+}

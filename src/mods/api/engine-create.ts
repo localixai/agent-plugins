@@ -1,5 +1,5 @@
 import { MODS_API } from '../../protocol/mods-api-names.ts';
-import { ENGINE_ORIGIN } from '../../protocol/mods-events.ts';
+import { ENGINE_ORIGIN, type ModTier } from '../../protocol/mods-events.ts';
 import type { ModsApi } from '../types.ts';
 import { type Deps } from './call.ts';
 import type { CallContext, Scope } from './scope.ts';
@@ -16,6 +16,13 @@ export interface ModApiSettlementOptions extends ApiOwner {
   readonly scopes: ScopeBook;
   readonly canWithhold: boolean;
 }
+
+/**
+ * The tiers whose mods may withhold a namespace at `engine.create`: `prepend` and `append` (§10.19.5,
+ * 2.1.330; before, every tier but `user`, the built-in one included).
+ */
+const WITHHOLDING_TIERS: ReadonlySet<ModTier> = new Set<ModTier>(['prepend', 'append']);
+export const mayWithhold = (tier: ModTier): boolean => WITHHOLDING_TIERS.has(tier);
 
 /** Runs `run` with `context` as the current one in every scope of `scopes`, until it settles. */
 function inAll<T>(

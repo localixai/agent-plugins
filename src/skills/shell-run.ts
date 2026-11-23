@@ -4,6 +4,7 @@ import type { SkillShell } from '../format/skill-types.ts';
 import type { ScratchFiles } from '../ports/index.ts';
 import type { PermissionBehavior, PermissionMode } from '../protocol/official.ts';
 import type { DocumentedTool } from '../protocol/tool-names.ts';
+import { splitCommand } from '../rules/bash/split.ts';
 import { refusalOf } from './shell-refusal.ts';
 import { mayMoveToBackground, renderResult, timeoutOf, type Step } from './shell-result.ts';
 import type { SkillCommandRunner } from './shell-ports.ts';
@@ -69,6 +70,11 @@ export interface InjectionContext {
   readonly bashOutputMaxChars?: number;
   /** Bare mode: a command that reaches its timeout stops instead of moving to the background. */
   readonly bare?: boolean;
+  /**
+   * The closest repository at or above the working directory looks bare (`looksLikeBareRepository`):
+   * a Bash command that contains `git` or that does not parse is asked without the grants (§4.8.5).
+   */
+  readonly bareRepository?: boolean;
 }
 
 export interface InjectionPorts {
@@ -93,6 +99,23 @@ const DEFERS_ASK: { readonly [M in PermissionMode]: boolean } = {
   dontAsk: false,
   auto: true,
 };
+
+/** The bare-repository limit names Bash commands only. */
+const BARE_RULE_APPLIES: { readonly [S in SkillShell]: boolean } = {
+  bash: true,
+  powershell: false,
+};
+
+/**
+ * The grants a command is checked with (§4.8.5 item 3, "Bare repository folders"): in a repository
+ * that looks bare the client ignores `allowed-tools` for a Bash command that contains `git` or that
+ * it cannot parse, so such a command aborts unless a permission rule allows it.
+ */
+function grantsFor(command: string, context: InjectionContext): readonly string[] {
+  if (context.bareRepository !== true || !BARE_RULE_APPLIES[context.shell]) return context.grants;
+  const unsafe = command.includes('git') || !splitCommand(command).parseable;
+  return unsafe ? [] : context.grants;
+}
 
 const defersAsk = (mode: PermissionMode | undefined): boolean =>
   mode !== undefined && DEFERS_ASK[mode];
@@ -171,7 +194,7 @@ async function step(
   const answer = await ports.permissions({
     tool: TOOL_NAMES[context.shell],
     command: planned.command,
-    grants: context.grants,
+    grants: grantsFor(planned.command, context),
   });
   const verdict = VERDICTS[answer](context);
   if (verdict === 'abort') {

@@ -25,7 +25,7 @@ async function shell(run: CommandRun | undefined): Promise<string> {
 const load = (tree: Parameters<typeof memoryFiles>[0]) => loadPlugin({ files: memoryFiles(tree) });
 const plugin = (extra: Record<string, unknown> = {}) => json({ name: 'formatter', ...extra });
 
-spec('hooks.troubleshooting.Hooks fail to load', () => {
+spec('install.troubleshooting.Hooks fail to load', () => {
   test('hooks/hooks.json that is not valid JSON: "Failed to load hooks from <path>: <reason>"', async () => {
     const { issues, plugin: loaded } = await load({
       '.claude-plugin/plugin.json': plugin(),
@@ -44,6 +44,17 @@ spec('hooks.troubleshooting.Hooks fail to load', () => {
     });
     expect(messagesOf(issues)[0]).toStartWith('Failed to load hooks from hooks/hooks.json: ');
     expect(messagesOf(issues)[0]).toContain('must be an object');
+  });
+
+  test('or that lacks the top-level `hooks` key (2.1.330): the file does not load', async () => {
+    const { issues, plugin: loaded } = await load({
+      '.claude-plugin/plugin.json': plugin(),
+      'hooks/hooks.json': json({ description: 'formatters' }),
+    });
+    expect(loaded?.hooks).toEqual({});
+    expect(messagesOf(issues)[0]).toMatch(
+      /^(Couldn't|Failed to) load hooks from hooks\/hooks\.json: /,
+    );
   });
 
   test('the manifest `hooks` names a file that does not exist: "hooks path not found: <path>"', async () => {
@@ -96,7 +107,7 @@ const dispatchStop = async (options: { checkPluginDirectories?: boolean }) => {
   return { calls: runner.calls.length, notices: outcome.notices.length };
 };
 
-spec('hooks.troubleshooting.hook error notices in the transcript', () => {
+spec('install.troubleshooting.hook error notices in the transcript', () => {
   test('a command that failed: "... hook error: Failed with non-blocking status code: <stderr>"', () => {
     const stderr = '/bin/sh: node: command not found';
     const verdict = verdictOf('Stop', exited(127, stderr), { entry: stopHook() });
@@ -143,7 +154,7 @@ spec('hooks.troubleshooting.hook error notices in the transcript', () => {
     });
   });
 
-  test('the plugin directory is gone: "Failed to run: Plugin directory does not exist: <path> (<plugin> — run /plugin to reinstall)", the hook does not run', async () => {
+  test('the plugin directory is gone: an error that begins "Failed to run: Plugin directory does not exist: <path>", the hook does not run', async () => {
     const runner = scriptedRunner({});
     const engine = createHookEngine(
       { commands: runner, locations: locations(), environment: fakeEnvironment({}) },

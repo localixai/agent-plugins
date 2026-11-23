@@ -25,6 +25,7 @@ const REMOVED_FROM_EVERY_SUBAGENT: readonly string[] = [
   'AskUserQuestion',
   'EndConversation',
   'EnterPlanMode',
+  'propose_skills',
   'ScheduleWakeup',
   'WaitForMcpServers',
   'Workflow',

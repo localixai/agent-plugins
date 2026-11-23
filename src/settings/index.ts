@@ -5,6 +5,7 @@ export { KEY_SPECS, SPECS, admits, type KeySpec, type ScopeRule } from './key-sp
 export type { ValueSpec } from './value-spec.ts';
 export { POLICY_SCOPES, type KeyHolder, type PolicyScope, type PolicyLayer } from './layers.ts';
 export type { MergeKind } from './merge.ts';
+export { readAddDirLayer, type AddDirLayerFacts } from './add-dir-layer.ts';
 export { readSettingsLayer } from './read-layer.ts';
 export type { RepairKind } from './repair/kinds.ts';
 export { loadSettingsLayers, type LoadedSettings, type SettingsSources } from './sources.ts';

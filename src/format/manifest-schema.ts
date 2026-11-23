@@ -111,6 +111,9 @@ export const MANIFEST_SCHEMAS = {
   defaultEnabled: z.boolean(),
   dependencies: z.array(dependency),
   settings: object,
+  // Read by `format/engines.ts` and `format/network.ts`: a value that is not an object is ignored.
+  engines: object,
+  network: object,
   userConfig,
   types: path,
   channels: z.array(channel),

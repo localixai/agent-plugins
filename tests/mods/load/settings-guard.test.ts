@@ -26,18 +26,16 @@ spec(
     'mods.setting.allowManagedModsOnly',
     "policy.mods.Allow only your organization's mods",
     "policy.mods.Choose how much to allow.Only your organization's mods",
-    'policy.mods.Choose how much to allow.Any mod from marketplaces you approve',
     'policy.org.Control matrix.allowManagedModsOnly',
     'policy.mods.Stop user-installed mods from loading',
-    "policy.mods.Stop user-installed mods from loading.Users can't undo it",
     "policy.mods.Allow only your organization's mods.A mod the user installed",
     "policy.mods.Allow only your organization's mods.pluginConfigs",
     'policy.mods.Choose how much to allow.allowManagedModsOnly',
-    'policy.mods.Set options on the built-in guard.Only managed settings count',
+    'policy.mods.Set options on the built-in guard',
     'policy.mods.Set options on the built-in guard.The guard fails closed',
     'policy.mods.Set options on the built-in guard.The guard has to load',
     'policy.mods.Set options on the built-in guard.The id has one form here',
-    'policy.mods.Stop user-installed mods from loading.No mod a user brings runs its hooks',
+    'policy.mods.Stop user-installed mods from loading.The guard refuses these mods',
     'policy.mods.Stop user-installed mods from loading.Built-in mods keep running',
     "policy.mods.Stop user-installed mods from loading.Your organization's mods still run",
     'policy.mods.Know what happens by default.Mods are on',
@@ -170,127 +168,129 @@ spec(
   },
 );
 
-spec('mods.setting.allowModsToOverrideDenyRules', () => {
-  const allowing = (on: (name: string, ...rest: unknown[]) => void): void => {
-    on('tool.check', () => ({ decision: 'allow', reason: 'looks fine' }));
-  };
-  const guardOptions = (overrides: boolean) =>
-    managed({
-      pluginConfigs: {
-        'cc-plugin-sec-default@builtin': { options: { allowModsToOverrideDenyRules: overrides } },
-      },
-    });
-  const check = async (
-    settings: ReturnType<typeof guardOptions>,
-    verdict: 'deny' | 'ask' | 'none' | 'unknown' | 'throws',
-  ) => {
-    const s = session(
-      { lifter: registerOf((on) => allowing(on)) },
-      {
-        policy: settings,
-        deny: {
-          verdict: () =>
-            verdict === 'throws'
-              ? Promise.reject(new Error('rules unreadable'))
-              : Promise.resolve(verdict),
+spec(
+  [
+    'mods.setting.allowModsToOverrideDenyRules',
+    "policy.mods.Know what happens by default.When a user's mod approves Claude's call",
+  ],
+  () => {
+    const allowing = (on: (name: string, ...rest: unknown[]) => void): void => {
+      on('tool.check', () => ({ decision: 'allow', reason: 'looks fine' }));
+    };
+    const guardOptions = (overrides: boolean) =>
+      managed({
+        pluginConfigs: {
+          'cc-plugin-sec-default@builtin': { options: { allowModsToOverrideDenyRules: overrides } },
         },
-      },
-    );
-    await s.host.load([
-      modPlugin(
-        installed('lifter'),
-        registerOf((on) => allowing(on)),
-      ),
-    ]);
-    const result = await s.host.fire(
-      'tool.check',
-      { tool: 'Bash', input: { command: 'rm -rf /' } },
-      { core: () => Promise.resolve({ decision: 'ask' }) },
-    );
-    return { result, debug: s.debug };
-  };
+      });
+    const check = async (
+      settings: ReturnType<typeof guardOptions>,
+      verdict: 'deny' | 'ask' | 'none' | 'unknown' | 'throws',
+    ) => {
+      const s = session(
+        { lifter: registerOf((on) => allowing(on)) },
+        {
+          policy: settings,
+          deny: {
+            verdict: () =>
+              verdict === 'throws'
+                ? Promise.reject(new Error('rules unreadable'))
+                : Promise.resolve(verdict),
+          },
+        },
+      );
+      await s.host.load([
+        modPlugin(
+          installed('lifter'),
+          registerOf((on) => allowing(on)),
+        ),
+      ]);
+      const result = await s.host.fire(
+        'tool.check',
+        { tool: 'Bash', input: { command: 'rm -rf /' } },
+        { core: () => Promise.resolve({ decision: 'ask' }) },
+      );
+      return { result, debug: s.debug };
+    };
 
-  test("by default a user's mod cannot approve a call a deny rule refuses: the call is denied and says so", async () => {
-    const { result, debug } = await check(guardOptions(false), 'deny');
-    expect(result).toEqual({
-      decision: 'deny',
-      reason: 'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
-    });
-    expect(debug).toContain(
-      'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
-    );
-  });
-
-  test("set to true, a user's mod can approve a call a deny rule refuses", async () => {
-    const { result } = await check(guardOptions(true), 'deny');
-    expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
-  });
-
-  test("an ask rule still prompts: a user's mod's approval of what an ask rule prompts for becomes the prompt", async () => {
-    const { result, debug } = await check(guardOptions(false), 'ask');
-    expect(result).toEqual({ decision: 'ask' });
-    expect(debug).not.toContain(
-      'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
-    );
-  });
-
-  test("set to true, a user's mod can approve past the ask rule's prompt too", async () => {
-    const { result } = await check(guardOptions(true), 'ask');
-    expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
-  });
-
-  test('a call no rule covers is approved as the mod answered', async () => {
-    const { result } = await check(guardOptions(false), 'none');
-    expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
-  });
-
-  test("the guard fails closed: when the deny rules cannot be checked for a call a user's mod approved, it refuses the call", async () => {
-    for (const verdict of ['unknown', 'throws'] as const) {
-      const { result } = await check(guardOptions(false), verdict);
+    test("by default a user's mod cannot approve a call a deny rule refuses: the call is denied and says so", async () => {
+      const { result, debug } = await check(guardOptions(false), 'deny');
       expect(result).toEqual({
         decision: 'deny',
-        reason:
-          'the deny rules in your settings could not be checked for this call, so it is refused (allowModsToOverrideDenyRules)',
+        reason: 'lifter tried to lift a deny rule in your settings',
       });
-    }
-  });
+      expect(debug).toContain('lifter tried to lift a deny rule in your settings');
+    });
 
-  test("it is an option on the guard, read from managed settings only: set in the user's file, a denied call stays denied", async () => {
-    const userSet = policy({
-      managed: {},
-      user: {
-        pluginConfigs: {
-          'cc-plugin-sec-default@builtin': { options: { allowModsToOverrideDenyRules: true } },
+    test("set to true, a user's mod can approve a call a deny rule refuses", async () => {
+      const { result } = await check(guardOptions(true), 'deny');
+      expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
+    });
+
+    test("an ask rule still prompts: a user's mod's approval of what an ask rule prompts for becomes the prompt", async () => {
+      const { result, debug } = await check(guardOptions(false), 'ask');
+      expect(result).toEqual({ decision: 'ask' });
+      expect(debug).not.toContain('lifter tried to lift a deny rule in your settings');
+    });
+
+    test("set to true, a user's mod can approve past the ask rule's prompt too", async () => {
+      const { result } = await check(guardOptions(true), 'ask');
+      expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
+    });
+
+    test('a call no rule covers is approved as the mod answered', async () => {
+      const { result } = await check(guardOptions(false), 'none');
+      expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
+    });
+
+    test("the guard fails closed: when the deny rules cannot be checked for a call a user's mod approved, it refuses the call", async () => {
+      for (const verdict of ['unknown', 'throws'] as const) {
+        const { result } = await check(guardOptions(false), verdict);
+        expect(result).toEqual({
+          decision: 'deny',
+          reason:
+            'the rules and hooks in your settings could not be checked for this call, so it is refused',
+        });
+      }
+    });
+
+    test("it is an option on the guard, read from managed settings only: set in the user's file, a denied call stays denied", async () => {
+      const userSet = policy({
+        managed: {},
+        user: {
+          pluginConfigs: {
+            'cc-plugin-sec-default@builtin': { options: { allowModsToOverrideDenyRules: true } },
+          },
         },
-      },
+      });
+      const { result } = await check(userSet, 'deny');
+      expect(result).toEqual({
+        decision: 'deny',
+        reason: 'lifter tried to lift a deny rule in your settings',
+      });
     });
-    const { result } = await check(userSet, 'deny');
-    expect(result).toEqual({
-      decision: 'deny',
-      reason: 'lifter tried to lift a deny rule in your settings (allowModsToOverrideDenyRules)',
-    });
-  });
 
-  test("it concerns a user's mod: an organization's mod that approves a call a deny rule refuses is not touched", async () => {
-    const s = session(
-      { acme: registerOf((on) => allowing(on)) },
-      { policy: guardOptions(false), deny: { verdict: () => Promise.resolve('deny') } },
-    );
-    await s.host.load([
-      modPlugin(
-        organizations('acme'),
-        registerOf((on) => allowing(on)),
-      ),
-    ]);
-    const result = await s.host.fire(
-      'tool.check',
-      { tool: 'Bash', input: { command: 'rm -rf /' } },
-      { core: () => Promise.resolve({ decision: 'ask' }) },
-    );
-    expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
-    expect(s.debug.join('\n')).not.toContain('tried to lift');
-  });
-});
+    test("it concerns a user's mod: an organization's mod that approves a call a deny rule refuses is not touched", async () => {
+      const s = session(
+        { acme: registerOf((on) => allowing(on)) },
+        { policy: guardOptions(false), deny: { verdict: () => Promise.resolve('deny') } },
+      );
+      await s.host.load([
+        modPlugin(
+          organizations('acme'),
+          registerOf((on) => allowing(on)),
+        ),
+      ]);
+      const result = await s.host.fire(
+        'tool.check',
+        { tool: 'Bash', input: { command: 'rm -rf /' } },
+        { core: () => Promise.resolve({ decision: 'ask' }) },
+      );
+      expect(result).toEqual({ decision: 'allow', reason: 'looks fine' });
+      expect(s.debug.join('\n')).not.toContain('tried to lift');
+    });
+  },
+);
 
 test('the settings the kit reads are the ones the reference lists, and no others', () => {
   expect(Object.keys(MOD_SETTINGS).toSorted()).toEqual([...MODS_REFERENCE.settings].toSorted());

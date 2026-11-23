@@ -20,11 +20,33 @@ const direct: Within = (call) => call();
 interface Guard {
   readonly budget: Budget;
   readonly within: Within;
+  /** The time the hook may wait on `$` calls, with the calls that do not count (§10.11). */
+  readonly wait?: { readonly budget: Budget; readonly exempt: ReadonlySet<string> };
+}
+
+/** The hook leaves the floor for a `$` call: its own time stops, the time it waits on calls runs. */
+function meter(
+  guard: Guard,
+  label: string,
+): { readonly enter: () => void; readonly leave: () => void } {
+  const waits =
+    guard.wait !== undefined && !guard.wait.exempt.has(label) ? guard.wait.budget : undefined;
+  return {
+    enter: () => {
+      guard.budget.pause();
+      waits?.resume();
+    },
+    leave: () => {
+      waits?.pause();
+      guard.budget.resume();
+    },
+  };
 }
 
 function guardedCall(method: Method, owner: object, label: string, guard: Guard): Method {
-  const { budget, within } = guard;
+  const { within } = guard;
   const metered = !OWN_TIME_CALLS.has(label);
+  const { enter, leave } = meter(guard, label);
   const atOnce = AT_ONCE_CALLS.has(label);
   return (...args) => {
     for (const argument of args) {
@@ -37,16 +59,16 @@ function guardedCall(method: Method, owner: object, label: string, guard: Guard)
     }
     const apply = (): unknown => within(() => Reflect.apply(method, owner, args));
     if (!metered) return apply();
-    budget.pause();
+    enter();
     try {
       const result = apply();
       if (!isThenable(result)) {
-        budget.resume(); // a synchronous result is back: the hook has the floor again
+        leave(); // a synchronous result is back: the hook has the floor again
         return result;
       }
-      return Promise.resolve(result).finally(() => budget.resume()); // a promise resumes when it settles
+      return Promise.resolve(result).finally(leave); // a promise resumes when it settles
     } catch (error) {
-      budget.resume();
+      leave();
       throw error;
     }
   };
@@ -96,7 +118,13 @@ function guardedNamespace(target: object, path: readonly string[], guard: Guard)
  * argument nests deeper than the limit rejects with a message ending `nesting deeper than 28000
  * levels is not supported`. `within` runs each call as the hook's (the chain's `AsyncSlot`).
  */
-export function guardApi(api: ModsApi, budget: Budget, within: Within = direct): ModsApi {
+export function guardApi(
+  api: ModsApi,
+  budget: Budget,
+  within: Within = direct,
+  wait?: Guard['wait'],
+): ModsApi {
+  const guard: Guard = wait === undefined ? { budget, within } : { budget, within, wait };
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the proxy forwards every property of `api`, so it has the same shape
-  return guardedNamespace(api, [], { budget, within }) as ModsApi;
+  return guardedNamespace(api, [], guard) as ModsApi;
 }

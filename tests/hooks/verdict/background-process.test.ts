@@ -33,9 +33,11 @@ spec('hooks.behavior.Hooks that start a background process', () => {
     const { fire } = engineSession([hook], [allowThenBackground]);
     const outcome = await fire('PreToolUse');
     expect(outcome.proceed).toBe(false);
-    expect(outcome.block?.message).toBe(
-      'PreToolUse:Bash hook error: [./policy.sh]: refusing to honor the suspect capture',
-    );
+    // 2.1.330 (Agent Plugins Extended §7.4.2 item 5): the error includes `stdio went quiet` and
+    // `refusing to honor the suspect capture`; how they are joined is the kit's (spec/judgments.md).
+    expect(outcome.block?.message).toStartWith('PreToolUse:Bash hook error: [./policy.sh]: ');
+    expect(outcome.block?.message).toContain('stdio went quiet');
+    expect(outcome.block?.message).toContain('refusing to honor the suspect capture');
     expect(outcome.effects.permissionDecision).toBe('deny');
   });
 

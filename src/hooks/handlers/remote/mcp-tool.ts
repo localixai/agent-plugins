@@ -5,6 +5,7 @@ import type { HandlerEntry, HandlerResult, RawRun, RunContext } from '../context
 import { handlerTimeoutMs } from '../timeouts.ts';
 import { failureRun, remotePath, withoutPort } from './failure-run.ts';
 import { substituteInput } from './mcp-input.ts';
+import type { McpRun, McpUnreadable } from './types.ts';
 
 /**
  * An `mcp_tool` hook (hooks.md, "MCP tool hook fields"). The `server` is passed as the hook writes
@@ -142,7 +143,32 @@ export async function runMcpTool(
   });
   const run =
     'failure' in answer
-      ? failureRun(answer, (text) => ({ kind: 'mcp', isError: true, text }))
+      ? (unreadableRun(answer.failure, server, tool) ??
+        failureRun(answer, (text) => ({ kind: 'mcp', isError: true, text })))
       : ({ kind: 'mcp', isError: answer.isError, text: answer.text } as const);
   return { run, issues: args.issues };
+}
+
+const SMALLER = 'If this keeps happening, the tool must send a smaller answer.';
+
+/** The hook errors of an answer the client could not read (hooks.md, "How the tool's result is read"). */
+const UNREADABLE: { readonly [U in McpUnreadable]: (server: string, tool: string) => string } = {
+  'message-too-large': (server, tool) =>
+    `MCP tool "${tool}" on server "${server}" gave no answer that could be read, because a message from the server was too large, so this hook gave no verdict. ${SMALLER}`,
+  'missing-text': (server, tool) =>
+    `MCP tool "${tool}" on server "${server}" answered without its text, which happens when a result is too large, so this hook gave no verdict. ${SMALLER}`,
+};
+
+const isUnreadable = (failure: string): failure is McpUnreadable =>
+  Object.hasOwn(UNREADABLE, failure);
+
+/** A port failure that says the answer could not be read, as the run the interpreter refuses on. */
+function unreadableRun(failure: string, server: string, tool: string): McpRun | undefined {
+  if (!isUnreadable(failure)) return undefined;
+  return {
+    kind: 'mcp',
+    isError: true,
+    unreadable: failure,
+    text: UNREADABLE[failure](server, tool),
+  };
 }

@@ -69,6 +69,12 @@ export interface TrueIn {
   readonly gitTracked?: boolean;
 }
 
+/** How the plugin's marketplace is on this machine at session start (spec §16.4.2). */
+export type MarketplaceOnMachine = 'local-path' | 'remote' | 'absent';
+
+/** When the decision is made: at session start, at `/reload-plugins`, or in a `-p` run with `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1`. */
+export type EnableMoment = 'session-start' | 'reload' | 'sync-print';
+
 export interface EnabledFacts {
   readonly name: string;
   readonly marketplace: string;
@@ -80,6 +86,9 @@ export interface EnabledFacts {
   readonly relativePath: boolean;
   /** A seed directory already holds it. */
   readonly seeded: boolean;
+  /** Whether its marketplace was added from a local path, from elsewhere, or is not on the machine. */
+  readonly marketplaceOnMachine: MarketplaceOnMachine;
+  readonly moment: EnableMoment;
 }
 
 export interface EnabledFetchDecision {
@@ -87,8 +96,12 @@ export interface EnabledFetchDecision {
   readonly fetch: boolean;
   /** It loads from the marketplace itself, needing no install record. */
   readonly inPlace: boolean;
+  /** It loads for the current session (or `-p` run) only (spec §16.4.2 item 1). */
+  readonly sessionOnly?: true;
   /** The Errors tab entry, when a project enables a plugin that is not here. */
   readonly error?: ErrorsTabEntry;
+  /** Its marketplace is not on the machine: the user adds it first, from the project's declared source. */
+  readonly addMarketplaceFirst?: true;
 }
 
 /** "Claude Code fetches a plugin with an external source only when one of these sources sets it to `true`." */
@@ -103,24 +116,48 @@ const FETCHES: { readonly [S in EnableSource]: (gitTracked: boolean | undefined)
 
 const NOTHING: EnabledFetchDecision = { fetch: false, inPlace: false };
 
+/** A relative-path entry of a marketplace not added from a local path loads only when the user asks: a reload, or a sync `-p` run. */
+const LOADS_FROM_REMOTE: { readonly [M in EnableMoment]: boolean } = {
+  'session-start': false,
+  reload: true,
+  'sync-print': true,
+};
+
+/** A relative-path plugin no install record holds (spec §16.4.2 item 1). */
+function relativeDecision(facts: EnabledFacts): EnabledFetchDecision | undefined {
+  if (facts.marketplaceOnMachine === 'local-path') return { fetch: false, inPlace: true };
+  return LOADS_FROM_REMOTE[facts.moment]
+    ? { fetch: false, inPlace: true, sessionOnly: true }
+    : undefined;
+}
+
+/** What is left when nothing loads it: the Errors tab entry, or adding its marketplace first (item 3). */
+function notHere(facts: EnabledFacts): EnabledFetchDecision {
+  if (!facts.trueIn.some((one) => ISSUES_ERROR[one.source])) return NOTHING;
+  if (facts.marketplaceOnMachine === 'absent') return { ...NOTHING, addMarketplaceFirst: true };
+  return { ...NOTHING, error: enabledNotInstalled(facts.name, facts.marketplace) };
+}
+
 /**
- * What Claude Code does with an enabled plugin that has no install record on this machine. A
- * relative-path plugin "needs no install record because it loads from the marketplace itself", and
- * a plugin a seed directory holds is there; otherwise an external source is fetched only when user
- * settings, an untracked `.claude/settings.local.json`, `--settings` or managed settings set it to
- * `true`. When only the project's `.claude/settings.json` does, nothing is fetched and the Errors
- * tab says so. Judgment (spec/judgments.md): a `true` from `--add-dir` alone neither fetches nor
- * reports, since the docs name it in neither list.
+ * What Claude Code does with an enabled plugin that has no install record on this machine (spec
+ * §16.4.2; plugins/loading.md, "Enabled in project settings but not installed"). A plugin a seed
+ * directory holds is there. An external source is fetched only when user settings, an untracked
+ * `.claude/settings.local.json`, `--settings` or managed settings set it to `true`. A relative-path
+ * entry needs no install record: from a marketplace added from a local path it loads at session
+ * start; from any other marketplace only at `/reload-plugins` or in a `-p` run with
+ * `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1`, for that session. When only the project's
+ * `.claude/settings.json` turns it on and nothing loads it, the Errors tab says it is not installed
+ * here, or, with its marketplace not on the machine, the user adds the marketplace first. Judgment
+ * (spec/judgments.md): a `true` from `--add-dir` alone neither fetches nor reports, since the docs
+ * name it in neither list.
  */
 export function decideEnabledFetch(facts: EnabledFacts): EnabledFetchDecision {
   if (facts.installed || facts.seeded || facts.trueIn.length === 0) return NOTHING;
-  if (facts.relativePath) return { fetch: false, inPlace: true };
   if (facts.trueIn.some((one) => FETCHES[one.source](one.gitTracked))) {
-    return { fetch: true, inPlace: false };
+    return facts.relativePath ? { fetch: false, inPlace: true } : { fetch: true, inPlace: false };
   }
-  return facts.trueIn.some((one) => ISSUES_ERROR[one.source])
-    ? { ...NOTHING, error: enabledNotInstalled(facts.name, facts.marketplace) }
-    : NOTHING;
+  const relative = facts.relativePath ? relativeDecision(facts) : undefined;
+  return relative ?? notHere(facts);
 }
 
 /** Only the project's own file makes the "isn't installed here" entry. */

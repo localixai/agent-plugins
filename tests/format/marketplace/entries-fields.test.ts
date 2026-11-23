@@ -141,10 +141,10 @@ describe('fields an entry accepts beside its own', () => {
     expect(entry?.components.hooks).toEqual({ PostToolUse: [] });
   });
 
-  test('a plugin.json field of the wrong type drops the entry (homepage must parse as a URL)', () => {
-    const { entry, issues } = readOne(rawEntry({ homepage: 'not a url' }));
+  test('a plugin.json field of the wrong type drops the entry (a component path list of numbers)', () => {
+    const { entry, issues } = readOne(rawEntry({ skills: [5] }));
     expect(entry).toBeUndefined();
-    expect(errorsOf(issues).map((found) => found.path)).toEqual(['plugins[0].homepage']);
+    expect(errorsOf(issues).map((found) => found.path)).toEqual(['plugins[0].skills']);
   });
 
   test('an unknown key is a warning, not an error, and the entry loads', () => {

@@ -38,10 +38,11 @@ spec('workflows.behavior.When a run hits your usage limit', () => {
     });
   });
 
-  test('only an interactive session pauses: claude -p and the Agent SDK, a background session, Remote Control and a teammate fail the agent', () => {
+  test('only an interactive terminal session or a local Code tab session pauses: claude -p and the Agent SDK, a background session, Remote Control, a teammate and other desktop sessions fail the agent', () => {
+    const pausing = ['interactive', 'desktop-code-tab'];
     for (const session of SESSION_KINDS) {
       const decision = decide({ session });
-      expect(decision.pauses).toBe(session === 'interactive');
+      expect(decision.pauses).toBe(pausing.includes(session));
     }
     const refused = decide({ session: 'background' });
     expect(refused).toEqual({
@@ -94,6 +95,36 @@ spec('workflows.behavior.When a run hits your usage limit', () => {
       failsAgent: true,
       causes: ['old-release'],
     });
+  });
+
+  test('a subscription with usage-based billing fails the agent (§11.9 item 1)', () => {
+    expect(decide({ usageBasedBilling: true })).toEqual({
+      pauses: false,
+      failsAgent: true,
+      causes: ['usage-based-billing'],
+    });
+  });
+
+  test('a Code tab session does not pause while CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC is set; a terminal session does', () => {
+    const tab = { session: 'desktop-code-tab', nonessentialTrafficDisabled: true } as const;
+    expect(decide(tab)).toEqual({
+      pauses: false,
+      failsAgent: true,
+      causes: ['nonessential-traffic-off'],
+    });
+    expect(decide({ nonessentialTrafficDisabled: true }).pauses).toBe(true);
+  });
+
+  test("the Code tab's auto-continue choice turned off stops the pause, unless managed settings set autoContinueAtUsageLimit to true (item 3)", () => {
+    const off = { session: 'desktop-code-tab', codeTabAutoContinue: false } as const;
+    expect(decide(off)).toEqual({
+      pauses: false,
+      failsAgent: true,
+      causes: ['code-tab-auto-continue-off'],
+    });
+    expect(decide({ ...off, managedAutoContinue: true }).pauses).toBe(true);
+    expect(decide({ session: 'desktop-code-tab' }).pauses).toBe(true);
+    expect(decide({ codeTabAutoContinue: false }).pauses).toBe(true);
   });
 
   test('when several conditions fail, the failing agent carries every cause in a stable order', () => {

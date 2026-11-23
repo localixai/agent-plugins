@@ -4,13 +4,19 @@ import type { ModsNamespaceApi } from '../types.ts';
 import { call, parse, type Deps } from './call.ts';
 import { absolutePath, workingDirectory } from './paths.ts';
 import { ancestors } from './fs-ancestors.ts';
-import type { FsEntry, FsStat } from './ports.ts';
+import type { FsEntry, FsRange, FsStat } from './ports.ts';
 import { utf8Length } from '../../format/utf8.ts';
 
 const pathEvent = z.looseObject({ path: z.string() });
-/** `$.fs.read(path, { as? })` (claude-code/index.d.ts:3446): `text`, the default, or `bytes` as `{ base64 }`; its event pins `as` (:7555). */
-const readOptions = z.looseObject({ as: z.enum(['text', 'bytes']).default('text') });
-const readEvent = z.looseObject({ path: z.string(), as: z.enum(['text', 'bytes']) });
+/**
+ * `$.fs.read(path, { as?, offset?, length? })` (`FsReadBytesOptions`, claude-code/index.d.ts:6539):
+ * `text`, the default, or `bytes` as `{ base64 }`; from v2.1.326 `offset` and `length`, in bytes,
+ * read a range. Its event pins `as` and carries the range when given.
+ */
+const byteCount = z.number().int().min(0);
+const range = { offset: byteCount.optional(), length: byteCount.optional() };
+const readOptions = z.looseObject({ as: z.enum(['text', 'bytes']).default('text'), ...range });
+const readEvent = z.looseObject({ path: z.string(), as: z.enum(['text', 'bytes']), ...range });
 /** `$.fs.stat(path, { resolve? })` (:3525): `resolve` false when left out, as its event pins it (:7582). */
 const statOptions = z.looseObject({ resolve: z.boolean().default(false) });
 const statEvent = z.looseObject({ path: z.string(), resolve: z.boolean() });
@@ -40,9 +46,18 @@ const statOf = (stat: FsStat, resolve: boolean): FsStat => ({
 const overLimit = (path: string, bytes: number): string =>
   `${path}: ${bytes} bytes is over the ${MOD_LIMITS.fileBytes}-byte limit`;
 
+/** The range the event asks for, when it asks for one: the port reads only those bytes. */
+const rangeOf = (offset: number | undefined, length: number | undefined): FsRange | undefined =>
+  offset === undefined && length === undefined
+    ? undefined
+    : { offset: offset ?? 0, ...(length === undefined ? {} : { length }) };
+
 async function read(deps: Deps, e: unknown): Promise<string | { base64: string }> {
-  const { path, as } = parse('$.fs.read', readEvent, e);
-  const file = await deps.ports.fs.read(path, deps.signal, as);
+  const { path, as, offset, length } = parse('$.fs.read', readEvent, e);
+  // 4 MiB for one file, or for one range read (reference.md §10.12, "Limits").
+  if (length !== undefined && length > MOD_LIMITS.fileBytes)
+    throw new Error(overLimit(path, length));
+  const file = await deps.ports.fs.read(path, deps.signal, as, rangeOf(offset, length));
   if (file === undefined) throw new Error(`${path}: no such file`);
   if (file.bytes > MOD_LIMITS.fileBytes) throw new Error(overLimit(path, file.bytes));
   if (as === 'text') return file.text;
@@ -81,10 +96,14 @@ export function fsApi(deps: Deps): ModsNamespaceApi<'fs'> {
   });
   return {
     read: async (...args) => {
-      const { as } = parse('$.fs.read', readOptions, args[1] ?? {});
-      return call(deps, 'fs.read', { ...(await at('$.fs.read', args[0])), as }, (e) =>
-        read(deps, e),
-      );
+      const { as, offset, length } = parse('$.fs.read', readOptions, args[1] ?? {});
+      const asked = {
+        ...(await at('$.fs.read', args[0])),
+        as,
+        ...(offset === undefined ? {} : { offset }),
+        ...(length === undefined ? {} : { length }),
+      };
+      return call(deps, 'fs.read', asked, (e) => read(deps, e));
     },
     write: async (...args) => {
       const text = parse('$.fs.write', z.string(), args[1]);

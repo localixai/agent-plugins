@@ -20,11 +20,16 @@ export type RenderEvent = {
   readonly props: Props;
   /**
    * The instance (claude-code/index.d.ts:10629, `RenderInputOf.requestId`, declared on every site):
-   * the pane's `id`, the message id, the tool call id, the agent id or a placed row's `requestId`;
+   * the pane's `id`, the drawn row's id, the tool call id, the agent id or a placed row's `requestId`;
    * for a site that has "One instance", the one the host gave, else the site's name (judgment).
    */
   readonly requestId: string;
   readonly viewport?: Viewport;
+  /**
+   * The mod whose pane or row of the band it is (2.1.323 or later; `plugin` is a default matcher
+   * key, Agent Plugins Extended §10.13.3); absent at a site Claude Code draws itself.
+   */
+  readonly plugin?: string;
 };
 
 export interface RenderRequest {
@@ -34,17 +39,29 @@ export interface RenderRequest {
   readonly requestId?: string;
   /** The window as the app measured it; absent until it has. */
   readonly viewport?: Viewport;
+  /** The mod whose pane or band row it is, as `RenderEvent.plugin`. */
+  readonly plugin?: string;
 }
 
-/** What each kind of `requestId` needs from the request: an `instance` has none. */
-const REQUEST_IDS: { readonly [K in RequestKind]: boolean } = {
-  'pane-id': true,
-  'message-id': true,
-  'tool-call-id': true,
-  'agent-id': true,
-  'placed-id': true,
-  backdrop: true,
-  instance: false,
+/** The id a request without one gets, or `undefined` when the site needs the host to give one. */
+type DefaultId = (site: RenderSite, props: Props) => string | undefined;
+const NEEDED: DefaultId = () => undefined;
+
+/**
+ * What each kind of `requestId` falls back to: an `instance` is the site's name (judgment), a notice
+ * "the notice's `text` prefixed with `notice:`" (reference.md, "Render sites"); the others are the
+ * host's to give.
+ */
+const REQUEST_IDS: { readonly [K in RequestKind]: DefaultId } = {
+  'pane-id': NEEDED,
+  'row-id': NEEDED,
+  'tool-call-id': NEEDED,
+  'agent-id': NEEDED,
+  'placed-id': NEEDED,
+  backdrop: NEEDED,
+  menu: NEEDED,
+  instance: (site) => site,
+  notice: (_site, props) => (typeof props.text === 'string' ? `notice:${props.text}` : undefined),
 };
 
 /**
@@ -56,21 +73,20 @@ export function renderEvent(
   request: RenderRequest,
 ): { readonly event: RenderEvent } | { readonly problem: string } {
   const { site, surface, viewport } = request;
-  const hasId = REQUEST_IDS[RENDER_SITES[site].request];
-  const { requestId } = request;
+  const props = request.props ?? {};
+  const requestId = request.requestId ?? REQUEST_IDS[RENDER_SITES[site].request](site, props);
   if (!decideSite(site, surface)) return { problem: `${site} is not raised in the ${surface} app` };
-  if (hasId && requestId === undefined) {
-    return { problem: `${site} needs a requestId` };
-  }
+  if (requestId === undefined) return { problem: `${site} needs a requestId` };
   const missing = viewportProblem(surface, viewport);
   if (missing !== undefined) return { problem: missing };
   return {
     event: {
       component: site,
       surface,
-      props: request.props ?? {},
-      requestId: requestId ?? site,
+      props,
+      requestId,
       ...(viewport === undefined ? {} : { viewport }),
+      ...(request.plugin === undefined ? {} : { plugin: request.plugin }),
     },
   };
 }

@@ -8,7 +8,7 @@
  */
 import { expect, test } from 'bun:test';
 import { foldRender, isElementNode, isEngineRef, uiRules } from '../../../src/mods/ui/index.ts';
-import { fn } from '../../support/mods-chain.ts';
+import { fn, type FnHook } from '../../support/mods-chain.ts';
 import { apiHarness } from '../../support/mods-api.ts';
 import {
   fakeInterface,
@@ -22,8 +22,10 @@ import {
 import { spec } from '../../support/spec.ts';
 
 const BAND = "mods.troubleshoot.Another mod's band shows and yours doesn't";
+const VALIDATES = `${BAND}.Your tree doesn't validate`;
 const EMPTY = "mods.troubleshoot.A pane or band is empty or shows Claude Code's usual content";
 const engine = (e: unknown) => Promise.resolve({ type: 'engine', ref: e });
+const band = () => renderOf('AbovePrompt');
 
 spec(['mods.event.ui.render', 'mods.site.Spinner'], () => {
   test('a tree returned without calling next replaces Claude Code`s drawing, and the engine does not run', async () => {
@@ -102,7 +104,7 @@ spec(['mods.event.ui.render', 'mods.site.Spinner'], () => {
   });
 });
 
-spec(['mods.event.ui.render', BAND, EMPTY], () => {
+spec(['mods.event.ui.render', VALIDATES, EMPTY], () => {
   test('a tree that does not validate fails the hook: the line is the documented one and the next handler runs in its place', async () => {
     const h = uiChain();
     h.mod('first-mod', 'user', [
@@ -191,31 +193,8 @@ spec('mods.site.AskUserQuestion', () => {
   });
 });
 
-spec('mods.site.AbovePrompt', () => {
-  test('a mod that answers ui.render without calling next is named in the debug log: <mod> (<tier>) answered ui.render without next()', async () => {
-    const h = await apiHarness({ rules: uiRules, ui: uiOver(fakeInterface().iface) });
-    await h.mod('dropper', 'user', [
-      fn('ui.render', async (_$, e, next) => (await next(e), text('x'))),
-    ]);
-    await h.mod('other-mod', 'user', [fn('ui.render', () => text('theirs'))]);
-    await h.ui?.draw({ site: 'AbovePrompt', surface: 'terminal', requestId: 'id-1' });
-    expect(h.debug).toEqual(['other-mod (user) answered ui.render without next()']);
-  });
-
-  const band = (component = 'AbovePrompt' as const) => renderOf(component);
-
-  test('a mod before replaces the band of the mods after it when its tree does not hold the result of next(e)', async () => {
-    const h = uiChain();
-    let laterRan = false;
-    const mine = text('mine');
-    h.mod('before', 'user', [fn('ui.render', () => mine)]);
-    h.mod('after', 'user', [fn('ui.render', () => ((laterRan = true), text('theirs')))]);
-    const settled = await h.fire('ui.render', band(), { core: engine });
-    expect(settled).toBe(mine);
-    expect(laterRan).toBe(false);
-  });
-
-  test('putting the result of await next(e) among the children of a Box keeps the bands after it', async () => {
+spec(`${BAND}.Keep later mods' drawings`, () => {
+  test('a band tree may put the result of await next(e) among the children of a Box: it is valid, and what next(e) gave is drawn there', async () => {
     const h = uiChain();
     const theirs = text('theirs');
     h.mod('before', 'user', [
@@ -229,6 +208,24 @@ spec('mods.site.AbovePrompt', () => {
     expect(isElementNode(settled) && settled.children[1]).toBe(theirs);
   });
 
+  test("from 2.1.323 that child draws no other mod's row: each row is asked for its own mod", async () => {
+    const h = await apiHarness({ rules: uiRules, ui: uiOver(fakeInterface().iface) });
+    const wrap: FnHook = async (_$, e, next) =>
+      node('Box', { children: [text('mine'), await next(e)] });
+    await h.mod('before', 'user', [
+      fn('ui.render', wrap, { matcher: { component: 'AbovePrompt' } }),
+    ]);
+    await h.mod('after', 'user', [
+      fn('ui.render', () => text('theirs'), { matcher: { component: 'AbovePrompt' } }),
+    ]);
+    const drawn = await h.ui?.drawBand({ surface: 'terminal' }, ['before', 'after']);
+    const [own, theirs] = drawn?.rows ?? [];
+    expect(own?.tree.children.map((child) => isEngineRef(child))).toEqual([false, true]);
+    expect(theirs).toEqual({ plugin: 'after', tree: text('theirs') });
+  });
+});
+
+spec(`${BAND}.Keep the tree valid`, () => {
   test('a Box around that result with width, height, minWidth, minHeight, position, top, left, right, bottom, display or overflow makes the tree invalid, and the other mods bands stay', async () => {
     const forbidden = {
       width: 10,

@@ -1,3 +1,4 @@
+import type { HookHandlerType } from '../../protocol/hook-config.ts';
 import { routedBlock, shownWith } from './route.ts';
 import type { HandlerVerdict, BlockInfo, BlockVia } from './types.ts';
 import { EXIT2_RULES } from './exit2.ts';
@@ -26,8 +27,13 @@ export const FAILURE_CAUSES = [
   'http-error',
   'timeout',
   'invalid-output',
-  /** An `mcp_tool` hook's tool answered `isError: true` (no `onFailure` on that type). */
+  /**
+   * An `mcp_tool` hook's tool answered `isError: true`, its server was not connected, or its answer
+   * could not be read; with `onFailure: "block"` (2.1.328) a failure (§7.4.3, "MCP failure").
+   */
   'tool-error',
+  /** A prompt or agent hook's model gave no verdict (an agent hook "ended without a decision"). */
+  'no-decision',
 ] as const;
 export type FailureCause = (typeof FAILURE_CAUSES)[number];
 
@@ -39,7 +45,7 @@ export interface Failure {
   readonly detail: string;
 }
 
-/** The `onFailure` of a `command` or `http` hook; the other types have no such field. */
+/** The `onFailure` of a `command`, `http` or `mcp_tool` hook; the other types have no such field. */
 const onFailureOf = (subject: Subject): 'continue' | 'block' | undefined => {
   const { handler } = subject.entry;
   return 'onFailure' in handler ? handler.onFailure : undefined;
@@ -176,8 +182,39 @@ function failureAsExit2Feedback(subject: Subject, failure: Failure): HandlerVerd
   return { ...base(subject), status: 'non-blocking-error' };
 }
 
+/**
+ * Code Mode (code-mode.md, "Tool call refused by a hook"; §7.6.11.4, J7.213): a `PreToolUse` hook
+ * that gives no decision on a call from code, because it timed out or an agent hook ended without
+ * one, refuses the call when `onFailure` is unset. Other failures let it run (2.1.329).
+ */
+const DID_NOT_FINISH = 'the hook did not finish';
+
+const REFUSES_UNFINISHED: ReadonlySet<string> = new Set(['PreToolUse']);
+
+/** "an agent hook ended without a decision": the type whose missing verdict counts as unfinished. */
+const ENDS_WITHOUT_DECISION: { readonly [T in HookHandlerType]: boolean } = {
+  command: false,
+  http: false,
+  mcp_tool: false,
+  prompt: false,
+  agent: true,
+};
+
+const unfinished = (subject: Subject, failure: Failure): boolean =>
+  failure.cause === 'timeout' ||
+  (failure.cause === 'no-decision' && ENDS_WITHOUT_DECISION[subject.entry.handler.type]);
+
+const refusesFromCode = (subject: Subject, failure: Failure): boolean =>
+  subject.fromCode === true &&
+  REFUSES_UNFINISHED.has(subject.event) &&
+  onFailureOf(subject) === undefined &&
+  unfinished(subject, failure);
+
 /** What a failed run comes to. */
 export function failureVerdict(subject: Subject, failure: Failure): HandlerVerdict {
+  if (refusesFromCode(subject, failure)) {
+    return refusedVerdict(subject, { ...failure, text: DID_NOT_FINISH });
+  }
   const block = blockFor(subject, failure);
   if (block !== undefined) {
     return { ...base(subject), status: 'blocked', block, ...shownWith(subject.entry.id, block) };
@@ -185,9 +222,16 @@ export function failureVerdict(subject: Subject, failure: Failure): HandlerVerdi
   const feedback = failureAsExit2Feedback(subject, failure);
   if (feedback !== undefined) return feedback;
   const { message } = lineOf(subject, failure.text);
-  return {
-    ...base(subject),
-    status: failure.cause === 'timeout' ? 'timed-out' : 'non-blocking-error',
-    notice: { handlerId: subject.entry.id, message },
-  };
+  const status = failure.cause === 'timeout' ? 'timed-out' : 'non-blocking-error';
+  if (EXIT2_RULES[subject.event].noFailureNotice === true) return { ...base(subject), status };
+  return { ...base(subject), status, notice: { handlerId: subject.entry.id, message } };
+}
+
+/**
+ * A verdict that refuses the action whatever `onFailure` says: an `mcp_tool` answer the client could
+ * not read refuses the `PreToolUse` call it was checking (hooks.md, "How the tool's result is read").
+ */
+export function refusedVerdict(subject: Subject, failure: Failure): HandlerVerdict {
+  const block = blockInfo(subject, failure, failure.text, false);
+  return { ...base(subject), status: 'blocked', block, ...shownWith(subject.entry.id, block) };
 }

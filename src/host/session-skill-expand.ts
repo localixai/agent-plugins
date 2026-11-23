@@ -1,7 +1,7 @@
 import { CONFIG_DIR_VARIABLE, configDirectoryOf } from '../format/config-directory.ts';
 import { error } from '../format/issues.ts';
 import type { Command, Skill, SkillShell } from '../format/skill-types.ts';
-import { decide, parseRule, type DecideContext, type Decision } from '../rules/index.ts';
+import type { DecideContext } from '../rules/index.ts';
 import { createSkillSettingsPolicy } from '../settings/skills/index.ts';
 
 import {
@@ -9,10 +9,8 @@ import {
   type ExpandSession,
   type Expansion,
   type Invoker,
-  type ShellPermission,
   type Trigger,
 } from '../skills/index.ts';
-import type { PermissionBehavior } from '../protocol/official.ts';
 import { currentOf, type SessionCore } from './session-core.ts';
 import type { SessionDirectories } from './session-directories.ts';
 import { portsOf, subprocessFor } from './session-environment.ts';
@@ -20,6 +18,8 @@ import type { Entry } from './session-skill-entries.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState } from './state.ts';
 import type { HookSessionGates } from '../settings/hooks/session-gates.ts';
+import { bareRepositoryFor } from './session-bare-repository.ts';
+import { rulesPermission } from './session-skill-permission.ts';
 
 /** What fires the skill: the user typing `/name`, the model's Skill call, a scheduled fire, a workflow's agent. */
 export type SkillInvoker = Trigger;
@@ -39,6 +39,11 @@ export interface ExpandOptions {
   readonly runningForks?: ReadonlySet<string>;
   readonly bashOutputMaxChars?: number;
   readonly bare?: boolean;
+  /**
+   * The closest repository at or above the working directory looks bare (`looksLikeBareRepository`,
+   * §4.8.5 item 3). Absent, the session reads it through `HostPorts.folders`.
+   */
+  readonly bareRepository?: boolean;
   /**
    * The user's message names this skill after plain text (`go ahead and /deploy`): for the model's
    * invocation in that message it lifts `disable-model-invocation` (skills.md, "Where you write the
@@ -91,32 +96,6 @@ export const skillSettingsOf = (state: HostState, options: SessionOptions) =>
 
 const shellDisabled = (state: HostState, options: SessionOptions): boolean =>
   !skillSettingsOf(state, options).shell('plugin').run;
-
-/** `decide` has a classifier answer the kit cannot give: auto mode treats it as an ask (it defers). */
-const BEHAVIOR_OF: { readonly [O in Decision['outcome']]: PermissionBehavior } = {
-  allow: 'allow',
-  ask: 'ask',
-  deny: 'deny',
-  classify: 'ask',
-};
-
-/**
- * The default answer for a skill's command (skills.md, "Permission checks on injected commands"):
- * `decide` over the session's rules with the skill's `allowed-tools` added as allow rules, so "Deny
- * and ask rules still override `allowed-tools`". A grant that does not parse grants nothing.
- */
-function rulesPermission(context: DecideContext): ShellPermission {
-  return (call) => {
-    const grants = call.grants.flatMap(
-      (text) => parseRule(text, { behavior: 'allow', source: { kind: 'session' } }).rule ?? [],
-    );
-    const decision = decide(
-      { toolName: call.tool, input: { command: call.command } },
-      { ...context, rules: [...context.rules, ...grants] },
-    );
-    return BEHAVIOR_OF[decision.outcome];
-  };
-}
 
 /**
  * The session's own facts as a `DecideContext` when the host gave none (`SessionOptions.permissionContext`):
@@ -243,6 +222,8 @@ export async function expansionOf(
   const windows = state.options.windows ?? false;
   const cwd = use.directories.cwd();
   const turn = { ...options, cwd };
+  const { folders } = state.options.ports;
+  const bareRepository = await bareRepositoryFor(request, { folders, cwd, body: content.body });
   return expandSkill(
     content,
     {
@@ -265,6 +246,7 @@ export async function expansionOf(
       cwd,
       commandEnvironment: (shell: SkillShell) => subprocessFor(core, turn, shell),
       ...requestFields(request),
+      ...(bareRepository === undefined ? {} : { bareRepository }),
       signal: request.signal,
     },
     expandPorts(use),

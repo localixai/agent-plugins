@@ -2,7 +2,7 @@ import { createBudget, deepFreeze } from '../../foundation/index.ts';
 import { MOD_LIMITS } from '../../protocol/mods-limits.ts';
 import type { ModsApi, SkipKind } from '../types.ts';
 import { guardApi } from './api-guard.ts';
-import { hookMs, type Context } from './context.ts';
+import { hookMs, waitLimit, type Context } from './context.ts';
 import { createDownstream, finish, type Stream } from './downstream.ts';
 import {
   EXPIRED,
@@ -30,6 +30,7 @@ import { reentrySkips } from './reentry.ts';
 import { TIER_RANK } from './tiers.ts';
 import { hookStep } from './trace.ts';
 import { runCore } from './core.ts';
+import { admitsByDefault } from './default-matcher.ts';
 
 /** What to run for a hook or for its handler, and how long it has. */
 interface Run {
@@ -58,9 +59,11 @@ export async function* runFrom(
         tier: entry.tier,
         isBuiltin: entry.plugin.isBuiltin ?? false,
         input: ctx.fired,
+        origin: ctx.options.origin,
       }) === false
     )
       continue;
+    if (!admitsByDefault(entry, ctx.name, e)) continue;
     const verdict = await entry.matcher.test(e, run);
     if (verdict.matched)
       return yield* counted(
@@ -101,12 +104,27 @@ function partsOf(
   };
 }
 
+/** A run's own time and, for the events that bound it, the time it may wait on `$` calls (§10.11). */
+function budgetsOf(ctx: Context, ms: number) {
+  const budget = createBudget(ctx.clock, ms);
+  const limit = waitLimit(ctx.name);
+  const wait = limit && {
+    budget: createBudget(ctx.clock, limit.ms, { paused: true }),
+    exempt: limit.exempt,
+  };
+  const dispose = (): void => {
+    budget.dispose();
+    wait?.budget.dispose();
+  };
+  return { budget, wait, dispose };
+}
+
 /** One run of a hook or of its handler, under its time limit, until it returns or fails. */
 async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> {
   const { ctx, entry } = site;
   if (ctx.group?.budget.isExpired())
     return { failed: groupTimedOut(ctx.group.event, ctx.group.budget.ms) };
-  const budget = createBudget(ctx.clock, run.ms);
+  const { budget, wait, dispose } = budgetsOf(ctx, run.ms);
   const floor = { inNext: 0 };
   const abandon = new AbortController();
   const signal = AbortSignal.any([ctx.options.signal, abandon.signal]);
@@ -121,14 +139,14 @@ async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> 
   try {
     out = within(() =>
       run.start(
-        guardApi(entry.plugin.api, budget, within),
+        guardApi(entry.plugin.api, budget, within, wait),
         deepFreeze(site.e),
         partsOf(site, { budget, floor }, signal),
       ),
     );
   } catch (error) {
     leave();
-    budget.dispose();
+    dispose();
     return { failed: thrown(error) };
   }
   let ended: Outcome;
@@ -139,11 +157,12 @@ async function* attempt(site: Site, run: Run): AsyncGenerator<unknown, Outcome> 
       floor,
       watch,
       ...(ctx.group ? { group: ctx.group } : {}),
+      ...(wait ? { wait: wait.budget } : {}),
     });
   } finally {
     leave();
   }
-  budget.dispose();
+  dispose();
   if ('failed' in ended) {
     abandon.abort(new Error(ended.failed.message)); // judgment: a hook that failed has its background work stopped
     return ended;
@@ -245,6 +264,7 @@ function noteAnswer(site: Site): void {
   const { ctx, entry } = site;
   if (site.downstream.latest() !== undefined) return;
   ctx.options.debug?.(`${entry.plugin.name} (${entry.tier}) answered ${ctx.name} without next()`);
+  ctx.options.answered?.({ plugin: entry.plugin.name, tier: entry.tier });
 }
 
 async function* invoke(site: Site): Stream {

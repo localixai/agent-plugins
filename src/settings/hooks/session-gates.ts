@@ -4,7 +4,12 @@ import type { PolicyView } from '../view.ts';
 import { readSurfaceLocks } from '../customization/surfaces.ts';
 import { applyParentRules, type ParentSettingsContext } from '../managed/parent.ts';
 import { createHookGate, type HookGate } from './hook-gate.ts';
-import { createHttpHookPolicy, type HttpHookUrlPolicy } from './http-policy.ts';
+import {
+  createHttpHookPolicy,
+  httpHookLists,
+  type HttpHookLists,
+  type HttpHookUrlPolicy,
+} from './http-policy.ts';
 
 /**
  * What a hook session needs of the settings, as plain data: the one hook decision `createHookPolicy`
@@ -18,11 +23,16 @@ export interface HookSessionGates {
   readonly allowManagedHooksOnly: boolean;
   /** `strictPluginOnlyCustomization` locks the `hooks` surface. */
   readonly pluginOnlyHooks: boolean;
-  /** The merged HTTP hook allowlists; a key no file sets is absent (no limit). */
-  readonly httpPolicy: {
-    readonly allowedUrls?: readonly string[];
-    readonly allowedEnvVars?: readonly string[];
-  };
+  /**
+   * The merged HTTP hook allowlists that cover every hook but those of managed settings; a key no
+   * file sets is absent (no limit).
+   */
+  readonly httpPolicy: HttpHookLists;
+  /**
+   * The same merged lists for the hooks of managed settings: a key is present only when managed
+   * settings define it (spec §12.7.1, Judgment J12.18).
+   */
+  readonly managedHttpPolicy: HttpHookLists;
   /** The `hooks` of each settings file that declares any, highest precedence first. */
   readonly settingsHooks: readonly { readonly scope: PolicyScope; readonly hooks: HooksSettings }[];
   /** The plugin is force-enabled in managed `enabledPlugins`, which `allowManagedHooksOnly` exempts. */
@@ -52,8 +62,6 @@ export function hookDecision(effective: PolicyView): HookDecision {
 
 /** The decision as the hook engine's session takes it. */
 function sessionGatesOf({ gate, pluginOnlyHooks, view }: HookDecision): HookSessionGates {
-  const urls = view.get('allowedHttpHookUrls');
-  const variables = view.get('httpHookAllowedEnvVars');
   return {
     disableAllHooks: {
       effective: gate.managedDisable || gate.otherDisable,
@@ -61,10 +69,8 @@ function sessionGatesOf({ gate, pluginOnlyHooks, view }: HookDecision): HookSess
     },
     allowManagedHooksOnly: gate.managedOnly,
     pluginOnlyHooks,
-    httpPolicy: {
-      ...(urls === undefined ? {} : { allowedUrls: urls }),
-      ...(variables === undefined ? {} : { allowedEnvVars: variables }),
-    },
+    httpPolicy: httpHookLists(view),
+    managedHttpPolicy: httpHookLists(view, { managed: true }),
     settingsHooks: view
       .eachFromHighest('hooks')
       .map((holder) => ({ scope: holder.scope, hooks: holder.value })),

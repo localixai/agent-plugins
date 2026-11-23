@@ -19,7 +19,13 @@ export {
 } from './policy.ts';
 export type { Credential, ModsPolicyInput, ModsSettingsFile } from './policy-input.ts';
 export { orderMods, type ModOrder, type OrderedMod, type SkippedMod } from './order.ts';
-export { parsePluginDirs, sideloadRefusal, watchesPluginDirs } from './plugin-dirs.ts';
+export {
+  parsePluginDirs,
+  reloadsOnSave,
+  sideloadRefusal,
+  type ReloadSession,
+  type ReloadSource,
+} from './plugin-dirs.ts';
 export {
   scanHooksModule,
   MOD_SCAN_ISSUE_CODES,
@@ -33,7 +39,20 @@ export {
 } from './scan/index.ts';
 
 export { modOptions, type ModOptions } from './options.ts';
-export { REGISTER_RULES } from './register-call.ts';
+export {
+  createRefusalBook,
+  registerRules,
+  type RefusalBook,
+  type RegisterVerdict,
+} from './register-call.ts';
+export type {
+  PluginRegisterFacts,
+  PluginRegisterInput,
+  RegisterUses,
+  RegisterUsesHosts,
+} from './register-event.ts';
+export { PROVIDES_KINDS, type PluginProvides, type ProvidesKind } from './provides.ts';
+export type { PluginKeptOut } from './register-ask.ts';
 export { activeModsLine } from './commands/active-line.ts';
 
 export { validateMod } from './commands/validate.ts';
@@ -71,6 +90,7 @@ export {
 export { changeNotice } from './change-notice.ts';
 export {
   createHotReloadGate,
+  writtenModAsks,
   writtenModRefusal,
   type HotReloadAnswer,
   type HotReloadGate,

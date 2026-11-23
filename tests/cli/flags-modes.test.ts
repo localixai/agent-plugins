@@ -208,7 +208,7 @@ describe('--restricted', () => {
     test('refuses bypassPermissions', () => {
       const plan = planOf({ '--restricted': true, '--permission-mode': 'bypassPermissions' });
       expect(plan.refusals).toHaveLength(1);
-      expect(plan.refusals[0]).toContain('bypassPermissions');
+      expect(plan.refusals[0]).toBe('Error: bypassPermissions not supported in restricted mode');
       expect(planOf({ '--restricted': true, '--permission-mode': 'plan' }).refusals).toEqual([]);
     });
 

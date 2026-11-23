@@ -15,15 +15,7 @@ const COMMONLY_SEEN: Readonly<Record<string, string>> = Object.fromEntries(
     [
       [
         'a VS Code/Cursor extension manifest',
-        [
-          'publisher',
-          'categories',
-          'engines',
-          'activationEvents',
-          'contributes',
-          'preview',
-          'icon',
-        ],
+        ['publisher', 'categories', 'activationEvents', 'contributes', 'preview', 'icon'],
       ],
       [
         'an npm package.json',

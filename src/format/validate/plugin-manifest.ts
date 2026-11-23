@@ -1,5 +1,6 @@
 import { errorAt, warningAt, type Finding } from './finding.ts';
 import {
+  enginesNetworkFindings,
   fieldFindings,
   looseObjectFindings,
   missingName,
@@ -13,6 +14,7 @@ import { claimsOf, type PathClaim } from './path-claims.ts';
 import { inlineFindings } from './mcp-check.ts';
 import { hooksMapFindings } from './hooks-check.ts';
 import { unknownFieldFinding } from './unknown-fields.ts';
+import { settingsDeprecations } from './settings-deprecation.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
 /**
@@ -153,6 +155,8 @@ export function checkPluginManifest(raw: unknown, options: ManifestOptions = {})
     ...(sound ? name.advice : []),
     ...unknownKeys(raw),
     ...looseObjectFindings(raw),
+    ...enginesNetworkFindings(raw),
+    ...settingsDeprecations(raw.settings, 'settings.'),
     ...advice(raw),
     ...(sound
       ? RECOMMENDED.filter(([key]) => raw[key] === undefined || raw[key] === '').map(

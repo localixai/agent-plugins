@@ -154,6 +154,19 @@ export {
   type SavedValues,
 } from './configure-plan.ts';
 export {
+  concludeCommandInstall,
+  type CommandSourceRan,
+  type PlannedCommandInstall,
+} from './install-command-outcome.ts';
+export {
+  planRestoreSetAside,
+  restoredValues,
+  type RestoreSetAsideArguments,
+  type RestoreSetAsideFacts,
+  type RestoreSetAsidePlan,
+  type SetAsideAction,
+} from './restore-set-aside.ts';
+export {
   checkGiven,
   unsetKeys,
   type CheckedInput,
@@ -226,6 +239,18 @@ export {
   type ValidationFileResult,
   type ValidationJson,
 } from './validate-run.ts';
+export {
+  VALIDATION_PROVIDES_KINDS,
+  pluginHosts,
+  pluginProvides,
+  validationListLines,
+  validationLists,
+  type ModValidationResults,
+  type ValidationProvidesKind,
+  type UnreadPart,
+  type ValidationHosts,
+  type ValidationProvides,
+} from './validate-lists.ts';
 export {
   adviceNeedsSource,
   readmeAdvice,

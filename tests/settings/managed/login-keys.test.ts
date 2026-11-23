@@ -16,6 +16,7 @@ spec(
     'settingsMerge.managed.Which managed source supplies login keys',
     'policy.server.Per-key exceptions across managed sources.First-party sign-in keys',
     'policy.server.Per-key exceptions across managed sources.Gateway sign-in keys',
+    'policy.managed.Choose a delivery mechanism.Gateway login keys',
   ],
   () => {
     test('the MDM policy or managed file supplies the login keys, even for a key remote settings also set', () => {

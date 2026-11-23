@@ -11,18 +11,19 @@ import { isRecord } from '../../protocol/is-record.ts';
  * The inline catalog of a `settings` marketplace source (plugins/marketplace-reference.md, "Fields
  * by type": "Each item takes `name`, `source`, `description`, `version`, `strict`, `headers`, and
  * `headersHelper`. Write each item's `source` as an object type, because a relative path has no
- * repository to resolve against"; settings-reference.md, `extraKnownMarketplaces`: "an entry in
+ * repository to resolve against", and `engines` too, spec §15.7; settings-reference.md, `extraKnownMarketplaces`: "an entry in
  * settings doesn't need `"strict": false`, because a settings file carries no manifest fields to
  * inline"). Issue paths are `plugins[i]...`, relative to the source object.
  */
 
-/** The seven keys an item takes; any other is unknown and ignored (spec/judgments.md). */
+/** The keys an item takes (`engines` since the SDK 0.3.330 `Settings` type, spec §15.7); any other is unknown and ignored (spec/judgments.md). */
 const SETTINGS_ENTRY_KEYS = [
   'name',
   'source',
   'description',
   'version',
   'strict',
+  'engines',
   'headers',
   'headersHelper',
 ] as const;

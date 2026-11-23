@@ -16,7 +16,7 @@ const load = async (tree: Record<string, string>, fallbackName?: string) =>
 
 const manifest = (settings: unknown) => json({ name: 'p', settings });
 
-spec(['manifest.field.settings', 'manifest.rule.settings'], () => {
+describe('the manifest settings key (spec §2.4, §12.6; Judgments J2.9, J12.10)', () => {
   test('settings.json applies when it sets a supported key, and the manifest settings is ignored', async () => {
     const { plugin } = await load({
       '.claude-plugin/plugin.json': manifest({ agent: 'from-manifest' }),
@@ -41,11 +41,9 @@ spec(['manifest.field.settings', 'manifest.rule.settings'], () => {
         model: 'opus',
       }),
     });
-    expect(plugin?.settings).toEqual({
-      agent: 'reviewer',
-      subagentStatusLine: { type: 'command', command: 'jq .tasks' },
-    });
-    expect(issues.map((found) => found.severity)).toEqual(['warning']);
+    // subagentStatusLine was removed in 2.1.323 (spec §12.6 item 1, J12.17): dropped like any key.
+    expect(plugin?.settings).toEqual({ agent: 'reviewer' });
+    expect(issues.map((found) => found.severity)).toEqual(['warning', 'warning']);
   });
 
   test('a settings.json that is not JSON is a warning and the manifest settings still apply (J12.10)', async () => {
@@ -137,5 +135,23 @@ describe('what a load reports (judgments)', () => {
     await loadPlugin({ files: watching, fallbackName: 'p', signal: controller.signal });
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((signal) => signal === controller.signal)).toBe(true);
+  });
+});
+
+describe('judgment J2.9: the list note while a plugin sets agent', () => {
+  test('a plugin that sets agent loads with the plugin-agent-setting-deprecated note', async () => {
+    const loaded = await load({ '.claude-plugin/plugin.json': manifest({ agent: 'reviewer' }) });
+    expect(loaded.notes).toEqual([
+      {
+        type: 'plugin-agent-setting-deprecated',
+        message:
+          "A plugin's `agent` setting is deprecated and will stop applying in a future release.",
+      },
+    ]);
+  });
+
+  test('a plugin without a valid agent has no such note', async () => {
+    const loaded = await load({ '.claude-plugin/plugin.json': manifest({ agent: 5 }) });
+    expect(loaded.notes).toBeUndefined();
   });
 });

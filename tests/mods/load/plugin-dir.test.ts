@@ -120,19 +120,28 @@ spec(
       expect(await mod.host.reloadMod('other-mod')).toBeUndefined();
     });
 
-    test('an interactive session watches a plugin directory; a non-interactive one only with CLAUDE_CODE_PLUGIN_DIR_WATCH=1', () => {
+    test('an interactive terminal session reloads a --plugin-dir mod on save; another session only with CLAUDE_CODE_PLUGIN_DIR_WATCH=1 and more than one prompt', () => {
       const flags = { pluginDirs: ['./first-mod'] };
-      expect(session({}, { policy: policy({ flags }) }).host.watchesPluginDirs(true)).toBe(true);
-      expect(session({}, { policy: policy({ flags }) }).host.watchesPluginDirs(false)).toBe(false);
+      const terminal = { isInteractiveTerminal: true, takesMorePrompts: true };
+      const headless = { isInteractiveTerminal: false, takesMorePrompts: true };
+      const host = session({}, { policy: policy({ flags }) }).host;
+      expect(host.reloadsOnSave('plugin-dir', terminal)).toBe(true);
+      expect(host.reloadsOnSave('plugin-dir', headless)).toBe(false);
       const watched = policy({ flags, env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: '1' } });
-      expect(session({}, { policy: watched }).host.watchesPluginDirs(false)).toBe(true);
+      expect(session({}, { policy: watched }).host.reloadsOnSave('plugin-dir', headless)).toBe(
+        true,
+      );
     });
   },
 );
 
+/** An interactive terminal session, which takes more than one prompt. */
+const TERMINAL = { isInteractiveTerminal: true, takesMorePrompts: true } as const;
+
 /** What the session does when a file of a mod is saved: it reloads the mods of the directories it watches. */
 const onSave = async (mod: ReturnType<typeof editable>, name: string): Promise<void> => {
-  const watched = mod.host.pluginDirs().length > 0 && mod.host.watchesPluginDirs(true);
+  const watched =
+    mod.host.pluginDirs().length > 0 && mod.host.reloadsOnSave('plugin-dir', TERMINAL);
   if (watched) await mod.host.reloadMod(name);
 };
 
@@ -141,7 +150,7 @@ spec(`mods.troubleshoot.Your edits don't take effect`, () => {
     const flags = policy({ flags: { pluginDirs: ['./first-mod'] } });
     const working = editable(inline('first-mod'), { policy: flags });
     expect(working.host.pluginDirs()).toEqual(['./first-mod']);
-    expect(working.host.watchesPluginDirs(true)).toBe(true);
+    expect(working.host.reloadsOnSave('plugin-dir', TERMINAL)).toBe(true);
     await working.host.load([working.plugin]);
     expect(await working.fire()).toEqual({ result: 'v1' });
     working.state.version = 'v2';

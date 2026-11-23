@@ -9,7 +9,7 @@ import type { Assert, Equal } from './type-equality.ts';
  * events too, and are derived from their own tables below.
  */
 export const MOD_EVENT_GROUPS = {
-  tools: ['tool.call', 'tool.check', 'tool.describe'],
+  tools: ['tool.call', 'tool.check', 'tool.judge', 'tool.run', 'tool.describe'],
   prompts: [
     'prompt.submit',
     'prompt.fill',
@@ -36,6 +36,7 @@ export const MOD_EVENT_GROUPS = {
     'session.attach',
     'session.detach',
     'session.measure',
+    'session.stop',
   ],
   subagents: ['agent.offer', 'agent.spawn'],
   interface: [
@@ -56,7 +57,7 @@ export const MOD_EVENT_GROUPS = {
 
 export type ModEventGroup = keyof typeof MOD_EVENT_GROUPS;
 
-/** The 48 documented events, flat, in the order of the reference. */
+/** The 51 documented events, flat, in the order of the reference. */
 export const MOD_EVENT_NAMES = [
   ...MOD_EVENT_GROUPS.tools,
   ...MOD_EVENT_GROUPS.prompts,
@@ -72,10 +73,18 @@ export type ModEventName = (typeof MOD_EVENT_NAMES)[number];
 
 /**
  * The engine's own events the declarations name and the reference page does not (AGENTS.md, E2a:
- * the declarations win): `prompt.change`, raised after the prompt box changed
- * (claude-code/index.d.ts:4416, `PromptChangeInput`).
+ * the declarations win; spec Judgment J10.22): `prompt.change`, raised after the prompt box changed
+ * (`PromptChangeInput`); `tool.offer`, a tool offered to a loop's model (`ToolOfferInput`,
+ * claude-code/index.d.ts:5400 of 2.1.330); `agent.report`, a subagent's report before it reaches
+ * its parent (`AgentReportInput`, :5219); `ui.pointer`, a click on the backdrop (`UiPointerInput`,
+ * :5134).
  */
-export const DECLARED_EVENT_NAMES = ['prompt.change'] as const;
+export const DECLARED_EVENT_NAMES = [
+  'prompt.change',
+  'tool.offer',
+  'agent.report',
+  'ui.pointer',
+] as const;
 export type DeclaredEventName = (typeof DECLARED_EVENT_NAMES)[number];
 
 /** Every event of the engine's own with a name of its own: the reference's, then the declarations' others. */

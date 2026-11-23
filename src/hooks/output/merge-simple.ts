@@ -1,7 +1,7 @@
 import { warning, type PluginIssue } from '../../format/issues.ts';
 import { classifierNote } from './classifier-note.ts';
 import { boolIn, specificOf, stringIn, stringsIn, textIn } from './fields.ts';
-import { checkToolOutput, isMcpToolName } from './tool-output.ts';
+import { checkToolOutput, isMcpToolName, withKeptFields } from './tool-output.ts';
 import { lastPathLine } from './worktree-path.ts';
 import { factOf } from '../input/fact-read.ts';
 import { NOTHING, lastOf, type Merged, type Merger, type Read } from './merge-rules.ts';
@@ -193,6 +193,7 @@ export const mergePostToolUse: Merger = (reads, facts) => {
   const rewrites = found.flatMap(({ rewrite }) => (rewrite === undefined ? [] : [rewrite]));
   const issues = found.flatMap(({ issue }) => (issue === undefined ? [] : [issue]));
   const winner = rewrites.filter((rewrite) => rewrite.accepted).at(-1);
+  const original = factOf(facts, 'tool_response');
   // A note is dropped with its own rewrite when that is rejected or replaced, and kept otherwise.
   const kept = reads.filter((read) => {
     const own = rewrites.find((rewrite) => rewrite.read === read);
@@ -201,7 +202,9 @@ export const mergePostToolUse: Merger = (reads, facts) => {
   const note = classifierNote(name, kept);
   return {
     effects: {
-      ...(winner === undefined ? {} : { updatedToolOutput: winner.value }),
+      ...(winner === undefined
+        ? {}
+        : { updatedToolOutput: withKeptFields(name, winner.value, original) }),
       ...(note === undefined ? {} : { classifierContext: note.text, classifierTrust: note.trust }),
     },
     issues,

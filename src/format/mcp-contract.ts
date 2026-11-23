@@ -45,9 +45,17 @@ export {
   type McpToolHints,
 } from './mcp-tool.ts';
 export {
+  MCP_TASK_MIN_RESULT_KEEP_MS,
+  recommendedMcpTaskTiming,
+  type McpTaskTiming,
+  type McpTaskTimingInput,
+} from './mcp-task-timing.ts';
+export {
   excludedToolsNotice,
+  mcpToolPolicy,
   prepareMcpTool,
   refusedSchemaFallback,
+  type McpFlagState,
   type McpListedTool,
   type McpToolDeclaration,
   type McpToolPolicy,

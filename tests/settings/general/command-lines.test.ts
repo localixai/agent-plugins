@@ -1,9 +1,10 @@
 /**
  * settings-reference.md § `statusLine` (an object with `type: "command"` and a `command`, optional
  * `padding`, `refreshInterval` of at least 1 and `hideVimModeIndicator`; any file; unset by default),
- * § `fileSuggestion`, § `subagentStatusLine`, and § Status line and file suggestion gates ("Off
+ * § `fileSuggestion`, and § Status line and file suggestion gates ("Off
  * entirely", then "Narrowed to managed settings"; "Otherwise it skips your value without warning");
- * permissions.md § What runs before you trust a folder (the workspace trust rule of hooks).
+ * permissions.md § What runs before you trust a folder (the workspace trust rule of hooks). Spec
+ * §12.7.1 `subagentStatusLine`: removed in 2.1.323, ignored in every file (Judgment J12.17).
  */
 import { describe, expect, test } from 'bun:test';
 import { COMMAND_LINE_KEYS, readCommandLine } from '../../../src/settings/general/index.ts';
@@ -90,11 +91,10 @@ spec('settings.reference.Status line and file suggestion gates', () => {
   const set = (value: string) => ({
     statusLine: LINE(value),
     fileSuggestion: LINE(value),
-    subagentStatusLine: LINE(value),
   });
 
   describe('off entirely', () => {
-    test('when managed settings set disableAllHooks, none of the three runs, not even a managed value', () => {
+    test('when managed settings set disableAllHooks, neither runs, not even a managed value', () => {
       for (const key of KEYS) {
         const result = run(key, [managed({ disableAllHooks: true, ...set('managed') })]);
         expect(result).toEqual({ runs: undefined, skippedBecause: 'off' });
@@ -171,7 +171,7 @@ spec('settings.reference.Status line and file suggestion gates', () => {
     });
   });
 
-  test('with no gate the value of the highest file runs, for all three keys', () => {
+  test('with no gate the value of the highest file runs, for both keys', () => {
     for (const key of KEYS) {
       expect(run(key, [user(set('a')), project(set('b'))]).runs).toEqual({
         value: LINE('b'),
@@ -184,19 +184,29 @@ spec('settings.reference.Status line and file suggestion gates', () => {
     expect(issuesOf('user', set('mine'))).toEqual([]);
   });
 
-  test('the three keys are statusLine, fileSuggestion and subagentStatusLine', () => {
-    expect([...COMMAND_LINE_KEYS]).toEqual(['statusLine', 'fileSuggestion', 'subagentStatusLine']);
+  test('the two keys are statusLine and fileSuggestion', () => {
+    expect([...COMMAND_LINE_KEYS]).toEqual(['statusLine', 'fileSuggestion']);
   });
 });
 
-describe('fileSuggestion and subagentStatusLine shapes', () => {
-  test('both are an object with type command and a command string', () => {
+describe('fileSuggestion shape', () => {
+  test('an object with type command and a command string', () => {
     expect(
       run('fileSuggestion', [user({ fileSuggestion: LINE('~/.claude/file-suggestion.sh') })]).runs
         ?.value,
     ).toEqual(LINE('~/.claude/file-suggestion.sh'));
-    expect(issuesOf('user', { subagentStatusLine: { type: 'command' } })[0]?.message).toContain(
-      '"subagentStatusLine"',
-    );
+  });
+});
+
+describe('subagentStatusLine is removed (spec §12.7.1, Judgment J12.17)', () => {
+  test('a file that holds it loads as before, with no issue, whatever the value', () => {
+    for (const scope of ['user', 'project', 'local', 'managed', 'flag'] as const) {
+      expect(issuesOf(scope, { subagentStatusLine: LINE('x') })).toEqual([]);
+      expect(issuesOf(scope, { subagentStatusLine: { type: 'command' } })).toEqual([]);
+    }
+  });
+
+  test('it is no command line: no gate or reader selects it', () => {
+    expect(COMMAND_LINE_KEYS).not.toContain('subagentStatusLine');
   });
 });

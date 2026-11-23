@@ -81,8 +81,7 @@ spec(
       expect(verdict.allowed).toBe(false);
       if (verdict.allowed) throw new Error('unreachable');
       expect(verdict.reason).toBe('disable-model-invocation');
-      // "instructs it not to reproduce the deploy steps another way, so expect Claude to suggest
-      // running `/deploy` yourself"
+      // Claude is expected to suggest running `/deploy` yourself; the wording is the kit's (J4.30).
       expect(verdict.message).toContain('/deploy');
     });
 

@@ -100,7 +100,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `HooksSettings` | type | The shape of hook configuration, derived from the official `Settings` type |
 | `HookStarted` | type | `statusMessage`: "Custom spinner message displayed while the hook runs" |
 | `HttpFailedRun` | type | The request never got an answer ("Connection failure: non-blocking error") |
-| `HttpHookPolicy` | type | The two outer limits on `http` hooks |
+| `HttpHookPolicy` | type | The two outer limits on `http` hooks: the lists covering every hook but those of managed settings, and `managed`, the lists covering those (J12.18) |
 | `HttpRun` | type | The server answered: any status, with the body as text |
 | `IfEvaluator` | type | Evaluates one `if` rule against a tool call, with whatever context rules need (cwd, home) |
 | `ifEvaluatorFor` | function | The evaluator of permission rule syntax over a match context the host (or the engine) built |

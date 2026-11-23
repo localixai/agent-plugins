@@ -120,12 +120,33 @@ spec('hooks.behavior.TaskCompleted decision control', () => {
     expect((await runScript('TaskCompleted', testsScript(true), facts)).proceed).toBe(true);
   });
 
-  test('{"continue": false, "stopReason": ...} stops the teammate entirely and the stopReason is shown to the user', async () => {
+  test('{"continue": false, "stopReason": ...} lets the teammate go idle, the stopReason for its transcript', async () => {
     const outcome = await viaEngine('TaskCompleted', [
       { continue: false, stopReason: 'Teammate has no budget left' },
     ]);
     expect(outcome.continue).toBe(false);
     expect(outcome.stopReason).toBe('Teammate has no budget left');
+  });
+
+  test('2.1.330: {"decision": "block", "reason": ...} keeps the task open and Claude receives the reason', async () => {
+    const outcome = await viaEngine('TaskCompleted', [
+      { decision: 'block', reason: 'Tests are failing' },
+    ]);
+    expect(outcome.proceed).toBe(false);
+    expect(outcome.block).toMatchObject({
+      via: 'decision',
+      to: 'claude',
+      reason: 'Tests are failing',
+    });
+  });
+
+  test("2.1.330: continue: false at the end of a teammate's turn lets it go idle even when another handler blocks", async () => {
+    const outcome = await viaEngine('TaskCompleted', [
+      { decision: 'block', reason: 'Tests are failing' },
+      { continue: false, stopReason: 'Out of budget' },
+    ]);
+    expect(outcome.continue).toBe(false);
+    expect(outcome.effects.stopCondition).toBe('teammate-finished-its-turn');
   });
 
   test('the merge leaves the stop to the host: continue: false carries the stop condition, and exit code 2 blocks without one', async () => {
@@ -154,7 +175,7 @@ describe('TaskCompleted with the trigger the host knows', () => {
       expect(outcome.block?.reason).toBe('Tests not passing');
     });
 
-    test('when a teammate finishing its turn triggered it, it stops the teammate and the stopReason is shown', async () => {
+    test('when a teammate finishing its turn triggered it, the teammate goes idle with the stopReason', async () => {
       const outcome = await dispatchBy('teammate-turn', stops);
       expect(outcome.continue).toBe(false);
       expect(outcome.stopReason).toBe('Out of budget');
@@ -177,12 +198,33 @@ spec('hooks.behavior.TeammateIdle decision control', () => {
     expect((await runScript('TeammateIdle', artifactScript(true), facts)).proceed).toBe(true);
   });
 
-  test('{"continue": false, "stopReason": ...} stops the teammate entirely, and the stopReason is shown to the user', async () => {
+  test('{"continue": false, "stopReason": ...} lets the teammate go idle, the stopReason for its transcript', async () => {
     const outcome = await viaEngine('TeammateIdle', [
       { continue: false, stopReason: 'Work is complete' },
     ]);
     expect(outcome.continue).toBe(false);
     expect(outcome.stopReason).toBe('Work is complete');
     expect(outcome.block).toBeUndefined();
+  });
+
+  test('2.1.330: {"decision": "block", "reason": ...} keeps the teammate working, and it receives the reason', async () => {
+    const outcome = await viaEngine('TeammateIdle', [
+      { decision: 'block', reason: 'Run the build first' },
+    ]);
+    expect(outcome.proceed).toBe(false);
+    expect(outcome.block).toMatchObject({
+      via: 'decision',
+      to: 'claude',
+      reason: 'Run the build first',
+    });
+  });
+
+  test('continue: false lets the teammate go idle even when another handler blocks', async () => {
+    const outcome = await viaEngine('TeammateIdle', [
+      { decision: 'block', reason: 'Run the build first' },
+      { continue: false, stopReason: 'Out of budget' },
+    ]);
+    expect(outcome.continue).toBe(false);
+    expect(outcome.stopReason).toBe('Out of budget');
   });
 });

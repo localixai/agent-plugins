@@ -33,7 +33,7 @@ const FILTERED: Partial<Record<HookEvent, { readonly value: string; readonly oth
   ConfigChange: { value: 'user_settings', other: 'project_settings' },
   DirectoryAdded: { value: 'slash_command', other: 'register_repo_root' },
   FileChanged: { value: '.envrc', other: 'data.csv' },
-  StopFailure: { value: 'rate_limit', other: 'overloaded' },
+  StopFailure: { value: 'rate_limit', other: 'server_error' },
   InstructionsLoaded: { value: 'session_start', other: 'include' },
   UserPromptExpansion: { value: 'review', other: 'deploy' },
   Elicitation: { value: 'issue-tracker', other: 'memory' },
@@ -144,13 +144,13 @@ describe('FileChanged filters on the changed file basename, and builds the watch
   });
 });
 
-const failed = (matcher: string, error: 'rate_limit' | 'overloaded') =>
+const failed = (matcher: string, error: 'rate_limit' | 'server_error') =>
   select([entry('StopFailure', { matcher })], 'StopFailure', { error }).selected.length === 1;
 
 describe('StopFailure uses the narrower exact-match set', () => {
   test('`|` separates alternatives; a comma or space sends the matcher to the regular expression path', () => {
-    expect(failed('rate_limit|overloaded', 'overloaded')).toBe(true);
-    expect(failed('rate_limit, overloaded', 'overloaded')).toBe(false);
+    expect(failed('rate_limit|server_error', 'server_error')).toBe(true);
+    expect(failed('rate_limit, server_error', 'server_error')).toBe(false);
   });
 
   test('other events with matcher support accept `|` or `,`', () => {

@@ -1,3 +1,4 @@
+import type { EnginesRead } from '../engines.ts';
 import { MARKETPLACE_SOURCE_KINDS } from '../../protocol/settings-keys.ts';
 import type { PluginDependency, PluginManifest } from '../manifest-schema.ts';
 import type { PluginIssue } from '../issues.ts';
@@ -127,6 +128,16 @@ export interface MarketplaceEntry {
   readonly headersHelper?: string;
   readonly components: Readonly<Partial<Pick<PluginManifest, ComponentKey>>>;
   readonly display: Readonly<Partial<Pick<PluginManifest, DisplayKey>>>;
+  /**
+   * `engines` read (spec §15.4, §2.4): the `claude-code` range, or the value that is not one, which
+   * is ignored. Absent when the entry has none.
+   */
+  readonly engines?: EnginesRead;
+  /**
+   * The entry's display-field problems, `<field>: <problem>` (spec §15.5.3, J15.15): the entry is
+   * listed, but installing it fails (`invalidEntryMessage`). Absent for an entry that installs.
+   */
+  readonly invalid?: readonly string[];
 }
 
 /** A marketplace source (`MarketplaceSourceKind`); the `path` of git sources defaults to `.claude-plugin/marketplace.json`. */

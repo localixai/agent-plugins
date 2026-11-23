@@ -52,8 +52,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `CommandOutput` | type | What a command ends with |
 | `CommandRow` | type | One row of the command table: aliases, handling and how unknown words are read |
 | `CommandScope` | type | `update` also takes `managed`, the one scope that can be updated but not installed to |
+| `CommandSourceRan` | type | The `ran` argument of `concludeCommandInstall`: what the command wrote to stderr and why it failed |
 | `commandSucceeded` | function | The output of a command that succeeded, with its message and extra fields |
 | `ComponentCost` | type | One component row of `claude plugin details`: its kind, name and projected token cost |
+| `concludeCommandInstall` | function | The end of an install whose entry runs a command: `commandPrinted` and `commandFailed`, the warning line or the failure (§17.2.2) |
 | `concludeMarketplaceAdd` | function | What the add ends with once the marketplace is fetched |
 | `concludeRetry` | function | The result once the host has retried the dependency install: the failure fails the command, the success leaves the latest-version line |
 | `concludeUninstall` | function | What the command prints and which state goes, once the host has switched the plugin off and removed its record |
@@ -134,16 +136,20 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `planMarketplaceList` | function | The listing: `--json` covers "configured marketplaces only and leaves the section out" |
 | `planMarketplaceRemove` | function | What `plugin marketplace remove` does and prints |
 | `planMarketplaceUpdate` | function | What `plugin marketplace update` refreshes and prints |
+| `PlannedCommandInstall` | type | The `planned` argument of `concludeCommandInstall`: the success `planInstall` returned |
 | `planPluginDetails` | function | What the command prints: the details of a loaded plugin, or the message for one that is not loaded |
 | `planPluginList` | function | What `claude plugin list` prints |
 | `planPluginTag` | function | Plans `claude plugin tag`: the tag to create from the plugin's version, or why it fails |
 | `planPluginUpdate` | function | What `claude plugin update` prints and does |
 | `planPruneCommand` | function | What `claude plugin prune` shows and removes, before any answer |
+| `planRestoreSetAside` | function | What `claude plugin restore-set-aside` restores, discards or prints (§17.10.1) |
 | `planSessionFlags` | function | What the flags a run was given add up to, in the order of `FLAG_NAMES` |
 | `PLUGIN_SUBCOMMANDS` | constant | `claude plugin <subcommand>`; `claude plugin eval init` is a command of `eval` |
 | `PluginCommandResult` | type | The JSON result of a `claude plugin` command: the subcommand, its outcome and message |
 | `PluginDetails` | type | The `found` argument of `planPluginDetails` |
 | `pluginFoldersOf` | function | The folders to load for one request, given what `readPluginDirectory` read in the directory: an archive or a URL is one plugin |
+| `pluginHosts` | function | The `hosts` of a plugin run: the hosts `network.hosts` declares and those the hooks module's calls spell, and the parts not read for hosts (spec §17.13.4) |
+| `pluginProvides` | function | The `provides` of a plugin run: the components of a loaded plugin by kind, named as a session names them |
 | `PluginRemoval` | type | One plugin uninstalled because its marketplace is gone: "Also deletes their saved options and secrets and data where it can" |
 | `PluginSubcommand` | type | One of `PLUGIN_SUBCOMMANDS` |
 | `PluginUpdateArguments` | type | The arguments and facts of `claude plugin update` |
@@ -165,6 +171,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RenderOptions` | type | The `options` argument of `renderCommand` |
 | `resolveCommand` | function | The command the words name, by name or alias, at each level |
 | `ResolvedCommand` | type | What `resolveCommand` returns |
+| `restoredValues` | function | The values an id holds after a restore: a value it already holds is kept, the set-aside one dropped |
+| `RestoreSetAsideArguments` | type | The `args` argument of `planRestoreSetAside`: the full `name@marketplace` id, `--discard`, and `--json`, which is refused |
+| `RestoreSetAsideFacts` | type | The `facts` argument of `planRestoreSetAside`: the ids holding set-aside options or secrets |
+| `RestoreSetAsidePlan` | type | What `planRestoreSetAside` returns |
 | `ResultFields` | type | Fields beyond the three that are always present: `marketplace`, `pluginId`, `scope`… |
 | `Retention` | type | What `uninstallRetention` returns |
 | `RetentionFacts` | type | The `facts` argument of `uninstallRetention` |
@@ -180,6 +190,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SessionChannel` | type | The `channels` field of `SessionPlan` |
 | `SessionPlan` | type | The `plan` argument of `mcpSourcesRead`; What `planSessionFlags` returns |
 | `SessionPluginRequest` | type | A plugin for this session only: `--plugin-dir` and `--plugin-url` load plugins of the `inline` origin |
+| `SetAsideAction` | type | The `action` field of `RestoreSetAsidePlan`: restore or discard the set-aside values of an id |
 | `ShownCommand` | type | The object a `--json` run's `failed` result carries when it displays a command and does not run it |
 | `SIDELOAD_FLAGS` | constant | What managed `disableSideloadFlags` rejects |
 | `SKIP_MODES` | constant | The customizations a mode leaves out |
@@ -205,6 +216,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `UninstallFacts` | type | The `facts` argument of `startUninstall` |
 | `uninstallRetention` | function | What the uninstall of `facts.id` from `facts.scope` deletes and keeps |
 | `UninstallStart` | type | The `start` argument of `concludeUninstall`; What `startUninstall` returns |
+| `UnreadPart` | type | One entry of `hosts.unread`: the kind, the name and why it was not read |
 | `unsetKeys` | function | The options that are not set: no saved value. A `default` gives an option a value but does not set it, so the dialog, `plugin configure` and the install line still count it (spec §3.4.4, §3.4.6) |
 | `UpdatableInstall` | type | A plugin installed at one scope, with what an update needs to know about it |
 | `UpdateArguments` | type | `claude plugin marketplace update [name]` as a plan: which marketplaces' listings are refreshed, from what, and what is printed |
@@ -213,9 +225,16 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `UpdateRun` | type | What `concludeRetry` returns; What `planPluginUpdate` returns |
 | `usageError` | function | The output of a command line used wrongly, with the reason |
 | `UsageError` | type | What `chooseScope` returns; What `exclusiveAcceptFlags` returns |
+| `VALIDATION_PROVIDES_KINDS` | constant | The kinds `provides` of a `claude plugin validate` plugin run holds, in Claude Code 2.1.330 order |
 | `ValidationAdvice` | type | One entry of `advice`: the README, the message and the line to paste |
 | `ValidationEntry` | type | One entry of `errors` or `warnings` (J17.15); `notes` entries are plain strings |
 | `ValidationFileResult` | type | The `manifest` field of `ValidationJson`; The `contents` field of `ValidationJson` |
+| `ValidationHosts` | type | What `pluginHosts` returns; the `hosts` field of `ValidationJson` |
 | `validationJson` | function | The `--json` report: `success` is the verdict the exit code gives, `strict` whether warnings failed the run, `target` the resolved path validated |
 | `ValidationJson` | type | What `validationJson` returns |
+| `validationListLines` | function | The text lines after a plugin run's findings: `Provides:`, then the `Hosts` lines (J17.36) |
+| `validationLists` | function | `provides` and `hosts` of a plugin run, `modules` and the hosts the module spells taken from `validateMod`'s results (spec §10.4.3, §17.13.4) |
+| `ValidationProvides` | type | What `pluginProvides` returns; the `provides` field of `ValidationJson` |
+| `ValidationProvidesKind` | type | One kind of `VALIDATION_PROVIDES_KINDS` |
+| `ModValidationResults` | type | What `validationLists` reads of `validateMod`'s `contents`: each result's `modules` |
 | `writeScope` | function | `--scope` given to `enable` or `disable` for a plugin: where the plugin is declared the scope is written |

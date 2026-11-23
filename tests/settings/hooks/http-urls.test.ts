@@ -4,8 +4,8 @@
  * array blocks every HTTP hook"; Scope: Any file, "Arrays merge across settings files"; `*` as a
  * wildcard; default unset, "so any URL is allowed"; the example `https://hooks.example.com/*` and
  * `http://localhost:*`; "Hostname matching is case-insensitive and treats `hooks.example.com.`, with
- * the trailing dot ... the same as `hooks.example.com`"; "The allowlist applies to hooks from every
- * source, including managed settings"), hooks.md § "Hooks in plugins/managed policy" ("when defined at
+ * the trailing dot ... the same as `hooks.example.com`"); which hooks a list covers is
+ * http-coverage.test.ts (J12.18), hooks.md § "Hooks in plugins/managed policy" ("when defined at
  * any settings level, Claude Code runs an HTTP hook handler only if its URL matches the merged
  * allowlist"), managed-settings.md § "Keys that fail closed" (an unreadable managed value is an empty
  * allowlist "so an HTTP hook runs only if another settings file lists its URL"; an invalid entry is
@@ -15,16 +15,7 @@
 import { describe, expect, test } from 'bun:test';
 import { matchUrlPattern } from '../../../src/settings/hooks/index.ts';
 import { issuesOf, plain } from '../../support/settings-layers.ts';
-import {
-  fromManaged,
-  fromSettings,
-  hookPolicyOf,
-  local,
-  managed,
-  project,
-  runs,
-  user,
-} from '../../support/hook-policy.ts';
+import { hookPolicyOf, local, managed, project, user } from '../../support/hook-policy.ts';
 import { spec } from '../../support/spec.ts';
 
 const docsExample = { allowedHttpHookUrls: ['https://hooks.example.com/*', 'http://localhost:*'] };
@@ -145,29 +136,6 @@ spec('settings.key.allowedHttpHookUrls', () => {
         user({ allowedHttpHookUrls: ['https://a.test/*'] }),
       ]);
       expect(allowed(policy, 'https://b.test/')).toBe(false);
-    });
-  });
-
-  describe('applies to hooks from every source, managed settings included', () => {
-    // Design: `httpHook` takes no origin, so no origin can be exempt from the allowlist. The two
-    // checks compose: `runs(origin)` says whether the origin may run hooks at all, `httpHook` whether
-    // the URL may be sent to.
-    test('an HTTP hook of the managed origin is stopped by httpHook while runs(managed) stays true', () => {
-      const policy = hookPolicyOf([
-        managed({ allowManagedHooksOnly: true, allowedHttpHookUrls: ['https://a.test/*'] }),
-      ]);
-      expect(runs(policy, fromManaged)).toBe(true);
-      expect(plain(policy.httpHook('https://managed-hook.test/', []))).toEqual({
-        run: false,
-        message: expect.any(String),
-      });
-      expect(allowed(policy, 'https://a.test/x')).toBe(true);
-    });
-
-    test('a user hook is judged by the same list as a managed one', () => {
-      const policy = hookPolicyOf([managed({ allowedHttpHookUrls: ['https://a.test/*'] })]);
-      expect(runs(policy, fromSettings('user'))).toBe(true);
-      expect(allowed(policy, 'https://user-hook.test/')).toBe(false);
     });
   });
 

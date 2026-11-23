@@ -8,8 +8,10 @@ import { IMAGE } from './image.ts';
 import { INPUT } from './input.ts';
 import { LINK } from './link.ts';
 import { MARKDOWN } from './markdown.ts';
+import { PROGRESS } from './progress.ts';
 import { RASTER } from './raster.ts';
 import { SELECT } from './select.ts';
+import { SHADER } from './shader.ts';
 import { SVG } from './svg.ts';
 import { TEXT } from './text.ts';
 
@@ -27,4 +29,6 @@ export const ELEMENT_DEFS: { readonly [N in ElementName]: ElementDef } = {
   Client: CLIENT,
   Raster: RASTER,
   Image: IMAGE,
+  Progress: PROGRESS,
+  Shader: SHADER,
 };

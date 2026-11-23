@@ -226,3 +226,39 @@ spec('mods.limit.$.session.messages()', () => {
     });
   });
 });
+
+spec('mods.api.$.session', () => {
+  test('messages({ last }) keeps the newest last entries; ({ after }) asks the host for the rows after one; the query rides on the event (2.1.330)', async () => {
+    const queries: unknown[] = [];
+    const rows = all(10).map((row, index) => ({ ...row, uuid: `u${index}` }));
+    const { api, mod } = await apiHarness({
+      ports: {
+        session: sessionPort({
+          messages: (_signal, query) => (
+            queries.push(query),
+            Promise.resolve(query?.after === 'u7' ? rows.slice(8) : rows)
+          ),
+        }),
+      },
+    });
+    const seen: unknown[] = [];
+    await mod('watch', 'prepend', [
+      fn('session.messages', (_$, e, next) => (seen.push(e), next(e))),
+    ]);
+    expect(await api.session.messages({ last: 2 })).toEqual(rows.slice(8));
+    expect(await api.session.messages({ after: 'u7' })).toEqual(rows.slice(8));
+    expect(queries).toEqual([{ last: 2 }, { after: 'u7' }]);
+    expect(seen).toEqual([{ last: 2 }, { after: 'u7' }]);
+  });
+
+  test('last is 1 to 4,096, and last and after are exclusive', async () => {
+    const { api } = await apiHarness({ ports: { session: sessionPort() } });
+    for (const wrong of [
+      { last: 0 },
+      { last: MOD_LIMITS.messages + 1 },
+      { last: 1, after: 'u1' },
+    ]) {
+      expect(await rejection(api.session.messages(wrong))).toStartWith('$.session.messages: ');
+    }
+  });
+});

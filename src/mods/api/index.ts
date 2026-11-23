@@ -16,15 +16,16 @@ export {
 export {
   createRegistries,
   type AgentType,
-  type BackdropBoard,
   type CommandDef,
   type CommandRunDepth,
   type CommandRuns,
   type ModRegistries,
   type RegisteredKind,
   type Registry,
+  type ThemeBoard,
   type ToolDef,
 } from './registries.ts';
+export { sceneBackdrop } from './theme.ts';
 export {
   createReplayLedger,
   replayedLine,
@@ -81,8 +82,13 @@ export {
 } from './settings-layers.ts';
 export { readEngineSettings, type EngineReadOptions } from './engine-settings.ts';
 export { API_RULES } from './rules.ts';
-export { commandPresentation, type CommandPresentation } from './command.ts';
-export { settleModApi, type ModApiSettlementOptions, type ScopeBook } from './engine-create.ts';
+export { commandPresentation, displayOnlyReply, type CommandPresentation } from './command.ts';
+export {
+  mayWithhold,
+  settleModApi,
+  type ModApiSettlementOptions,
+  type ScopeBook,
+} from './engine-create.ts';
 export { runScopedModCall } from './scoped-call.ts';
 export type * from './ports.ts';
 export {

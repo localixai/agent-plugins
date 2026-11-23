@@ -25,11 +25,10 @@ export const unsentReason = {
 
 /**
  * The toast Claude Code shows when the user stopped a turn and a mod then tried to start work on its
- * own and was refused (troubleshoot.md, "`Stopped: type a message to continue; a mod cannot resume work
- * after Stop`"). Nothing needs fixing: after the next message, mods can start work again.
+ * own and was refused (spec §10.43.2, "`stopped · type a message to continue`", the 2.1.330 wording).
+ * Nothing needs fixing: after the next message, mods can start work again.
  */
-export const STOPPED_TOAST =
-  'Stopped: type a message to continue; a mod cannot resume work after Stop';
+export const STOPPED_TOAST = 'stopped · type a message to continue';
 
 /** What a call that waited in the queue gives when the user stops the turn before it ran. */
 export const QUEUE_DROPS = {

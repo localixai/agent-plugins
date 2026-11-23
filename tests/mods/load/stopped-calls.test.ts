@@ -1,4 +1,4 @@
-/** plugins/mods/troubleshoot.md § Stopped: type a message to continue; api.md § Calls and background work after the user interrupts a turn. */
+/** Agent Plugins Extended §10.43.2 (troubleshoot.md § `stopped · type a message to continue`, the 2.1.330 wording); api.md § Calls and background work after the user interrupts a turn. */
 import { expect, test } from 'bun:test';
 import type { ModNext, ModsApi } from '../../../src/mods/types.ts';
 import { STOPPED_TOAST } from '../../../src/mods/api/index.ts';
@@ -46,26 +46,26 @@ const calls = [
   ],
 ] as const;
 
-spec(
-  'mods.troubleshoot.Stopped: type a message to continue; a mod cannot resume work after Stop',
-  () => {
-    for (const [name, register] of calls) {
-      test(`${name} refused after a stop raises the engine toast`, async () => {
-        const base = fakePorts().ports;
-        const s = session(
-          { resumer: register },
-          { ports: { ...base, session: { ...base.session, turns: () => Promise.resolve(1) } } },
-        );
-        const loaded = await s.host.load([modPlugin(inline('resumer'), register)]);
-        expect(loaded.lines).toEqual([]);
-        expect(loaded.loaded).toHaveLength(1);
-        s.host.input.interrupt();
-        await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
-        expect(s.host.ui.toasts.visible().map((toast) => toast.text)).toEqual([STOPPED_TOAST]);
-      });
-    }
-  },
-);
+spec('mods.troubleshoot.stopped · type a message to continue', () => {
+  for (const [name, register] of calls) {
+    test(`${name} refused after a stop raises the engine toast`, async () => {
+      const base = fakePorts().ports;
+      const s = session(
+        { resumer: register },
+        { ports: { ...base, session: { ...base.session, turns: () => Promise.resolve(1) } } },
+      );
+      const loaded = await s.host.load([modPlugin(inline('resumer'), register)]);
+      expect(loaded.lines).toEqual([]);
+      expect(loaded.loaded).toHaveLength(1);
+      s.host.input.interrupt();
+      await s.host.fire('classic.Stop', { hook_event_name: 'Stop' });
+      expect(s.host.ui.toasts.visible().map((toast) => toast.text)).toEqual([
+        'stopped · type a message to continue',
+      ]);
+      expect(STOPPED_TOAST).toBe('stopped · type a message to continue');
+    });
+  }
+});
 
 test('a refused session.send reports its own reason and raises no stopped-work toast', async () => {
   const register = registerOf((on) => {

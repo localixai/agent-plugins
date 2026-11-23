@@ -58,6 +58,13 @@ const EVENT_ANSWERED = [
   'prompt.suggest',
   'session.send',
   'agent.spawn',
+  // `$.vcs` resolves to its event's result, which the client raises for its own work too (§10.19.8).
+  'vcs.detect',
+  'vcs.diff',
+  'vcs.isolate',
+  'vcs.list',
+  'vcs.release',
+  'vcs.status',
 ] as const satisfies readonly ApiEventName[];
 
 const EVENT_ANSWERED_SET: ReadonlySet<string> = new Set(EVENT_ANSWERED);

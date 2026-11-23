@@ -45,9 +45,12 @@ const ELEMENT_IDS = {
   Client: 'mods.element.Client',
   Raster: 'mods.element.Raster',
   Image: 'mods.element.Image',
-} as const satisfies Record<ElementName, string>;
+} as const satisfies Partial<Record<ElementName, string>>;
 
-for (const name of ELEMENT_NAMES) {
+// `Progress` and `Shader` are not in the docs' table (J10.24): elements-declared.test.ts.
+for (const name of ELEMENT_NAMES.filter(
+  (one): one is keyof typeof ELEMENT_IDS => one in ELEMENT_IDS,
+)) {
   const row = MODS_REFERENCE.elements.find((candidate) => candidate.name === name);
   const drawn = row?.surfaces ?? [];
   const refused = ELEMENT_COLUMNS.filter((surface) => !drawn.includes(surface));
@@ -244,13 +247,10 @@ spec(['mods.element.Text', 'mods.reference.Replace bold with weight'], () => {
     expect(problemOf(node('Text', props))).toBeUndefined();
   });
 
-  test('wrap is one of wrap, truncate, truncate-start, truncate-middle, truncate-end', () => {
+  test('wrap takes each documented value (the others: elements-declared.test.ts)', () => {
     for (const wrap of ['wrap', 'truncate', 'truncate-start', 'truncate-middle', 'truncate-end']) {
       expect(problemOf(node('Text', { wrap }))).toBeUndefined();
     }
-    expect(problemOf(node('Text', { wrap: 'clip' }))).toBe(
-      'a tree Pane refuses: Text prop "wrap" must be one of wrap, truncate, truncate-start, truncate-middle, truncate-end',
-    );
   });
 
   test('size is one of caption, footnote, body, heading, title and weight one of regular, medium, semibold, bold', () => {

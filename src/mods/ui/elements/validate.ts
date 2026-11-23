@@ -8,6 +8,7 @@ import { buttonKey, isButton } from './button.ts';
 import { childProblem } from './children.ts';
 import { isElementNode, isEngineRef, isTree, walkTree, type ElementNode } from './node.ts';
 import { ELEMENT_DEFS } from './registry.ts';
+import { shaderProblem } from './shader-place.ts';
 
 /** Elements whose `key` addresses them and must be given: "Give every `Input` and `Select` a `key` prop". */
 const NEEDS_KEY: ReadonlySet<ElementName> = new Set(['Input', 'Select']);
@@ -58,7 +59,8 @@ export function treeProblem(
     if (drawnTwice.has(id)) return refuses(`${id} is drawn twice; each takes its own key`);
     drawnTwice.add(id);
   }
-  return undefined;
+  const misplaced = shaderProblem(site, tree);
+  return misplaced === undefined ? undefined : refuses(misplaced);
 }
 
 /** How many times Claude Code's own drawing sits in `tree`. */

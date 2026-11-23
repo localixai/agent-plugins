@@ -198,8 +198,8 @@ function builtIn(input: StartInput, settings: StartSettings): PermissionMode {
 
 const BYPASS_LOCKED =
   'bypassPermissions is rejected while "permissions.disableBypassPermissionsMode" is "disable"';
-const BYPASS_RESTRICTED = 'bypassPermissions is refused in a session started with --restricted';
-/** permission-modes.md, verbatim. */
+// permission-modes.md (2.1.330), verbatim (§13.9.6 item 2); the next one also verbatim.
+const BYPASS_RESTRICTED = 'Error: bypassPermissions not supported in restricted mode';
 export const BYPASS_AS_ROOT =
   '--dangerously-skip-permissions cannot be used with root/sudo privileges for security reasons';
 const BYPASS_NOT_ACCEPTED =

@@ -3,7 +3,7 @@ import type { CoreCallFacts, CoreToolProfile } from './types.ts';
 
 /**
  * The portable view of a pending Claude Code call (Agent Plugins Extended §18.2.7; core §7.3.6): a
- * table by Claude Code tool name of 2.1.321, each entry deciding from the call's defined operation
+ * table by Claude Code tool name of 2.1.330, each entry deciding from the call's defined operation
  * and input whether its profile applies. A tool the table does not name gets none (`Glob`, `Grep`,
  * `Agent`, `Skill`, `AskUserQuestion` and every bookkeeping tool), and so does a call the entry's
  * criteria exclude (a `Monitor` with `ws`, a `WebFetch` of a relative URL).

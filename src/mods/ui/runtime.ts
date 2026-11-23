@@ -5,12 +5,19 @@ import { ENGINE_TYPE } from './elements/node.ts';
 import { faultReason } from './elements/client.ts';
 import type { ModInterface } from './ports.ts';
 import { createPaneRegistry, type PaneRegistry } from './panes/registry.ts';
+import { paneRequest } from './panes/pane-request.ts';
 import { createPlacedRows, type PlacedRows } from './placed/rows.ts';
 import { createInvalidator, type Invalidator } from './redraw/invalidate.ts';
-import { trackStateReads } from './redraw/subscribe.ts';
+import { trackStateReads, type StateReads } from './redraw/subscribe.ts';
 import type { StateStore } from '../api/state.ts';
 import { foldRender, type Drawn, type FoldOptions } from './sites/fold.ts';
 import { renderEvent, type RenderRequest } from './sites/registry.ts';
+import {
+  drawBand,
+  type BandDrawn,
+  type BandRequest,
+  type SettleRender,
+} from './sites/band-rows.ts';
 import { createElementTables, resolveTables, type ElementTables } from './tables.ts';
 import { createToastBoard, type ToastBoard } from './toast.ts';
 import { uiApi, type UiParts } from './ui-api.ts';
@@ -46,6 +53,11 @@ export interface ModsUi extends UiParts {
   readonly api: (deps: Deps) => ModsNamespaceApi<'ui'>;
   /** Fires `ui.resolve` for a mod that loaded, once for each app and render site. */
   loadMod(plugin: string): Promise<void>;
+  /**
+   * Draws the band (2.1.323 or later): one `AbovePrompt` row for each of `mods` (the loaded mods, in
+   * the order they run in) that hooks `ui.render`, stacked through `AbovePromptList`.
+   */
+  drawBand(request: BandRequest, mods: readonly string[]): Promise<BandDrawn>;
   /** Draws one render site: fires `ui.render` and folds what the chain settled on. */
   draw(
     request: RenderRequest,
@@ -65,6 +77,26 @@ export interface ModsUi extends UiParts {
     change: Readonly<Record<string, unknown>>,
     apply: (change: unknown) => unknown,
   ): Promise<unknown>;
+}
+
+/** Fires `ui.render` for one request; the sites a hook read `$.state` at redraw when it changes. */
+function settler(options: ModsUiOptions, reads: StateReads): SettleRender {
+  const { chain, signal, report } = options;
+  return async (request) => {
+    const built = renderEvent(request);
+    if ('problem' in built) return undefined;
+    const key = `${request.site}:${built.event.requestId}:${request.plugin ?? ''}`;
+    return reads.track(key, () =>
+      chain.dispatch('ui.render', built.event, {
+        origin: ENGINE_ORIGIN,
+        signal,
+        report,
+        debug: options.debug,
+        // Claude Code's own drawing, with the props the last `next(e)` gave it.
+        core: (e) => Promise.resolve({ type: ENGINE_TYPE, ref: e }),
+      }),
+    );
+  };
 }
 
 /**
@@ -106,23 +138,22 @@ export function createModsUi(options: ModsUiOptions): ModsUi {
       report,
       core: (e) => Promise.resolve(e),
     });
+  const settle = settler(options, reads);
   return {
     ...parts,
     api: (deps) => uiApi(deps, parts),
+    drawBand: (request, mods) =>
+      drawBand(
+        settle,
+        request,
+        mods.filter((plugin) => chain.hears('ui.render', plugin)),
+      ),
     loadMod: (plugin) => resolveTables({ chain, tables, signal, report }, plugin),
-    async draw(request, fold) {
+    async draw(given, fold) {
+      const request = paneRequest(panes, given);
       const built = renderEvent(request);
       if ('problem' in built) return built;
-      const settled = await reads.track(`${request.site}:${request.requestId ?? ''}`, () =>
-        chain.dispatch('ui.render', built.event, {
-          origin: ENGINE_ORIGIN,
-          signal,
-          report,
-          debug: options.debug,
-          // Claude Code's own drawing, with the props the last `next(e)` gave it.
-          core: (e) => Promise.resolve({ type: ENGINE_TYPE, ref: e }),
-        }),
-      );
+      const settled = await settle(request);
       const drawn = foldRender(request.site, request.surface, settled, fold);
       // troubleshoot.md, "A `ui.render` line says refused": the debug log's line beside the transcript's.
       if ('refused' in drawn) {

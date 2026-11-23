@@ -20,7 +20,8 @@ import { rejection } from '../../support/rejection.ts';
 import { spec } from '../../support/spec.ts';
 import { toolFullName } from '../../../src/mods/api/registries.ts';
 
-spec(['mods.api.$.command', 'mods.apiGuide.Add a command'], () => {
+// Agent Plugins Extended §10.30.1 item 4 (2.1.330 gives it no id of its own; `mods.api.$.command` carries it).
+spec('mods.api.$.command', () => {
   test('$.command has register, run and list', async () => {
     const { api } = await apiHarness();
     expectMethods(api.command, MODS_API.command);

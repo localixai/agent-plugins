@@ -6,7 +6,7 @@
  * exit 1 is valid; the PowerShell list differs); errors.md § No shell command in a skill or command
  * was run (control characters).
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { PermissionBehavior, PermissionMode } from '../../src/protocol/official.ts';
 import { runInjections, type InjectionContext } from '../../src/skills/shell-run.ts';
 import { scriptedRunner } from '../support/ports.ts';
@@ -143,7 +143,7 @@ spec('skills.behavior.When an injected command fails', () => {
   });
 });
 
-spec('skills.behavior.Permission checks on injected commands', () => {
+spec('skills.behavior.Permission checks on injected commands.Deny and ask rules', () => {
   test("each command is checked first, with its tool, the command and the skill's grants", async () => {
     const { asked, runner } = await run(['gh pr diff'], [{}], {
       context: { grants: ['Bash(gh *)'] },
@@ -199,7 +199,7 @@ spec('skills.behavior.Permission checks on injected commands', () => {
   });
 });
 
-spec('skills.behavior.Permission checks on injected commands', () => {
+describe('auto mode (§4.8.5 item 3; the docs paragraph after the three limits, no requirement id of its own)', () => {
   const auto: Partial<InjectionContext> = { mode: 'auto' satisfies PermissionMode };
 
   test('"a command that would otherwise need your approval doesn\'t abort": an instruction to run it first', async () => {

@@ -5,6 +5,7 @@ import { AGENT_SPECS } from './agent.ts';
 import { ATTRIBUTION_SPEC } from './attribution.ts';
 import { COMMAND_SPECS } from './command.ts';
 import { CONFIG_SPECS } from './config.ts';
+import { DECLARED_SPECS } from './declared.ts';
 import { PROMPT_CHANGE_SPEC, PROMPT_SPECS } from './prompt.ts';
 import { SESSION_SPECS } from './session.ts';
 import { SKILL_PROMPT_SPEC } from './skill.ts';
@@ -28,6 +29,7 @@ export const EVENT_SPECS = {
   ...TURN_SPECS,
   ...SESSION_SPECS,
   ...AGENT_SPECS,
+  ...DECLARED_SPECS,
 } as const satisfies Readonly<Record<string, EventSpec>>;
 
 export type SpecifiedEventName = keyof typeof EVENT_SPECS;
@@ -52,7 +54,7 @@ export function eventInputProblem(event: string, input: unknown): string | undef
  * wording is the kit's), and one returned after `next` was answered is checked once more.
  */
 function ruleOfSpec(event: string, spec: EventSpec): EventRule {
-  const { changeProblem, coreInput, settle } = spec;
+  const { changeProblem, coreInput, settle, coreAgain } = spec;
   return {
     shapeProblem(result, answered) {
       const parsed = spec.result.safeParse(result);
@@ -62,6 +64,7 @@ function ruleOfSpec(event: string, spec: EventSpec): EventRule {
     ...(changeProblem ? { changeProblem } : {}),
     ...(coreInput ? { coreInput } : {}),
     ...(settle ? { settle } : {}),
+    ...(coreAgain ? { coreAgain } : {}),
   };
 }
 

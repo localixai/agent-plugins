@@ -164,7 +164,7 @@ export interface EffortChoice {
 export interface TurnOverrides {
   /** The rest of the turn, or the forked subagent. */
   readonly target: 'turn' | 'subagent';
-  /** The model to run on; absent keeps the session's (or, for a fork, the inherited) model. */
+  /** The model to run on, else the session's (a fork: the inherited); for `turn`, the turn's own requests only (§4.9.3). */
   readonly model?: string;
   /** Why the skill's `model` was not used. */
   readonly modelKept?: ModelKept;

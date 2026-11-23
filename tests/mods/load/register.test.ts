@@ -20,7 +20,7 @@ import { spec } from '../../support/spec.ts';
 
 const BLOCKED_CALLS = ['process.run', 'process.spawn'];
 
-type Event = { tier: string; plugin: string; uses: { calls: string[] } };
+type Event = { tier: string; name: string; uses: { calls: string[] } };
 type Hook = ($: unknown, e: Event, next: (e: unknown) => Promise<unknown>) => Promise<unknown>;
 
 // The policy mod of the admin page, as `acme-guard/hooks/register.js`.
@@ -92,7 +92,7 @@ spec('mods.event.plugin.register', () => {
       on(
         'plugin.register',
         async (_$: unknown, e: Event, next: (e: unknown) => Promise<unknown>) => {
-          seen[e.plugin] = e.tier;
+          seen[e.name] = e.tier;
           return next(e);
         },
       );
@@ -131,7 +131,7 @@ spec('mods.event.plugin.register', () => {
     ]);
   });
 
-  test("e.uses lists the mod's events, mods API calls without the $. prefix, environment variables and state", async () => {
+  test("e carries the plugin's name, root, version, tier and provenance; e.uses lists the mod's events, mods API calls without the $. prefix, and env and state only when it uses them", async () => {
     const seen: unknown[] = [];
     const spy = registerOf((on) => {
       on(
@@ -167,16 +167,19 @@ spec('mods.event.plugin.register', () => {
     );
     expect(seen).toEqual([
       {
-        plugin: 'subject',
+        name: 'subject',
+        root: '/plugins/subject@market',
+        version: '0.1.0',
         tier: 'user',
+        provenance: 'installed',
         uses: {
           events: ['tool.call{tool=Bash}'],
           calls: ['env.get', 'fs.read'],
-          envReads: ['HOME'],
-          envWrites: [],
-          stateReads: [],
-          stateWrites: [],
+          env: { reads: ['HOME'], writes: [] },
         },
+        provides: expect.objectContaining({ modules: [{ path: 'hooks/register.js' }] }),
+        unread: [],
+        hosts: { named: [], unread: [] },
       },
     ]);
   });
@@ -254,7 +257,7 @@ spec('policy.mods.Enforce a policy with a mod of your own.e.uses.calls', () => {
       on(
         'plugin.register',
         async (_$: unknown, e: Event, next: (e: unknown) => Promise<unknown>) => {
-          if (e.plugin === 'busy') calls = e.uses.calls;
+          if (e.name === 'busy') calls = e.uses.calls;
           return next(e);
         },
       );

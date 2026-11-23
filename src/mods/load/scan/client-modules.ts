@@ -72,7 +72,7 @@ function kindOf(node: Node | undefined): string {
 }
 
 /** `a/b` joined with `../c/d.js`, `.` and `..` resolved: a path from the plugin root. */
-function joined(directory: string, specifier: string): string {
+export function joined(directory: string, specifier: string): string {
   const parts = directory.split('/').filter((part) => part !== '' && part !== '.');
   for (const part of specifier.split('/')) {
     if (part === '..') parts.pop();

@@ -50,7 +50,10 @@ export interface AgentScanOutcome {
   readonly entries: readonly ScannedAgent[];
   /** The files that were skipped with a reason, and the fields a file's frontmatter got wrong. */
   readonly issues: readonly PluginIssue[];
-  /** The agents folders the session watches for changes: those that exist when it starts. */
+  /**
+   * The agents folders the session watches for changes, including one created after it started, so
+   * its first file loads (§5.4.1); never an added directory's, nor any with `--disable-slash-commands`.
+   */
   readonly watch: readonly string[];
 }
 
@@ -107,6 +110,7 @@ async function scanBase(where: Omit<Where, 'files'>): Promise<AgentScanOutcome> 
   const read = await readFiles({ ...where, files });
   const watch = await watchedFolder(files, where.container, {
     watched: folder.watched && context.watch !== false,
+    evenAbsent: true,
     signal: context.signal,
   });
   return { ...read, watch };

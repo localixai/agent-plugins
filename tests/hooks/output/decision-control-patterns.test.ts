@@ -106,7 +106,7 @@ spec('hooks.behavior.Decision control', () => {
     );
 
     test.each(['TeammateIdle', 'TaskCompleted'] as const)(
-      '%s: {"continue": false, "stopReason": ...} stops the teammate entirely and shows the stopReason',
+      '%s: {"continue": false, "stopReason": ...} lets the teammate go idle with the stopReason',
       async (event) => {
         const outcome = await viaEngine(event, [{ continue: false, stopReason: 'Tests are red' }]);
         expect(outcome.continue).toBe(false);
@@ -116,11 +116,11 @@ spec('hooks.behavior.Decision control', () => {
     );
 
     test.each(['TeammateIdle', 'TaskCompleted'] as const)(
-      '%s: a top-level decision block is not part of the pattern',
+      '%s: 2.1.330 adds a top-level decision block to the pattern, with its reason',
       async (event) => {
         const outcome = await viaEngine(event, [{ decision: 'block', reason: 'r' }]);
-        expect(outcome.proceed).toBe(true);
-        expect(outcome.block).toBeUndefined();
+        expect(outcome.proceed).toBe(false);
+        expect(outcome.block).toMatchObject({ via: 'decision', reason: 'r' });
       },
     );
 

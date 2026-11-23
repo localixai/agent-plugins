@@ -74,7 +74,7 @@ function dependentsFirst(mods: readonly OrderedMod[]): readonly OrderedMod[] {
 }
 
 const holdsName = (policy: ModsPolicyInput, candidate: ModCandidate): boolean =>
-  candidate.managed?.isEnabled === true || countsAsOrganizations(candidate, policy.platform);
+  candidate.managed?.isEnabled === true || countsAsOrganizations(candidate, policy);
 
 /**
  * One plugin per name loads a hooks module; "when your organization's managed settings turn on one
@@ -95,7 +95,7 @@ function nameHolders(policy: ModsPolicyInput, candidates: readonly ModCandidate[
 /** The mods the policy lets load, with the tier each runs in, in running order. */
 export function orderMods(policy: ModsPolicyInput, plugins: readonly ModCandidate[]): ModOrder {
   const skipped: SkippedMod[] = [];
-  const notes = plugins.flatMap((candidate) => managedButUsers(candidate, policy.platform) ?? []);
+  const notes = plugins.flatMap((candidate) => managedButUsers(candidate, policy) ?? []);
   const holders = nameHolders(policy, plugins);
   const decided = plugins.flatMap((candidate): OrderedMod[] => {
     if (holders.get(candidate.name) !== candidate) {

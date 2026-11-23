@@ -20,6 +20,7 @@ const IGNORE_REASONS = [
   'dialog-timer',
   'attachments',
   'file-mentions',
+  'code-mode',
   'identity',
   'launch-only',
 ] as const;
@@ -86,6 +87,8 @@ const GROUPS: readonly Group[] = [
       'OTEL_LOG_TOOL_DETAILS',
       'OTEL_EXPORTER_PROMETHEUS_HOST',
       'OTEL_EXPORTER_PROMETHEUS_PORT',
+      // Adds the machine's name and ID to telemetry.
+      'OTEL_RESOURCE_INCLUDE_HOST',
     ],
     pattern: OTLP,
   },
@@ -118,6 +121,8 @@ const GROUPS: readonly Group[] = [
   { reason: 'dialog-timer', from: 'repository', names: ['CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS'] },
   { reason: 'attachments', from: 'repository', names: ['CLAUDE_CODE_DISABLE_ATTACHMENTS'] },
   { reason: 'file-mentions', from: 'repository', names: ['CLAUDE_CODE_DISABLE_FILE_MENTIONS'] },
+  // Code Mode turns on only from the launch environment, user settings or `--settings` (`codeModeOn`).
+  { reason: 'code-mode', from: 'repository', names: ['CLAUDE_CODE_EXPERIMENTAL_CODE_MODE'] },
   {
     reason: 'identity',
     from: 'every file',
@@ -135,7 +140,9 @@ const GROUPS: readonly Group[] = [
       'CLAUDE_CODE_DISABLE_DANGEROUS_RM_TIMEOUT',
       'CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT',
       'CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT',
+      'CLAUDE_CODE_STRICT_INLINE_SHELL_RM_PROMPT',
       'CLAUDE_CODE_DISABLE_MOUNTED_DRIVE_RM_PROMPT',
+      'CLAUDE_CODE_DISABLE_ULTRAREVIEW_TRUST_CHECK',
       'CLAUDE_CODE_EVEN_MORE_DANGEROUSLY_SKIP_PERMISSIONS',
       'CLAUDE_CODE_WARN_DISK_FREE_GIB',
       'CLAUDE_CODE_WARN_MEMORY_FREE_GIB',

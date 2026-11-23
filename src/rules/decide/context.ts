@@ -92,9 +92,12 @@ export interface DecideContext {
    * The "Permission required" column of the tools table, as the host knows it. A tool it answers
    * `false` for runs without a prompt, except a file read (Read, Grep, Glob), whose path decides;
    * with no function every tool outside the read-only set asks (spec/judgments.md). `toolRequiresPermission`
-   * (`rules/tools`) is the kit's own.
+   * (`rules/tools`) is the kit's own. It also receives the call's input, for the column's
+   * conditional cells (2.1.330): `Skill` "Some skills" (one that sets `allowed-tools`,
+   * `disallowed-tools` or `hooks` can prompt), `EnterWorktree` "Some worktrees", `ExitWorktree`
+   * removing a worktree with work at risk. Only the host knows which calls those are.
    */
-  readonly requiresPermission?: (toolName: string) => boolean;
+  readonly requiresPermission?: (toolName: string, input: unknown) => boolean;
   /**
    * Whether a host name is in WebFetch's "built-in set of preapproved documentation domains" that
    * "fetch without a prompt" (tools-reference.md, "WebFetch tool behavior"; permissions.md,

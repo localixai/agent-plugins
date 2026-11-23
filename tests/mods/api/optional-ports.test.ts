@@ -48,7 +48,7 @@ describe('a host without the optional ports gets the declared answers', () => {
 
   test('$.theme.set resolves isDrawn false, with the reason', async () => {
     const h = await absent();
-    expect(await h.api.theme.set({ backdrop: { id: 'lagoon' } })).toEqual({
+    expect(await h.api.theme.set({ backdrop: { scene: 'lagoon' } })).toEqual({
       isDrawn: false,
       reason: 'no Desktop or mobile app that draws backdrops is connected to the session',
     });

@@ -47,6 +47,38 @@ describe('system/init plugin fields', () => {
     ]);
   });
 
+  test('a directory copy a managed enabledPlugins entry dropped carries managed_lock (spec §17.15.2, SDK 0.3.330)', () => {
+    const fields = initPluginFields({
+      loaded: [],
+      unloaded: [
+        {
+          id: 'fmt@inline',
+          error: { type: 'generic-error', message: 'locked by managed settings' },
+          managedLock: { pluginEnabled: true, name: 'fmt', marketplace: 'team' },
+        },
+        {
+          id: 'lint@skills-dir',
+          error: { type: 'generic-error', message: 'turned off by managed settings' },
+          managedLock: { pluginEnabled: false, name: 'Lint' },
+        },
+      ],
+    });
+    expect(fields.plugin_errors).toEqual([
+      {
+        plugin: 'fmt@inline',
+        type: 'generic-error',
+        message: 'locked by managed settings',
+        managed_lock: { plugin_enabled: true, name: 'fmt', marketplace: 'team' },
+      },
+      {
+        plugin: 'lint@skills-dir',
+        type: 'generic-error',
+        message: 'turned off by managed settings',
+        managed_lock: { plugin_enabled: false, name: 'Lint' },
+      },
+    ]);
+  });
+
   test('a session persisted server-side always omits plugin_errors', () => {
     const fields = initPluginFields({
       loaded: [],

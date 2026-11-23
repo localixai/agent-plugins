@@ -65,6 +65,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ListingOptions` | type | The `options` argument of `listedAs`; The `options` argument of `modelListing` |
 | `loadCommandEntries` | function | Load every entry of a `commands` object map |
 | `LoadedSkill` | type | One invocation that is in the conversation |
+| `looksLikeBareRepository` | function | Whether a folder looks like a bare Git repository: a `HEAD` file beside `refs` or `commondir` |
 | `MentionOptions` | type | The `options` argument of `MentionPart.messageMentions`; The `options` argument of `readSkillMentions` |
 | `menuEntries` | function | The rows of the `/` menu, in the official `SlashCommand` shape: the skills a user may type (`user-invocable: false` and an `off` override are hidden) |
 | `MenuOptions` | type | The `options` argument of `menuEntries` |

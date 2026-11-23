@@ -4,6 +4,7 @@ import type {
   MarketplaceSourceKind,
   MarketplaceSourceOf,
 } from '../format/marketplace/types.ts';
+import { isCommitSha } from '../format/marketplace/marketplace-names.ts';
 import { normalizeHeaders } from './header-map.ts';
 import {
   githubRepoIssues,
@@ -60,6 +61,7 @@ const cloneOf = (
   kind: 'git',
   repo,
   ...(source.ref === undefined ? {} : { ref: source.ref }),
+  ...(source.ref !== undefined && isCommitSha(source.ref) ? { pinned: true } : {}),
   path: source.path,
   ...(source.sparsePaths === undefined ? {} : { sparsePaths: source.sparsePaths }),
   lfs: 'pointer-files',

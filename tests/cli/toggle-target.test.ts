@@ -2,17 +2,18 @@
  * Judgments of `enable` and `disable` (spec/judgments.md, `src/cli/toggle-target.ts`): which plugin a
  * bare name picks, the codes of the refusals the docs do not name, and what "mentions" means. The
  * quoted lines are plugins/cli-reference.md § plugin enable and § plugin disable; these tests sit
- * outside `spec(...)`.
+ * outside `spec(...)`, except the bare-name rule spec §17.1.1 "Plugin arguments" now states.
  */
 import { describe, expect, test } from 'bun:test';
 import { planDisable } from '../../src/cli/disable-plan.ts';
 import { planEnable } from '../../src/cli/enable-plan.ts';
 import type { TogglePlan } from '../../src/cli/enable-plan.ts';
 import { jsonLine, settingsOnly, world } from '../support/toggle.ts';
+import { spec } from '../support/spec.ts';
 
 const code = (plan: TogglePlan) => jsonLine(plan)['failureCode'];
 
-describe('a bare name', () => {
+spec('cli.plugin.claude plugin commands.Plugin arguments', () => {
   const graph = world(
     ['formatter@a', { scope: 'user', enabled: false }],
     ['formatter@b', { scope: 'user', enabled: false }],

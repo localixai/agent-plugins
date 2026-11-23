@@ -69,7 +69,7 @@ describe('the text listing', () => {
       'Source: GitHub (acme/tools)',
       'Source: Git (https://example.com/m.git)',
       'Source: URL (https://example.com/marketplace.json)',
-      'Source: Directory (/work/market)',
+      'Source: Folder (/work/market)',
       'Source: File (/work/market.json)',
     ]);
   });
@@ -159,6 +159,13 @@ spec('cli.plugin.plugin marketplace list.ref', () => {
     expect(only(entry('m', { ...git, ref: 'release' })).ref).toBe('release');
     expect('ref' in only(entry('m', github))).toBe(false);
     expect('ref' in only(entry('m', git))).toBe(false);
+  });
+
+  test('a full commit SHA is a pinned ref (§15.7, 2.1.324): it is listed as given', () => {
+    const sha = '0123456789abcdef0123456789abcdef01234567';
+    expect(only(entry('m', { ...github, ref: sha })).ref).toBe(sha);
+    const text = planMarketplaceList({ marketplaces: [entry('m', { ...github, ref: sha })] }).text;
+    expect(text.join('\n')).toContain(`acme/tools#${sha}`);
   });
 
   test('a source that cannot be pinned has none', () => {

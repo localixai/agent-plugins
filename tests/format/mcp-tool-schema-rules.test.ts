@@ -1,7 +1,7 @@
 /**
  * mcp.md § Tools with invalid input schemas (top-level property names of 1 to 64 characters of ASCII letters,
  * digits, `_`, `.`, `-`; the JSON Schema draft 2020-12 meta-schema for a schema with no `$schema` or the
- * 2020-12 one; with flag fetching off the tool is sent and the log says `input schema would be rejected by
+ * 2020-12 one; while the flags have not arrived the tool is sent and the log says `input schema would be rejected by
  * the Anthropic API`); errors.md § Tool input schema is invalid. The combinators are in mcp-tool-schema.test.ts.
  */
 import { describe, expect, test } from 'bun:test';
@@ -134,7 +134,7 @@ describe('Tools with invalid input schemas', () => {
       expect(named.sent).toBe(false);
     });
 
-    test('with flag fetching off the tool is sent unchanged and the log records the line the docs quote', () => {
+    test('while the flags have not arrived the tool is sent unchanged and the log records the line the docs quote', () => {
       const broken = tool({ type: 'object', properties: { 'has space': string } });
       const result = prepareMcpTool(broken, { ...ON, excludeInvalid: false });
       expect(result.sent).toBe(true);

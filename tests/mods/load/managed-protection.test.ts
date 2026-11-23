@@ -6,8 +6,11 @@ import { expect, test } from 'bun:test';
 import type { AnyModEventName } from '../../../src/protocol/mods-events.ts';
 import { apiHarness } from '../../support/mods-api.ts';
 import { fn, record } from '../../support/mods-chain.ts';
-import { managed, session } from '../../support/mods-load.ts';
+import type { ModNext, ModsApi } from '../../../src/mods/types.ts';
+import { installed, managed, modPlugin, registerOf, session } from '../../support/mods-load.ts';
 import { spec } from '../../support/spec.ts';
+
+type Next = ModNext<unknown, Promise<unknown>>;
 
 const rowKeys: Readonly<Record<string, (input: unknown) => string>> = {
   'classic.Stop': () => 'classic.<Event>',
@@ -103,7 +106,7 @@ const cases = [
 for (const fixture of cases) {
   spec(
     [
-      'policy.mods.Know what happens by default.The guard protects what you manage',
+      'policy.mods.Know what happens by default',
       `policy.mods.Know which hooks of a user's mod don't run.${rowKeys[fixture.event]?.(fixture.input) ?? fixture.event}`,
     ],
     () => {
@@ -153,4 +156,39 @@ test('ordinary prompts and conversation rows still reach a user mod', async () =
     { core: () => Promise.resolve({}) },
   );
   expect(seen).toEqual(['prompt', 'row']);
+});
+
+spec("policy.mods.Know which hooks of a user's mod don't run.telemetry.log", () => {
+  test("telemetry.log passes over a user's mod where the guard loads (2.1.328), not the organization's", async () => {
+    const s = session({}, { policy: managed({}), firesSessionStart: false });
+    await s.host.load([]);
+    const trace: string[] = [];
+    const { api } = await apiHarness();
+    const collector = { matcher: { to: 'collector' } };
+    s.host.chain.register({ name: 'user-mod', api }, 'user', [
+      fn('telemetry.log', (_$, e, next) => (trace.push('user'), next(e)), collector),
+    ]);
+    s.host.chain.register({ name: 'company-mod', api }, 'prepend', [
+      fn('telemetry.log', (_$, e, next) => (trace.push('organization'), next(e)), collector),
+    ]);
+    await s.host.fire(
+      'telemetry.log',
+      { to: 'collector', name: 'claude_code.tool_result', attributes: {} },
+      { core: () => (trace.push('core'), Promise.resolve({})) },
+    );
+    expect(trace).toEqual(['organization', 'core']);
+  });
+
+  test('the note in the plugin`s details names the telemetry.log hook as the mod registered it', async () => {
+    const register = registerOf((on) => {
+      on('telemetry.log', { to: 'collector' }, async (_$: ModsApi, e: unknown, next: Next) =>
+        next(e),
+      );
+    });
+    const s = session({ tally: register }, { policy: managed({}), firesSessionStart: false });
+    await s.host.load([modPlugin(installed('tally'), register)]);
+    expect(s.host.guardedHookNotes('tally')[0]).toBe(
+      'Its hooks on telemetry.log{to=collector} do not run here: where an organization manages Claude Code, these events pass over the plugins you install',
+    );
+  });
 });

@@ -1,28 +1,31 @@
 /**
- * plugins/components.md § Default settings ("Two keys take effect, `agent` and `subagentStatusLine`, and
- * every other key is dropped"); plugins/manifest-reference.md § `settings` ("Only `agent` and
- * `subagentStatusLine` take effect; other keys are dropped at load"), § Standard layout (Settings:
- * "`agent` and `subagentStatusLine` defaults applied while the plugin is enabled"); settings-reference.md
- * § subagentStatusLine ("object with `type` set to `"command"` and a `command` string").
+ * Spec §12.6 item 1 ("Only `agent` takes effect. Every other key MUST be dropped at load ... An
+ * `agent` that is not a string is dropped as well"); `subagentStatusLine` removed in 2.1.323
+ * (Judgment J12.17).
  *
  * Applying the defaults (the lowest settings layer) is the host's; these tests prove which keys the kit
  * hands over.
  */
 import { describe, expect, test } from 'bun:test';
 import { hasAppliedSettings, readPluginSettings } from '../../src/entry/format.ts';
-import { spec } from '../support/spec.ts';
 
-spec(['layout.Settings', 'manifest.field.settings'], () => {
-  test('agent and subagentStatusLine are the two keys that take effect', () => {
+describe('the keys a plugin default keeps (spec §12.6 item 1; Judgments J1.3, J2.9)', () => {
+  test('agent is the one key that takes effect', () => {
+    const read = readPluginSettings({ agent: 'security-reviewer' }, 'settings.json');
+    expect(read.settings).toEqual({ agent: 'security-reviewer' });
+    expect(read.issues).toEqual([]);
+  });
+
+  test('subagentStatusLine is dropped like any other key, and a file holding only it applies nothing', () => {
     const read = readPluginSettings(
-      { agent: 'security-reviewer', subagentStatusLine: { type: 'command', command: 'jq .tasks' } },
+      { subagentStatusLine: { type: 'command', command: 'jq .tasks' } },
       'settings.json',
     );
-    expect(read.settings).toEqual({
-      agent: 'security-reviewer',
-      subagentStatusLine: { type: 'command', command: 'jq .tasks' },
-    });
-    expect(read.issues).toEqual([]);
+    expect(read.settings).toEqual({});
+    expect(hasAppliedSettings(read)).toBe(false);
+    expect(read.issues.map((found) => [found.severity, found.path])).toEqual([
+      ['warning', 'settings.json.subagentStatusLine'],
+    ]);
   });
 
   test('every other key is dropped, each with a warning naming it', () => {
@@ -47,13 +50,10 @@ spec(['layout.Settings', 'manifest.field.settings'], () => {
 });
 
 describe('settings values (judgments)', () => {
-  test('a supported key with a value of the wrong shape is dropped with a warning', () => {
-    const read = readPluginSettings(
-      { agent: 3, subagentStatusLine: { type: 'script', command: 'x' } },
-      'settings',
-    );
+  test('an agent that is not a string is dropped with a warning', () => {
+    const read = readPluginSettings({ agent: 3 }, 'settings');
     expect(read.settings).toEqual({});
-    expect(read.issues.map((found) => found.severity)).toEqual(['warning', 'warning']);
+    expect(read.issues.map((found) => found.severity)).toEqual(['warning']);
   });
 
   test('settings that are not an object are a warning naming where they came from (J12.10)', () => {

@@ -30,11 +30,16 @@ export const ELEMENT_COLUMN_OF: { readonly [S in UiSurface]: ElementColumn } = {
 export const REQUEST_KINDS = [
   'pane-id',
   'instance',
-  'message-id',
+  /** "The drawn row's id" (2.1.330; before, "the message id"). */
+  'row-id',
   'tool-call-id',
   'agent-id',
   'placed-id',
   'backdrop',
+  /** "The notice's `text` prefixed with `notice:`": derived from `e.props.text` when the host gives none. */
+  'notice',
+  /** `ContextMenu`'s "the menu" (declarations only, Judgment J10.24). */
+  'menu',
 ] as const;
 export type RequestKind = (typeof REQUEST_KINDS)[number];
 
@@ -55,6 +60,17 @@ const TERMINAL: readonly ElementColumn[] = ['terminal'];
 /** The Desktop app and the mobile app: the only apps that raise `Backdrop`. */
 const DESKTOP_AND_MOBILE: readonly UiSurface[] = ['desktop', 'mobile'];
 
+/** The props of the band, each mod's row and the stack of rows alike (reference.md, "Render sites"). */
+const BAND_PROPS = [
+  'hasSurvey',
+  'isCollapsed',
+  'isWorking',
+  'maxRows',
+  'bodyColumns',
+  'scroll',
+  'view',
+] as const;
+
 /** `e.requestId` of the `Backdrop` site: one backdrop for each session. */
 export const BACKDROP_REQUEST_ID = 'backdrop';
 
@@ -64,8 +80,15 @@ export const RENDER_SITES = {
     request: 'pane-id',
     surfaces: ALL,
   },
+  /** One mod's row of the band (2.1.323 or later): `e.plugin` names the mod whose row it is. */
   AbovePrompt: {
-    props: ['hasSurvey', 'isWorking', 'maxRows', 'bodyColumns', 'scroll', 'view'],
+    props: BAND_PROPS,
+    request: 'instance',
+    surfaces: TERMINAL_AND_DESKTOP,
+  },
+  /** The stack of the band's rows, `rows` one `{ plugin, tree }` for each, plus the `AbovePrompt` props (2.1.323 or later). */
+  AbovePromptList: {
+    props: ['rows', ...BAND_PROPS],
     request: 'instance',
     surfaces: TERMINAL_AND_DESKTOP,
   },
@@ -73,34 +96,49 @@ export const RENDER_SITES = {
   Placed: { props: ['id', 'plugin', 'onScreen'], request: 'placed-id', surfaces: TERMINAL },
   /** The session's backdrop (`$.theme.set`): its `requestId` is always `backdrop`. */
   Backdrop: {
-    props: ['id', 'plugin', 'glass', 'colorScheme'],
+    props: ['scene', 'plugin', 'glass', 'overrideColorScheme'],
     request: 'backdrop',
     surfaces: DESKTOP_AND_MOBILE,
   },
   UserMessage: {
     props: ['text', 'origin', 'isExpanded', 'task', 'from'],
-    request: 'message-id',
+    request: 'row-id',
     surfaces: ALL,
   },
-  AssistantMessage: { props: [], request: 'message-id', surfaces: ALL },
+  AssistantMessage: { props: [], request: 'row-id', surfaces: ALL },
   ToolUse: { props: [], request: 'tool-call-id', surfaces: ALL },
   ToolResult: { props: [], request: 'tool-call-id', surfaces: ALL },
   ToolGroup: { props: [], request: 'tool-call-id', surfaces: ALL },
   CommandOutput: {
     props: ['command', 'text'],
-    request: 'message-id',
+    request: 'row-id',
     surfaces: TERMINAL_AND_DESKTOP,
   },
   AskUserQuestion: { props: [], request: 'tool-call-id', surfaces: ALL },
   ToolProgress: { props: ['kind'], request: 'tool-call-id', surfaces: TERMINAL },
   Spinner: { props: ['word', 'message', 'suffix', 'mode'], request: 'agent-id', surfaces: ALL },
-  TurnDuration: { props: ['word', 'durationMs'], request: 'message-id', surfaces: TERMINAL },
-  InfoNotice: { props: ['text', 'command'], request: 'message-id', surfaces: TERMINAL },
+  TurnDuration: { props: ['word', 'durationMs'], request: 'row-id', surfaces: TERMINAL },
+  InfoNotice: { props: ['text', 'command'], request: 'notice', surfaces: TERMINAL },
   SessionMode: { props: ['modes'], request: 'instance', surfaces: TERMINAL_AND_DESKTOP },
   PromptHint: {
     props: ['isDraft', 'isWorking', 'hint'],
     request: 'instance',
     surfaces: TERMINAL_AND_DESKTOP,
+  },
+  /**
+   * One agent's row in the agent list (2.1.326 or later): the agent's `$.agent.list()` fields, plus
+   * those the table names. The terminal, and the VS Code extension's Focus view.
+   */
+  AgentRow: {
+    props: ['rowIds', 'columns', 'body', 'isHidden'],
+    request: 'agent-id',
+    surfaces: ['terminal', 'vscode'],
+  },
+  /** The Desktop app's menu on a transcript row; declarations only (Judgment J10.24, `RenderPropsOf.ContextMenu`, claude-code/index.d.ts:13771). */
+  ContextMenu: {
+    props: ['row', 'link', 'selection', 'code'],
+    request: 'menu',
+    surfaces: ['desktop'],
   },
 } as const satisfies Readonly<Record<string, RenderSiteDef>>;
 
@@ -109,6 +147,7 @@ export type RenderSite = keyof typeof RENDER_SITES;
 export const RENDER_SITE_NAMES = [
   'Pane',
   'AbovePrompt',
+  'AbovePromptList',
   'Placed',
   'Backdrop',
   'UserMessage',
@@ -124,6 +163,8 @@ export const RENDER_SITE_NAMES = [
   'InfoNotice',
   'SessionMode',
   'PromptHint',
+  'AgentRow',
+  'ContextMenu',
 ] as const;
 /** @public Drift guard: the list names every key of the table. */
 export type RenderSiteNamesMatch = Assert<Equal<(typeof RENDER_SITE_NAMES)[number], RenderSite>>;
@@ -141,6 +182,9 @@ export const ELEMENT_NAMES = [
   'Client',
   'Raster',
   'Image',
+  // In the 2.1.330 declarations' per-surface tables, not in the documentation's (Judgment J10.24).
+  'Progress',
+  'Shader',
 ] as const;
 export type ElementName = (typeof ELEMENT_NAMES)[number];
 
@@ -158,6 +202,9 @@ export const ELEMENT_SURFACES: { readonly [N in ElementName]: readonly ElementCo
   Client: TERMINAL_AND_DESKTOP,
   Raster: TERMINAL,
   Image: TERMINAL,
+  Progress: ALL,
+  // The Desktop app; the mobile app takes the Desktop column (claude-code/index.d.ts:4819-4891).
+  Shader: ['desktop'],
 };
 
 /**
@@ -194,6 +241,8 @@ export const VSCODE_IGNORED: { readonly [N in ElementName]: readonly string[] } 
   Client: [],
   Raster: [],
   Image: [],
+  Progress: [],
+  Shader: [],
 };
 
 /** `Box` `borderStyle` names; any other value draws no border (reference.md, "`Box` border styles"). */
@@ -222,13 +271,19 @@ export const SPACING_STEPS = {
 export type SpacingStep = keyof typeof SPACING_STEPS;
 
 export const FLEX_DIRECTIONS = ['row', 'column', 'row-reverse', 'column-reverse'] as const;
+/** `Text` `wrap` (claude-code/index.d.ts:16833 of 2.1.330: `end`, `middle` and `clip` from 2.1.326). */
 export const TEXT_WRAPS = [
   'wrap',
+  'end',
+  'middle',
   'truncate',
   'truncate-start',
   'truncate-middle',
   'truncate-end',
+  'clip',
 ] as const;
+/** `Box` `overflowX` (claude-code/index.d.ts:1382 of 2.1.330, from 2.1.326). */
+export const BOX_OVERFLOW_X = ['visible', 'scroll'] as const;
 export const TEXT_SIZES = ['caption', 'footnote', 'body', 'heading', 'title'] as const;
 export const TEXT_WEIGHTS = ['regular', 'medium', 'semibold', 'bold'] as const;
 export const BUTTON_VARIANTS = ['primary', 'secondary'] as const;

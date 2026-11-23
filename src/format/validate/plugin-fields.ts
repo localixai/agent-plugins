@@ -8,6 +8,8 @@ import { zodFindings } from './zod-findings.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 import { USER_CONFIG_KEY } from '../user-config-refs.ts';
 import { dependencyText, userConfigOptionSchema } from '../manifest-schema.ts';
+import { enginesFindings } from '../engines.ts';
+import { networkFindings } from '../network.ts';
 
 /**
  * The type rules of `plugin.json` as `claude plugin validate` applies them (oracle 2.1.319): one
@@ -69,6 +71,8 @@ const ORDER = [
   'mcpServers',
   'lspServers',
   'settings',
+  'engines',
+  'network',
   'userConfig',
 ] as const;
 
@@ -125,6 +129,18 @@ const NOT_AN_OBJECT = (key: string, what: string, outcome: string, value: unknow
     key,
     `'${key}' must be ${what}; got ${kindOf(value)}. It will be ${outcome} at load time.`,
   );
+
+/**
+ * `engines` and `network` (spec §2.4, J2.10): an invalid `claude-code` range is an error, every other
+ * problem a warning; loading ignores each.
+ */
+export function enginesNetworkFindings(manifest: Readonly<Record<string, unknown>>): Finding[] {
+  const { engines, network } = manifest;
+  return [
+    ...(engines === undefined ? [] : enginesFindings(engines)),
+    ...(network === undefined ? [] : networkFindings(network)),
+  ];
+}
 
 /** The free-form `metadata` and the `experimental` block: a wrong type is only a warning. */
 export function looseObjectFindings(manifest: Readonly<Record<string, unknown>>): Finding[] {

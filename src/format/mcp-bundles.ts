@@ -7,15 +7,15 @@ import { readMcpbOptions } from './mcpb-manifest.ts';
 
 /**
  * MCP bundles (plugins/manifest-reference.md, "mcpServers"; plugins/components.md, "Include a
- * packaged MCPB server"). The host opens a bundle (extracts or downloads it into `.mcpb-cache/`
- * under the plugin root, reads its manifest into a server config); the kit decides what a manifest
+ * packaged MCPB server"; spec §2.9). The host opens a bundle (extracts or downloads it into `mcpb/`
+ * under the plugins root, not the plugin's folder, and reads its manifest into a server config); the kit decides what a manifest
  * value is, that it ends in `.mcpb` or `.dxt`, which server name results and what the bundle's
  * settings are. Whether the server may start and what its `${user_config.KEY}` references stand for
  * are decided when it is resolved, from the session's saved values (`loading/resolve/bundle-scope.ts`).
  */
 
-/** Where the host puts an extracted or downloaded bundle, relative to the plugin root. */
-const MCPB_CACHE_DIR = '.mcpb-cache';
+/** Where the host extracts a bundle: `mcpb/`, relative to the plugins root (spec §2.9, §16.6; 2.1.324). */
+const MCPB_DIR = 'mcpb';
 
 /**
  * What a source needs to load: the plugin's files and what decides whether a path leaves them
@@ -73,7 +73,7 @@ export async function loadBundle(
     const missing = warning(FIELD, `MCP bundle ${value} needs an extractor: the host gave none`);
     return nothing(missing);
   }
-  const opened = await context.bundles.open(source, MCPB_CACHE_DIR, context.signal);
+  const opened = await context.bundles.open(source, MCPB_DIR, context.signal);
   return bundledServer(value, opened);
 }
 

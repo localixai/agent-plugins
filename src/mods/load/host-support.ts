@@ -1,6 +1,5 @@
 import { ENGINE_ORIGIN } from '../../protocol/mods-events.ts';
 import type { DispatchOptions, ModChain, ReentryInfo } from '../types.ts';
-import type { PluginFiles } from '../../ports/index.ts';
 import { GUARD_NAME } from '../../protocol/mods-settings.ts';
 import {
   loadMod,
@@ -15,7 +14,7 @@ import type { LoadOutcome } from './prepare.ts';
 import type { ReplayLedger, ReplayMode } from '../api/replay.ts';
 import type { Wired } from './wiring.ts';
 import { commandRunEnd } from '../events/index.ts';
-import type { CommandPresentation, CommandRunDepth } from '../api/index.ts';
+import { displayOnlyReply, type CommandPresentation, type CommandRunDepth } from '../api/index.ts';
 import type { SessionEndReason } from '../../protocol/exit-reasons.ts';
 
 /** What the host passes the chain when it fires an event itself. */
@@ -29,6 +28,8 @@ export interface FireSettings {
   readonly only?: string;
   readonly reentry?: ReentryInfo;
   readonly groupMs?: number;
+  /** Told the mod whose hook answered without `next`: who held a server back, for `/mcp` (§14.9.2). */
+  readonly answered?: DispatchOptions['answered'];
 }
 
 /**
@@ -60,6 +61,7 @@ export const dispatchOptionsFor =
     ...(opts.only === undefined ? {} : { only: opts.only }),
     ...(opts.reentry === undefined ? {} : { reentry: opts.reentry }),
     ...(opts.groupMs === undefined ? {} : { groupMs: opts.groupMs }),
+    ...(opts.answered === undefined ? {} : { answered: opts.answered }),
   });
 
 export interface ReloadedOne {
@@ -124,12 +126,12 @@ export async function announceSessionStart(
 export async function loadOne(
   wired: Pick<Wired, 'env' | 'registerGuard'>,
   mod: OrderedMod,
-  files: PluginFiles | undefined,
+  plugin: ModPlugin | undefined,
 ): Promise<LoadOutcome> {
   if (mod.candidate.isBuiltin && mod.candidate.name === GUARD_NAME) {
     return { mod: await wired.registerGuard() };
   }
-  return files ? loadMod(wired.env, mod, files) : {};
+  return plugin ? loadMod(wired.env, mod, plugin.files, plugin) : {};
 }
 
 /**
@@ -165,21 +167,34 @@ interface CommandRequest {
   readonly args: string;
 }
 
-/** The `command.run` chain of one `runCommand`: the hooks, then the body, marked as that command's. */
-function fireCommand(host: CommandHost, request: CommandRequest, opts: RunCommandOptions) {
+/**
+ * The `command.run` chain of one `runCommand`: the hooks, then the body, marked as that command's.
+ * The answer is the model's to read unless a hook answered without `next` with `isTextDisplayOnly`
+ * for a command registered without `immediate` (§10.30.1, "Hiding command text from Claude").
+ */
+async function fireCommand(
+  host: CommandHost,
+  request: CommandRequest,
+  opts: RunCommandOptions,
+): Promise<unknown> {
   const { origin = { kind: 'unclassified' }, ...fire } = opts;
-  const { commandRuns } = host.registries;
-  return host.chain.dispatch(
+  const { commandRuns, commands } = host.registries;
+  let reached = false;
+  const answer = await host.chain.dispatch(
     'command.run',
     { ...request, origin, presentation: host.presentation() },
     host.dispatchOptions({
       ...fire,
-      core: (e) =>
-        commandRunEnd(host.registries.commands.get(request.command)?.plugin, request.command, () =>
+      core: (e) => (
+        (reached = true),
+        commandRunEnd(commands.get(request.command)?.plugin, request.command, () =>
           commandRuns.within(request.command, 'body', () => fire.core?.(e) ?? Promise.resolve({})),
-        ),
+        )
+      ),
     }),
   );
+  const immediate = commands.get(request.command)?.immediate === true;
+  return displayOnlyReply(answer, { answeredByHook: !reached, immediate });
 }
 
 /**
@@ -216,4 +231,29 @@ export function runCommandThrough(
 ): Promise<unknown> {
   const depth = host.registries.commandRuns.depth(request.command);
   return NESTED_RUN[depth](host, request, opts);
+}
+
+/**
+ * The user stops Claude (§10.19.2): the session's input is held first, so what a `session.stop` hook
+ * queues is refused, then the event fires and nobody waits on it; `next(e)` resolves the input.
+ */
+export function stopSession(
+  host: {
+    readonly gate: { interrupt(): void };
+    readonly chain: ModChain;
+    readonly dispatchOptions: (opts: FireSettings) => DispatchOptions;
+    readonly debug: (line: string) => void;
+  },
+  isTurnRunning: boolean,
+  opts: FireSettings,
+): void {
+  host.gate.interrupt();
+  const input = { isTurnRunning };
+  void host.chain
+    .dispatch(
+      'session.stop',
+      input,
+      host.dispatchOptions({ core: () => Promise.resolve(input), ...opts }),
+    )
+    .catch((error: unknown) => host.debug(`session.stop: ${String(error)}`));
 }

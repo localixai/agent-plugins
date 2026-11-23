@@ -54,6 +54,11 @@ export interface RankOptions {
    * definition" of a stdio server written in both user scope and `.mcp.json`.
    */
   readonly desktopCodeTab?: boolean;
+  /**
+   * A `claude -p`, Agent SDK or VS Code session: the claude.ai connectors rank above plugin-provided
+   * servers, still below the user, project and local scopes (§8.11.1 item 2).
+   */
+  readonly connectorsAbovePlugins?: boolean;
 }
 
 /** A candidate a higher one of the same identity displaced: `/mcp` lists a hidden connector so. */
@@ -70,6 +75,8 @@ export interface McpRanking {
 
 /** Between project (4) and local (5): the user definition beats `.mcp.json` and nothing above it. */
 const DESKTOP_USER_RANK = 4.5;
+/** Between user (3) and plugin (2): a connector of a `-p`, SDK or VS Code session. */
+const CONNECTOR_ABOVE_PLUGIN_RANK = 2.5;
 
 const isStdio = (candidate: McpCandidate): boolean => !isRemoteMcpServer(candidate.server);
 
@@ -85,6 +92,9 @@ function rankOf(
   options: RankOptions,
 ): number {
   const own = SCOPE_RULES[candidate.scope].rank;
+  if (options.connectorsAbovePlugins === true && candidate.scope === 'connector') {
+    return CONNECTOR_ABOVE_PLUGIN_RANK;
+  }
   const desktopUser =
     options.desktopCodeTab === true &&
     candidate.scope === 'user' &&

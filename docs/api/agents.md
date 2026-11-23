@@ -112,6 +112,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `NO_WAIT_CAUSES` | constant | Why a workflow does not wait out a usage limit |
 | `NOTHING_TO_RESUME` | constant | The error of a relaunch that finds no saved results at all: it never starts the run over on its own |
 | `NoWaitCause` | type | One of `NO_WAIT_CAUSES` |
+| `offersSubagentHistory` | function | Whether the task list offers the row that reopens ended subagents (`CLAUDE_CODE_SUBAGENT_HISTORY`) |
 | `parseToolEntry` | function | Reads one entry of the field, as `readAgent` keeps it (a comma inside parentheses is not a split) |
 | `Pause` | type | What `interruptRun` returns |
 | `PERMISSION_MODE_INPUTS` | constant | The values `permissionMode` accepts in a subagent file: the six modes' config values "and `manual` as an alias for `default`" |
@@ -186,6 +187,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SkillSkipReason` | type | The `skipped` field of `PreloadPlan` |
 | `spawnableAgents` | function | The catalog an agent sees through its Agent tool |
 | `spawnDepthLimit` | function | `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`: "the number of subagent layers you want below your main conversation" |
+| `spawnerWaitsForNested` | function | Whether a spawning subagent waits for a nested subagent's result |
 | `spawnRefusal` | function | Why an Agent call may not spawn `subagentType` under the caller's `spawnTypes` (`resolveSubagentTools`), or `undefined` when the allowlist lets it through |
 | `SpawnTypes` | type | What the `Agent` tool may spawn: a list of types, any type, or none (without the tool) |
 | `StallWindowInput` | type | The `input` argument of `stallWindowMs` |
@@ -202,6 +204,9 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `SubagentPermissionInput` | type | What decides the subagent's mode beyond its own `permissionMode` |
 | `SubagentPromptSurface` | type | Where a subagent's permission prompts appear |
 | `SubagentRun` | type | How a subagent is started, as far as its tools are concerned |
+| `subagentTaskRow` | function | The task-list row of a subagent: its model, and its effort level when one is set |
+| `SubagentTaskRow` | type | What `subagentTaskRow` returns |
+| `subagentThinking` | function | A subagent's extended-thinking configuration: the main conversation's |
 | `SubagentTypeOutcome` | type | What `resolveSubagentType` returns |
 | `TeammateDisplay` | type | In process (the default) or in its own split pane |
 | `TeammateInput` | type | The argument of `teammateSetup` |

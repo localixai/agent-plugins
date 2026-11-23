@@ -235,6 +235,9 @@ export const SHAPES_1: ShapeTable = {
             'short_summary?': 'string',
             failure_scenario: 'string',
             'category?': 'string',
+            'severity?': {
+              oneOf: [{ literal: 'important' }, { literal: 'pre_existing' }, { literal: 'nit' }],
+            },
             'verdict?': { oneOf: [{ literal: 'CONFIRMED' }, { literal: 'PLAUSIBLE' }] },
             'outcome?': {
               oneOf: [

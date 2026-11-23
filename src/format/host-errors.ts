@@ -153,7 +153,7 @@ export const reportedCheckCode = (code: string): string =>
 
 /** `/plugin` Errors tab: a path the operating system could not check (any error but "not found"). */
 export const pathCouldNotBeChecked = (component: string, path: string, code: string): string =>
-  `${component} path could not be checked: ${path} (${reportedCheckCode(code)})`;
+  `${component} path couldn't be checked: ${path} (${reportedCheckCode(code)})`;
 
 /** The same error as `claude plugin list` prints it. */
 export const pathCouldNotBeCheckedInList = (

@@ -248,3 +248,22 @@ describe('records', () => {
     expect(done.records['formatter@acme']).toHaveLength(2);
   });
 });
+
+/** Spec §15.5.3, Judgment J15.15: an invalid entry refuses its install before anything is fetched. */
+describe('judgment J15.15: installing an entry with a malformed display field', () => {
+  test('fails with the entry problems and plans no fetch', () => {
+    const planned = planInstallStart({
+      source: { kind: 'github', repo: 'acme/formatter' },
+      fetch: { platform: 'posix' },
+      invalid: ['description: Invalid input: expected string, received number'],
+    });
+    expect(planned.fetch).toBeUndefined();
+    expect(planned.decision).toBeUndefined();
+    expect(planned.issues.map((found) => [found.severity, found.message])).toEqual([
+      [
+        'error',
+        "This plugin's marketplace entry is invalid: description: Invalid input: expected string, received number",
+      ],
+    ]);
+  });
+});

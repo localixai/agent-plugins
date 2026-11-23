@@ -121,6 +121,7 @@ async function runAll(run: Run, tool: SkillShell): Promise<Rendered> {
         ? {}
         : { bashOutputMaxChars: request.bashOutputMaxChars }),
       ...(request.bare === undefined ? {} : { bare: request.bare }),
+      ...(request.bareRepository === undefined ? {} : { bareRepository: request.bareRepository }),
     },
     ports,
   );

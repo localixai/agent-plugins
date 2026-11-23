@@ -149,7 +149,12 @@ function activatedOf(core: SessionCore): Set<string> {
 function activate(
   entries: readonly Entry[],
   known: Set<string>,
-  touched: { readonly path: string; readonly cwd: string; readonly platform: Platform },
+  touched: {
+    readonly path: string;
+    readonly cwd: string;
+    readonly platform: Platform;
+    readonly primaryWorkingDirectory: string;
+  },
 ): string[] {
   const fresh = entries
     .map((entry) => entry.invocable)
@@ -157,7 +162,7 @@ function activate(
       (invocable) =>
         invocable.paths.length > 0 &&
         !known.has(invocable.command) &&
-        skillActivatesFor(invocable, touched.path, touched.cwd, { platform: touched.platform }),
+        skillActivatesFor(invocable, touched.path, touched.cwd, touched),
     )
     .map((invocable) => invocable.command);
   for (const command of fresh) known.add(command);
@@ -184,21 +189,8 @@ function recorded(core: SessionCore, entry: Entry | Failure): boolean {
   return true;
 }
 
-/**
- * The skills of one turn: the cwd, effort, mode, interactivity and shell answer are the turn's, the
- * limits on skill hooks are the session's (`core`), so a skill invoked in an earlier turn still
- * counts and a later turn cannot register past them. The catalog, `skillOverrides`, the shell policy
- * and the plugin-only lock are read from the current state at each call, so `host.update` reaches a
- * session that is open.
- */
-export function createSkillPart(
-  core: SessionCore,
-  options: SessionOptions,
-  parts: { readonly registrar: SkillHooksRegistrar; readonly content: SessionContent },
-): SkillPart {
-  const { registrar, content } = parts;
-  const addHooks = skillHookRegistration(registrar, core.skillHooks);
-  const entryNamed = (name: string) => entryIn(currentOf(core).state, options, allEntries(), name);
+/** Every entry the session can invoke and the catalog over them, read from the current state per call. */
+function sourcesOf(core: SessionCore, options: SessionOptions, content: SessionContent) {
   const allEntries = (): readonly Entry[] => {
     const { state } = currentOf(core);
     return [
@@ -222,6 +214,25 @@ export function createSkillPart(
     const rows = catalogRows({ entries: allEntries(), workflows: taken, overrides, activated });
     return { rows, workflows, overrides, activated };
   };
+  return { allEntries, issuesOf, catalog };
+}
+
+/**
+ * The skills of one turn: the cwd, effort, mode, interactivity and shell answer are the turn's, the
+ * limits on skill hooks are the session's (`core`), so a skill invoked in an earlier turn still
+ * counts and a later turn cannot register past them. The catalog, `skillOverrides`, the shell policy
+ * and the plugin-only lock are read from the current state at each call, so `host.update` reaches a
+ * session that is open.
+ */
+export function createSkillPart(
+  core: SessionCore,
+  options: SessionOptions,
+  parts: { readonly registrar: SkillHooksRegistrar; readonly content: SessionContent },
+): SkillPart {
+  const { registrar, content } = parts;
+  const addHooks = skillHookRegistration(registrar, core.skillHooks);
+  const { allEntries, issuesOf, catalog } = sourcesOf(core, options, content);
+  const entryNamed = (name: string) => entryIn(currentOf(core).state, options, allEntries(), name);
   return {
     skills: (listing = {}) => {
       const { rows, workflows, overrides, activated } = catalog(listing.activated);
@@ -240,7 +251,9 @@ export function createSkillPart(
       const reload = await content.folders.touch(path, signal);
       const platform: Platform =
         currentOf(core).state.options.windows === true ? 'windows' : 'posix';
-      const touched = { path, cwd: content.directories.cwd(), platform };
+      // The main conversation's patterns stay relative to where it started (§4.7.3).
+      const cwd = content.directories.cwd();
+      const touched = { path, cwd, platform, primaryWorkingDirectory: options.cwd };
       return { ...reload, activated: activate(allEntries(), activatedOf(core), touched) };
     },
     addDirectory: (path, { signal }) => content.folders.addDirectory(path, signal),

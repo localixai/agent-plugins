@@ -1,7 +1,9 @@
+import { installEngineCheck } from './install-engines.ts';
 import { checkForUpdate, upToDateMessage } from '../marketplace/update-detection.ts';
 import { UNKNOWN_VERSION } from '../marketplace/version-resolution.ts';
 import type { InstallScope } from '../marketplace/install-scopes.ts';
 import type { Sha256 } from '../ports/marketplace.ts';
+import type { InstallStep } from '../marketplace/dependency-install-plan.ts';
 import { DISABLE_NONESSENTIAL_TRAFFIC, isSet } from '../updates/env-flags.ts';
 import {
   decideAcceptance,
@@ -20,6 +22,7 @@ import { recordsRefusal } from './records-refusal.ts';
 import { chooseScope } from './scope.ts';
 import { commandToAccept, failureLine, locate } from './update-locate.ts';
 import type { UpdatableInstall, PluginUpdateArguments, PluginUpdateFacts } from './update-facts.ts';
+import { dependencyList, updateDependencies } from './update-dependencies.ts';
 
 /**
  * `claude plugin update <plugin>` as a plan (plugins/cli-reference.md, "plugin update"): "Claude Code
@@ -51,16 +54,22 @@ export interface RetryRequest {
   readonly argument: string;
   readonly latest: string;
   readonly fields: ResultFields;
+  /** The missing dependencies the update installs with it (§16.24.1). */
+  readonly dependencies?: readonly InstallStep[];
 }
 
 export type UpdateRun =
   /** The host prints `before`, asks `prompt` and calls again with the answer. */
   | { readonly before: readonly string[]; readonly prompt: string }
   | { readonly before: readonly string[]; readonly retry: RetryRequest }
+  /** The dependency plan `needs` catalog plugins fetched: the host fills them in `graph` and calls again. */
+  | { readonly before: readonly string[]; readonly needs: readonly string[] }
   | {
       readonly before: readonly string[];
       readonly output: CommandOutput;
       readonly update?: UpdateEffects;
+      /** The missing dependencies to install with the update, dependencies first (§16.24.1 item 4). */
+      readonly dependencies?: readonly InstallStep[];
     };
 
 const ended = (output: CommandOutput, before: readonly string[] = []): UpdateRun => ({
@@ -80,19 +89,43 @@ function atLatest(
   args: PluginUpdateArguments,
   facts: PluginUpdateFacts,
 ): UpdateRun {
+  const deps = updateDependencies(install, facts.graph, facts.env);
+  if ('needs' in deps) return { before: checking(args.plugin), needs: deps.needs };
   const version = install.installedVersion ?? UNKNOWN_VERSION;
-  const latest = upToDateMessage(nameOf(install.id), version);
+  const latest = withDependencies(upToDateMessage(nameOf(install.id), version), deps);
   const fields = fieldsOf(install.id, install.scope);
+  const installing = stepsOf(deps.steps);
   const retries =
     install.dependencyInstall === 'unfinished' && !isSet(facts.env, DISABLE_NONESSENTIAL_TRAFFIC);
   if (!retries) {
-    return ended(commandSucceeded('update', latest, { fields }), checking(args.plugin));
+    return {
+      ...ended(commandSucceeded('update', latest, { fields }), checking(args.plugin)),
+      ...installing,
+    };
   }
   return {
     before: checking(args.plugin),
-    retry: { id: install.id, scope: install.scope, argument: args.plugin, latest, fields },
+    retry: {
+      id: install.id,
+      scope: install.scope,
+      argument: args.plugin,
+      latest,
+      fields,
+      ...installing,
+    },
   };
 }
+
+/** The success line with the dependencies listed, then the lines about the unresolved ones. */
+const withDependencies = (
+  line: string,
+  deps: { readonly steps: readonly InstallStep[]; readonly lines: readonly string[] },
+): string => [`${line}${dependencyList(deps.steps)}`, ...deps.lines].join('\n');
+
+const stepsOf = (
+  steps: readonly InstallStep[],
+): { readonly dependencies?: readonly InstallStep[] } =>
+  steps.length === 0 ? {} : { dependencies: steps };
 
 type RetryOutcome = { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
@@ -100,7 +133,10 @@ type RetryOutcome = { readonly ok: true } | { readonly ok: false; readonly reaso
 export function concludeRetry(request: RetryRequest, outcome: RetryOutcome): UpdateRun {
   const before = checking(request.argument);
   if (outcome.ok) {
-    return ended(commandSucceeded('update', request.latest, { fields: request.fields }), before);
+    return {
+      ...ended(commandSucceeded('update', request.latest, { fields: request.fields }), before),
+      ...(request.dependencies === undefined ? {} : { dependencies: request.dependencies }),
+    };
   }
   return ended(
     commandFailed('update', failureLine(request.argument, outcome.reason), {
@@ -177,8 +213,14 @@ async function updateTo(
     );
     if (stopped !== undefined) return stopped;
   }
-  const message = `Successfully updated plugin: ${nameOf(install.id)} to version ${to} (scope: ${install.scope})`;
+  const deps = updateDependencies(install, facts.graph, facts.env);
+  if ('needs' in deps) return { before: checking(args.plugin), needs: deps.needs };
+  const message = withDependencies(
+    `Successfully updated plugin: ${nameOf(install.id)} to version ${to} (scope: ${install.scope})`,
+    deps,
+  );
   return {
+    ...stepsOf(deps.steps),
     before: checking(args.plugin),
     output: commandSucceeded('update', message, { fields: fieldsOf(install.id, install.scope) }),
     update: {
@@ -209,7 +251,9 @@ export async function planPluginUpdate(
   if ('end' in located) return ended(located.end);
   const { install } = located;
   const verdict = await checkForUpdate(install.subject, install.installedVersion, sha256);
-  return verdict.check === 'new copy'
+  // A newer version outside its `engines` range is not one to move to (spec §2.4).
+  const fits = installEngineCheck(install.id, install.engines).refusal === undefined;
+  return verdict.check === 'new copy' && fits
     ? updateTo({ install, to: verdict.version }, args, facts, sha256)
     : atLatest(install, args, facts);
 }

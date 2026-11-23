@@ -11,6 +11,7 @@ import { readJson, type JsonRead } from '../../format/read-json.ts';
 import type { LoadedMod, LoaderEnv, ModPlugin } from './loader.ts';
 import { modOptions } from './options.ts';
 import { scanHooksModule, type ModScan } from './scan/index.ts';
+import { checkWasmFiles } from './wasm-files.ts';
 import { declaredState, missingTypes, readTypes } from './types-decl.ts';
 
 /** Preparing one hooks module: its manifest, its compiled code, its scan and its options, or the line that says why not. */
@@ -23,10 +24,14 @@ export interface LoadOutcome {
   readonly line?: string;
   /** Which of the two lines of troubleshoot.md `line` is: the module did not load, or another mod refused it. */
   readonly kind?: LoadLineKind;
+  /** The manifest of a plugin that names no hooks module: `plugin.register` still fires for it (§10.8.1, 2.1.326). */
+  readonly withoutModule?: PluginManifest;
 }
 
 export interface Prepared {
   readonly manifest: PluginManifest;
+  /** What the host told of the plugin's other parts (`ModPlugin.register`). */
+  readonly register?: ModPlugin['register'];
   readonly entry: string;
   /** What the engine runs, in the format the compiler chose. */
   readonly run: RunOutput;
@@ -71,7 +76,7 @@ async function scanned(
   env: LoaderEnv,
   files: PluginFiles,
   manifest: PluginManifest,
-  module: { readonly entry: string; readonly code: string },
+  module: { readonly id: string; readonly entry: string; readonly code: string },
 ): Promise<{ readonly scan: ModScan } | { readonly problem: string }> {
   const typesPath = resolveTypesPath(manifest);
   const placed = await contained(env, files, 'types', manifest.types);
@@ -85,12 +90,26 @@ async function scanned(
   });
   const errors = firstError(scan.issues);
   if (errors.length > 0) return { problem: messages(errors) };
+  // A `$.wasm.compile` file that is not there refuses the module too (§10.4.2); one that does not parse loads.
+  const root = env.pluginRoot(module.id);
+  const wasm = await checkWasmFiles(files, scan.wasmFiles, { root, signal: env.signal });
+  const missing = wasm.problems.filter((problem) => problem.severity === 'error');
+  if (missing.length > 0) return { problem: missing.map((problem) => problem.message).join('; ') };
   const needed = types === undefined ? missingTypes(scan, module.entry, typesPath) : undefined;
   return needed === undefined ? { scan } : { problem: needed };
 }
 
-/** The manifest, the module the plugin names, its compiled code, its scan and its options; or why not. */
-export async function prepare(env: LoaderEnv, plugin: ModPlugin): Promise<Prepared | LoadOutcome> {
+/** The manifest and the module `hooks/hooks.json` names; else the outcome: a plugin with none (`withoutModule`), or why they do not read. */
+async function readPluginFiles(
+  env: LoaderEnv,
+  plugin: ModPlugin,
+): Promise<
+  | LoadOutcome
+  | {
+      readonly manifestRead: { readonly manifest: PluginManifest };
+      readonly modules: { readonly entry: string };
+    }
+> {
   const { candidate, files } = plugin;
   const manifestRead = readManifest(
     valueOf(await readJson(files, '.claude-plugin/plugin.json', env.signal)),
@@ -101,7 +120,16 @@ export async function prepare(env: LoaderEnv, plugin: ModPlugin): Promise<Prepar
   );
   const bad = firstError(modules.issues);
   if (bad.length > 0) return didNotLoad(candidate.name, messages(bad));
-  if (modules.entry === undefined) return {};
+  if (modules.entry === undefined) return { withoutModule: manifestRead.manifest };
+  return { manifestRead: { manifest: manifestRead.manifest }, modules: { entry: modules.entry } };
+}
+
+/** The manifest, the module the plugin names, its compiled code, its scan and its options; or why not. */
+export async function prepare(env: LoaderEnv, plugin: ModPlugin): Promise<Prepared | LoadOutcome> {
+  const { candidate, files } = plugin;
+  const read = await readPluginFiles(env, plugin);
+  if (!('modules' in read)) return read;
+  const { manifestRead, modules } = read;
   const escaped = await contained(env, files, 'hooks', modules.entry);
   if (escaped !== undefined) return didNotLoad(candidate.name, escaped);
   const compiled = await compileModule(env, files, modules.entry);
@@ -111,6 +139,7 @@ export async function prepare(env: LoaderEnv, plugin: ModPlugin): Promise<Prepar
   const source = scanSourceOf(compiled, modules.entry);
   if ('problem' in source) return didNotLoad(candidate.name, source.problem);
   const checked = await scanned(env, files, manifestRead.manifest, {
+    id: candidate.id,
     entry: modules.entry,
     code: source.code,
   });
@@ -124,6 +153,7 @@ export async function prepare(env: LoaderEnv, plugin: ModPlugin): Promise<Prepar
   if (fitted.issues.length > 0) return didNotLoad(candidate.name, messages(fitted.issues));
   return {
     manifest: manifestRead.manifest,
+    ...(plugin.register === undefined ? {} : { register: plugin.register }),
     entry: modules.entry,
     run: compiled.run,
     scan,

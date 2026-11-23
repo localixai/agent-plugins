@@ -12,6 +12,11 @@ export interface HotkeyContext {
   readonly hasFocus: boolean;
   /** Whether an `Input` of the drawing has the focus: "every printable key goes to the field". */
   readonly isInputFocused: boolean;
+  /**
+   * The band's rows, each mod's tree (2.1.323 or later): given, hotkeys are read from them and not
+   * from the tree, so two mods' rows on one key are told apart.
+   */
+  readonly rows?: readonly { readonly plugin: string; readonly tree: unknown }[] | undefined;
 }
 
 /** Buttons of a tree in document order. */
@@ -29,14 +34,43 @@ const pressableByKey = (context: HotkeyContext): boolean =>
  * The button each hotkey names, wherever the keyboard focus is: "when two buttons in one drawing
  * name the same `hotkey`, the later one gets it" (reference.md, "Elements").
  */
-function namedHotkeys(tree: unknown, context: HotkeyContext): ReadonlyMap<string, ElementNode> {
+function treeHotkeys(tree: unknown): Map<string, ElementNode> {
   const table = new Map<string, ElementNode>();
-  if (!pressableByKey(context)) return table;
   for (const button of buttons(tree)) {
     const { hotkey } = button.props;
     if (typeof hotkey === 'string') table.set(hotkey, button);
   }
   return table;
+}
+
+/**
+ * The hotkeys of the band's rows: "Buttons of two mods' rows of the band on the same key: in the
+ * terminal the key presses neither" (Agent Plugins Extended §10.10.5 item 4, §10.44.10); the
+ * client does not pick one of the mods. The Desktop app keeps the later row's (judgment: the spec
+ * states the rule for the terminal alone).
+ */
+function rowHotkeys(
+  rows: NonNullable<HotkeyContext['rows']>,
+  surface: UiSurface,
+): Map<string, ElementNode> {
+  const table = new Map<string, ElementNode>();
+  const owner = new Map<string, string>();
+  const shared = new Set<string>();
+  for (const row of rows) {
+    for (const [hotkey, button] of treeHotkeys(row.tree)) {
+      const other = owner.get(hotkey);
+      if (other !== undefined && other !== row.plugin) shared.add(hotkey);
+      owner.set(hotkey, row.plugin);
+      table.set(hotkey, button);
+    }
+  }
+  if (surface === 'terminal') for (const hotkey of shared) table.delete(hotkey);
+  return table;
+}
+
+function namedHotkeys(tree: unknown, context: HotkeyContext): ReadonlyMap<string, ElementNode> {
+  if (!pressableByKey(context)) return new Map();
+  return context.rows === undefined ? treeHotkeys(tree) : rowHotkeys(context.rows, context.surface);
 }
 
 /**

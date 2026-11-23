@@ -5,7 +5,7 @@
  * `{ value }`." Its examples are the calls below; the other calls are held to the same rule by the
  * names the reference lists (§ Mods API methods) through `describeApi`.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { describeApi } from '../../../src/mods/api/index.ts';
 import { isDenyResolved } from '../../../src/mods/api/call.ts';
 import { validateMod } from '../../../src/mods/load/commands/validate.ts';
@@ -26,7 +26,6 @@ import { CALL_SAMPLES, NOT_FIRED_BY_A_CALL } from '../../support/mods-api-sample
 import { fakeInterface, uiOver } from '../../support/mods-ui.ts';
 import { memoryFiles } from '../../support/ports.ts';
 import { rejection } from '../../support/rejection.ts';
-import { spec } from '../../support/spec.ts';
 
 const usage = modelUsage;
 const models = () => {
@@ -80,7 +79,9 @@ function refusedAs(event: ApiEventName, run: Driven): boolean {
   return 'rejected' in run.outcome && run.outcome.rejected.includes(REASON);
 }
 
-spec('mods.reference.Mods API calls', () => {
+// Agent Plugins Extended §10.19.7: the 2.1.330 docs dropped the section's id, so the rule is
+// proven here without one (it is no judgment of the kit's; spec/requirements.json has no id for it).
+describe('§10.19.7 Mods API calls', () => {
   test('fs.read, model.complete and ui.open are events: a hook on each sees the call and next(e) reaches Claude Code', async () => {
     const { iface } = fakeInterface();
     const port = models();

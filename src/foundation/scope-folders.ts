@@ -207,12 +207,18 @@ export async function readScopeFiles(
   };
 }
 
-/** The folder to watch below an opened base: its host path when the scope watches it and it exists. */
+/** The folder to watch below an opened base: its host path when the scope watches it and it exists, or always with `evenAbsent`. */
 export async function watchedFolder(
   base: ScanFolder,
   container: string,
-  options: { readonly watched: boolean; readonly signal?: AbortSignal | undefined },
+  options: {
+    readonly watched: boolean;
+    /** Watch the folder even before it exists, so its first file loads (agents, §5.4.1). */
+    readonly evenAbsent?: boolean;
+    readonly signal?: AbortSignal | undefined;
+  },
 ): Promise<readonly string[]> {
   if (!options.watched) return [];
+  if (options.evenAbsent === true) return [base.hostPath(container)];
   return (await base.files.exists(container, options.signal)) ? [base.hostPath(container)] : [];
 }

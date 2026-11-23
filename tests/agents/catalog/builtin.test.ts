@@ -20,20 +20,23 @@ const INTERACTIVE: BuiltinPolicy = {
   disableAll: false,
 };
 
+/** Every built-in but `web-fetch`, which only a session that reads web pages through it registers. */
+const ALWAYS = [
+  'Explore',
+  'Plan',
+  'general-purpose',
+  'claude',
+  'statusline-setup',
+  'claude-code-guide',
+];
+
 const named = (policy: BuiltinPolicy, name: string) =>
   builtinAgents(policy).find((agent) => agent.name === name);
 
 spec('agents.behavior.Built-in subagents', () => {
   test('the documented built-ins are registered by default in an interactive session', () => {
-    expect(builtinAgents(INTERACTIVE).map((agent) => agent.name)).toEqual([...BUILTIN_AGENT_NAMES]);
-    expect([...BUILTIN_AGENT_NAMES]).toEqual([
-      'Explore',
-      'Plan',
-      'general-purpose',
-      'claude',
-      'statusline-setup',
-      'claude-code-guide',
-    ]);
+    expect(builtinAgents(INTERACTIVE).map((agent) => agent.name)).toEqual(ALWAYS);
+    expect<readonly string[]>(BUILTIN_AGENT_NAMES).toEqual([...ALWAYS, 'web-fetch']);
   });
 
   test('every built-in is a catalog agent of the builtin source with a description', () => {
@@ -105,15 +108,33 @@ spec('agents.behavior.Built-in subagents', () => {
       disableExplorePlan: false,
       disableAll: false,
     };
-    expect(builtinAgents(policy)).toHaveLength(BUILTIN_AGENT_NAMES.length);
+    expect(builtinAgents(policy)).toHaveLength(ALWAYS.length);
+  });
+
+  describe('web-fetch (§5.12.4)', () => {
+    const fetching: BuiltinPolicy = { ...INTERACTIVE, webFetch: true };
+
+    test('registered only in a session that reads web pages through it', () => {
+      expect(named(INTERACTIVE, 'web-fetch')).toBeUndefined();
+      expect(builtinAgents(fetching).map((agent) => agent.name)).toEqual([...ALWAYS, 'web-fetch']);
+    });
+
+    test('runs on the haiku alias with WebFetch alone, and starts without CLAUDE.md', () => {
+      const agent = named(fetching, 'web-fetch');
+      expect(agent?.definition.model).toBe('haiku');
+      expect(agent?.definition.tools).toEqual(['WebFetch']);
+      expect(agent?.startsWith.claudeMd).toBe(false);
+    });
+
+    test('CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS removes it with the others', () => {
+      expect(builtinAgents({ ...fetching, interactive: false, disableAll: true })).toEqual([]);
+    });
   });
 });
 
 describe('judgments of the built-in registry (spec/judgments.md)', () => {
   test('the SDK variable does nothing in an interactive session: the page names it for non-interactive mode and the SDK', () => {
-    expect(builtinAgents({ ...INTERACTIVE, disableAll: true })).toHaveLength(
-      BUILTIN_AGENT_NAMES.length,
-    );
+    expect(builtinAgents({ ...INTERACTIVE, disableAll: true })).toHaveLength(ALWAYS.length);
   });
 
   test('both variables together leave nothing', () => {

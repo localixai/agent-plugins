@@ -127,11 +127,16 @@ spec(
       for (const root of ['../plugins', './a/../../b', '/plugins', 'C:/plugins', '']) {
         const result = parse('formatter', root);
         expect(result.source).toBeUndefined();
-        expect(result.issues).toHaveLength(1);
-        expect(result.issues[0]?.severity).toBe('error');
-        expect(result.issues[0]?.path).toBe(PATH);
-        // The wording is oracle 2.1.325 (spec J15.6): the bare name reads as one without "./".
-        expect(result.issues[0]?.message).toBe('Invalid string: must start with "./"');
+        // The wording is oracle 2.1.330 (spec J15.6): the bare name reads as one without "./",
+        // and a second error names the pluginRoot that cannot resolve it.
+        expect(result.issues.map((found) => [found.severity, found.path, found.message])).toEqual([
+          ['error', PATH, 'Invalid string: must start with "./"'],
+          [
+            'error',
+            PATH,
+            `Bare source name "formatter" cannot resolve: metadata.pluginRoot ("${root}") must be a relative path inside the marketplace (e.g. "./plugins").`,
+          ],
+        ]);
       }
     });
 

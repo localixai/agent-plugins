@@ -24,10 +24,23 @@ export interface LoadedPluginRow {
   readonly errors?: readonly PluginLoadError[];
 }
 
+/**
+ * The managed `enabledPlugins` entry that dropped a `--plugin-dir`, SDK `plugins`, skills-directory or
+ * synced copy (spec §17.15.2, `managed_lock` of the SDK 0.3.330 `SDKSystemMessage`): its value, its
+ * name as the entry spells it, and its marketplace when it names one.
+ */
+export interface ManagedLock {
+  readonly pluginEnabled: boolean;
+  readonly name: string;
+  readonly marketplace?: string;
+}
+
 /** A plugin that did not load, such as one whose dependency's version is not satisfied. */
 export interface PluginNotLoaded {
   readonly id: string;
   readonly error: PluginLoadError;
+  /** Set for a directory copy a managed `enabledPlugins` entry dropped. */
+  readonly managedLock?: ManagedLock;
 }
 
 /**
@@ -58,6 +71,18 @@ const rowOf = (plugin: LoadedPluginRow): InitPluginFields['plugins'][number] => 
   ...(plugin.version === undefined ? {} : { version: plugin.version }),
 });
 
+const lockOf = (lock: ManagedLock): NonNullable<InitPluginError['managed_lock']> => ({
+  plugin_enabled: lock.pluginEnabled,
+  name: lock.name,
+  ...(lock.marketplace === undefined ? {} : { marketplace: lock.marketplace }),
+});
+
+const notLoadedError = (plugin: PluginNotLoaded): InitPluginError => ({
+  plugin: plugin.id,
+  ...plugin.error,
+  ...(plugin.managedLock === undefined ? {} : { managed_lock: lockOf(plugin.managedLock) }),
+});
+
 const directoryError = (entry: FailedPluginDirectory): InitPluginError => ({
   plugin: `${entry.origin}[${entry.index}]`,
   ...entry.error,
@@ -75,7 +100,7 @@ export function initPluginFields(facts: InitPluginFacts): InitPluginFields {
     ...facts.loaded.flatMap((plugin) =>
       (plugin.errors ?? []).map((error) => ({ plugin: plugin.id, ...error })),
     ),
-    ...(facts.unloaded ?? []).map((plugin) => ({ plugin: plugin.id, ...plugin.error })),
+    ...(facts.unloaded ?? []).map(notLoadedError),
     ...(facts.failedDirectories ?? []).map(directoryError),
   ];
   const omitted = errors.length === 0 || facts.persistedRemotely === true;

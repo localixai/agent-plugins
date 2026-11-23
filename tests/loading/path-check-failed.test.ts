@@ -1,7 +1,7 @@
 /**
  * errors.md § Path could not be checked: when the client asks whether a plugin path exists and gets
  * an error other than "not found", it does not load what the path names and reports
- * `<component> path could not be checked: <path> (<code>)`; the plugin's other components load. The
+ * `<component> path couldn't be checked: <path> (<code>)`; the plugin's other components load. The
  * error reaches the kit through `FileStat.checkFailed` (docs/API.md, "Ports").
  */
 import { expect, test } from 'bun:test';
@@ -22,7 +22,7 @@ spec(['cli.errors.Path could not be checked', 'cli.errors.Path could not be chec
     const { plugin, issues } = await loadPlugin({ files });
     expect(plugin?.skills).toEqual([]);
     expect(plugin?.commands).toHaveLength(1);
-    expect(messagesOf(issues)).toEqual(['skills path could not be checked: skills (ELOOP)']);
+    expect(messagesOf(issues)).toEqual(["skills path couldn't be checked: skills (ELOOP)"]);
   });
 
   test('a path that simply does not exist draws no error', async () => {
@@ -40,7 +40,7 @@ spec('cli.errors.Path could not be checked.EIO', () => {
     const { plugin, issues } = await loadPlugin({ files });
     expect(plugin?.monitors).toEqual([]);
     expect(messagesOf(issues)).toEqual([
-      'monitors path could not be checked: monitors/monitors.json (EIO)',
+      "monitors path couldn't be checked: monitors/monitors.json (EIO)",
     ]);
   });
 });
@@ -54,7 +54,7 @@ spec('cli.errors.Path could not be checked.EACCES', () => {
     const { plugin, issues } = await loadPlugin({ files });
     expect(plugin?.commands).toEqual([]);
     expect(messagesOf(issues)).toEqual([
-      'commands path could not be checked: ./locked/deploy.md (EACCES)',
+      "commands path couldn't be checked: ./locked/deploy.md (EACCES)",
     ]);
   });
 });
@@ -69,14 +69,14 @@ spec('cli.errors.Path could not be checked', () => {
     const { plugin, issues } = await loadPlugin({ files });
     expect(plugin?.skills).toEqual([]);
     expect(plugin?.commands).toHaveLength(1);
-    expect(messagesOf(issues)).toEqual(['skills path could not be checked: SKILL.md (EIO)']);
+    expect(messagesOf(issues)).toEqual(["skills path couldn't be checked: SKILL.md (EIO)"]);
   });
 
   test('the plugin directory itself that cannot be checked: nothing of the plugin loads', async () => {
     const files = memoryFiles({ '.': { checkFailed: 'EACCES' }, 'commands/hi.md': 'Hi.' });
     const { plugin, issues } = await loadPlugin({ files, fallbackName: 'p' });
     expect(plugin).toBeUndefined();
-    expect(messagesOf(issues)).toEqual(['plugin path could not be checked: . (EACCES)']);
+    expect(messagesOf(issues)).toEqual(["plugin path couldn't be checked: . (EACCES)"]);
     expect(files.reads).toEqual([]);
   });
 });

@@ -89,8 +89,9 @@ export interface InstallFailure {
 const FULL_ERROR = 'Installing a plugin from its details (Enter) in /plugin shows its full error.';
 
 /**
- * The summary the `/plugin` menu closes with when none of the selected plugins installed: `Failed
- * to install: <plugin> (<reason>)`. A reason shows only its first line, and when one was
+ * The summary the `/plugin` menu closes with when none of the selected plugins installed:
+ * `Couldn't install: <plugin> (<reason>)` (2.1.330; the docs also give `Failed to install:`, spec
+ * §16.31; the kit prints the newer form, spec/judgments.md). A reason shows only its first line, and when one was
  * shortened the summary ends with `Installing a plugin from its details (Enter) in /plugin shows
  * its full error.` Judgment: several failures are joined by `, `.
  */
@@ -100,7 +101,7 @@ export function failedToInstall(failures: readonly InstallFailure[]): string {
     reason: one.reason.split('\n')[0] ?? '',
     shortened: one.reason.includes('\n'),
   }));
-  const summary = `Failed to install: ${firstLines.map((one) => `${one.plugin} (${one.reason})`).join(', ')}`;
+  const summary = `Couldn't install: ${firstLines.map((one) => `${one.plugin} (${one.reason})`).join(', ')}`;
   return firstLines.some((one) => one.shortened) ? `${summary} ${FULL_ERROR}` : summary;
 }
 
@@ -145,9 +146,9 @@ export const notCached = (name: string, path: string): ErrorsTabEntry => ({
 export const reinstallCommand = (name: string, marketplace: string): string =>
   installCommand(`${name}@${marketplace}`);
 
-/** A project's settings enable the plugin, but it was never installed on this machine. */
+/** A project's settings turn the plugin on, but it was never installed on this machine (spec §16.4.2 item 3). */
 export const enabledNotInstalled = (name: string, marketplace: string): ErrorsTabEntry => ({
-  message: `Plugin "${name}" is enabled in project settings but isn't installed here`,
+  message: `Plugin "${name}" is on in project settings but isn't installed here`,
   guidance: `Run ${collaboratorInstallCommand(`${name}@${marketplace}`)} to install it for this project`,
 });
 
@@ -169,7 +170,7 @@ export const pluginDirectoryMissingAtRun = (path: string, plugin: string): strin
 export type EmptyView = 'discover' | 'marketplace-list';
 
 const EMPTY: { readonly [V in EmptyView]: string } = {
-  discover: 'No plugins available',
+  discover: 'No plugins yet',
   'marketplace-list': 'No marketplaces configured',
 };
 
@@ -177,7 +178,7 @@ const EMPTY: { readonly [V in EmptyView]: string } = {
 const ADD_OFFICIAL = '/plugin marketplace add anthropics/claude-plugins-official';
 
 /**
- * `No plugins available` on the Discover tab, `No marketplaces configured` from the list command:
+ * `No plugins yet` on the Discover tab, `No marketplaces configured` from the list command:
  * both mean no marketplace is registered, so there is no catalog; `undefined` when one is.
  */
 export function noMarketplaces(

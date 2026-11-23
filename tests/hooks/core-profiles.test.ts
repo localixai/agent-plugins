@@ -2,7 +2,7 @@
  * The core tool profiles Claude Code calls get (Agent Plugins Extended §18.2.7, Judgment J18.16;
  * core §7.3.6 and §7.3.7, the profile sections) and how a core handler's output is read (core
  * §7.3.3, §7.3.2 item 5; §18.1.2, "Failures"). Shapes on the Claude Code side are those of
- * `sdk-tools.d.ts` 0.3.321. Judgment-style tests outside `spec(...)`: chapter 18 has no ids.
+ * `sdk-tools.d.ts` 0.3.330. Judgment-style tests outside `spec(...)`: chapter 18 has no ids.
  */
 import { describe, expect, test } from 'bun:test';
 import { readCoreRun } from '../../src/hooks/core/output.ts';
@@ -53,6 +53,18 @@ describe('§18.2.7: the pending profile of each tool', () => {
     expect(pendingProfile('WebFetch', { url: 'file:///etc/passwd' }, context)).toBeUndefined();
     for (const tool of ['Glob', 'Grep', 'Agent', 'Skill', 'AskUserQuestion', 'TodoWrite'])
       expect(pendingProfile(tool, { pattern: 'x' }, context)).toBeUndefined();
+  });
+
+  test('2.1.330: the claude.ai plugin and skill tools list, search or suggest, and get no profile', () => {
+    for (const tool of [
+      'ListPlugins',
+      'ListSkills',
+      'SearchPlugins',
+      'SearchSkills',
+      'SuggestPluginInstall',
+      'SuggestSkills',
+    ])
+      expect(pendingProfile(tool, { query: 'x' }, context), tool).toBeUndefined();
   });
 
   test('mcp: the declared tool name and the arguments; the host’s name wins', () => {

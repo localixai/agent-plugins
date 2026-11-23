@@ -13,6 +13,7 @@ import type { selectHandlers } from './select/select.ts';
 import type { IfEvaluator } from './select/if-guard.ts';
 import type { OnceClaims } from './select/once.ts';
 import { interruptPlan, withInterrupt } from './interrupt.ts';
+import { withCoworkAnswers } from './output/cowork-answers.ts';
 import { withResolvedWatchPaths } from './output/watch-paths.ts';
 import { withOriginalPrompt } from './verdict/blocked-prompt.ts';
 import { isToolCall, type StopBlockCap } from './verdict/stop-block-cap.ts';
@@ -161,6 +162,38 @@ function selectionOf<E extends HookEvent>(
   });
 }
 
+/**
+ * The events no hook runs on when the occurrence is Code Mode's code output: from 2.1.328
+ * `UserPromptSubmit` hooks "don't receive code output, even when an administrator sets them in
+ * managed settings" (code-mode.md, "Move a check from a `UserPromptSubmit` hook"; Agent Plugins
+ * Extended §7.6.11.3 item 4, §7.5.8).
+ */
+const SKIPS_CODE_OUTPUT: ReadonlySet<HookEvent> = new Set<HookEvent>(['UserPromptSubmit']);
+
+/** The events on which the built-in `web-fetch` agent runs only managed hooks (§7.5.18, §7.5.19). */
+const WEB_FETCH_MANAGED_ONLY: ReadonlySet<HookEvent> = new Set<HookEvent>([
+  'SubagentStart',
+  'SubagentStop',
+]);
+
+/** Whether only the hooks of managed settings run on this occurrence. */
+const managedOnly = <E extends HookEvent>(request: DispatchRequest<E>): boolean =>
+  request.failedCall === true ||
+  (request.webFetchAgent === true && WEB_FETCH_MANAGED_ONLY.has(request.event));
+
+/**
+ * J7.215: on a failed call `PostToolUse` runs only the hooks of managed settings; code output runs
+ * no `UserPromptSubmit` hook at all. For the built-in `web-fetch` agent `SubagentStart` and
+ * `SubagentStop` run only the hooks of managed settings (§7.6.3 item 8).
+ */
+function forCall<E extends HookEvent>(
+  selected: readonly RegisteredHandler[],
+  request: DispatchRequest<E>,
+): readonly RegisteredHandler[] {
+  if (request.fromCode === true && SKIPS_CODE_OUTPUT.has(request.event)) return [];
+  return managedOnly(request) ? selected.filter((each) => each.source.managed === true) : selected;
+}
+
 export async function dispatchEvent<E extends HookEvent>(
   registry: HookRegistry,
   request: DispatchRequest<E>,
@@ -176,10 +209,8 @@ export async function dispatchEvent<E extends HookEvent>(
   const built = stages.build(event, facts, session);
   const issues: readonly PluginIssue[] = [...selection.issues, ...built.issues];
   // A `once` handler another dispatch runs, or a run spent, is left out (`OnceClaims`).
-  const selected =
-    built.input === undefined
-      ? []
-      : (config.onceClaims?.take(selection.selected) ?? selection.selected);
+  const eligible = forCall(selection.selected, request);
+  const selected = built.input === undefined ? [] : (config.onceClaims?.take(eligible) ?? eligible);
   if (built.input === undefined || selected.length === 0)
     return finishedIdle(idleOutcome(event, issues), request, config);
   const plan = interruptPlan(event, request.interrupt, config.ports.environment);
@@ -190,7 +221,7 @@ export async function dispatchEvent<E extends HookEvent>(
   });
   report(config.observer, event, verdicts);
   const limited = await stages.output.limit(event, verdicts.map(tagged), request.signal);
-  const merged = stages.output.merge(event, limited.outputs, facts);
+  const merged = withCoworkAnswers(stages.output.merge(event, limited.outputs, facts), request);
   return finished(
     assemble(event, verdicts, merged, [...issues, ...limited.issues]),
     request,

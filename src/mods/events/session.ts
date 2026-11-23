@@ -1,7 +1,16 @@
 import { z } from 'zod';
 import { SESSION_END_REASONS } from '../../protocol/exit-reasons.ts';
 import type { MOD_EVENT_GROUPS } from '../../protocol/mods-events.ts';
-import { answer, fields, flag, noFields, passThrough, text, type EventSpec } from './spec.ts';
+import {
+  answer,
+  count,
+  fields,
+  flag,
+  noFields,
+  passThrough,
+  text,
+  type EventSpec,
+} from './spec.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
 /** The session events (reference.md, "Session"; api.md, "Send and receive messages between sessions"). */
@@ -38,8 +47,12 @@ export const SESSION_SPECS: { readonly [N in SessionEvent]: EventSpec } = {
     }),
     result: passThrough,
   },
-  // A hook answers `{ skip: reason }` to stop the compaction.
-  'session.compact': { input: noFields, result: answer({ skip: text.optional() }) },
+  // A hook answers `{ skip: reason }` to stop the compaction. Each message may carry its `uuid`
+  // (2.1.330, spec §10.19.2).
+  'session.compact': {
+    input: fields({ messages: z.array(z.looseObject({ uuid: text.optional() })).optional() }),
+    result: answer({ skip: text.optional() }),
+  },
   // `e.text` is the message and `e.origin.kind` says where it came from (`peer`,
   // `peer-send-message`, `task-notification`, `scheduled-trigger`...); `{ consumed: reason }` keeps it from Claude.
   'session.receive': {
@@ -66,5 +79,14 @@ export const SESSION_SPECS: { readonly [N in SessionEvent]: EventSpec } = {
   },
   'session.attach': { input: noFields, result: passThrough },
   'session.detach': { input: noFields, result: passThrough },
-  'session.measure': { input: noFields, result: passThrough },
+  // `cost` is `{ usd, hasUnknownPrice? }` (claude-code/index.d.ts:14657 of 2.1.330).
+  'session.measure': {
+    input: fields({
+      cost: z.looseObject({ usd: count, hasUnknownPrice: flag.optional() }).optional(),
+    }),
+    result: passThrough,
+  },
+  // §10.19.2: observe only; the stop goes on whatever a hook does, and `next(e)` resolves
+  // `{ isTurnRunning }` (`SessionStopInput`, claude-code/index.d.ts:5900).
+  'session.stop': { input: fields({ isTurnRunning: flag }), result: passThrough },
 };

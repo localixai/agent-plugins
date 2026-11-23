@@ -5,6 +5,7 @@
 import { expect, test } from 'bun:test';
 import { MODS_API } from '../../../src/protocol/mods-api-names.ts';
 import { apiHarness, expectMethods } from '../../support/mods-api.ts';
+import { fn } from '../../support/mods-chain.ts';
 import { rejection } from '../../support/rejection.ts';
 import { spec } from '../../support/spec.ts';
 
@@ -33,6 +34,30 @@ spec('mods.api.$.audio', () => {
     expect(
       await rejection(h.api.audio.play({ url: 'https://x/a.wav' }, { shouldLoop: true })),
     ).toContain('shouldLoop takes the signal that stops it');
+  });
+
+  test('speak takes { voice, signal } (2.1.330 declarations): voice rides on the event, the signal reaches the host and does not cross', async () => {
+    const heard: unknown[] = [];
+    const seen: unknown[] = [];
+    const h = await apiHarness({
+      ports: {
+        audio: {
+          play: () => Promise.resolve(),
+          speak: (text, options) => (
+            heard.push([text, options?.voice, options?.signal?.aborted]),
+            Promise.resolve()
+          ),
+        },
+      },
+    });
+    await h.mod('watch', 'prepend', [fn('audio.speak', (_$, e, next) => (seen.push(e), next(e)))]);
+    const stop = new AbortController();
+    stop.abort();
+    expect(await h.api.audio.speak('done', { voice: 'Ava', signal: stop.signal })).toEqual({
+      via: 'system',
+    });
+    expect(seen).toEqual([{ text: 'done', voice: 'Ava' }]);
+    expect(heard).toEqual([['done', 'Ava', true]]);
   });
 
   test('speak with something that is not text rejects', async () => {

@@ -8,6 +8,7 @@ import type {
   ChunkOf,
   DispatchOptions,
   EventOf,
+  EventRule,
   EventRuleBook,
   HookAccess,
   ModChain,
@@ -57,6 +58,21 @@ async function collect(stream: Stream): Promise<unknown> {
   }
 }
 
+/**
+ * Claude Code's own behaviour as the chain reaches it: once per dispatch where the event's rule says
+ * so (`EventRule.coreAgain`), every later call answering from the first run's result.
+ */
+function coreOf(rule: EventRule, core: DispatchOptions['core']): DispatchOptions['core'] {
+  const again = rule.coreAgain;
+  if (again === undefined) return core;
+  let first: Promise<unknown> | undefined;
+  return async (e) => {
+    if (first !== undefined) return again(await first);
+    first = Promise.resolve(core(e));
+    return first;
+  };
+}
+
 /** The time all the hooks of `event` share, stopped until the settings hooks finish (§10.11). */
 const groupOf = (clock: Clock, event: string, ms: number | undefined): Pick<Context, 'group'> =>
   ms === undefined ? {} : { group: { budget: createBudget(clock, ms, { paused: true }), event } };
@@ -78,10 +94,12 @@ export function createModChain(options: ModChainOptions): ModChain {
     const groupMs = opts.groupMs ?? GROUP_MS[name];
     // The host keeps its own object: hooks see a frozen copy.
     const frozen = frozenCopy(input);
+    const rule = ruleOf(rules, name);
     const ctx: Context = {
       name,
       options: {
         ...opts,
+        core: coreOf(rule, opts.core),
         origin: deepFreeze({ ...opts.origin }),
         ...(opts.caller === undefined ? {} : { caller: deepFreeze({ ...opts.caller }) }),
       },
@@ -91,7 +109,7 @@ export function createModChain(options: ModChainOptions): ModChain {
         .filter((entry) => isAmong(opts.only, entry.plugin.name)),
       input: frozen,
       fired: input,
-      rule: ruleOf(rules, name),
+      rule,
       matcherMs: options.matcherMs ?? MATCHER_MS,
       ...hostParts,
       calling: { frames, followed: running !== undefined, frame: running?.current() },

@@ -159,20 +159,20 @@ export interface ModPluginInfo {
   /** Native modules remain trusted even when the host places them in the user tier. */
   readonly isBuiltin?: boolean;
   /**
-   * Where the mod runs among the mods of its tier: a lower number first, whenever it registered.
-   * A host that loads mods one at a time (in the order its own settings give) gives each one; mods
-   * with none run after those with one, in the order they registered (judgment).
+   * Where the mod runs in its tier, a lower number first, whenever it registered (a host loading one
+   * at a time gives each one); mods with none run after, in the order they registered (judgment).
    */
   readonly position?: number;
 }
 
-/** Admission uses the original frozen input, not a previous hook's rewrite. */
+/** Admission reads the original frozen input, not a rewrite. */
 export interface HookAccess {
   readonly event: string;
   readonly tier: ModTier;
   readonly isBuiltin: boolean;
-  /** The event as the host fired it: the host's own object, so an identity fact can be checked on it. */
+  /** The event as the host fired it (an identity fact is checked on it), and who fired it (§10.19.7). */
   readonly input: unknown;
+  readonly origin: HookOrigin;
 }
 
 /**
@@ -226,6 +226,8 @@ export interface EventRule {
   readonly coreInput?: (original: unknown, passed: unknown) => unknown;
   /** A hook's result as it counts, for example with an over-long reason cut. */
   readonly settle?: (result: unknown) => unknown;
+  /** For a behaviour run once per dispatch (`tool.judge`, `tool.run`): a later `next(e)` gets this of the first answer. */
+  readonly coreAgain?: (first: unknown) => unknown;
 }
 
 /** The rules of the events one part of mods knows, keyed by event name. */
@@ -253,13 +255,12 @@ export interface DispatchOptions {
    * on one intercepts calls from the mods that run after it").
    */
   readonly caller?: HookOrigin;
-  /**
-   * Only this mod's hooks handle the event: what Claude Code fires for one mod alone (`ui.message`
-   * and `ui.fault` reach the mod that drew the `Client`, reference.md, "Interface").
-   */
+  /** Only these mods' hooks handle it (`ui.message` and `ui.fault` reach the mod that drew the `Client`). */
   readonly only?: string | ReadonlySet<string>;
   /** The debug log: the chain says there which mod answered without calling `next`. */
   readonly debug?: (line: string) => void;
+  /** Told each mod whose hook answered without calling `next`: `/mcp` names it (§14.9.2 item 3). */
+  readonly answered?: (by: HookOrigin) => void;
   /** The limit all the hooks of the event share, in milliseconds; `session.end` has one by default. */
   readonly groupMs?: number;
   /** Observes each valid hook result before outer hooks can replace it (engine settings refusals). */

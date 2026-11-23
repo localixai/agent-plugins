@@ -11,7 +11,9 @@ import type { InstallScope } from '../marketplace/install-scopes.ts';
  * folder on a case-insensitive file system, so there folders are compared without regard to case,
  * J3.19); and installed plugins that cannot be read
  * back after the removal keep the options, the secrets and the directory ("the plugin may still be
- * installed at another scope"). Pure over what the host read back.
+ * installed at another scope"). With the options go the files extracted into `mcpb/` from the
+ * plugin's MCP bundles, unless another plugin uses an identical bundle (spec §17.5.1). Pure over
+ * what the host read back.
  */
 
 /** Why the data directory stayed. `other-scope` is the judgment that a plugin still installed somewhere keeps everything. */
@@ -37,6 +39,11 @@ export interface RetentionFacts {
    * cannot tell keeps a folder rather than deleting one another plugin may use.
    */
   readonly caseInsensitiveFileSystem?: boolean;
+  /**
+   * The bundles extracted into `mcpb/` under the plugins root (spec §2.9, §16.6), by the host's key
+   * for an identical bundle: those of this plugin, and those another installed plugin uses.
+   */
+  readonly bundles?: { readonly own: readonly string[]; readonly usedByOthers: readonly string[] };
 }
 
 export interface Retention {
@@ -49,7 +56,13 @@ export interface Retention {
   readonly dataKeptBecause?: DataKeptBecause;
   /** The folder name under `~/.claude/plugins/data/`. */
   readonly dataFolder: string;
+  /** The extracted bundles to delete with the options: never one another plugin uses (spec §17.5.1). */
+  readonly mcpbDelete: readonly string[];
 }
+
+/** With the options go the plugin's extracted bundles, except one an identical bundle of another plugin needs. */
+const mcpbToDelete = (facts: RetentionFacts): readonly string[] =>
+  (facts.bundles?.own ?? []).filter((key) => !facts.bundles?.usedByOthers.includes(key));
 
 const folded = (id: string, fold: boolean): string =>
   fold ? pluginDataId(id).toLowerCase() : pluginDataId(id);
@@ -80,6 +93,7 @@ export function uninstallRetention(facts: RetentionFacts): Retention {
       savedKept: SAVED_KEPT_UNREADABLE,
       dataKeptBecause: 'install_records_unreadable',
       dataFolder,
+      mcpbDelete: [],
     };
   }
   const because = keptBecause(facts, facts.remaining);
@@ -89,6 +103,7 @@ export function uninstallRetention(facts: RetentionFacts): Retention {
     data: because === undefined ? 'delete' : 'keep',
     ...(because === undefined ? {} : { dataKeptBecause: because }),
     dataFolder,
+    mcpbDelete: savedStays ? [] : mcpbToDelete(facts),
   };
 }
 

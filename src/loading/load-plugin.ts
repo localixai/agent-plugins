@@ -17,6 +17,8 @@ import { readJson } from '../format/read-json.ts';
 import type { ComponentValues, ReaderContext } from './reader-types.ts';
 import { commandDirectoryDebug } from './command-debug.ts';
 import { manifestGate } from './manifest-gate.ts';
+import type { PluginNote } from '../format/plugin-notes.ts';
+import { engineGate, loadNotes } from './load-notes.ts';
 
 export interface LoadPluginInput {
   /** Read access to the plugin folder: its root is the plugin root. */
@@ -40,6 +42,16 @@ export interface LoadPluginInput {
    * `fallbackName`. Absent, the plugin's own `plugin.json` is the manifest (`--plugin-dir`).
    */
   readonly entry?: MarketplaceEntry;
+  /**
+   * The running client's version, such as `2.1.330`: a plugin whose `engines["claude-code"]` range
+   * excludes it does not load (spec §2.4). Absent, the range is not checked.
+   */
+  readonly clientVersion?: string;
+  /**
+   * The plugin is read from a local folder (`--plugin-dir`, or in place from a marketplace added
+   * from a local path): outside its `engines` range it loads anyway, with a note (§2.4).
+   */
+  readonly localFolder?: boolean;
   readonly signal?: AbortSignal;
 }
 
@@ -48,6 +60,7 @@ export interface ManifestStep {
   readonly present: boolean;
   readonly manifest: PluginManifest | undefined;
   readonly issues: readonly PluginIssue[];
+  readonly notes: readonly PluginNote[];
 }
 
 /** Reads the optional manifest: absent is fine, unreadable JSON or a manifest with an error is not. */
@@ -57,7 +70,7 @@ export async function loadManifest(
 ): Promise<ManifestStep> {
   const { location } = STANDARD_LAYOUT.manifest;
   if (!(await files.exists(location, signal))) {
-    return { present: false, manifest: undefined, issues: [] };
+    return { present: false, manifest: undefined, issues: [], notes: [] };
   }
   const raw = await readJson(files, location, signal);
   if ('problem' in raw) {
@@ -65,16 +78,18 @@ export async function loadManifest(
       present: true,
       manifest: undefined,
       issues: [error(location, `${location} could not be read as JSON: ${raw.problem}`)],
+      notes: [],
     };
   }
   const read = readManifest(raw.value);
-  return { present: true, manifest: read.manifest, issues: read.issues };
+  return { present: true, manifest: read.manifest, issues: read.issues, notes: read.notes };
 }
 
 /** The manifest the plugin loads with: its own, or, from a marketplace entry, the merge of the two. */
 interface MergedStep {
   readonly manifest: PluginManifest | undefined;
   readonly issues: readonly PluginIssue[];
+  readonly notes: readonly PluginNote[];
   readonly scanDefaultSkills: boolean;
   readonly replacedHookEvents: readonly string[];
 }
@@ -99,6 +114,7 @@ function withEntry(read: ManifestStep, entry: MarketplaceEntry | undefined): Mer
     return {
       manifest: read.manifest,
       issues: read.issues,
+      notes: read.notes,
       scanDefaultSkills: true,
       replacedHookEvents: [],
     };
@@ -107,6 +123,7 @@ function withEntry(read: ManifestStep, entry: MarketplaceEntry | undefined): Mer
   return {
     manifest: merge.manifest,
     issues: [...read.issues, ...merge.issues],
+    notes: read.notes,
     scanDefaultSkills: merge.scanDefaultSkills,
     replacedHookEvents: merge.replacedHookEvents,
   };
@@ -124,6 +141,20 @@ function nameOf(
   if (fallbackName === undefined) return { name: undefined, issues: [error('name', NO_NAME)] };
   const issues = nameLoadIssues(fallbackName);
   return { name: issues.length > 0 ? undefined : fallbackName, issues };
+}
+
+/**
+ * The name the plugin loads under, or why it does not load: no name, or an `engines` range that
+ * excludes the client (spec §2.4).
+ */
+function admitted(
+  step: MergedStep,
+  input: LoadPluginInput,
+): { readonly name: string | undefined; readonly issues: readonly PluginIssue[] } {
+  const named = nameOf(step.manifest, input.fallbackName);
+  if (named.name === undefined) return named;
+  const refused = engineGate(step.manifest, named.name, input);
+  return refused ? { name: undefined, issues: [...named.issues, refused] } : named;
 }
 
 /** Runs every reader over what discovery found. */
@@ -213,7 +244,7 @@ export async function loadPlugin(input: LoadPluginInput): Promise<LoadedPlugin> 
   if (gate) return { plugin: undefined, issues: [gate] };
   const step = await manifestFor(files, input.entry, signal);
   if ('failed' in step) return { plugin: undefined, issues: step.failed };
-  const named = nameOf(step.manifest, input.fallbackName);
+  const named = admitted(step, input);
   const issues: PluginIssue[] = [...step.issues, ...named.issues];
   if (named.name === undefined) return { plugin: undefined, issues };
   const discovered = await discoverComponents(files, step.manifest, named.name, {
@@ -245,9 +276,11 @@ export async function loadPlugin(input: LoadPluginInput): Promise<LoadedPlugin> 
   };
   const channels = channelIssues(step.manifest, read.values.mcpServers.servers);
   const debug = await commandDirectoryDebug(context, read.values.commands);
+  const notes = loadNotes(step, plugin, input);
   return {
     plugin,
     issues: [...issues, ...discovered.issues, ...read.issues, ...channels],
     ...(debug.length > 0 && { debug }),
+    ...(notes.length > 0 && { notes }),
   };
 }

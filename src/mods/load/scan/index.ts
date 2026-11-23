@@ -12,10 +12,12 @@ import { lineIndex } from './on-rules.ts';
 import { missingRegister } from './register-export.ts';
 import type { ModScan } from './uses.ts';
 import { maxScopeDepth } from './walk.ts';
+import { wasmFilesOf } from './wasm-paths.ts';
 
 export { combineScans } from './uses.ts';
 export type { ModScan, ModUses, ScannedCall, ScannedHook } from './uses.ts';
 export type { SurfaceModuleSpan } from './client-modules.ts';
+export type { ScannedWasm } from './wasm-paths.ts';
 export { MOD_SCAN_ISSUE_CODES, type ModScanIssue, type ModScanIssueCode } from './issue-codes.ts';
 
 export interface ScanOptions {
@@ -54,6 +56,9 @@ const nothing = (file: string): Omit<ModScan, 'issues'> => ({
   envWrites: [],
   stateReads: [],
   stateWrites: [],
+  hostsNamed: [],
+  hostsUnread: [],
+  wasmFiles: [],
   imports: [],
   surfaceModules: [],
   surfaceModuleSpans: [],
@@ -123,6 +128,9 @@ export function scanHooksModule(source: string, file: string, options: ScanOptio
     envWrites: [...found.envWrites],
     stateReads: [...found.stateReads],
     stateWrites: [...found.stateWrites],
+    hostsNamed: [...found.hostsNamed],
+    hostsUnread: [...found.hostsUnread],
+    wasmFiles: wasmFilesOf(found, directory),
     imports: facts.imports,
     surfaceModules: clients.modules,
     surfaceModuleSpans: clients.spans,

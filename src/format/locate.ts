@@ -42,7 +42,7 @@ export const locateContext = (files: PluginFiles, options: LocateOptions = {}): 
  * its marketplace) "doesn't load" and is reported as `<component> path escapes plugin directory:
  * <path>` (`escapedPathIssue`); a path that is not there is `undefined` and the caller decides
  * whether it was declared. A path the system could not check (`FileStat.checkFailed`, on it or a
- * folder above it) does not load either: `<component> path could not be checked: <path> (<code>)`
+ * folder above it) does not load either: `<component> path couldn't be checked: <path> (<code>)`
  * (errors.md, "Path could not be checked"), for a default location as for a declared one, the
  * plugin's other components loading. `written` is the spelling the message quotes. A link is seen on the
  * path itself and on every folder above it: each ancestor is stat'd once per call, since a port

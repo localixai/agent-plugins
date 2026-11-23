@@ -69,3 +69,26 @@ export function managedLayer(
     ? { scope: 'managed', settings }
     : { scope: 'managed', settings, invalid };
 }
+
+/**
+ * The sign-in requirement `enforceAnthropicSignIn` (spec §14.2.8; 2.1.329 and later; the SDK's
+ * `Settings` does not declare it yet, so it is read by name). "The client reads the key from a
+ * managed settings file, where it applies even beneath server-managed settings; on a machine that
+ * also has an MDM policy, from that policy. It ignores the key in server-managed settings, in HKCU
+ * and in a `policyHelper`'s output." Judgment (spec/judgments.md): the machine source is the one
+ * that supplies the login keys, the highest MDM policy or managed file carrying a policy key, and a
+ * value that is not a Boolean is not read.
+ */
+const SIGN_IN_KEY = 'enforceAnthropicSignIn';
+
+/** `settings` with the sign-in requirement taken from `value` alone (a Boolean), any other copy dropped. */
+export function withSignInRequirement(settings: Settings, value: unknown): Settings {
+  const rest: Settings = Object.fromEntries(
+    Object.entries(settings).filter(([name]) => name !== SIGN_IN_KEY),
+  );
+  return typeof value === 'boolean' ? { ...rest, [SIGN_IN_KEY]: value } : rest;
+}
+
+/** The sign-in requirement a document carries, as `withSignInRequirement` takes it. */
+export const signInRequirementOf = (settings: Settings | undefined): unknown =>
+  settings?.[SIGN_IN_KEY];

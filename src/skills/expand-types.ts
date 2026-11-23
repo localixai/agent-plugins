@@ -57,6 +57,11 @@ export interface ExpandRequest {
   /** Bare mode: a command that reaches its timeout stops instead of moving to the background. */
   readonly bare?: boolean;
   /**
+   * The closest repository at or above the working directory looks bare (`looksLikeBareRepository`):
+   * the skill's grants do not cover a Bash command that contains `git` or that does not parse (§4.8.5).
+   */
+  readonly bareRepository?: boolean;
+  /**
    * The environment a command runs with, for the shell it runs in: a Bash or PowerShell subprocess's
    * (`subprocessEnvironment`). Default the host's environment as the port gives it.
    */

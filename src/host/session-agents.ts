@@ -16,12 +16,7 @@ import {
   type SessionAgentChoice,
 } from '../agents/catalog/index.ts';
 import type { PermissionRule } from '../rules/index.ts';
-import {
-  readSubagentStatusLine,
-  type PluginDefaults,
-  type SubagentLineRead,
-} from '../settings/general/index.ts';
-import { createHookPolicy, type CommandSessionFacts } from '../settings/hooks/index.ts';
+import type { PluginDefaults } from '../settings/general/index.ts';
 import { extraFoldersOf, scopeRequestOf } from './scope.ts';
 import { portsOf } from './session-environment.ts';
 import { createFirstRead } from './session-first-read.ts';
@@ -56,6 +51,8 @@ export interface AgentOverrides {
   readonly flag?: unknown;
   /** Whether the run is interactive (`SessionOptions.interactive`): it decides which built-ins exist. */
   readonly interactive?: boolean;
+  /** Whether the run reads web pages through the built-in `web-fetch` agent (`SessionOptions.webFetchAgent`). */
+  readonly webFetchAgent?: boolean;
 }
 
 export interface AgentPart {
@@ -84,17 +81,10 @@ export interface AgentPart {
     overrides?: AgentOverrides,
   ): SessionAgentChoice;
   /**
-   * The enabled plugins' default settings (plugins/components.md, "Default settings"): `agent` and
-   * `subagentStatusLine`, which plugin each came from, and the `overrides setting` debug lines.
+   * The enabled plugins' default settings (spec §12.6, deprecated): `agent`, the plugin it came
+   * from, the `overrides setting` debug lines and the startup deprecation warnings.
    */
   pluginDefaults(): SessionPluginDefaults;
-  /**
-   * The `subagentStatusLine` that runs: the settings' value, else the plugin default, under the gates
-   * of `statusLine` (`disableAllHooks`, trust, `allowManagedHooksOnly`; a plugin's value never runs
-   * narrowed). `folderTrusted` defaults to `SessionOptions.trusted`. Running the command, its input and
-   * the rows it rewrites are the host's.
-   */
-  subagentStatusLine(facts?: CommandSessionFacts): SubagentLineRead<DefaultsPlugin>;
   /** The plugin an agent of the `plugin` source belongs to. */
   pluginOf(agent: CatalogAgent): ActivePlugin | undefined;
 }
@@ -137,20 +127,26 @@ const NO_FLAG: ReturnType<typeof readFlagAgents> = { agents: [], issues: [] };
 const readFlag = (flag: unknown): ReturnType<typeof readFlagAgents> =>
   flag === undefined ? NO_FLAG : readFlagAgents(flag);
 
-/** The environment switches of "Built-in subagents". */
+/** The environment switches of "Built-in subagents", and whether `web-fetch` reads web pages (§5.12.4). */
 function builtinPolicyOf(
   state: HostState,
   options: SessionOptions,
-  interactive: boolean,
+  run: { readonly interactive: boolean; readonly webFetch: boolean },
 ): BuiltinPolicy {
   const { environment } = portsOf(state, options);
   return {
-    interactive,
+    ...run,
     // On/off variables: any on spelling (env-vars.md, "Variables"; spec J3.16).
     disableExplorePlan: isTruthyEnv(environment.get('CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS')),
     disableAll: isTruthyEnv(environment.get('CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS')),
   };
 }
+
+/** Which built-ins this run has: interactive or not, and whether `web-fetch` reads web pages. */
+const runOf = (options: SessionOptions, overrides: AgentOverrides | undefined) => ({
+  interactive: overrides?.interactive ?? options.interactive ?? true,
+  webFetch: overrides?.webFetchAgent ?? options.webFetchAgent ?? false,
+});
 
 function pluginAgents(state: HostState) {
   const owners = new Map<CatalogAgent, ActivePlugin>();
@@ -203,11 +199,10 @@ export function createAgentPart(
   };
 
   const catalog = (overrides?: AgentOverrides): AgentCatalog => {
-    const interactive = overrides?.interactive ?? options.interactive ?? true;
     const denied = overrides?.permissionRules ?? options.permissionRules;
     const resolved = resolveAgents({
       builtin: policyOf().loads('agents', 'builtIn')
-        ? builtinAgents(builtinPolicyOf(stateOf(), options, interactive))
+        ? builtinAgents(builtinPolicyOf(stateOf(), options, runOf(options, overrides)))
         : [],
       flag: flagOf(overrides).agents.map((record) => catalogAgentOf(record)),
       scanned: scanned.filter((entry) => policyOf().loads('agents', entry.origin)),
@@ -230,12 +225,6 @@ export function createAgentPart(
         setting: agentSettingOf(stateOf()),
       }),
     pluginDefaults: () => sessionPluginDefaults(stateOf()),
-    subagentStatusLine: (facts) => {
-      const state = stateOf();
-      const context = { ...state.parent, folderTrusted: options.trusted ?? true, ...facts };
-      const policy = createHookPolicy(state.view, context);
-      return readSubagentStatusLine(state.view, policy, sessionPluginDefaults(state));
-    },
     pluginOf: (agent) => pluginsOf().owners.get(agent),
   };
 }

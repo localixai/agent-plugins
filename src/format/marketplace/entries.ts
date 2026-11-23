@@ -2,6 +2,7 @@ import { blocksLoading, error, warning, type PluginIssue } from '../issues.ts';
 import { MANIFEST_SCHEMAS } from '../manifest-schema.ts';
 import { defined } from '../defined.ts';
 import { headerIssues, nameReports, versionIssues } from './entry-checks.ts';
+import { readEntryEngines, splitDisplayIssues } from './entry-display.ts';
 import { ENTRY_KEYS, isEntryKey, readEntryFields, type EntryFields } from './entry-schema.ts';
 import type { EntryReader, EntryReading, EntrySlot } from './marketplace.ts';
 import { mismatch, typeName, unknownField } from './marketplace-schema.ts';
@@ -85,21 +86,24 @@ function readExperimental(raw: unknown, path: string) {
 }
 
 /** The fields an entry reads with a reader of their own. */
-function readApart(raw: Readonly<Record<string, unknown>>, base: string) {
+function readApart(raw: Readonly<Record<string, unknown>>, base: string, slot: EntrySlot) {
   const metadata = objectOrWarning(raw.metadata, `${base}.metadata`, 'a free-form object');
   const experimental = readExperimental(raw.experimental, `${base}.experimental`);
   const relevance = readRelevance(raw.relevance, `${base}.relevance`);
+  const engines = readEntryEngines(raw.engines, base, slot.mode ?? 'load');
   return {
     metadata: metadata.value,
     experimental: experimental.value,
     relevance: relevance.relevance,
+    engines: engines.engines,
     issues: [...metadata.issues, ...experimental.issues, ...relevance.issues],
+    advisory: engines.issues,
   };
 }
 
 type Apart = ReturnType<typeof readApart>;
 
-function build({ fields, name, source }: Parts, apart: Apart): MarketplaceEntry {
+function build({ fields, name, source, invalid }: Parts, apart: Apart): MarketplaceEntry {
   return {
     name,
     source,
@@ -116,6 +120,8 @@ function build({ fields, name, source }: Parts, apart: Apart): MarketplaceEntry 
       metadata: apart.metadata,
       headers: fields.headers,
       headersHelper: fields.headersHelper,
+      engines: apart.engines,
+      invalid: invalid.length === 0 ? undefined : invalid,
     }),
     components: defined({
       commands: fields.commands,
@@ -149,6 +155,8 @@ interface Parts {
   readonly fields: EntryFields;
   readonly name: string;
   readonly source: PluginSource;
+  /** The display-field problems that make the entry invalid to install (J15.15). */
+  readonly invalid: readonly string[];
 }
 
 /** The reports that need the parsed fields and the parsed source together. */
@@ -178,9 +186,10 @@ export function readEntry(raw: unknown, slot: EntrySlot, parseSource: SourcePars
   if (!isRecord(raw)) {
     return dropped(mismatch(base, 'object', raw));
   }
-  const { fields, issues: fieldIssues } = readEntryFields(raw, base);
+  const { fields, issues: read } = readEntryFields(raw, base);
+  const { issues: fieldIssues, invalid } = splitDisplayIssues(read, base, slot.mode ?? 'load');
   const source = readSource(raw.source, slot, base, parseSource);
-  const apart = readApart(raw, base);
+  const apart = readApart(raw, base, slot);
   const named = readName(raw, base, slot);
   const issues = [
     ...named.shape,
@@ -188,6 +197,7 @@ export function readEntry(raw: unknown, slot: EntrySlot, parseSource: SourcePars
     ...fieldIssues,
     ...source.issues,
     ...apart.issues,
+    ...apart.advisory,
     ...unknownKeys(raw, base),
   ];
   // The reserved-name ruling does not stop the comparison with the entry's manifest (oracle 2.1.319).
@@ -196,7 +206,7 @@ export function readEntry(raw: unknown, slot: EntrySlot, parseSource: SourcePars
   if (fields === undefined || name === undefined || source.source === undefined) {
     return dropped(...issues);
   }
-  const parts = { fields, name, source: source.source };
+  const parts = { fields, name, source: source.source, invalid };
   issues.push(...crossIssues(parts, slot, base, sound));
   if (blocksLoading(issues)) return { entry: undefined, issues, schemaSound: sound };
   return { entry: build(parts, apart), issues };

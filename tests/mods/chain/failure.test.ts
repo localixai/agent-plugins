@@ -1,12 +1,9 @@
 /**
  * A hook that fails, and the `.catch` handler that answers in its place.
  * plugins/mods/events.md § Handle a hook that fails; plugins/mods/reference.md § The hook function
- * (`next.error`, `next.error.cause`, `next.called`). Where reference.md says a hook skipped for
- * re-entry reaches its handler with `kind` `re-entry` and a `cause`, the declarations of the same
- * release (claude-code/index.d.ts:5447, `HookFailure`: `kind` is `'throw' | 'timeout'`, with
- * `message?` and `budget`; :1209, `CatchHandler`: run "when it throws, misreturns or overruns") win
- * (AGENTS.md, E2a), and oracle 2.1.322 agrees (spec/judgments.md): the spec tests of those two ids
- * assert the declared behaviour.
+ * (`next.error`, `next.called`). reference.md of 2.1.330 gives `next.error.kind` as `throw` or
+ * `timeout` only, as the declarations do (`HookFailure`: `message?` and `budget`), and a hook skipped
+ * for re-entry reaches no handler (spec Judgment J10.7; oracle 2.1.322).
  */
 import { describe, expect, test } from 'bun:test';
 import type { HookFailure } from '../../../src/protocol/mods-events.ts';
@@ -205,7 +202,7 @@ describe('the .catch handler', () => {
 });
 
 describe('re-entry (reference.md § The hook function)', () => {
-  spec(['mods.hookArgument.next.error', 'mods.hookArgument.next.error.cause'], () => {
+  spec('mods.hookArgument.next.error', () => {
     test('a hook is skipped when the event came from a mods API call by its own mod, and its handler is not asked', async () => {
       const h = harness();
       const seen: HookFailure[] = [];

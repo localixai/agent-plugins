@@ -1,6 +1,6 @@
 import type { MOD_EVENT_GROUPS } from '../../protocol/mods-events.ts';
 import { z } from 'zod';
-import { answer, fields, flag, noFields, text, type EventSpec } from './spec.ts';
+import { answer, fields, flag, text, type EventSpec } from './spec.ts';
 import { isRecord } from '../../protocol/is-record.ts';
 
 /** The subagent events (reference.md, "Subagents"). */
@@ -17,8 +17,12 @@ function spawnedAs(original: unknown, passed: unknown): unknown {
 }
 
 export const AGENT_SPECS: { readonly [N in AgentEvent]: EventSpec } = {
-  // A hook answers `{ isOffered: false }` to withhold the subagent type.
-  'agent.offer': { input: noFields, result: answer({ isOffered: flag.optional() }) },
+  // A hook answers `{ isOffered: false }` to withhold the subagent type from the listing and refuse
+  // its dispatch; `e.agentId` is set on the offer to resume an agent of that type (2.1.330).
+  'agent.offer': {
+    input: fields({ agentId: text.optional() }),
+    result: answer({ isOffered: flag.optional() }),
+  },
   // `e.isTeammate` is `true` for a teammate, `e.resume` is `{ agentId }` for a resumed run. A hook
   // passes `{ ...e, model }` to choose the model of one that is starting, or answers `{ deny }`.
   'agent.spawn': {

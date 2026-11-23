@@ -196,7 +196,6 @@ const FIELDS: readonly Field[] = [
     name: 'error',
     good: [
       'rate_limit',
-      'overloaded',
       'authentication_failed',
       'oauth_org_not_allowed',
       'account_on_hold',
@@ -277,6 +276,17 @@ for (const field of FIELDS) {
     }
   });
 }
+
+spec('hooks.input.StopFailure.error', () => {
+  // 2.1.330: "An HTTP `529` overloaded response is reported as `server_error`; there is no
+  // `overloaded` value" (Agent Plugins Extended §7.5.23). The SDK type still has it, so a host
+  // passing it is not refused: the hook reads `server_error`.
+  test('an overloaded error reaches the hook as server_error', () => {
+    const { wire, issues } = build('StopFailure', { error: 'overloaded' });
+    expect(issues).toEqual([]);
+    expect(wire?.['error']).toBe('server_error');
+  });
+});
 
 describe('the sample input of each event in this file', () => {
   test('builds with no issue', () => {

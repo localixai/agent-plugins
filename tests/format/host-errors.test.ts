@@ -25,10 +25,6 @@ import {
   organizationSettingsUnavailable,
   pathCouldNotBeChecked,
   pathCouldNotBeCheckedInList,
-  REMOTE_MANAGED_SETTINGS_DID_NOT_LOAD,
-  REMOTE_MANAGED_SETTINGS_STILL_LOADING,
-  remoteManagedSettingsFailed,
-  remoteManagedSettingsLoaded,
   reservedSkillNameNotice,
   reservedSpellingIgnored,
   reservedSpellingRefusal,
@@ -208,7 +204,7 @@ spec(
   () => {
     test.each(['ELOOP', 'EIO', 'EACCES'])('names the path and the code %s', (code) => {
       expect(pathCouldNotBeChecked('skills', '/home/user/my-plugin/skills', code)).toBe(
-        `skills path could not be checked: /home/user/my-plugin/skills (${code})`,
+        `skills path couldn't be checked: /home/user/my-plugin/skills (${code})`,
       );
       expect(pathCouldNotBeCheckedInList('skills', '/home/user/my-plugin/skills', code)).toBe(
         `Path not found: /home/user/my-plugin/skills (skills, ${code})`,
@@ -263,33 +259,3 @@ spec(`${E}Skill or command name refused`, () => {
     );
   });
 });
-
-spec(
-  [
-    `${E}Remote managed settings failed to load`,
-    `${E}Remote managed settings failed to load.No cache`,
-    `${E}Remote managed settings failed to load.Remote managed settings did not load`,
-    `${E}Remote managed settings failed to load.Remote managed settings have now loaded`,
-  ],
-  () => {
-    test('the warning names the cause and the policy the session runs on', () => {
-      const cached = remoteManagedSettingsFailed('request timed out', 'cached');
-      expect(cached).toStartWith('Remote managed settings failed to load (request timed out)');
-      expect(cached).toEndWith('using cached policy');
-      expect(remoteManagedSettingsFailed('network error', 'none')).toEndWith(
-        'no remote policy applied',
-      );
-    });
-
-    test('the related state lines', () => {
-      expect(REMOTE_MANAGED_SETTINGS_STILL_LOADING).toBe(
-        'Remote managed settings are still loading',
-      );
-      expect(REMOTE_MANAGED_SETTINGS_DID_NOT_LOAD).toBe('Remote managed settings did not load');
-      expect(remoteManagedSettingsLoaded(true)).toStartWith(
-        'Remote managed settings have now loaded',
-      );
-      expect(remoteManagedSettingsLoaded(false)).toEndWith('no remote policy applied');
-    });
-  },
-);

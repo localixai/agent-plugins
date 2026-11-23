@@ -1,7 +1,8 @@
 /**
  * hooks.md § "Exit code 0" (how stdout is read, which events show it to Claude), § "Exit code 2"
- * (what blocks, the stderr as the reason, the docs' `no-rm.sh` example) and § "Other exit codes"
- * (the `Failed with non-blocking status code:` notice and its examples).
+ * (what blocks, the stderr as the reason, the docs' `no-rm.sh` example; 2.1.330: what JSON beside
+ * exit 2 does, Agent Plugins Extended §7.4.1.2) and § "Other exit codes" (the `Failed with
+ * non-blocking status code:` notice and its examples).
  */
 import { expect, test } from 'bun:test';
 import { entry } from '../../support/hooks-select.ts';
@@ -95,7 +96,7 @@ spec('hooks.behavior.Exit code 0', () => {
   });
 });
 
-spec('hooks.behavior.Exit code 2', () => {
+spec('hooks.behavior.Exit code output.Blocking error', () => {
   test('a PreToolUse hook blocks the tool call, a UserPromptSubmit hook rejects the prompt', () => {
     expect(pre(2, '', 'x').block?.to).toBe('claude');
     const prompt = verdictOf('UserPromptSubmit', exited(2, 'no prompts'));
@@ -110,23 +111,6 @@ spec('hooks.behavior.Exit code 2', () => {
     expect(verdict.block?.message).toBe(
       'PreToolUse:Bash hook error: [${CLAUDE_PROJECT_DIR}/.claude/hooks/no-rm.sh]: Blocked: rm commands are not allowed',
     );
-  });
-
-  test('exit 2 blocks even when the hook prints JSON that passes validation: an allow does not let the action through', () => {
-    const allow = JSON.stringify({
-      systemMessage: 'x',
-      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' },
-    });
-    const verdict = pre(2, allow, 'denied');
-    expect(verdict.status).toBe('blocked');
-    expect(verdict.block?.reason).toBe('denied');
-  });
-
-  test('JSON that fails schema validation: the hook still blocks, the stderr is the reason', () => {
-    const verdict = pre(2, INVALID, 'because');
-    expect(verdict.status).toBe('blocked');
-    expect(verdict.block?.reason).toBe('because');
-    expect(verdict.output).toBeUndefined();
   });
 
   test('"If your hook also printed JSON that makes a blocking decision, Claude Code uses that decision\'s reason instead" of the stderr', async () => {
@@ -147,12 +131,61 @@ spec('hooks.behavior.Exit code 2', () => {
     );
     expect((await fire('Stop')).block?.reason).toBe('a');
   });
+});
+
+spec('hooks.behavior.Exit code 2.Other JSON that passes schema validation', () => {
+  test('exit 2 blocks even when the hook prints JSON that passes validation: an allow does not let the action through', () => {
+    const allow = JSON.stringify({
+      systemMessage: 'x',
+      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' },
+    });
+    const verdict = pre(2, allow, 'denied');
+    expect(verdict.status).toBe('blocked');
+    expect(verdict.block?.reason).toBe('denied');
+  });
 
   test('on Elicitation and ElicitationResult the hookSpecificOutput of an exit-2 hook is ignored', () => {
     const json = JSON.stringify({
       hookSpecificOutput: { hookEventName: 'Elicitation', action: 'accept', content: {} },
     });
     expect(verdictOf('Elicitation', exited(2, 'no', json)).output).toBeUndefined();
+  });
+});
+
+spec('hooks.behavior.Exit code 2.JSON that fails schema validation', () => {
+  test('the hook still blocks, the stderr is the reason', () => {
+    const verdict = pre(2, INVALID, 'because');
+    expect(verdict.status).toBe('blocked');
+    expect(verdict.block?.reason).toBe('because');
+    expect(verdict.output).toBeUndefined();
+  });
+});
+
+spec('hooks.behavior.Exit code 2.JSON that sets continue: false', () => {
+  const stops = JSON.stringify({ continue: false, stopReason: 'done for today' });
+
+  test('on Stop and SubagentStop the field wins over exit 2: the turn ends, nobody is sent back to work', async () => {
+    for (const event of ['Stop', 'SubagentStop'] as const) {
+      const { fire } = engineSession(
+        [entry(event, { handler: { type: 'command', command: './h.sh' } })],
+        [{ exitCode: 2, stderr: 'keep going', stdout: stops }],
+      );
+      const outcome = await fire(event);
+      expect(outcome.block).toBeUndefined();
+      expect(outcome.proceed).toBe(true);
+      expect(outcome.continue).toBe(false);
+      expect(outcome.stopReason).toBe('done for today');
+    }
+  });
+
+  test('on PreToolUse the tool call stays blocked with the field', async () => {
+    const { fire } = engineSession(
+      [entry('PreToolUse', { handler: { type: 'command', command: './h.sh' } })],
+      [{ exitCode: 2, stderr: 'no', stdout: stops }],
+    );
+    const outcome = await fire('PreToolUse');
+    expect(outcome.proceed).toBe(false);
+    expect(outcome.block?.reason).toBe('no');
   });
 });
 
@@ -182,6 +215,12 @@ spec('hooks.behavior.Other exit codes', () => {
   test('exit code 1 without valid JSON does not block, which is why a policy hook uses exit 2', () => {
     expect(pre(1, '', 'policy violation').block).toBeUndefined();
     expect(pre(2, '', 'policy violation').block).toBeDefined();
+  });
+
+  test('on Notification a failing command hook shows no notice (2.1.330, §7.4.1.3 item 2)', () => {
+    const verdict = verdictOf('Notification', exited(1, 'something broke'));
+    expect(verdict.status).toBe('non-blocking-error');
+    expect(verdict.notice).toBeUndefined();
   });
 
   test('only the first line of stderr is in the notice', () => {

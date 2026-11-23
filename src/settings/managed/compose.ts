@@ -11,7 +11,13 @@ import {
 } from './admin-source.ts';
 import { combineSources } from './combine.ts';
 import { notInForce, withCrossSourceKeys, type InForceNote } from './cross-source.ts';
-import { loginKeysOf, managedLayer, withoutLoginKeys } from './login-keys.ts';
+import {
+  loginKeysOf,
+  managedLayer,
+  signInRequirementOf,
+  withoutLoginKeys,
+  withSignInRequirement,
+} from './login-keys.ts';
 import { readPolicyHelper, type PolicyHelper } from './policy-helper.ts';
 
 /**
@@ -125,7 +131,8 @@ function policyOf(delivering: readonly AdminDocument[], behavior: ManagedBehavio
     used.map((document) => document.settings),
     crossed,
   );
-  return withoutControlKeys({ ...withoutLoginKeys(paired), ...login });
+  const policy = withoutControlKeys({ ...withoutLoginKeys(paired), ...login });
+  return withSignInRequirement(policy, signInRequirementOf(machine?.settings));
 }
 
 const labelOf = (document: AdminDocument): string =>
@@ -217,7 +224,7 @@ function settingsOf(selection: Selection, helperIssues: readonly PluginIssue[]):
   const chosen =
     selection.delivering.length > 0
       ? policyOf(selection.delivering, selection.behavior)
-      : withoutControlKeys(selection.used[0]?.settings ?? {});
+      : withSignInRequirement(withoutControlKeys(selection.used[0]?.settings ?? {}), undefined);
   return helperIssues.length === 0
     ? chosen
     : Object.fromEntries(Object.entries(chosen).filter(([name]) => name !== 'policyHelper'));
@@ -260,36 +267,5 @@ export function composeManaged(
       ...unreadable.issues,
     ],
     fatal: ranked.some((document) => document.broken && isAdmin(document)) || unreadable.exits,
-  };
-}
-
-/**
- * The managed tier after a policy helper emitted `managedSettings` (settings-reference.md, "Write
- * the helper output"): "that object becomes the only managed settings source for the run", the
- * cross-source keys read from it alone, and parent settings are never merged.
- */
-export function withHelperSettings(
-  composition: ManagedComposition,
-  helperOutput: Settings,
-): ManagedComposition {
-  // `forceRemoteSettingsRefresh` "has its own startup rule" that runs before the helper and reads
-  // the admin sources, so the helper's copy takes no part (`composition.forceRemoteRefresh`).
-  const emitted: Settings = Object.fromEntries(
-    Object.entries(helperOutput).filter(([name]) => name !== 'forceRemoteSettingsRefresh'),
-  );
-  const settings = withCrossSourceKeys(
-    { admins: [emitted], onMachine: [true], merging: false },
-    emitted,
-  );
-  return {
-    ...composition,
-    layer: { scope: 'managed', settings },
-    used: [],
-    skipped: [],
-    settingSources: 'Enterprise managed settings (helper)',
-    skippedSources: undefined,
-    hasManagedSettings: true,
-    parentMerge: false,
-    admins: [emitted],
   };
 }

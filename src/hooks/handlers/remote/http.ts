@@ -3,7 +3,7 @@ import type { HandlerEntry, HandlerResult, RunContext } from '../context.ts';
 import { handlerTimeoutMs } from '../timeouts.ts';
 import { failureRun, remotePath, withoutPort } from './failure-run.ts';
 import { interpolateHeaders } from './http-env.ts';
-import { blockedUrlIssue, permittedEnvVars, urlAllowed } from './http-policy.ts';
+import { blockedUrlIssue, limitsFor, permittedEnvVars, urlAllowed } from './http-policy.ts';
 
 /**
  * An `http` hook (hooks.md, "HTTP hook fields"): "Claude Code sends the hook's JSON input as the
@@ -20,7 +20,7 @@ export async function runHttp(
   const client: HttpClient | undefined = context.ports.http;
   if (client === undefined) return withoutPort(entry, 'http', 'HttpClient');
   const { url, headers, allowedEnvVars } = entry.handler;
-  const { httpPolicy } = context;
+  const httpPolicy = limitsFor(context.httpPolicy, entry.source.managed === true);
   if (!urlAllowed(url, httpPolicy?.allowedUrls)) {
     const issue = blockedUrlIssue(remotePath(entry, 'url'), url);
     return { run: { kind: 'skipped', reason: issue.message }, issues: [issue] };

@@ -71,8 +71,8 @@ export function closePanel(state: {
 
 // ---- uninstalling a plugin the project enables ----
 
+/** One item of the question's list, chosen with the arrow keys and Enter (Esc cancels); no letter answers it (2.1.326). */
 export interface UninstallOption {
-  readonly key: 'y' | 'u';
   readonly label: string;
   /** Writes the plugin's value into this settings file. */
   readonly writes?: { readonly file: string; readonly value: false };
@@ -85,9 +85,9 @@ export interface UninstallOption {
 const fileOf = (scope: ChosenScope): string => scopeReach(scope).file;
 
 /**
- * For a plugin this repository's `.claude/settings.json` enables, Uninstall asks: `y`, **Disable
+ * For a plugin this repository's `.claude/settings.json` enables, Uninstall asks (spec §16.4.4): **Disable
  * for me** writes `false` for it in your `.claude/settings.local.json` and leaves it installed for
- * the project; `u`, **Uninstall for everyone** removes it from the shared `.claude/settings.json`.
+ * the project; **Uninstall for everyone** removes it from the shared `.claude/settings.json`.
  * Any other plugin is uninstalled without the question (`undefined`).
  */
 export function uninstallChoice(facts: {
@@ -96,12 +96,11 @@ export function uninstallChoice(facts: {
   if (!facts.enabledByProject) return undefined;
   return [
     {
-      key: 'y',
       label: 'Disable for me',
       writes: { file: fileOf('local'), value: false },
       installed: true,
     },
-    { key: 'u', label: 'Uninstall for everyone', removesFrom: fileOf('project'), installed: false },
+    { label: 'Uninstall for everyone', removesFrom: fileOf('project'), installed: false },
   ];
 }
 

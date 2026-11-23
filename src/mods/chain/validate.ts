@@ -2,6 +2,7 @@ import { error, type PluginIssue } from '../../format/issues.ts';
 import { TELEMETRY_FILTER, type ModMatcher, type ModTier } from '../../protocol/mods-events.ts';
 import type { MatcherEngine } from '../ports.ts';
 import type { RegisteredHook } from '../types.ts';
+import { fieldsTested } from './default-matcher.ts';
 import { acceptsField, compileMatcher, isUnfiltered, type CompiledMatcher } from './matcher.ts';
 import { isKnownEvent, isStreamEvent, isWildcard, selectsTelemetry } from './wildcard.ts';
 
@@ -76,7 +77,7 @@ export function checkHooks(
   for (const hook of hooks) {
     const found = formProblem(hook) ?? telemetryProblem(hook, tier);
     if (found) issues.push(found);
-    const compiled = compileMatcher(hook.matcher, engine);
+    const compiled = compileMatcher(fieldsTested(hook.matcher), engine);
     if ('test' in compiled) matchers.push(compiled);
     else issues.push(error(at(hook.event), `on("${hook.event}"): ${compiled.problem}`));
   }

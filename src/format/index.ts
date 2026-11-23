@@ -64,7 +64,7 @@ export {
   type AgentMemoryScope,
 } from './agent-fields.ts';
 export {
-  AUTO_COMPACT_RANGE,
+  AUTO_COMPACT_MIN,
   type AgentCoercer,
   type AgentFieldRead,
   type CacheTtl,
@@ -202,5 +202,17 @@ export {
   type PluginSettings,
   type PluginSettingsRead,
 } from './plugin-settings.ts';
+export { PLUGIN_NOTE_TYPES, type PluginNote, type PluginNoteType } from './plugin-notes.ts';
+export {
+  engineRefuses,
+  engineVerdict,
+  newestFittingVersion,
+  readEngines,
+  type EngineCandidate,
+  type EngineFacts,
+  type EnginesRead,
+  type EngineVerdict,
+} from './engines.ts';
+export { declaredHosts } from './network.ts';
 export * from './mcp-contract.ts';
 export type { LinkRoots } from './path-escape.ts';

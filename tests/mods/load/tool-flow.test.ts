@@ -12,7 +12,6 @@ spec(
     'mods.events.Approve or refuse a tool call before the user is asked.When tool.check fires',
     'mods.events.Where settings hooks run in the order',
     'policy.mods.Know which controls still apply.Managed hooks run first',
-    'policy.mods.Know which controls still apply.Settings hooks keep working',
   ],
   () => {
     test('managed and ordinary hooks surround tool.call; tool.check finishes before review or prompt', async () => {
@@ -206,4 +205,26 @@ test('a dropped prompt restores its original text and supplies the user-facing n
     notice: 'Prompt dropped by a hook: not now',
   });
   expect(calls).toBe(0);
+});
+
+spec("policy.mods.Know what happens by default.When a user's mod approves Claude's call", () => {
+  test("a call a PreToolUse hook blocked stays blocked: no user mod's tool.check can approve it, and it never runs", async () => {
+    const trace: string[] = [];
+    const { flow } = await openToolFlow(trace, [
+      fn('tool.check', () => {
+        trace.push('tool.check');
+        return { decision: 'allow' };
+      }),
+    ]);
+    const result = await runModToolCall({
+      ...flow,
+      preToolUse: (call) => {
+        trace.push('PreToolUse');
+        return Promise.resolve({ call, deny: 'blocked by a hook' });
+      },
+    });
+    expect(result.result).toEqual({ deny: 'blocked by a hook' });
+    expect(trace).not.toContain('tool.check');
+    expect(trace).not.toContain('execute');
+  });
 });

@@ -44,6 +44,8 @@ export interface McpSessionFacts {
   readonly strictMcpConfig?: boolean;
   /** Set only for a user who could run Claude in Chrome: they ran `claude --chrome`, or turned it on by default. */
   readonly chrome?: { readonly flag: boolean; readonly byDefault: boolean };
+  /** A `claude -p`, Agent SDK or VS Code session: connectors rank above plugin servers (§8.11.1). */
+  readonly connectorsAbovePlugins?: boolean;
 }
 
 /** A server some scope other than the organization's defines; the plan builds the managed ones itself. */
@@ -222,7 +224,9 @@ function candidatesOf(input: McpLoadInput, exclusive: boolean): McpCandidate[] {
  * always, `allowedMcpServers` for what is not the organization's own) filter the result. Without it
  * the scopes rank as usual and the flags keep their meaning: a `--mcp-config` server replaces a
  * provided one of its name and meets the allowlist, `--strict-mcp-config` leaves everything else out.
- * The built-in in-process servers of the app that started the session never pass through here.
+ * The built-in in-process servers of the app that started the session never pass through here, nor
+ * does the server the client creates for the tools a mod adds, which loads under the file too
+ * (§8.11.5 item 2): only stopping user-installed mods keeps it out.
  */
 export function mcpLoadPlan(input: McpLoadInput): McpLoadPlan {
   const exclusive = input.managedFile !== undefined;
@@ -236,6 +240,7 @@ export function mcpLoadPlan(input: McpLoadInput): McpLoadPlan {
     candidatesOf(input, exclusive).filter(
       (each) => each.scope !== 'managed' || !flagNames.has(each.name),
     ),
+    { connectorsAbovePlugins: input.session.connectorsAbovePlugins === true },
   );
   const planned: PlannedServer[] = [
     ...ranking.loaded.map((each) => ({

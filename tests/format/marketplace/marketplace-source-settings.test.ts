@@ -73,6 +73,15 @@ spec('marketplace.sourceField.plugins', () => {
     });
   });
 
+  test("an item also takes engines, read as an entry's (SDK 0.3.330 Settings)", () => {
+    const source = sourceOf(inline({ ...formatter, engines: { 'claude-code': '>=2.1.400' } }));
+    expect(
+      warnings(parse(inline({ ...formatter, engines: { 'claude-code': '>=2.1.400' } })).issues),
+    ).toEqual([]);
+    if (source.kind !== 'settings') throw new Error('not settings');
+    expect(source.plugins[0]?.engines).toEqual({ range: '>=2.1.400' });
+  });
+
   test('an item takes name, source, description, version, strict, headers and headersHelper', () => {
     const entry = {
       name: 'internal',

@@ -51,7 +51,6 @@ const NOTIFICATION_TYPES = [
  */
 const STOP_FAILURE_ERRORS = [
   'rate_limit',
-  'overloaded',
   'authentication_failed',
   'oauth_org_not_allowed',
   'account_on_hold',

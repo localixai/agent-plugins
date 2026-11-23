@@ -43,11 +43,21 @@ export interface ModelCheckInput {
   readonly chosen: string;
   /** `CLAUDE_CODE_SUBAGENT_MODEL`, tried first when the chosen value is blocked. */
   readonly envModel?: string | undefined;
-  /** The inherited model: the main conversation's. */
+  /** The inherited model: the main conversation's, or the spawning subagent's for a nested subagent. */
   readonly inherited: string;
   /** Absent: no allowlist, nothing is blocked. */
   readonly allowlist?: ModelAllowlist | undefined;
+  /** A nested subagent: a replacement is not reported, as only a top-level subagent warns (§5.8.4). */
+  readonly nested?: boolean | undefined;
+  /**
+   * The agent type. The built-in `web-fetch` is not checked (§5.8.4): when the allowlist leaves its
+   * model out it runs on the starting conversation's model (`inherited`), without a warning (§5.12.4).
+   */
+  readonly agent?: string | undefined;
 }
+
+/** The built-ins §5.8.4 leaves out of the check. */
+const UNCHECKED_AGENTS: ReadonlySet<string> = new Set(['web-fetch']);
 
 /** A blocked family alias runs on the newest version of its family the allowlist permits. */
 function familyVersion(value: string, allowlist: ModelAllowlist): string | undefined {
@@ -71,16 +81,19 @@ const usable = (envModel: string | undefined): string | undefined => {
  * `opus` becomes the newest version of that family the allowlist permits; "for any other blocked
  * value ... or when the allowlist permits no version of the family" the subagent runs on the
  * inherited model, "If you set `CLAUDE_CODE_SUBAGENT_MODEL`, Claude Code tries that model first,
- * under these same rules". The inherited model is never checked: it is what the session already runs.
+ * under these same rules" (§5.8.4). The inherited model is never checked: it is what the session
+ * already runs. `replaced` is the warning of a top-level subagent; a nested one gives none.
  */
 export function checkAgainstAllowlist(input: ModelCheckInput): CheckedModel {
   const { allowlist, chosen, inherited } = input;
   if (allowlist === undefined) return { model: chosen };
+  if (input.agent !== undefined && UNCHECKED_AGENTS.has(input.agent)) {
+    return { model: allowlist.permits(chosen) ? chosen : inherited };
+  }
   const direct = permitted(chosen, allowlist);
   const viaEnv = usable(input.envModel);
   const fallback = viaEnv === undefined ? undefined : permitted(viaEnv, allowlist);
   const running = direct ?? fallback ?? inherited;
-  return running === chosen
-    ? { model: chosen }
-    : { model: running, replaced: { requested: chosen, running } };
+  if (running === chosen || input.nested === true) return { model: running };
+  return { model: running, replaced: { requested: chosen, running } };
 }

@@ -3,6 +3,7 @@ import { imageBytes, isImage } from './image.ts';
 import { isElementNode, walkTree, type ElementNode, type TreeChild } from './node.ts';
 import { isRaster, rasterCells } from './raster.ts';
 import { childrenFrom } from './children.ts';
+import { propSizeProblem } from './prop-size.ts';
 
 /** What one tree holds, measured against the Limits table. */
 export interface TreeSize {
@@ -46,9 +47,10 @@ export function sizeProblem(tree: unknown): string | undefined {
   if (size.rasterCells > MOD_LIMITS.rasterCells) {
     return `Raster cells over ${MOD_LIMITS.rasterCells}; nothing was drawn`;
   }
-  return size.imageBytes > MOD_LIMITS.imageBytes
-    ? `Image bytes over ${MOD_LIMITS.imageBytes}; nothing was drawn`
-    : undefined;
+  if (size.imageBytes > MOD_LIMITS.imageBytes) {
+    return `Image bytes over ${MOD_LIMITS.imageBytes}; nothing was drawn`;
+  }
+  return propSizeProblem(tree);
 }
 
 interface Budget {

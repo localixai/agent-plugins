@@ -20,6 +20,8 @@ export interface EventSpec {
   readonly coreInput?: (original: unknown, passed: unknown) => unknown;
   /** A hook's result as it counts, for example with an over-long reason cut. */
   readonly settle?: (result: unknown) => unknown;
+  /** What a later `next(e)` answers when Claude Code's own behaviour runs once per event. */
+  readonly coreAgain?: (first: unknown) => unknown;
 }
 
 export const text = z.string();

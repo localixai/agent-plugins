@@ -42,6 +42,7 @@ const spawnEvent = spawnRequest.extend({ cwd: z.string() });
 const NAMESPACE = 'process';
 const RUN = `${NAMESPACE}.run` as const;
 const SPAWN = `${NAMESPACE}.spawn` as const;
+const HOOK_ENV = `${NAMESPACE}.hookEnv` as const;
 const LABEL_RUN = `$.${RUN}`;
 const LABEL_SPAWN = `$.${SPAWN}`;
 
@@ -153,4 +154,7 @@ async function* spawn(deps: Deps, args: readonly unknown[]): AsyncGenerator<unkn
 export const processApi = (deps: Deps): ModsNamespaceApi<'process'> => ({
   run: async (...args) => call(deps, RUN, await runInput(deps, args), (e) => run(deps, e)),
   spawn: (...args) => spawn(deps, args),
+  // The variables a command hook of this plugin gets (claude-code/index.d.ts:4361); `run` and `spawn` set none of them.
+  hookEnv: async () =>
+    call(deps, HOOK_ENV, {}, () => deps.ports.hookEnv.of(deps.plugin, deps.signal)),
 });

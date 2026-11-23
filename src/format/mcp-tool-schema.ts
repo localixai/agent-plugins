@@ -19,14 +19,30 @@ export type McpListedTool = Pick<Tool, 'name' | 'description'> & {
 };
 
 export interface McpToolPolicy {
-  /** The remote configuration that enables the rewrite of root-level combinators was received. */
+  /** The root-level combinators are rewritten: not while the flags are pending (`mcpToolPolicy`). */
   readonly rewriteRootCombinators: boolean;
   /**
-   * The checks of "Tools with invalid input schemas" exclude the tool: false "when feature flag
-   * fetching is off or the flags have never arrived" (the tool is sent and the log records it).
+   * The checks of "Tools with invalid input schemas" exclude the tool: false only while feature-flag
+   * fetching is on and the flags have not arrived yet (the tool is sent and the log records it).
    */
   readonly excludeInvalid: boolean;
 }
+
+/** Feature-flag fetching: turned off, on and still waiting for the flags, or on with them arrived. */
+export type McpFlagState = 'off' | 'pending' | 'arrived';
+
+const POLICY_BY_FLAGS: { readonly [S in McpFlagState]: McpToolPolicy } = {
+  off: { rewriteRootCombinators: true, excludeInvalid: true },
+  pending: { rewriteRootCombinators: false, excludeInvalid: false },
+  arrived: { rewriteRootCombinators: true, excludeInvalid: true },
+};
+
+/**
+ * The policy of a session by its feature flags (§8.8, 2.1.328 and later): with fetching off the
+ * rewrite runs and the checks apply, as once the flags arrived; only while they are pending (the
+ * first session after an install or upgrade) is a combinator tool skipped and an invalid one sent.
+ */
+export const mcpToolPolicy = (flags: McpFlagState): McpToolPolicy => POLICY_BY_FLAGS[flags];
 
 export type McpToolPreparation =
   | { readonly sent: true; readonly tool: McpToolDeclaration; readonly log: readonly string[] }

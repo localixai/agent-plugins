@@ -82,6 +82,8 @@ const DECISION_BLOCKS = eventSet(
   'ConfigChange',
   'PreCompact',
   'TaskCreated',
+  'TaskCompleted',
+  'TeammateIdle',
 );
 
 /** "Returning `decision: \"block\"` or `continue: false` stops the agentic loop": the same block. */

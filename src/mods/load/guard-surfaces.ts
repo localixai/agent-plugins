@@ -13,6 +13,8 @@ export const GUARDED_EVENTS: Readonly<Record<string, boolean | undefined>> = Obj
     'attribution.text',
     'session.compact',
     'settings.read',
+    // A record bound for an OpenTelemetry collector, passed over from Claude Code 2.1.328 (§14.9.4).
+    'telemetry.log',
   ].map((name): readonly [string, boolean] => [name, true]),
 );
 

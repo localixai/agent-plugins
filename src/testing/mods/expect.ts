@@ -1,124 +1,162 @@
+import {
+  asymmetric,
+  equal,
+  isObjectOrArray,
+  matchesObject,
+  type Asymmetric,
+} from './expect-equal.ts';
+import { CHECKS, errorMatches, show, type Check, type CheckName } from './expect-matchers.ts';
+
 /**
- * `expect` of the test kit (plugins/mods/test.md, "Look up what a stub returns"): "the assertions
- * `toBe`, `toEqual`, `toMatch`, `toMatchObject`, `toContain`, `toBeDefined`, `toBeUndefined`, and
- * `toThrow`, and `.not` before any of them". A failed assertion throws an `ExpectationError`.
+ * `expect` of the test kit (`Expecting`, `Expectation`, `Matchers`, `Matching`,
+ * claude-code/index.d.ts:21301–21530 of 2.1.330; Agent Plugins Extended §10.12): each check after the
+ * value checked, `.not` before a check for the opposite, `.resolves` and `.rejects` for what a
+ * promise settles with, and the asymmetric matchers inside an expected value. A failed check throws
+ * an `ExpectationError`, the test's own message leading.
  */
 
 export class ExpectationError extends Error {
   override readonly name = 'ExpectationError';
 }
 
-/** Any object, arrays included (unlike `isRecord`): both compare by their keys here. */
-const isObjectOrArray = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === 'object' && value !== null;
+type Checks = { readonly [N in CheckName]: (...args: readonly unknown[]) => void };
+type AsyncChecks = { readonly [N in CheckName]: (...args: readonly unknown[]) => Promise<void> };
+type Negatable<T> = T & { readonly not: T };
 
-/** Whether two values hold the same data: records by their own keys, lists by position, everything else by `Object.is`. */
-function sameValue(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true;
-  if (!isObjectOrArray(a) || !isObjectOrArray(b)) return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  return [...keys].every((key) => sameValue(a[key], b[key]));
-}
-
-/** Whether `actual` holds every field of `expected`, nested records compared the same way. */
-function matchesObject(actual: unknown, expected: unknown): boolean {
-  if (!isObjectOrArray(expected) || Array.isArray(expected)) return sameValue(actual, expected);
-  if (!isObjectOrArray(actual)) return false;
-  return Object.entries(expected).every(([key, value]) => matchesObject(actual[key], value));
-}
-
-const show = (value: unknown): string => {
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'function') return '[function]';
-  try {
-    return JSON.stringify(value) ?? typeof value;
-  } catch {
-    return `[${typeof value}]`;
-  }
+export type Expectation = Negatable<Checks> & {
+  readonly resolves: Negatable<AsyncChecks>;
+  readonly rejects: Negatable<AsyncChecks>;
 };
 
-/** A value as the text a match compares with: a string as it is, anything else as `show` writes it. */
-const textOf = (value: unknown): string => (typeof value === 'string' ? value : show(value));
-
-interface Matcher {
-  /** Whether the assertion holds for `actual`. */
-  readonly holds: (actual: unknown, expected: unknown) => boolean;
-  readonly says: (actual: unknown, expected: unknown) => string;
+/** The asymmetric matchers (`Matching`). */
+export interface Matching {
+  any(expected: abstract new (...args: never[]) => unknown): Asymmetric;
+  anything(): Asymmetric;
+  stringContaining(text: string): Asymmetric;
+  stringMatching(pattern: string | RegExp): Asymmetric;
+  objectContaining(shape: object): Asymmetric;
+  arrayContaining(items: readonly unknown[]): Asymmetric;
 }
 
-const MATCHERS = {
-  toBe: {
-    holds: (actual, expected) => Object.is(actual, expected),
-    says: (actual, expected) => `be ${show(expected)}, got ${show(actual)}`,
-  },
-  toEqual: {
-    holds: sameValue,
-    says: (actual, expected) => `equal ${show(expected)}, got ${show(actual)}`,
-  },
-  toMatch: {
-    holds: (actual, expected) =>
-      typeof actual === 'string' &&
-      (expected instanceof RegExp ? expected.test(actual) : actual.includes(textOf(expected))),
-    says: (actual, expected) => `match ${show(textOf(expected))}, got ${show(actual)}`,
-  },
-  toMatchObject: {
-    holds: matchesObject,
-    says: (actual, expected) => `match the object ${show(expected)}, got ${show(actual)}`,
-  },
-  toContain: {
-    holds: (actual, expected) =>
-      typeof actual === 'string'
-        ? actual.includes(textOf(expected))
-        : Array.isArray(actual) && actual.some((item) => sameValue(item, expected)),
-    says: (actual, expected) => `contain ${show(expected)}, got ${show(actual)}`,
-  },
-  toBeDefined: {
-    holds: (actual) => actual !== undefined,
-    says: () => 'be defined',
-  },
-  toBeUndefined: {
-    holds: (actual) => actual === undefined,
-    says: (actual) => `be undefined, got ${show(actual)}`,
-  },
-  toThrow: {
-    holds: (actual, expected) => thrown(actual, expected),
-    says: (_actual, expected) =>
-      expected === undefined ? 'throw' : `throw an error matching ${show(textOf(expected))}`,
-  },
-} as const satisfies Readonly<Record<string, Matcher>>;
+export type Expect = ((actual: unknown, message?: string) => Expectation) & Matching;
 
-function thrown(actual: unknown, expected: unknown): boolean {
-  if (typeof actual !== 'function') return false;
-  try {
-    Reflect.apply(actual, undefined, []);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (expected === undefined) return true;
-    return expected instanceof RegExp ? expected.test(message) : message.includes(textOf(expected));
-  }
-  return false;
+/** Where the checked value came from, as a failure words it. */
+interface Subject {
+  readonly lead: string;
+  /** Under `.rejects`: `toThrow` describes the rejection itself. */
+  readonly isRejection: boolean;
 }
 
-type Assertions = { readonly [N in keyof typeof MATCHERS]: (expected?: unknown) => void };
-export type Expect = (actual: unknown) => Assertions & { readonly not: Assertions };
+const holdsFor = (name: CheckName, check: Check, subject: Subject) =>
+  subject.isRejection && name === 'toThrow'
+    ? (actual: unknown, args: readonly unknown[]) => errorMatches(actual, args[0])
+    : check.holds;
 
-function assertions(actual: unknown, negated: boolean): Assertions {
-  const made = Object.entries(MATCHERS).map(([name, matcher]) => {
-    const check = (expected?: unknown): void => {
-      if (matcher.holds(actual, expected) === negated) {
+function checkOf(name: CheckName, subject: Subject, negated: boolean) {
+  const check: Check = CHECKS[name];
+  const holds = holdsFor(name, check, subject);
+  return (actual: unknown, args: readonly unknown[]): void => {
+    if (holds(actual, args) !== negated) return;
+    const not = negated ? 'not ' : '';
+    throw new ExpectationError(
+      `${subject.lead}expected ${show(actual)} ${not}to ${check.says(args)}`,
+    );
+  };
+}
+
+function checks(actual: unknown, subject: Subject, negated: boolean): Checks {
+  const names = Object.keys(CHECKS).filter((name): name is CheckName => name in CHECKS);
+  const entries = names.map((name) => {
+    const run = checkOf(name, subject, negated);
+    return [name, (...args: readonly unknown[]) => run(actual, args)] as const;
+  });
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- one entry for each check of the table, which is what `Checks` is
+  return Object.fromEntries(entries) as unknown as Checks;
+}
+
+type Settled = { readonly value: unknown } | { readonly reason: unknown };
+
+function asyncChecks(
+  promise: unknown,
+  lead: string,
+  rejects: boolean,
+  negated: boolean,
+): AsyncChecks {
+  const settled: Promise<Settled> = Promise.resolve(promise).then(
+    (value) => ({ value }),
+    (reason: unknown) => ({ reason }),
+  );
+  const subject: Subject = { lead, isRejection: rejects };
+  const names = Object.keys(CHECKS).filter((name): name is CheckName => name in CHECKS);
+  const entries = names.map((name) => {
+    const run = checkOf(name, subject, negated);
+    const check = async (...args: readonly unknown[]): Promise<void> => {
+      const outcome = await settled;
+      if (rejects && 'value' in outcome) {
         throw new ExpectationError(
-          `expected ${show(actual)} ${negated ? 'not ' : ''}to ${matcher.says(actual, expected)}`,
+          `${lead}expected the promise to reject, it resolved with ${show(outcome.value)}`,
         );
       }
+      if (!rejects && 'reason' in outcome) {
+        throw new ExpectationError(
+          `${lead}expected the promise to resolve, it rejected with ${show(outcome.reason)}`,
+        );
+      }
+      run('value' in outcome ? outcome.value : outcome.reason, args);
     };
     return [name, check] as const;
   });
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- one entry for each matcher of the table, which is what `Assertions` is
-  return Object.fromEntries(made) as unknown as Assertions;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- one entry for each check of the table, which is what `AsyncChecks` is
+  return Object.fromEntries(entries) as unknown as AsyncChecks;
 }
 
-export const expect: Expect = (actual) => ({
-  ...assertions(actual, false),
-  not: assertions(actual, true),
+const negatable = <T>(make: (negated: boolean) => T): Negatable<T> => ({
+  ...make(false),
+  not: make(true),
 });
+
+/** A primitive matches `expect.any` by its wrapper: `expect.any(Number)` matches `1`. */
+const isAny = (actual: unknown, expected: abstract new (...args: never[]) => unknown): boolean =>
+  actual !== null &&
+  actual !== undefined &&
+  (actual instanceof expected || Object(actual) instanceof expected);
+
+const MATCHING: Matching = {
+  any: (expected) =>
+    asymmetric(`expect.any(${expected.name})`, (actual) => isAny(actual, expected)),
+  anything: () =>
+    asymmetric('expect.anything()', (actual) => actual !== null && actual !== undefined),
+  stringContaining: (text) =>
+    asymmetric(
+      `expect.stringContaining(${show(text)})`,
+      (actual) => typeof actual === 'string' && actual.includes(text),
+    ),
+  stringMatching: (pattern) => {
+    const regexp = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+    return asymmetric(
+      `expect.stringMatching(${String(regexp)})`,
+      (actual) => typeof actual === 'string' && regexp.test(actual),
+    );
+  },
+  objectContaining: (shape) =>
+    asymmetric(
+      `expect.objectContaining(${show(shape)})`,
+      (actual) => isObjectOrArray(actual) && matchesObject(actual, shape),
+    ),
+  arrayContaining: (items) =>
+    asymmetric(
+      `expect.arrayContaining(${show(items)})`,
+      (actual) =>
+        Array.isArray(actual) &&
+        items.every((item) => actual.some((element) => equal(element, item))),
+    ),
+};
+
+export const expect: Expect = Object.assign((actual: unknown, message?: string): Expectation => {
+  const lead = message === undefined ? '' : `${message}: `;
+  return {
+    ...negatable((negated) => checks(actual, { lead, isRejection: false }, negated)),
+    resolves: negatable((negated) => asyncChecks(actual, lead, false, negated)),
+    rejects: negatable((negated) => asyncChecks(actual, lead, true, negated)),
+  };
+}, MATCHING);

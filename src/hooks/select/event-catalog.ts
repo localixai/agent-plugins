@@ -30,7 +30,10 @@ const ALL: readonly HookHandlerType[] = HOOK_HANDLER_TYPES;
 const NO_AGENT: readonly HookHandlerType[] = ['command', 'http', 'mcp_tool', 'prompt'];
 /** The events that "support command, http, and mcp_tool hooks but not prompt or agent". */
 const NO_MODEL: readonly HookHandlerType[] = ['command', 'http', 'mcp_tool'];
-/** `SessionStart` and `Setup`: command and mcp_tool only. */
+/**
+ * `SessionStart` and `Setup`: command and mcp_tool only. On `Setup` (2.1.330: "command" only) the
+ * mcp_tool hook is listed so that its skip is reported in §7.3.5 item 5's words; it never runs.
+ */
 const LAUNCH: readonly HookHandlerType[] = ['command', 'mcp_tool'];
 
 const NONE: readonly string[] = [];

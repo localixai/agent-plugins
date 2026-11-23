@@ -117,52 +117,55 @@ spec('cli.plugin.Which scope the command updates', () => {
   });
 });
 
-spec('cli.plugin.Update by bare name', () => {
-  test('matches a bare name against the installed plugins', async () => {
-    const found = await update({
-      args: { plugin: 'formatter' },
-      installs: [install('formatter@m', { installed: '1.0.0', offered: '1.1.0' })],
+spec(
+  ['cli.plugin.Update by bare name', 'cli.plugin.claude plugin commands.Plugin arguments'],
+  () => {
+    test('matches a bare name against the installed plugins', async () => {
+      const found = await update({
+        args: { plugin: 'formatter' },
+        installs: [install('formatter@m', { installed: '1.0.0', offered: '1.1.0' })],
+      });
+      expect('update' in found && found.update?.id).toBe('formatter@m');
     });
-    expect('update' in found && found.update?.id).toBe('formatter@m');
-  });
 
-  test('refuses when installed plugins from different marketplaces share the name and lists the qualified commands', async () => {
-    const found = await update({
-      args: { plugin: 'formatter' },
-      installs: [
-        install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }),
-        install('formatter@b', { installed: '1.0.0', offered: '1.1.0' }),
-      ],
+    test('refuses when installed plugins from different marketplaces share the name and lists the qualified commands', async () => {
+      const found = await update({
+        args: { plugin: 'formatter' },
+        installs: [
+          install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }),
+          install('formatter@b', { installed: '1.0.0', offered: '1.1.0' }),
+        ],
+      });
+      const out = shown(found);
+      expect(out.exitCode).toBe(1);
+      expect(out.stderr[0]).toContain('claude plugin update formatter@a');
+      expect(out.stderr[0]).toContain('claude plugin update formatter@b');
+      expect('update' in found).toBe(false);
     });
-    const out = shown(found);
-    expect(out.exitCode).toBe(1);
-    expect(out.stderr[0]).toContain('claude plugin update formatter@a');
-    expect(out.stderr[0]).toContain('claude plugin update formatter@b');
-    expect('update' in found).toBe(false);
-  });
 
-  test('the qualified name picks one of them', async () => {
-    const found = await update({
-      args: { plugin: 'formatter@b' },
-      installs: [
-        install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }),
-        install('formatter@b', { installed: '1.0.0', offered: '1.1.0' }),
-      ],
+    test('the qualified name picks one of them', async () => {
+      const found = await update({
+        args: { plugin: 'formatter@b' },
+        installs: [
+          install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }),
+          install('formatter@b', { installed: '1.0.0', offered: '1.1.0' }),
+        ],
+      });
+      expect('update' in found && found.update?.id).toBe('formatter@b');
     });
-    expect('update' in found && found.update?.id).toBe('formatter@b');
-  });
 
-  test('the same plugin installed at two scopes is not ambiguous', async () => {
-    const found = await update({
-      args: { plugin: 'formatter' },
-      installs: [
-        install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }, { scope: 'user' }),
-        install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }, { scope: 'project' }),
-      ],
+    test('the same plugin installed at two scopes is not ambiguous', async () => {
+      const found = await update({
+        args: { plugin: 'formatter' },
+        installs: [
+          install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }, { scope: 'user' }),
+          install('formatter@a', { installed: '1.0.0', offered: '1.1.0' }, { scope: 'project' }),
+        ],
+      });
+      expect('update' in found && found.update?.scope).toBe('project');
     });
-    expect('update' in found && found.update?.scope).toBe('project');
-  });
-});
+  },
+);
 
 spec('cli.plugin.Retry an unfinished dependency install', () => {
   const unfinished = current({ dependencyInstall: 'unfinished' });

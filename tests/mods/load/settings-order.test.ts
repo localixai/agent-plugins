@@ -14,8 +14,6 @@ import { installed, managed, organizations, policy, session } from '../../suppor
 import { spec } from '../../support/spec.ts';
 
 const dirsOf = (settings: ModsPolicyInput) => session({}, { policy: settings }).host.pluginDirs();
-const watches = (settings: ModsPolicyInput, isInteractive: boolean) =>
-  session({}, { policy: settings }).host.watchesPluginDirs(isInteractive);
 
 const names = (order: ReturnType<typeof orderMods>) =>
   order.ordered.map((mod) => `${mod.candidate.name}:${mod.tier}`);
@@ -50,26 +48,6 @@ spec('mods.setting.CLAUDE_CODE_PLUGIN_DIRS', () => {
     expect(MOD_SETTINGS.CLAUDE_CODE_PLUGIN_DIRS.homes).toEqual(['environment', 'user-env']);
     const viaManaged = policy({ managed: { env: { CLAUDE_CODE_PLUGIN_DIRS: '/managed' } } });
     expect(dirsOf(viaManaged)).toEqual([]);
-  });
-});
-
-spec('mods.setting.CLAUDE_CODE_PLUGIN_DIR_WATCH', () => {
-  // env-vars.md: "on by default in interactive sessions. Set to `1` to turn it on in non-interactive
-  // sessions as well, or `0` to turn it off in every session"; read as an on/off variable (J3.16).
-  test('`1` makes a non-interactive session reload --plugin-dir mods on save; unset or another value does not', () => {
-    for (const value of ['1', 'true', 'On']) {
-      expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), false)).toBe(true);
-    }
-    for (const value of [undefined, '0', 'maybe', '']) {
-      expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), false)).toBe(false);
-    }
-  });
-
-  test('an interactive session watches by default; `0` turns watching off in every session', () => {
-    expect(watches(policy(), true)).toBe(true);
-    for (const value of ['0', 'false', 'OFF']) {
-      expect(watches(policy({ env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: value } }), true)).toBe(false);
-    }
   });
 });
 

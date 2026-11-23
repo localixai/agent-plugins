@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from '../../foundation/index.ts';
+import type { JsonObject } from '../../foundation/index.ts';
 
 /** The fields of an event or a call's argument: plain data a hook may have changed. */
 export type EventData = Readonly<Record<string, unknown>>;
@@ -12,7 +12,14 @@ import type { EffortLevel } from '../../protocol/official.ts';
  * because they name mods types.
  */
 
-export type { FsAncestor, FsAncestorsRequest, FsEntry, FsStat, ModFs } from './fs-ports.ts';
+export type {
+  FsAncestor,
+  FsAncestorsRequest,
+  FsEntry,
+  FsRange,
+  FsStat,
+  ModFs,
+} from './fs-ports.ts';
 
 /** A piece of what a long-running command wrote. */
 export interface SpawnChunk {
@@ -105,46 +112,7 @@ export interface ModModels {
   classify(request: EventData, signal: AbortSignal): Promise<unknown>;
 }
 
-/** One entry of `$.session.messages()`. */
-export interface SessionEntry {
-  readonly role: string;
-  readonly text: string;
-  readonly toolUses: readonly JsonValue[];
-}
-
-export interface ModSession {
-  /** Every entry of the transcript, oldest first; the kit keeps the newest 4,096. */
-  messages(signal: AbortSignal): Promise<readonly SessionEntry[]>;
-  cwd(): Promise<string>;
-  root(): Promise<string>;
-  model(): Promise<string>;
-  turns(): Promise<number>;
-  id(): Promise<string>;
-  repo(): Promise<JsonValue>;
-  surfaces(): Promise<readonly string[]>;
-  /** `{ startedAt, context: { tokens, window, percent }, rateLimits: [{ kind, percentUsed, resetsAt }], cost }`. */
-  usage(): Promise<JsonObject>;
-  /** The version, or `{ version, base?, builtAt? }` (claude-code/index.d.ts:3019). */
-  version(): Promise<string | JsonObject>;
-  /**
-   * Compacts the conversation and answers what came of it: `{ messages, tokensBefore?,
-   * tokensAfter?, usage? }`, or `{ skip }` (claude-code/index.d.ts:3031).
-   */
-  compact(signal: AbortSignal): Promise<JsonObject | void>;
-  /**
-   * Sends the message and resolves with `{ isDelivered }`. `refusal` is the reason the session takes
-   * no new work from mods now (`RunGate.refusal`), when it takes none: a host whose target is a
-   * subagent that finished or a teammate answers `{ isDelivered: false, reason }` with the sentence
-   * from `unsentReason`, and still delivers to a subagent that is running.
-   */
-  send(to: string, text: string, signal: AbortSignal, refusal?: string): Promise<JsonObject>;
-  /**
-   * Appends `{ message, agentId? }` and answers the row as stored, `{ message, uuid }`
-   * (claude-code/index.d.ts:11730), or `{ deny: reason }` when the host refuses it.
-   */
-  append(row: EventData, signal: AbortSignal): Promise<EventData | void>;
-  authorize(request: EventData, signal: AbortSignal): Promise<unknown>;
-}
+export type { MessagesQuery, ModSession, SessionEntry } from './session-ports.ts';
 
 export interface ModPrompts {
   /**
@@ -267,6 +235,9 @@ export interface ModSettingsReader {
 
 export type {
   BackdropDrawn,
+  BackdropGlass,
+  SessionTheme,
+  ThemeBackdrop,
   ModAccount,
   ModAudio,
   ModNotifications,
@@ -277,6 +248,19 @@ export type {
   SessionBackdrop,
   SessionIdentity,
 } from './optional-port-types.ts';
+export type {
+  AgentLimits,
+  AgentToolCall,
+  DeclaredOptionalPorts,
+  ModAgentCalls,
+  ModHookEnv,
+  ModSessionFacts,
+  ModVcs,
+  ModWasm,
+  SessionInfo,
+  SessionMachine,
+  WasmSource,
+} from './declared-port-types.ts';
 
 /** The environment variables a mod reads and sets; `snapshot` is the environment a command gets. */
 export interface ModEnv {

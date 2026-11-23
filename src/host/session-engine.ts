@@ -59,7 +59,8 @@ function built(core: SessionCore, options: SessionOptions, stopCap = core.stopCa
     }),
     userConfigOf: (id) =>
       state.active.find((plugin) => plugin.id === id)?.userConfig ?? { declared: {}, values: {} },
-    httpPolicy: gates.httpPolicy,
+    // §7.3.4 item 3 (J12.18): the lists of managed settings cover the hooks of managed settings.
+    httpPolicy: { ...gates.httpPolicy, managed: gates.managedHttpPolicy },
   });
 }
 

@@ -14,13 +14,13 @@ export {
 export {
   MANAGED_BEHAVIORS,
   composeManaged,
-  withHelperSettings,
   type ComposeOptions,
   type HelperPlan,
   type ManagedBehavior,
   type ManagedComposition,
 } from './compose.ts';
 export type { InForceNote } from './cross-source.ts';
+export { withHelperSettings } from './helper-settings.ts';
 export {
   dropInOrder,
   isDropInName,
@@ -149,3 +149,18 @@ export {
   deliveredPayloadOutcome,
   retentionValueApplies,
 } from './limits.ts';
+export {
+  SERVER_CACHE_LIFETIME_MS,
+  serverFetchProxy,
+  startupOnFailedFetch,
+  type FailedFetchFacts,
+  type FailedFetchStart,
+  type FetchProxySources,
+  type ServerCache,
+} from './server-cache.ts';
+export {
+  deliveredConfiguration,
+  type DeliverySession,
+  type GroupConfiguration,
+  type GroupedDelivery,
+} from './server-groups.ts';

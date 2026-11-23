@@ -169,7 +169,7 @@ spec('layout.Monitors', () => {
   });
 });
 
-spec('layout.Settings', () => {
+describe('judgment J1.3: settings.json stays a default location (spec §1.4)', () => {
   test('settings.json at the plugin root is the plugin settings; one inside .claude-plugin is not', async () => {
     expect((await discover({ 'settings.json': '{}' })).settingsFile).toBe('settings.json');
     expect((await discover({ '.claude-plugin/settings.json': '{}' })).settingsFile).toBeUndefined();

@@ -187,5 +187,14 @@ spec('settingsMerge.settings.Change a setting for one session.--settings', () =>
         expect(layerOf(scope, { autoConnectIde: true }).settings).toEqual({});
       }
     });
+
+    test('nor a user key whose scope leaves --settings out: prependPlugins and appendPlugins (spec §12.2.2 item 1)', () => {
+      for (const key of ['prependPlugins', 'appendPlugins'] as const) {
+        const list = ['guard@corp'];
+        expect(layerOf('flag', { [key]: list }).settings).toEqual({});
+        expect(issuesOfFlag({ [key]: list }).map((one) => one.severity)).toEqual(['warning']);
+        expect(layerOf('user', { [key]: list }).settings).toEqual({ [key]: list });
+      }
+    });
   });
 });

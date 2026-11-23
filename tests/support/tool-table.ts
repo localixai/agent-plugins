@@ -6,6 +6,12 @@ import type { RuleFormatId } from '../../src/rules/index.ts';
  * "Rule format" table's "Applies to" column (a tool it does not list takes only its bare name),
  * and a call of each tool that stays inside the working directory `/work/app`. Tests read this,
  * never the catalog, so the catalog is checked against the docs and not against itself.
+ *
+ * Three cells of the 2.1.330 column are conditional, and the spec's copy reads them as one value:
+ * `EnterWorktree` "Some worktrees" and `Skill` "Some skills" are No, `ExitWorktree` "Yes (v2.1.327+)
+ * to remove a worktree the client cannot check or that holds work at risk ... otherwise No" is Yes.
+ * Which call of them prompts is the host's to know (`DecideContext.requiresPermission` takes the
+ * call's input).
  */
 export interface ToolRow {
   readonly tool: string;
@@ -40,29 +46,36 @@ export const TOOL_TABLE: readonly ToolRow[] = [
   }),
   row('EndConversation', 'No'),
   row('EnterPlanMode', 'No'),
-  row('EnterWorktree', 'Yes'),
+  row('EnterWorktree', 'No'),
   row('ExitPlanMode', 'Yes'),
-  row('ExitWorktree', 'No'),
+  row('ExitWorktree', 'Yes'),
   row('Glob', 'No', 'read-path', { pattern: '*.ts', path: '/work/app/src' }),
   row('Grep', 'No', 'read-path', { pattern: 'TODO', path: '/work/app/src' }),
   row('ListAgents', 'No'),
   row('ListMcpResourcesTool', 'No'),
+  row('ListPlugins', 'No'),
+  row('ListSkills', 'No'),
   row('LSP', 'No', 'read-path'),
   row('Monitor', 'Yes', 'command', { command: 'tail -f build.log' }),
   row('NotebookEdit', 'Yes', 'edit-path', { notebook_path: '/work/app/a.ipynb' }),
   row('PowerShell', 'Yes', 'powershell-command', { command: 'Remove-Item build' }),
+  row('propose_skills', 'No'),
   row('PushNotification', 'No'),
   row('Read', 'No', 'read-path', { file_path: '/work/app/a.ts' }),
   row('ReadMcpResourceTool', 'No'),
   row('RemoteTrigger', 'No'),
   row('ReportFindings', 'No'),
   row('ScheduleWakeup', 'No'),
+  row('SearchPlugins', 'No'),
+  row('SearchSkills', 'No'),
   row('SendFeedback', 'No'),
   row('SendMessage', 'No'),
   row('SendUserFile', 'No'),
   row('ShareOnboardingGuide', 'Yes'),
-  row('Skill', 'Yes', 'skill-name', { skill: 'deploy' }),
+  row('Skill', 'No', 'skill-name', { skill: 'deploy' }),
   row('SubagentHandback', 'No'),
+  row('SuggestPluginInstall', 'No'),
+  row('SuggestSkills', 'No'),
   row('TaskCreate', 'No'),
   row('TaskGet', 'No'),
   row('TaskList', 'No'),

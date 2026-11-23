@@ -1,4 +1,5 @@
 import { error, type PluginIssue } from '../format/issues.ts';
+import { invalidEntryMessage } from '../format/marketplace/entry-display.ts';
 import type { PluginSource } from '../format/marketplace/types.ts';
 import { samePath } from './command-output.ts';
 import { planPluginFetch } from './fetch-plan.ts';
@@ -29,10 +30,16 @@ export interface InstallStartInput {
   readonly source: PluginSource;
   /** `marketplaceOrigin` is how the marketplace the plugin is listed in was added. */
   readonly fetch: FetchPlanContext;
+  /** The entry's `invalid` problems (spec §15.5.3, J15.15): the install fails and fetches nothing. */
+  readonly invalid?: readonly string[];
 }
 
 /** Before the fetch: its plan and how the plugin will be installed. A refusal of either is an issue and plans nothing. */
 export function planInstallStart(input: InstallStartInput): InstallStart {
+  const refused = invalidEntryMessage(input);
+  if (refused !== undefined) {
+    return { fetch: undefined, decision: undefined, issues: [error('source', refused)] };
+  }
   const planned = planPluginFetch(input.source, input.fetch);
   if (planned.plan === undefined)
     return { fetch: undefined, decision: undefined, issues: planned.issues };

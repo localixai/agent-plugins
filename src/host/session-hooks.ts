@@ -23,7 +23,7 @@ import {
   type TurnScope,
 } from './session-hook-scope.ts';
 import { withUpdatesInEffect } from './session-permission-updates.ts';
-import { registerEntries } from './session-registry.ts';
+import { dropSkillRegistrations, registerEntries } from './session-registry.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState } from './state.ts';
 import type { HookSessionGates } from '../settings/hooks/session-gates.ts';
@@ -35,6 +35,19 @@ function inClaudeNames<F>(facts: F, options: SessionOptions): F {
   const input = 'tool_input' in facts ? facts.tool_input : undefined;
   return { ...facts, tool_name: toolNamesOf(options.toolNames).claudeName(facts.tool_name, input) };
 }
+
+/**
+ * When a dispatch marks leaving the conversation, which removes the skills' hooks (Agent Plugins
+ * Extended §7.1.4 item 2): after `SessionEnd` of any reason (exit, `/clear`, an interactive
+ * `/resume`; the skill's own `SessionEnd` hook still runs), and before a `SessionStart` of source
+ * `clear` or `resume`, for a host that dispatched no `SessionEnd` first. A compaction stays.
+ */
+const LEAVES_AFTER: ReadonlySet<HookEvent> = new Set<HookEvent>(['SessionEnd']);
+const LEAVES_BEFORE: ReadonlySet<HookEvent> = new Set<HookEvent>(['SessionStart']);
+const LEAVING_SOURCES: ReadonlySet<unknown> = new Set<unknown>(['clear', 'resume']);
+
+const leavesBefore = (event: HookEvent, facts: unknown): boolean =>
+  LEAVES_BEFORE.has(event) && LEAVING_SOURCES.has(Reflect.get(Object(facts), 'source'));
 
 /**
  * The hook session of one turn: the common input fields and the gates. `promptId`, `scratchpadDir`,
@@ -137,6 +150,7 @@ export function createHookPart(
       subprocessEnvironment: (kind) => subprocessFor(core, optionsOf(), kind),
       ...createHookScope(core, sessionNow, turn),
       async dispatch(event, facts, { sourcesOnly, core: callFacts, ...request }) {
+        if (leavesBefore(event, facts)) dropSkillRegistrations(core);
         const { state, gates } = currentOf(core);
         const options = optionsOf();
         const registry = core.registry.get();
@@ -171,6 +185,7 @@ export function createHookPart(
             ),
         );
         recordOutcome(core, outcome, Reflect.get(facts, 'source'));
+        if (LEAVES_AFTER.has(event)) dropSkillRegistrations(core);
         return withUpdatesInEffect(outcome, options);
       },
     },

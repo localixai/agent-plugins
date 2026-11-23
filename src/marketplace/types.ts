@@ -116,6 +116,11 @@ export type MarketplaceFetchPlan =
       readonly kind: 'git';
       readonly repo: { readonly shorthand: string } | { readonly url: string };
       readonly ref?: string;
+      /**
+       * `ref` is a full commit SHA (spec §15.7, 2.1.324): the clone checks out that commit, and a
+       * refresh or auto-update leaves the marketplace on it.
+       */
+      readonly pinned?: true;
       readonly path: string;
       readonly sparsePaths?: readonly string[];
       /** As for a plugin's clone: LFS content is never downloaded, whatever `skipLfs` says. */

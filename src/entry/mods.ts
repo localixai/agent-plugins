@@ -22,6 +22,7 @@ export * as modsTesting from '../testing/mods/index.ts';
 export {
   AGENT_STATUSES,
   DECLARED_API_MEMBERS,
+  DECLARED_API_NAMESPACES,
   MODS_API,
   MODS_API_REFERENCE,
   AT_ONCE_CALLS,

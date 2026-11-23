@@ -31,6 +31,7 @@ export const SHAPES_3: ShapeTable = {
           'faviconSent?': { literal: true },
           'iconDropped?': { literal: true },
           'audience?': 'string',
+          'folder_audience?': { oneOf: [{ literal: 'others' }, { literal: 'unknown' }] },
           'seq?': 'number',
           'unchanged?': { literal: true },
           'liveSubscription?': 'string',

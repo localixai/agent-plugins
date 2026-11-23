@@ -1,4 +1,4 @@
-import type { PluginSettings } from '../../format/plugin-settings.ts';
+import { PLUGIN_AGENT_DEPRECATED, type PluginSettings } from '../../format/plugin-settings.ts';
 import type { PolicyView } from '../view.ts';
 
 /** A plugin as its defaults are merged: its name (for the debug line) and its applied settings. */
@@ -7,16 +7,27 @@ export interface PluginWithDefaults {
   readonly settings: PluginSettings;
 }
 
-/** plugins/components.md, "Default settings": last plugin wins, below every settings source. */
+/** A startup warning: an enabled plugin sets the deprecated `agent` default (spec §12.6 item 2). */
+export interface PluginDefaultWarning<P extends PluginWithDefaults = PluginWithDefaults> {
+  readonly plugin: P;
+  readonly message: string;
+}
+
+/** Spec §12.6, a deprecated feature: last plugin wins, below every settings source. */
 export interface PluginDefaults<P extends PluginWithDefaults = PluginWithDefaults> {
   readonly settings: PluginSettings;
   /** The plugin each key of `settings` came from: the one loaded last that sets it. */
   readonly owners: { readonly [K in keyof PluginSettings]?: P };
   /** The `claude --debug` lines: `Plugin "<b>" overrides setting "<key>" set by plugin "<a>"`. */
   readonly debug: readonly string[];
+  /**
+   * One deprecation warning per plugin that sets `agent`, in load order, whether or not its value
+   * applies; the text is the validator's (Judgment J12.14).
+   */
+  readonly warnings: readonly PluginDefaultWarning<P>[];
 }
 
-const KEYS = ['agent', 'subagentStatusLine'] as const satisfies readonly (keyof PluginSettings)[];
+const KEYS = ['agent'] as const satisfies readonly (keyof PluginSettings)[];
 
 /** The plugins' defaults merged in the order given (the load order): a later plugin's key wins. */
 export function pluginDefaultsOf<P extends PluginWithDefaults>(
@@ -37,7 +48,10 @@ export function pluginDefaultsOf<P extends PluginWithDefaults>(
     owners[key] = plugin;
   };
   for (const plugin of plugins) for (const key of KEYS) apply(plugin, key);
-  return { settings, owners, debug };
+  const warnings = plugins
+    .filter((plugin) => plugin.settings.agent !== undefined)
+    .map((plugin) => ({ plugin, message: PLUGIN_AGENT_DEPRECATED }));
+  return { settings, owners, debug, warnings };
 }
 
 /** A key's value after the plugin defaults: from a settings source, or from the plugin named. */
@@ -47,19 +61,16 @@ export interface SettingWithDefault<K extends keyof PluginSettings, P> {
   readonly plugin?: P;
 }
 
-/** What the settings sources themselves set of the two keys. */
+/** What the settings sources themselves set of the key. */
 const ownSettings = (view: PolicyView): PluginSettings => {
   const agent = view.get('agent');
-  const line = view.get('subagentStatusLine');
-  return {
-    ...(agent === undefined ? {} : { agent }),
-    ...(line === undefined ? {} : { subagentStatusLine: line }),
-  };
+  return agent === undefined ? {} : { agent };
 };
 
 /**
- * The value of `agent` or `subagentStatusLine`: "plugin defaults are the lowest layer, so a user's
- * own `agent` in `~/.claude/settings.json` overrides yours". `undefined` when nothing sets it.
+ * The value of `agent`: "Plugin defaults are the lowest settings layer: an `agent` at any settings
+ * level, the user's own in `~/.claude/settings.json` for one, replaces the plugin's" (§12.6 item 4).
+ * `undefined` when nothing sets it.
  */
 export function valueWithPluginDefaults<
   K extends keyof PluginSettings,

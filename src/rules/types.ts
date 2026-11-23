@@ -63,6 +63,12 @@ export interface ToolCall {
 export interface PreparedCall extends ToolCall {
   readonly resolvedPaths?: readonly string[];
   /**
+   * Code Mode's code made the call, inside one `REPL` call (code-mode.md, "Permission checks";
+   * Agent Plugins Extended §7.6.11.2). It meets the deny and ask rules under its usual name; in auto
+   * mode the classifier reviewed the code, not the call. Offering Code Mode is the host's (J7.214).
+   */
+  readonly fromCode?: boolean;
+  /**
    * Every name the called skill goes by (its alias, its display name, a qualified form), which a
    * `Skill(skill:<name>)` deny rule matches (permissions.md, "Match by input parameter"). The host
    * knows its skills; the kit holds no skill catalog.

@@ -70,8 +70,16 @@ export const mcpApi = (deps: Deps): ModsNamespaceApi<'mcp'> => ({
     const given = { server: args[0], tool: args[1], args: args[2] ?? {} };
     return call(deps, 'mcp.call', parse('$.mcp.call', request, given), (e) => callTool(deps, e));
   },
+  // `provider` is `{ plugin, tier }` of whoever configured the server (2.1.330; Agent Plugins
+  // Extended §10.19.7): the plugin whose manifest lists it, the only one a mod connects.
   connect: async (...args) =>
-    call(deps, 'mcp.connect', { server: parse('$.mcp.connect', z.string(), args[0]) }, (e) =>
-      connectOwn(deps, e),
+    call(
+      deps,
+      'mcp.connect',
+      {
+        server: parse('$.mcp.connect', z.string(), args[0]),
+        provider: { plugin: deps.plugin, tier: deps.tier },
+      },
+      (e) => connectOwn(deps, e),
     ),
 });

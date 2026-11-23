@@ -132,10 +132,24 @@ function restoredSearchTools(
   return lists('Bash') ? [] : SEARCH_TOOLS.filter((tool) => lists(tool) && names.has(tool));
 }
 
+const WEB_FETCH = 'WebFetch';
+
+/**
+ * `WebFetch` where the built-in `web-fetch` agent reads web pages (§5.7.1): the main conversation's
+ * pool lacks it, a subagent the Agent tool starts gets it back, a teammate or a fork does not.
+ */
+function withWebFetchRule(builtin: readonly string[], run: SubagentRun, keeps: boolean) {
+  if (run.webFetchAgent !== true) return [...builtin];
+  const others = builtin.filter((tool) => tool !== WEB_FETCH);
+  return keeps ? [...others, WEB_FETCH] : others;
+}
+
 /** The tools a subagent could be given: the pool with the restored search tools, filtered; `matchable` adds the handback the host grants. */
 function candidatesOf(agent: AgentToolFields, pool: ToolPool, run: SubagentRun, names: ToolNames) {
   const restored = restoredSearchTools(agent.tools?.map(parseToolEntry), names);
-  const available = availableTo({ ...pool, builtin: dedupe([...pool.builtin, ...restored]) }, run);
+  const keepsWebFetch = run.teammate !== true && names.has(WEB_FETCH);
+  const builtin = withWebFetchRule(dedupe([...pool.builtin, ...restored]), run, keepsWebFetch);
+  const available = availableTo({ ...pool, builtin }, run);
   // The host grants `SubagentHandback` (`SubagentRun.handback`), so an entry naming it matches.
   return { available, matchable: run.handback === true ? [...available, HANDBACK] : available };
 }
@@ -171,9 +185,12 @@ function resolveSubagent(
   return { ok: true, tools: granted, spawnTypes: spawnTypesOf(entries, tools, run) };
 }
 
-/** A fork has the main conversation's exact pool: no definition narrows it, nothing is refused. */
+/**
+ * A fork has its parent conversation's exact pool: no definition narrows it, nothing is refused. Where
+ * the `web-fetch` agent reads web pages it has no `WebFetch`, as the main conversation has none.
+ */
 function resolveFork(_agent: AgentToolFields, pool: ToolPool, run: SubagentRun): ToolsOutcome {
-  const tools = poolNames(pool);
+  const tools = poolNames({ ...pool, builtin: withWebFetchRule(pool.builtin, run, false) });
   const spawns = tools.includes('Agent') && !run.atDepthLimit;
   return { ok: true, tools, spawnTypes: spawns ? 'any' : 'none' };
 }

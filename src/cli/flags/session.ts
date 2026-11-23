@@ -34,7 +34,8 @@ export function permissionMode(value: string, context: FlagContext): Contributio
   }
   const mode = MODE_OF[value];
   if (mode === 'bypassPermissions' && context.given['--restricted'] === true) {
-    return refuse('Error: --restricted refuses --permission-mode bypassPermissions');
+    // permission-modes.md (2.1.330), verbatim (Agent Plugins Extended §13.9.6 item 2).
+    return refuse('Error: bypassPermissions not supported in restricted mode');
   }
   return { permissionMode: mode };
 }

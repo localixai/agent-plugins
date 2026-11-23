@@ -12,9 +12,11 @@ export type * from './ports/index.ts';
 export * from './host/index.ts';
 export { EFFORT_LEVELS, SAVED_EFFORT_LEVELS, type SavedEffortLevel } from './protocol/effort.ts';
 export {
+  DOCS_ONLY_TOOLS,
   DOCUMENTED_TOOLS,
   REMOVED_TOOLS,
   SDK_ONLY_TOOLS,
+  type DocsOnlyTool,
   type DocumentedTool,
   type RemovedTool,
   type SdkOnlyTool,
@@ -74,6 +76,7 @@ export {
   type InvocableHead,
   type PluginIssue,
   type PluginManifest,
+  type PluginNote,
   type PluginSource,
   type Severity,
 } from './format/index.ts';

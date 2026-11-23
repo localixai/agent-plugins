@@ -7,6 +7,7 @@ export * from './elements/index.ts';
 export { decideSite, renderEvent, type RenderEvent, type RenderRequest } from './sites/registry.ts';
 export { backdropRender } from './sites/backdrop.ts';
 export { foldRender, type Drawn, type FoldOptions } from './sites/fold.ts';
+export type { BandDrawn, BandRequest, BandRow } from './sites/band-rows.ts';
 
 export type { Viewport } from './sites/viewport.ts';
 export { parseOpen, type OpenRequest } from './panes/open.ts';

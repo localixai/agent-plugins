@@ -36,6 +36,38 @@ function foldLines(written: string, { engine }: ModScan): string[] {
   ];
 }
 
+/**
+ * The default matcher keys of the events on another mod's controls and drawings (§10.13.3, "Other
+ * mods' drawings and controls"): `claude plugin validate` 2.1.330 follows a hook whose matcher leaves
+ * one out with ` (default matcher key: <keys>)` (§10.4.3; oracle 2.1.330). Judgment: `plugin` and
+ * `component` for each, as the two quoted lines give them; a wildcard pattern gets no note.
+ */
+const DEFAULT_KEYS: readonly string[] = ['plugin', 'component'];
+const DEFAULT_KEYED: ReadonlySet<string> = new Set([
+  'ui.press',
+  'ui.input',
+  'ui.select',
+  'ui.focus',
+  'ui.render',
+]);
+
+/** The render sites where the client sets `e.plugin`: a mod's `Pane` and its row of the band. */
+const MOD_SITES: ReadonlySet<string> = new Set(['Pane', 'AbovePrompt']);
+
+/** A hook's entry on the `hooks:` line, with the default matcher keys its matcher leaves out. */
+function hooksEntry(hook: ScannedHook): string {
+  const label = hookLabel(hook);
+  if (!DEFAULT_KEYED.has(hook.event)) return label;
+  const pairs = (hook.matcher ?? '').split(',').map((pair) => pair.split('='));
+  const component = pairs.find(([key]) => key === 'component')?.[1];
+  // A site the client draws itself carries no `plugin` (§10.13.3 item 1): only a mod's pane and band row do.
+  const isClientSite = hook.event === 'ui.render' && component !== undefined;
+  if (isClientSite && !MOD_SITES.has(component)) return label;
+  const named = pairs.map(([key]) => key);
+  const missing = DEFAULT_KEYS.filter((key) => !named.includes(key));
+  return missing.length === 0 ? label : `${label} (default matcher key: ${missing.join(', ')})`;
+}
+
 const OTHER_STATE =
   'state of other plugins, not checked (run validate in a session with them enabled)';
 
@@ -57,7 +89,7 @@ export function scanLines(written: string, scan: ModScan, plugin?: string): stri
     lines.push(`  ❯ ${written} ${noun} writes: ${listed(writes)}`);
     lines.push(`  ❯ ${written} ${noun} reads: ${listed(reads)}`);
   };
-  add('hooks', scan.hooks.map(hookLabel));
+  add('hooks', scan.hooks.map(hooksEntry));
   add('answers its own command', scan.hooks.filter(answersCommand).map(hookLabel));
   const calls = scan.calls.map(callLabel);
   lines.push(`  ❯ ${written} calls: ${calls.length === 0 ? 'nothing on $' : listed(calls)}`);

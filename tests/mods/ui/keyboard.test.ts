@@ -239,10 +239,7 @@ spec(`${I}Open a pane at the right time.columns`, () => {
 });
 
 spec(
-  [
-    'mods.troubleshoot.The band shows plugin panel hidden',
-    'mods.troubleshoot.Hotkeys do nothing.The button is in a collapsed band',
-  ],
+  ['mods.troubleshoot.The band shows plugin panel hidden', 'mods.troubleshoot.Hotkeys do nothing'],
   () => {
     test('a collapsed band is one dim row naming the keys, and no hotkey presses a button in it', () => {
       expect(collapsedRow()).toBe('▸ plugin panel hidden · ctrl+x ctrl+a or click to show');
@@ -253,15 +250,37 @@ spec(
   },
 );
 
-spec('mods.troubleshoot.Hotkeys do nothing.No keyboard focus', () => {
+spec('mods.troubleshoot.Hotkeys do nothing', () => {
   test('without keyboard focus a hotkey is a key for the prompt', () => {
     expect(press(['a'], fresh, context({ hasFocus: false })).effects).toEqual([
       { effect: 'toPrompt' },
     ]);
   });
+
+  const row = (hotkey: string, key: string) =>
+    node('Button', { key, label: key, hotkey, onPress: () => undefined });
+  const rows = [
+    { plugin: 'first', tree: node('Box', { children: [row('1', 'one'), row('a', 'mine')] }) },
+    { plugin: 'second', tree: row('1', 'two') },
+  ];
+
+  test("two rows of the band on the same hotkey: in the terminal the key presses neither mod's button", () => {
+    const band = context({ isBand: true, rows });
+    expect(press(['1'], fresh, band).effects).toEqual([]);
+    expect(press(['a'], fresh, band).effects).toEqual([{ effect: 'press', key: 'mine' }]);
+  });
+
+  test("one mod's two buttons on one hotkey: the later one gets it", () => {
+    const one = [
+      { plugin: 'first', tree: node('Box', { children: [row('1', 'x'), row('1', 'y')] }) },
+    ];
+    expect(press(['1'], fresh, context({ isBand: true, rows: one })).effects).toEqual([
+      { effect: 'press', key: 'y' },
+    ]);
+  });
 });
 
-spec('mods.troubleshoot.Hotkeys do nothing.In the VS Code extension', () => {
+spec('mods.troubleshoot.Hotkeys do nothing', () => {
   test('buttons have no hotkeys there: Enter presses the focused one', () => {
     const vs = context({ surface: 'vscode' });
     expect(press(['a'], fresh, vs).effects).toEqual([]);

@@ -19,6 +19,31 @@ const registration = z.looseObject({
 
 const spawnRequest = z.looseObject({});
 
+/**
+ * `$.agent.call({ tool, input, agentId? }, { signal? })` (claude-code/index.d.ts:3922, v2.1.326): a
+ * tool run as that agent's own call, `Workflow` refused (Agent Plugins Extended §10.7.1).
+ */
+const agentCall = z.looseObject({
+  tool: z.string(),
+  input: z.record(z.string(), z.unknown()),
+  agentId: z.string().optional(),
+});
+const callOptions = z.looseObject({ signal: z.instanceof(AbortSignal).optional() });
+/** Judgment (spec/judgments.md): the words of the refusal, which the declarations do not give. */
+const WORKFLOW_REFUSED = "$.agent.call: Workflow cannot be called as an agent's own call";
+
+async function callAs(deps: Deps, args: readonly unknown[]): Promise<unknown> {
+  const request = parse('$.agent.call', agentCall, args[0]);
+  const { signal } = parse('$.agent.call', callOptions, args[1] ?? {});
+  if (request.tool === 'Workflow') throw new Error(WORKFLOW_REFUSED);
+  const stop = signal === undefined ? deps.signal : AbortSignal.any([deps.signal, signal]);
+  return call(deps, 'agent.call', request, (e) => {
+    const asked = parse('$.agent.call', agentCall, e);
+    if (asked.tool === 'Workflow') throw new Error(WORKFLOW_REFUSED);
+    return deps.ports.agentCalls.call(asked, stop);
+  });
+}
+
 /** A row of `$.agent.list()`: each has a `status` the reference lists (reference.md, "Mods API methods"). */
 const listed = z.array(z.looseObject({ status: z.enum(AGENT_STATUSES) }));
 
@@ -53,6 +78,9 @@ export function agentApi(deps: Deps): ModsNamespaceApi<'agent'> {
         ),
       );
     },
+    call: async (...args) => callAs(deps, args),
+    // `{ concurrent, depth, isBackgroundEnabled }` (`AgentLimits`, claude-code/index.d.ts:364).
+    limits: async () => call(deps, 'agent.limits', {}, () => deps.ports.agentCalls.limits()),
     // Judgment: a row whose `status` the reference does not list is a host that drifted, so the call rejects.
     list: async () =>
       call(deps, 'agent.list', {}, async () =>

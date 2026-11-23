@@ -223,7 +223,10 @@ The kit decides; the host's ports act. These are the risks no kit default remove
 - **Running a mod's code.** The hooks module runs in the host's `ModRuntime`. The scan refuses
   `require()`, dynamic `import()` and imports outside the plugin, but a module that runs can still
   reach `import.meta.require`, `Bun`, `process` and the globals of its runtime. Running it in an
-  isolate or a worker without them is the host's job.
+  isolate or a worker without them is the host's job, as is the 2.1.330 `WebAssembly` global: a
+  runtime that hands a module the unrestricted one lets it compile any bytes, past the 64 MiB limit
+  and the `wasm.compile` hooks of the mods before it (docs/API.md, "The module's globals are the
+  runtime's").
 - **Worktree isolation of commands.** The kit reads `isolation: worktree` and leaves the checks on
   each command to the host: a Bash, PowerShell or Monitor command of an isolated session or subagent
   whose working directory resolves to the main checkout, a Bash or Monitor command that redirects

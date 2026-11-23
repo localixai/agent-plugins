@@ -6,6 +6,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 
 | Name | Kind | What it is |
 | --- | --- | --- |
+| `AddDirLayerFacts` | type | The facts of one `--add-dir` file: which file, the setting sources the session loads, saved trust, an interactive terminal (`AddDirFacts`) |
 | `AddedDirectory` | type | A directory `permissions.additionalDirectories` adds, with the file's scope |
 | `addPluginsRefusal` | function | The Agent SDK's `addPlugins` option under `disableSideloadFlags` |
 | `AdminDocument` | type | One source after reading: what it delivers and whether it counts |
@@ -70,6 +71,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `claudeJsonProject` | function | The `~/.claude.json` entry of one project (`projects["<path>"]`), as it was written |
 | `claudeJsonServers` | function | The user and local servers of Claude Code's state file `~/.claude.json`, already parsed by the host |
 | `claudeTempDirectory` | function | `CLAUDE_CODE_TMPDIR`: "Claude Code appends `/claude-{uid}/` to this path on Unix, or `/claude/` on Windows" |
+| `codeModeOn` | function | Whether `CLAUDE_CODE_EXPERIMENTAL_CODE_MODE` turns Code Mode on: a `1` from the launch environment, user settings or `--settings`; a `0` there or in managed settings keeps it off; under a managed `1` a launch-environment `1` is ignored (spec §12.7.4) |
+| `CodeModeValues` | type | The `values` argument of `codeModeOn`: the variable's value in the launch environment, user, `--settings` and managed settings |
 | `COMMAND_LINE_KEYS` | constant | Commands follow hook policy |
 | `CommandBlocker` | type | The key that blocks a command: the explicit one, or the one that decides while it is unset |
 | `CommandGates` | type | The commands that follow the hooks: the status line, the file suggestion command, the subagent status line, plugin monitors and `/goal` |
@@ -103,8 +106,10 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `CROSS_SESSION_MODES` | constant | The values of `crossSessionInbound` from the least to the most strict |
 | `CustomizationPolicy` | type | `strictPluginOnlyCustomization` as one object over a view: a host's discovery of skills, agents, hooks and MCP servers asks `loads(surface, origin)` per candidate |
 | `DecidedBy` | type | Where an `enabledPlugins` decision came from: a file, or the plugin's own `defaultEnabled` |
+| `deliveredConfiguration` | function | The server-managed configuration a member receives under group configurations: the highest-ranked of their groups, else the catch-all, else none; a group's `availableModels` only in local sessions (spec §14.3.7) |
 | `deliveredPayloadOutcome` | function | Every setting fails validation, none falls back to a stricter value, and the payload holds a key other than the two retention keys |
 | `deliversChannelEvents` | function | Whether a channel server's event reaches the session; a refused one is dropped silently |
+| `DeliverySession` | type | The `session` argument of `deliveredConfiguration`: local, or a cloud or remote Cowork session |
 | `describeManagedServer` | function | What `claude mcp get` and `/mcp` show of a provided server |
 | `DesktopManaged` | type | Sessions of the Claude Desktop app where Claude Code does not read the key |
 | `DropInDirectory` | type | The `managed-settings.d/` folder: absent, present and unreadable, or its files |
@@ -126,8 +131,11 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `EnvInput` | type | The `input` argument of `resolveEnv` |
 | `EnvResolution` | type | The `previous` argument of `envAfterCd`; The `entered` argument of `envAfterCd` |
 | `EnvTrust` | type | What the `env` blocks of the settings files come to for a session |
+| `FailedFetchFacts` | type | The `facts` argument of `startupOnFailedFetch`: the time of the fetch and `forceRemoteSettingsRefresh` |
+| `FailedFetchStart` | type | What `startupOnFailedFetch` returns: start on the cache (`policy: 'cached'`), start without server-managed settings (`'none'`), or exit |
 | `fetchesRemoteSettings` | function | Whether remote settings, the top-ranked managed source, are fetched at all |
 | `FetchFacts` | type | The `facts` argument of `fetchesRemoteSettings` |
+| `FetchProxySources` | type | The `sources` argument of `serverFetchProxy`: the endpoint-managed, user settings and launch environments |
 | `FILE_ORIGINS` | constant | `managed-settings.json` and the other managed sources have no one path |
 | `FILE_SCOPES` | constant | Whose sessions a settings file reaches |
 | `FILE_USES` | constant | How much of the managed settings file a place applies |
@@ -148,6 +156,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `globalConfigFileOf` | function | The global config file: `.claude.json` in `CLAUDE_CONFIG_DIR` when set and not empty, else in the home |
 | `globalGitExcludesFile` | function | The global git excludes file: `core.excludesFile`, else the XDG git `ignore` file |
 | `groupChannelEvents` | function | Groups queued channel events in the order the session processes them |
+| `GroupConfiguration` | type | One group's server-managed configuration, by group name |
+| `GroupedDelivery` | type | The `delivery` argument of `deliveredConfiguration`: the organization-wide, ranked group and catch-all configurations, and whether group-based mode is on |
 | `GuardPlacement` | type | Where the built-in guard sits: at the position a managed list gives it, outermost by default, or not loaded |
 | `HELPER_PHASES` | constant | One run of a policy helper and what it comes to |
 | `HelperFileProbe` | type | The one effect the managed sources need beyond the shared ports: asking whether a regular file is at a path, within a time budget |
@@ -169,6 +179,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `HookPolicyContext` | type | What the host tells the hook policy besides the layers |
 | `HooksOrigin` | type | The hooks of every origin the hook policy knows: the same vocabulary, one decision about it |
 | `HookVerdict` | type | What `HookPolicy.runs` returns |
+| `HttpHookLists` | type | The merged HTTP hook allowlists that cover one kind of hook: `HookSessionGates.httpPolicy` (every hook but managed ones) and `managedHttpPolicy` (managed hooks, present only for a key managed settings define; J12.18) |
+| `HttpHookOrigin` | type | The `hook` argument of `HookPolicy.httpHook`: `managed: true` for a hook of managed settings (J12.18) |
 | `HttpHookUrlPolicy` | type | The `httpHook` field of `HookPolicy` |
 | `HttpHookVerdict` | type | The two allowlists of HTTP hooks |
 | `ignoredBecause` | function | Why Claude Code drops the variable `name` set to `value` in a file of `scope`, or `undefined` when the variable stays |
@@ -323,7 +335,8 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `pluginBlockedMessage` | function | `Plugin "<name>" is blocked by your organization's policy...` in its three forms |
 | `pluginConfig` | function | The answers stored for a plugin |
 | `PluginConfig` | type | What `pluginConfig` returns; What `PluginSettingsPolicy.config` returns |
-| `PluginDefaults` | type | Last plugin wins, below every settings source |
+| `PluginDefaults` | type | The enabled plugins' deprecated `agent` default (spec §12.6): last plugin wins, below every settings source; the `overrides setting` debug lines and the startup deprecation warnings |
+| `PluginDefaultWarning` | type | One startup deprecation warning: a plugin that sets `agent`, and the validator's text (spec §12.6 item 2, J12.14) |
 | `pluginGitTimeoutMs` | function | The plugin git timeout from `CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS`, or the default |
 | `PluginHookSource` | type | A plugin that ships hooks, with the facts the locks look at |
 | `PluginId` | type | A plugin id is `<name>@<origin>`: the origin is a marketplace name or one of the reserved ones or `builtin` for a plugin inside Claude Code |
@@ -376,6 +389,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `ReachFacts` | type | What a host tells about the file besides its scope |
 | `reachOf` | function | Where a setting saved in a file of this scope applies |
 | `reachOfPlace` | function | What managed settings reach at a place |
+| `readAddDirLayer` | function | One settings file of a `--add-dir` directory as an `addDir` layer: only the `enabledPlugins` and `extraKnownMarketplaces` that `addDirReads` admits for that file (its setting sources, saved trust, the interactive-terminal skip; spec §16.4.6) |
 | `readAdminDocument` | function | What one source's read comes to |
 | `readAgentSetting` | function | `agent` and `disableAgentView` |
 | `readChannelNotification` | function | The `notifications/claude/channel` params a server sent, read as a `ChannelNotification` |
@@ -392,8 +406,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `readProjectToggles` | function | The two lists of one project's entry in the state file `~/.claude.json`, already parsed |
 | `readSettingsLayer` | function | An absent source (`undefined`) is an empty layer; a document that is no JSON object is skipped |
 | `readsManagedSettingsAt` | function | Whether Claude Code reads `path` as the managed settings file of `platform` |
-| `readSubagentStatusLine` | function | `subagentStatusLine` with the plugins' defaults below every settings source, under the same gates as `statusLine`. statusline.md, "Subagent status lines" |
-| `readSubagentStatusRows` | function | The rows a `subagentStatusLine` command rewrote, by task id: each `{"id","content"}` line's body as printed (ANSI and OSC 8 kept), `''` hiding the row; a row it does not name keeps the default. statusline.md, "Subagent status lines" |
 | `readSurfaceLocks` | function | What the value of `strictPluginOnlyCustomization` locks: `true` locks all four kinds, an array locks the kinds it names, and anything unset locks nothing |
 | `readTeammateMode` | function | The teammate display mode: a file's value, else `legacy` from `~/.claude.json`, else `"in-process"` |
 | `readThemeSetting` | function | The theme: the highest file that sets it, else `legacy` (a value "in `~/.claude.json` from an older version applies when no settings file sets it"), else `"dark"` |
@@ -421,18 +433,20 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RuleEntry` | type | A rule as written in a settings file, with the file's scope |
 | `RunningMode` | type | What `PermissionsPolicy.runningMode` returns: the mode a running session changes to, and its notice |
 | `runPolicyHelper` | function | Runs the helper with no arguments and `CLAUDE_CODE_VERSION` set, within `timeoutMs` counted from the file check (the check and the run share one budget) |
-| `runSubagentStatusLine` | function | Runs the selected `subagentStatusLine` once through the `CommandRunner` (`bash`, from `input.cwd`, the host's env, the input on stdin) and reads its rows; a run that does not exit 0 rewrites none |
 | `ScopeRule` | type | One of `SCOPE_RULES` |
 | `ScopeTrust` | type | Whether the user trusts the folder a file of this scope belongs to (the host asks the dialog's record) |
 | `SDK_SETTING_SOURCES` | constant | The settings files an Agent SDK app chooses among with `settingSources` |
 | `SdkSettingSource` | type | One of `SDK_SETTING_SOURCES` |
 | `senderAllowed` | function | A message passes when its sender is on the list, whatever room it came from |
+| `SERVER_CACHE_LIFETIME_MS` | constant | 24 hours: how long after the last successful fetch the server-managed cache can apply at startup (spec §14.3.2) |
 | `SERVER_CHANGE_TIMINGS` | constant | When a change of server-managed settings applies |
+| `ServerCache` | type | The server-managed cache as the host keeps it: the payload and when it was fetched |
 | `ServerChange` | type | The `change` argument of `serverChangeTiming` |
 | `serverChangeTiming` | function | When a server-managed change applies |
 | `ServerChangeTiming` | type | One of `SERVER_CHANGE_TIMINGS` |
 | `serverEnabled` | function | Whether the project's lists leave the server on |
 | `ServerFetch` | type | What one fetch of server-managed settings came to: the policy it delivered, or a failure |
+| `serverFetchProxy` | function | The proxy the server-managed fetch goes through: `HTTPS_PROXY` from the endpoint-managed `env`, user settings, then the launch environment; never `ALL_PROXY` alone (spec §14.3.2) |
 | `SESSION_OVERRIDES` | constant | The keys with a per-session override, each with its sources highest first |
 | `SessionInput` | type | The `input` argument of `OverrideSource.read`; The `input` argument of `OverrideSource.admit` |
 | `SessionValue` | type | What `resolveSessionValue` returns |
@@ -484,11 +498,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `StartupFetchFacts` | type | The `facts` argument of `startupFetchOf` |
 | `startupFetchFailure` | function | What a failed startup fetch does: start, exit, or (a gateway `401` on an attended interactive launch with `forceRemoteSettingsRefresh` off) open signed out with `GATEWAY_SESSION_EXPIRED` |
 | `startupFetchOf` | function | What startup does about the fetch: `true` blocks until a fresh fetch and exits on failure; unset does not block, though a sign-in startup waits up to five seconds |
-| `SubagentLineRead` | type | The subagent status line that runs: a settings source's (with its scope) or a plugin's default |
-| `subagentStatusLineInput` | function | The stdin object of one refresh tick: the base hook fields, `columns` and `tasks`, each row's `tokenSamples` cut to its last 16 readings |
-| `SubagentStatusLineInput` | type | What `subagentStatusLineInput` returns: the SDK's `BaseHookInput` with `columns` and `tasks` |
-| `SubagentStatusLineRun` | type | The `run` argument of `runSubagentStatusLine`: the input and the whole environment of the process |
-| `SubagentStatusTask` | type | One entry of `tasks` (statusline.md, "Task fields"); the SDK has no type for it |
+| `startupOnFailedFetch` | function | What a failed startup fetch of server-managed settings leaves: the cache while under 24 hours old, else no remote policy; an exit under `forceRemoteSettingsRefresh` (spec §14.3.2) |
 | `suggestionMarketplaces` | function | The names of `pluginSuggestionMarketplaces` that take effect, in the order the list gives them |
 | `SurfaceLocks` | type | The kinds of customization the lock covers, and how many names in the list were no kind |
 | `SymlinkFacts` | type | The `facts` argument of `symlinkVerdict` |

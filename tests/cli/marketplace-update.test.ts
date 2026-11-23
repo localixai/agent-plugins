@@ -55,6 +55,13 @@ spec(
       ]);
     });
 
+    test('a marketplace pinned to a full commit SHA stays on that commit (§17.14.4)', () => {
+      const sha = '0123456789abcdef0123456789abcdef01234567';
+      const plan = run({ name: 'pinned' }, { registered: [{ name: 'pinned', ref: sha }] });
+      expect(plan.refresh).toEqual([{ name: 'pinned', ref: sha, pinnedCommit: true }]);
+      expect(run({ name: 'beta' }).refresh).toEqual([{ name: 'beta', ref: 'v2' }]);
+    });
+
     test('refreshes listings only: no installed plugin is updated', () => {
       expect(run({}).update).toEqual([]);
       expect(run({ name: 'alpha' }).update).toEqual([]);

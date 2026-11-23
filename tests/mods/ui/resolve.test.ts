@@ -8,6 +8,7 @@
  */
 import { expect, test } from 'bun:test';
 import { uiRules } from '../../../src/mods/ui/index.ts';
+import { RENDER_SITE_NAMES } from '../../../src/protocol/mods-ui-names.ts';
 import { fn } from '../../support/mods-chain.ts';
 import { apiHarness } from '../../support/mods-api.ts';
 import { fakeInterface, recordOf, uiOver, renderOf } from '../../support/mods-ui.ts';
@@ -27,8 +28,8 @@ spec('mods.event.ui.resolve', () => {
     const seen: unknown[] = [];
     await h.mod('watcher', 'prepend', [fn('ui.resolve', (_$, e, next) => (seen.push(e), next(e)))]);
     await h.ui?.loadMod('my-mod');
-    expect(seen).toHaveLength(4 * 17);
-    expect(new Set(seen.map((e) => JSON.stringify(e))).size).toBe(68);
+    expect(seen).toHaveLength(4 * RENDER_SITE_NAMES.length);
+    expect(new Set(seen.map((e) => JSON.stringify(e))).size).toBe(4 * RENDER_SITE_NAMES.length);
     expect(seen[0]).toMatchObject({ plugin: 'my-mod', surface: 'terminal', component: 'Pane' });
   });
 

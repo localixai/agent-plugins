@@ -7,6 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   DECLARED_API_MEMBERS,
+  DECLARED_API_NAMESPACES,
   MODS_API,
   MODS_API_REFERENCE,
 } from '../../src/protocol/mods-api-names.ts';
@@ -48,8 +49,8 @@ describe('the events of the reference', () => {
       expect(group).toBeDefined();
       if (group) expect(MOD_EVENT_GROUPS[group].map(String)).toEqual(section.events);
     }
-    expect(MOD_EVENT_NAMES).toHaveLength(48);
-    expect(new Set(MOD_EVENT_NAMES).size).toBe(48);
+    expect(MOD_EVENT_NAMES).toHaveLength(51);
+    expect(new Set(MOD_EVENT_NAMES).size).toBe(51);
     expect(MOD_EVENT_NAMES.map(String)).toEqual(groups.flatMap((section) => section.events));
   });
   test('the mods.event.* requirements are the events of the kit', () => {
@@ -82,18 +83,19 @@ describe('the events of the reference', () => {
 describe('the mods API table', () => {
   test('every namespace of the page has exactly the methods the kit lists, in the page order', () => {
     const documented = MODS_REFERENCE.apiMethods.map((row) => [row.namespace, row.methods]);
-    expect(Object.keys(MODS_API)).toHaveLength(22);
+    expect(Object.keys(MODS_API_REFERENCE)).toHaveLength(23);
     expect(documented).toEqual(
       Object.entries(MODS_API_REFERENCE).map(([name, methods]) => [name, [...methods]]),
     );
   });
-  test("the kit's table is the page's, each namespace followed by the members only the declarations name", () => {
-    expect(Object.entries(MODS_API).map(([name, methods]) => [name, [...methods]])).toEqual(
-      Object.entries(MODS_API_REFERENCE).map(([name, methods]) => [
+  test("the kit's table is the page's, each namespace followed by the members only the declarations name, then the declarations' own namespaces", () => {
+    expect(Object.entries(MODS_API).map(([name, methods]) => [name, [...methods]])).toEqual([
+      ...Object.entries(MODS_API_REFERENCE).map(([name, methods]) => [
         name,
         [...methods, ...(Reflect.get(DECLARED_API_MEMBERS, name) ?? [])],
       ]),
-    );
+      ...Object.entries(DECLARED_API_NAMESPACES).map(([name, methods]) => [name, [...methods]]),
+    ]);
   });
 });
 
@@ -126,6 +128,10 @@ const LIMIT_ROWS: Readonly<Record<TableLimit, readonly [string, string]>> = {
   hookMs: ["A hook's own execution time", '10 seconds'],
   promptEditMs: ["A hook's own execution time", '50 milliseconds'],
   catchMs: ['`.catch` handler', '1 second'],
+  renderWaitMs: ['Time a `ui.render` or `plugin.register`', '30 seconds'],
+  registerWaitMs: ['Time a `ui.render` or `plugin.register`', '10 seconds'],
+  propDepth: ['Depth and size of a', '100'],
+  propValues: ['Depth and size of a', '1000000'],
   sessionEndMs: ['All `session.end` hooks together', '1.5 seconds'],
   runTimeoutMs: ['`$.process.run` timeout', '30 seconds'],
   runTimeoutMaxMs: ['`$.process.run` timeout', '10 minutes'],
@@ -182,7 +188,14 @@ describe('the Limits table', () => {
     expect(Object.keys(LIMIT_ROWS).toSorted()).toEqual(
       Object.keys(MOD_LIMITS).filter(isLimit).toSorted(),
     );
-    expect(rows.filter((cells) => !held.has(cells) && !nesting.includes(cells))).toEqual([]);
+    // "The rows above the prompt, stacked" adds the rows up against the limits of one tree: no number of its own
+    const stacked = rows.filter((cells) => cells[0]?.startsWith('The rows above the prompt'));
+    expect(stacked).toEqual([['The rows above the prompt,', '']]);
+    expect(
+      rows.filter(
+        (cells) => !held.has(cells) && !nesting.includes(cells) && !stacked.includes(cells),
+      ),
+    ).toEqual([]);
     expect(nesting.every((cells) => cells[1]?.startsWith('28,000 levels'))).toBe(true);
   });
   test('a constant with no row is the value its declaration gives', () => {

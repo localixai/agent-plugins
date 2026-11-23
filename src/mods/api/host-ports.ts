@@ -21,6 +21,7 @@ import type {
   ModTurns,
   PromptPainted,
 } from './ports.ts';
+import { DECLARED_PORT_DEFAULTS, type DeclaredOptionalPorts } from './declared-port-types.ts';
 
 /**
  * The ports `createModsHost` takes, by group (docs/API.md, "Mods"). A host gives the platform and
@@ -62,7 +63,7 @@ export interface ModSessionPorts {
  * app that draws a backdrop, telemetry the engine itself does nothing with, no sign-in to tell, a
  * prompt box that takes no decorations and holds no media, and no host that raises notifications.
  */
-export interface ModOptionalPorts {
+export interface ModOptionalPorts extends DeclaredOptionalPorts {
   readonly mcp: McpCaller;
   readonly audio: ModAudio;
   readonly theme: ModTheme;
@@ -116,6 +117,7 @@ const promptBoxOver = (
  * notifications, `isSent: false` (:2534).
  */
 export const OPTIONAL_PORT_DEFAULTS: ModOptionalPorts = Object.freeze({
+  ...DECLARED_PORT_DEFAULTS,
   audio: Object.freeze({ play: () => Promise.resolve(), speak: noSynthesizer }),
   mcp: Object.freeze({
     ensureConnected: () => Promise.resolve('unavailable' as const),
@@ -140,6 +142,12 @@ export const OPTIONAL_PORT_DEFAULTS: ModOptionalPorts = Object.freeze({
 /** `given` with each optional port it left out filled from `OPTIONAL_PORT_DEFAULTS`. */
 export const withDefaultPorts = (given: ModHostPortsInput): ModHostPorts => ({
   ...given,
+  ...documentedDefaults(given),
+  ...declaredDefaults(given),
+});
+
+/** The optional ports of the documented members, each filled when `given` left it out. */
+const documentedDefaults = (given: ModHostPortsInput) => ({
   audio: given.audio ?? OPTIONAL_PORT_DEFAULTS.audio,
   mcp: given.mcp ?? OPTIONAL_PORT_DEFAULTS.mcp,
   theme: given.theme ?? OPTIONAL_PORT_DEFAULTS.theme,
@@ -147,4 +155,13 @@ export const withDefaultPorts = (given: ModHostPortsInput): ModHostPorts => ({
   account: given.account ?? OPTIONAL_PORT_DEFAULTS.account,
   promptBox: given.promptBox ?? promptBoxOver(() => given.prompts.read()),
   notifications: given.notifications ?? OPTIONAL_PORT_DEFAULTS.notifications,
+});
+
+/** The optional ports of the members only the 2.1.330 declarations name, each filled when left out. */
+const declaredDefaults = (given: ModHostPortsInput) => ({
+  agentCalls: given.agentCalls ?? OPTIONAL_PORT_DEFAULTS.agentCalls,
+  sessionFacts: given.sessionFacts ?? OPTIONAL_PORT_DEFAULTS.sessionFacts,
+  hookEnv: given.hookEnv ?? OPTIONAL_PORT_DEFAULTS.hookEnv,
+  wasm: given.wasm ?? OPTIONAL_PORT_DEFAULTS.wasm,
+  vcs: given.vcs ?? OPTIONAL_PORT_DEFAULTS.vcs,
 });

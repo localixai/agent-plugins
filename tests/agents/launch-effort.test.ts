@@ -56,6 +56,51 @@ spec('agents.frontmatter.effort', () => {
   });
 });
 
+spec('agents.behavior.When a subagent has no effort field or parameter', () => {
+  test('the spawning subagent level, or a level for this turn only, comes before the session level (§5.8.7)', () => {
+    expect(resolveSubagentEffort({ spawner: 'low', session: 'high', ...same })).toBe('low');
+    expect(resolveSubagentEffort({ spawner: 'low', session: 'high', sameModelAsMain: false })).toBe(
+      'low',
+    );
+  });
+
+  test('CLAUDE_CODE_EFFORT_LEVEL still comes first, and the field and the parameter before the spawner', () => {
+    expect(resolveSubagentEffort({ env: 'max', spawner: 'low', ...same })).toBe('max');
+    expect(resolveSubagentEffort({ field: 'medium', spawner: 'low', ...same })).toBe('medium');
+    expect(resolveSubagentEffort({ invocation: 'xhigh', spawner: 'low', ...same })).toBe('xhigh');
+  });
+});
+
+spec('environment.host.CLAUDE_CODE_SUBAGENT_EFFORT', () => {
+  test('the default level of a subagent with no field or parameter, after the spawning level', () => {
+    expect(resolveSubagentEffort({ subagentDefault: 'medium', session: 'high', ...same })).toBe(
+      'medium',
+    );
+    expect(resolveSubagentEffort({ subagentDefault: 'medium', sameModelAsMain: false })).toBe(
+      'medium',
+    );
+    expect(resolveSubagentEffort({ subagentDefault: 'medium', spawner: 'low', ...same })).toBe(
+      'low',
+    );
+    expect(resolveSubagentEffort({ subagentDefault: 'medium', field: 'max', ...same })).toBe('max');
+    expect(resolveSubagentEffort({ subagentDefault: 'medium', env: 'high', ...same })).toBe('high');
+  });
+
+  test('it takes the five levels; another value is ignored', () => {
+    for (const level of ['low', 'medium', 'high', 'xhigh', 'max'] as const) {
+      expect(resolveSubagentEffort({ subagentDefault: level, ...same })).toBe(level);
+    }
+    expect(resolveSubagentEffort({ subagentDefault: 'turbo', session: 'low', ...same })).toBe(
+      'low',
+    );
+  });
+
+  test('never for a fork, a forked skill or a teammate, nor does the spawning level apply to them', () => {
+    const input = { subagentDefault: 'medium', spawner: 'low', session: 'high', ...same } as const;
+    expect(resolveSubagentEffort({ ...input, forkOrTeammate: true })).toBe('high');
+  });
+});
+
 describe('judgments (spec/judgments.md)', () => {
   test('CLAUDE_CODE_EFFORT_LEVEL set to `auto` or `unset` also suppresses the invocation parameter and the field', () => {
     for (const env of ['auto', 'unset']) {

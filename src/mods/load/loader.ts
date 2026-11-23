@@ -6,7 +6,9 @@ import { evaluate } from './loader-io.ts';
 import type { HookReport, ModChain, RegisterTier } from '../types.ts';
 import { registeredFrom } from './guest.ts';
 import type { OrderedMod } from './order.ts';
-import { askToLoad, tagRefusals, type RefusalBook } from './register-call.ts';
+import { tagRefusals, type RefusalBook } from './register-call.ts';
+import { askPlugin, type PluginKeptOut } from './register-ask.ts';
+import type { PluginRegisterFacts } from './register-event.ts';
 import { combineScans } from './scan/index.ts';
 import {
   didNotLoad,
@@ -30,6 +32,8 @@ import type { ModUses, ScannedHook } from './scan/uses.ts';
 export interface ModPlugin {
   readonly candidate: OrderedMod['candidate'];
   readonly files: PluginFiles;
+  /** What `plugin.register` tells the mods of the plugin's other parts (`e.provides`, `e.hosts`, ...). */
+  readonly register?: PluginRegisterFacts;
 }
 
 export interface LoadedMod {
@@ -59,6 +63,10 @@ export interface LoaderEnv {
   readonly debug: (line: string) => void;
   readonly book: RefusalBook;
   readonly ledger: ApprovalLedger;
+  /** The plugin's directory, for `e.root` when the host gives none (`ModLocations.pluginRoot`). */
+  readonly pluginRoot: (id: string) => string;
+  /** What `plugin.register` kept out of each plugin, for the load report (`ModLoadReport.keptOut`). */
+  readonly keptOut: PluginKeptOut[];
   /** Called once the mod's hooks are registered (the interface part fires `ui.resolve`). */
   readonly onLoaded?: (name: string) => Promise<void>;
 }
@@ -80,10 +88,8 @@ async function afterLoad(env: LoaderEnv, name: string): Promise<string | undefin
 async function start(env: LoaderEnv, mod: OrderedMod, prepared: Prepared): Promise<LoadOutcome> {
   const { name } = mod.candidate;
   const uses = combineScans([prepared.scan]);
-  const refusal = await askToLoad(env, { plugin: name, tier: mod.tier, uses });
-  if (refusal) {
-    return { line: `${name}: refused by ${refusal.by}: ${refusal.reason}`, kind: 'refused-by-mod' };
-  }
+  const kept = await askPlugin(env, mod, { prepared, uses });
+  if (kept !== undefined) return kept;
   const handle = await env.createApi({ name, tier: mod.tier, isBuiltin: mod.candidate.isBuiltin });
   const loaded = await evaluate(env, {
     plugin: name,
@@ -156,10 +162,13 @@ export async function loadMod(
   env: LoaderEnv,
   mod: OrderedMod,
   files: PluginFiles,
+  facts: Pick<ModPlugin, 'register'> = {},
 ): Promise<LoadOutcome> {
-  const prepared = await prepare(env, { candidate: mod.candidate, files });
-  if (!isPrepared(prepared)) return prepared;
-  return start(env, mod, prepared);
+  const prepared = await prepare(env, { candidate: mod.candidate, files, ...facts });
+  if (isPrepared(prepared)) return start(env, mod, prepared);
+  const manifest = prepared.withoutModule;
+  if (manifest === undefined) return prepared;
+  return (await askPlugin(env, mod, { manifest, ...facts })) ?? {};
 }
 
 /**
@@ -185,7 +194,10 @@ export async function restartMod(
 export interface ReloadOutcome {
   /** The mod now loaded: the new version, or the previous one when the reload failed. */
   readonly mod?: LoadedMod;
-  /** The transcript line: the mod and its hooks, or `reload failed, the previous version stays loaded:` and the reason. */
+  /**
+   * The transcript line: the mod and its hooks; `reload failed, the previous version stays loaded:`
+   * and the reason; or `reload failed:` and the reason where no version stays (§10.41.7).
+   */
   readonly line: string;
   /** Why the reload failed, and whether a version of the mod still runs: what `changeNotice` reads. */
   readonly failure?: { readonly reason: string; readonly earlierRuns: boolean };
@@ -227,7 +239,8 @@ export async function reloadMod(
   const reason = reasonOf(name, started);
   return {
     ...(restored.mod ? { mod: restored.mod } : {}),
-    line: failed(reason),
+    // §10.41.7: where no version stays, the line does not say one does.
+    line: restored.mod ? failed(reason) : `${name}: reload failed: ${reason}`,
     failure: { reason, earlierRuns: restored.mod !== undefined },
   };
 }

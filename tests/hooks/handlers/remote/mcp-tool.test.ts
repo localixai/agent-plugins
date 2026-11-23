@@ -130,6 +130,36 @@ spec('hooks.handler.mcp_tool.tool', () => {
   });
 });
 
+spec('hooks.handler.mcp_tool.tool', () => {
+  // 2.1.330, "An answer the client cannot read": the host's client says so with a port failure of
+  // kind `message-too-large` or `missing-text`; the hook error names the tool and the server.
+  test('a message from the server too large to read is an unreadable answer naming tool and server', async () => {
+    const mcp = watched(['my_server'], {
+      'my_server/security_scan': { failure: 'message-too-large', message: 'frame over limit' },
+    });
+    const { run } = await call({ server: 'my_server', tool: 'security_scan' }, { mcp });
+    expect(run).toEqual({
+      kind: 'mcp',
+      isError: true,
+      unreadable: 'message-too-large',
+      text: 'MCP tool "security_scan" on server "my_server" gave no answer that could be read, because a message from the server was too large, so this hook gave no verdict. If this keeps happening, the tool must send a smaller answer.',
+    });
+  });
+
+  test('a result that came without its text is an unreadable answer too', async () => {
+    const mcp = watched(['my_server'], {
+      'my_server/security_scan': { failure: 'missing-text', message: 'no content' },
+    });
+    const { run } = await call({ server: 'my_server', tool: 'security_scan' }, { mcp });
+    expect(run).toEqual({
+      kind: 'mcp',
+      isError: true,
+      unreadable: 'missing-text',
+      text: 'MCP tool "security_scan" on server "my_server" answered without its text, which happens when a result is too large, so this hook gave no verdict. If this keeps happening, the tool must send a smaller answer.',
+    });
+  });
+});
+
 spec('hooks.handler.mcp_tool.input', () => {
   test('the docs example: "${tool_input.file_path}" becomes the edited file path', async () => {
     const { sent } = await argsOf({ file_path: '${tool_input.file_path}' });

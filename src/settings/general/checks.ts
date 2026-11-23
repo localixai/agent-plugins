@@ -108,7 +108,6 @@ export const GENERAL_CHECKS: { readonly [K in GeneralKey]: Repair } = {
   outputStyle: text,
   processWrapper: text,
   statusLine: commandLine,
-  subagentStatusLine: commandLine,
   fileSuggestion: commandLine,
   teammateMode: oneOf(...TEAMMATE_MODES),
   theme: (value, at) =>

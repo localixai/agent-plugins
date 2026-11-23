@@ -2,7 +2,12 @@ import { z } from 'zod';
 import type { ModsNamespaceApi } from '../types.ts';
 import { call, parse, type Deps } from './call.ts';
 
-const speak = z.looseObject({ text: z.string() });
+const speak = z.looseObject({ text: z.string(), voice: z.string().optional() });
+/** `speak(text, { voice?, signal? })` (2.1.330 declarations): the signal stops the utterance and does not cross. */
+const speakOptions = z.object({
+  voice: z.string().optional(),
+  signal: z.instanceof(AbortSignal).optional(),
+});
 
 /**
  * `AudioClip` (claude-code/index.d.ts:787): the plugin's own file `{ asset }`, a URL the engine
@@ -41,9 +46,17 @@ export const audioApi = (deps: Deps): ModsNamespaceApi<'audio'> => ({
     );
   },
   // "which synthesizer spoke, once the utterance has ended" (claude-code/index.d.ts:2839): the platform's own.
-  speak: async (...args) =>
-    call(deps, 'audio.speak', { text: parse('$.audio.speak', z.string(), args[0]) }, async (e) => {
-      await deps.ports.audio.speak(parse('$.audio.speak', speak, e).text);
+  speak: async (...args) => {
+    const { voice, signal } = parse('$.audio.speak', speakOptions, args[1] ?? {});
+    const input = {
+      text: parse('$.audio.speak', z.string(), args[0]),
+      ...(voice === undefined ? {} : { voice }),
+    };
+    return call(deps, 'audio.speak', input, async (e) => {
+      const asked = parse('$.audio.speak', speak, e);
+      const said = asked.voice === undefined ? {} : { voice: asked.voice };
+      await deps.ports.audio.speak(asked.text, { ...said, signal: signal ?? deps.signal });
       return { via: 'system' };
-    }),
+    });
+  },
 });

@@ -183,13 +183,13 @@ spec(
       expect(sizeProblem(nested(33))).toBe('deeper than 32; nothing was drawn');
     });
 
-    test('the refusal line of several mods whose bands nest too deep is the documented one', () => {
-      expect(foldRender('AbovePrompt', 'terminal', nested(33), { mods: 2 })).toEqual({
+    test('the refusal line names the site and then the reason, led by `hooks:` when several mods hook the site', () => {
+      expect(foldRender('Pane', 'terminal', nested(33), { mods: 2 })).toEqual({
         refused: 'deeper than 32; nothing was drawn',
-        line: 'hooks: ui.render (AbovePrompt) refused: deeper than 32; nothing was drawn',
+        line: 'hooks: ui.render (Pane) refused: deeper than 32; nothing was drawn',
       });
-      expect(foldRender('AbovePrompt', 'terminal', nested(33))).toMatchObject({
-        line: 'ui.render (AbovePrompt) refused: deeper than 32; nothing was drawn',
+      expect(foldRender('Pane', 'terminal', nested(33))).toMatchObject({
+        line: 'ui.render (Pane) refused: deeper than 32; nothing was drawn',
       });
     });
 

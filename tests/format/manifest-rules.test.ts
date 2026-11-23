@@ -21,7 +21,10 @@ spec('manifest.rule.metadata', () => {
       }),
     });
     expect(plugin?.commands.map((command) => command.qualifiedName)).toEqual(['demo:go']);
-    expect(readManifest({ name: 'demo', metadata: ['not-an-object'] }).manifest).toBeUndefined();
+    // Judgment J2.6 (oracle 2.1.330): a metadata that is not an object is ignored, and the plugin loads.
+    expect(readManifest({ name: 'demo', metadata: ['not-an-object'] }).manifest).toEqual({
+      name: 'demo',
+    });
   });
 });
 

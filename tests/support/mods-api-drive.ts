@@ -37,6 +37,13 @@ const EVENT_ANSWERED: ReadonlySet<string> = new Set([
   'prompt.suggest',
   'session.send',
   'agent.spawn',
+  // `$.vcs` resolves to its event's result, the client's own events too (Agent Plugins Extended §10.19.8).
+  'vcs.detect',
+  'vcs.diff',
+  'vcs.isolate',
+  'vcs.list',
+  'vcs.release',
+  'vcs.status',
   // A stream: what a hook returns is the command's own result, which is not unwrapped (test.md, "Follow the test kit's rules").
   'process.spawn',
 ]);

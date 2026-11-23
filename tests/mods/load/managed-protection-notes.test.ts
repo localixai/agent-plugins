@@ -25,7 +25,7 @@ const register = registerOf((on) => {
   on('prompt.submit', async (_$: ModsApi, e: unknown, next: Next) => next(e));
 });
 
-spec('policy.mods.Know what happens by default.The guard protects what you manage', () => {
+spec('policy.mods.Know what happens by default', () => {
   test('provides the published note and administrator guidance with each fully skipped registration', async () => {
     const s = session({ addon: register }, { policy: managed({}), firesSessionStart: false });
     const report = await s.host.load([modPlugin(installed('addon'), register)]);

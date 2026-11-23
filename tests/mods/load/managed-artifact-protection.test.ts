@@ -8,7 +8,7 @@ import { fn, record } from '../../support/mods-chain.ts';
 import { managed, session } from '../../support/mods-load.ts';
 import { spec } from '../../support/spec.ts';
 
-spec('policy.mods.Know what happens by default.The guard protects what you manage', () => {
+spec('policy.mods.Know what happens by default', () => {
   test('an organization rewrite cannot launder managed tool identity into a user hook', async () => {
     const original = { description: 'managed tool description' };
     const trace: string[] = [];

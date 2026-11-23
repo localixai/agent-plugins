@@ -8,6 +8,17 @@ import { declaredOptions } from '../../format/validate/plugin-manifest.ts';
 import type { PluginFiles } from '../../ports/index.ts';
 import { componentIssues, manifestPaths } from './components.ts';
 import { hooksFileIssues, mcpFileIssues } from './json-files.ts';
+import { readJson } from '../../format/read-json.ts';
+import { settingsDeprecations } from '../../format/validate/settings-deprecation.ts';
+
+/** The root `settings.json`: its deprecation warnings only (spec §12.6 item 2, J1.3). */
+async function settingsFileIssues(
+  files: PluginFiles,
+  signal?: AbortSignal,
+): Promise<ValidationIssue[]> {
+  const read = await readJson(files, 'settings.json', signal);
+  return 'problem' in read ? [] : inFile('settings.json', settingsDeprecations(read.value, ''));
+}
 
 const CLAUDE_MD =
   'CLAUDE.md at the plugin root is not loaded as project context. To ship context with your plugin, use a skill (skills/<name>/SKILL.md) instead.';
@@ -63,5 +74,6 @@ export async function pluginContents(
     ...(await hookIssues(files, manifest, signal)),
     ...inFile(site.file, site.inline),
     ...(await mcpIssues(files, manifest, signal)),
+    ...(await settingsFileIssues(files, signal)),
   ];
 }

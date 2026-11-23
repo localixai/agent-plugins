@@ -199,6 +199,39 @@ const big = (bytes: number) => ({
   read: () => Promise.resolve({ text: 'x', bytes }),
 });
 
+spec(['mods.api.$.fs', 'mods.limit.$.fs.read'], () => {
+  test('read with { offset, length } asks the host for that range of bytes, through the fs.read event (v2.1.326)', async () => {
+    const ranges: unknown[] = [];
+    const port = {
+      ...fsPort(),
+      read: (_path: string, _signal: AbortSignal, as?: 'text' | 'bytes', range?: unknown) => (
+        ranges.push(range),
+        Promise.resolve({ text: 'No', bytes: 2, ...(as === 'bytes' ? { base64: 'Tm8=' } : {}) })
+      ),
+    };
+    const h = await apiHarness({ ports: { fs: port } });
+    const seen: unknown[] = [];
+    await h.mod('watch', 'prepend', [fn('fs.read', (_$, e, next) => (seen.push(e), next(e)))]);
+    expect(await h.api.fs.read('notes.md', { offset: 2, length: 2 })).toBe('No');
+    expect(await h.api.fs.read('notes.md', { as: 'bytes', offset: 2 })).toEqual({ base64: 'Tm8=' });
+    expect(await h.api.fs.read('notes.md')).toBe('No');
+    expect(ranges).toEqual([{ offset: 2, length: 2 }, { offset: 2 }, undefined]);
+    expect(seen).toEqual([
+      { path: '/work/notes.md', as: 'text', offset: 2, length: 2 },
+      { path: '/work/notes.md', as: 'bytes', offset: 2 },
+      { path: '/work/notes.md', as: 'text' },
+    ]);
+  });
+
+  test('a range read is held to 4 MiB too, and a negative offset is refused', async () => {
+    const h = await apiHarness({ ports: { fs: fsPort() } });
+    expect(
+      await rejection(h.api.fs.read('notes.md', { length: MOD_LIMITS.fileBytes + 1 })),
+    ).toContain(`over the ${MOD_LIMITS.fileBytes}-byte limit`);
+    expect(await rejection(h.api.fs.read('notes.md', { offset: -1 }))).toStartWith('$.fs.read');
+  });
+});
+
 spec('mods.limit.$.fs.read', () => {
   test('a file of exactly 4 MiB reads', async () => {
     const h = await apiHarness({ ports: { fs: { ...fsPort(), ...big(MOD_LIMITS.fileBytes) } } });

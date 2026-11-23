@@ -65,6 +65,38 @@ export const HOST_ANSWERS: Partial<ModHostPorts> = {
     media: resolved({ type: 'image', mediaType: 'image/png', base64: 'AA==', size: 1 }),
   },
   notifications: { cancel: resolved({ isSent: true }) },
+  agentCalls: {
+    call: resolved({ result: 'ok' }),
+    limits: resolved({ concurrent: 4, depth: 2, isBackgroundEnabled: true }),
+  },
+  sessionFacts: {
+    info: resolved({ transcriptPath: '/work/.claude/session.jsonl' }),
+    machine: resolved({
+      sysname: 'Darwin',
+      release: '25.0.0',
+      machine: 'arm64',
+      packageManagers: ['npm'],
+      runtimes: ['node'],
+    }),
+  },
+  hookEnv: { of: resolved({ CLAUDECODE: '1' }) },
+  wasm: { compile: resolved({}) },
+  vcs: {
+    detect: resolved({
+      vcs: 'git',
+      root: '/work',
+      mainRoot: '/work',
+      revision: 'abc',
+      branch: 'main',
+      defaultBranch: 'main',
+      remote: null,
+    }),
+    diff: resolved({ base: 'abc', files: [] }),
+    isolate: resolved({ path: '/work/.wt/fix', vcs: 'git' }),
+    list: resolved([{ path: '/work', vcs: 'git' }]),
+    release: resolved({ isReleased: true }),
+    status: resolved({ changes: [], unpublished: 0 }),
+  },
   agents: { spawn: resolved({ agentId: 'agent-1', model: 'haiku' }), list: resolved([]) },
   fs: {
     read: resolved({ text: 'x', bytes: 1 }),
