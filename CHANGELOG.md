@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-23
+
 - The kit follows Agent Plugins Extended `0ed968b`, where the 48 disagreements its judgments
   listed are settled (the spec's own ledger `v16-disagreements`); `spec/judgments.md` has none left.
   What changed in behaviour:
