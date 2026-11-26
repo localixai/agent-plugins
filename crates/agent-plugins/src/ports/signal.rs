@@ -9,6 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 #[derive(Clone, Debug, Default)]
 pub struct Signal {
     aborted: Arc<AtomicBool>,
+    /// The host's number for it when it came across the boundary (`{"$signal": n}`,
+    /// `crate::registry`), so a port the host implements is handed the host's own signal back.
+    host: Option<u32>,
 }
 
 impl Signal {
@@ -16,6 +19,20 @@ impl Signal {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// The signal a host handed across the boundary as number `host`, aborted or not; its flag
+    /// is the one `crate::registry` sets when the host says it aborted.
+    pub(crate) fn from_host(host: u32, aborted: Arc<AtomicBool>) -> Self {
+        Self {
+            aborted,
+            host: Some(host),
+        }
+    }
+
+    /// The host's number for it, when it came across the boundary.
+    pub(crate) const fn host(&self) -> Option<u32> {
+        self.host
     }
 
     /// Aborts every clone of this signal.

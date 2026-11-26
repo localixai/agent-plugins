@@ -10,7 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::BoxFuture;
+use super::{BoxFuture, Signal};
 
 /// What a host knows about one entry; flags, so no code compares a kind to a string.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,18 +56,34 @@ pub struct DirectoryEntry {
 /// for a [`PluginFiles`], host paths from `Locations` for a reader of an agent memory folder.
 pub trait TextFileReader: Send + Sync {
     /// The file's text decoded as UTF-8, or `None` when there is no such file.
-    fn read_text<'a>(&'a self, path: &'a str) -> BoxFuture<'a, Option<String>>;
+    fn read_text<'a>(
+        &'a self,
+        path: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<String>>;
 }
 
 /// One plugin folder, read through paths relative to it.
 pub trait PluginFiles: TextFileReader {
     /// The file's bytes, or `None` when there is no such file.
-    fn read_bytes<'a>(&'a self, path: &'a str) -> BoxFuture<'a, Option<Vec<u8>>>;
+    fn read_bytes<'a>(
+        &'a self,
+        path: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<Vec<u8>>>;
     /// Entries of a directory in any order (the crate sorts them), or `None` when it does not
     /// exist.
-    fn list<'a>(&'a self, path: &'a str) -> BoxFuture<'a, Option<Vec<DirectoryEntry>>>;
+    fn list<'a>(
+        &'a self,
+        path: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<Vec<DirectoryEntry>>>;
     /// What the host knows about the entry, or `None` when there is none.
-    fn stat<'a>(&'a self, path: &'a str) -> BoxFuture<'a, Option<FileStat>>;
+    fn stat<'a>(
+        &'a self,
+        path: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<FileStat>>;
     /// Whether there is an entry at `path`.
-    fn exists<'a>(&'a self, path: &'a str) -> BoxFuture<'a, bool>;
+    fn exists<'a>(&'a self, path: &'a str, signal: Option<&'a Signal>) -> BoxFuture<'a, bool>;
 }

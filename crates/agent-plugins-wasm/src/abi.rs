@@ -15,6 +15,13 @@
 //! const json = decoder.decode(new Uint8Array(memory.buffer, answer + 4, length))
 //! agent_plugins_free(answer, length + 4)
 //! ```
+//!
+//! An export that waits on the host (docs/RUST.md, "The boundary") is driven with the same
+//! buffers: `agent_plugins_start` takes a name and arguments as `agent_plugins_call` does and
+//! returns a step's buffer (`{"done"}`, `{"task", "needs"}` or `{"rethrow"}`,
+//! `agent_plugins::registry::Step`); `agent_plugins_resume` takes a task's number and a buffer
+//! of the host's answers (`{"answers": [...], "aborted": [...]}`) and returns the next step's;
+//! `agent_plugins_release` forgets a handle the host no longer holds.
 #![expect(
     unsafe_code,
     reason = "an export keeps its name (`no_mangle`), and a buffer the host hands back is \
@@ -57,6 +64,69 @@ pub unsafe extern "C" fn agent_plugins_call(
     let name = unsafe { take(name_ptr, name_len) };
     let args = unsafe { take(args_ptr, args_len) };
     give(&answer(&name, &args))
+}
+
+/// Starts the export named in one buffer with the arguments in the other
+/// (`registry::start_json`) and returns the step's buffer.
+///
+/// # Safety
+///
+/// As `agent_plugins_call`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn agent_plugins_start(
+    name_ptr: *mut u8,
+    name_len: usize,
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> *mut u8 {
+    let name = unsafe { take(name_ptr, name_len) };
+    let args = unsafe { take(args_ptr, args_len) };
+    give(&step(&name, &args))
+}
+
+/// Gives task `task` the host's answers in the buffer (`registry::resume_json`) and returns the
+/// next step's buffer.
+///
+/// # Safety
+///
+/// As `agent_plugins_free`, for the buffer: it is taken back and freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn agent_plugins_resume(
+    task: u32,
+    answers_ptr: *mut u8,
+    answers_len: usize,
+) -> *mut u8 {
+    let answers = unsafe { take(answers_ptr, answers_len) };
+    give(&resumed(task, &answers))
+}
+
+/// Forgets the handle `handle` (`registry::release`); a handle already released is no fault.
+#[unsafe(no_mangle)]
+pub extern "C" fn agent_plugins_release(handle: u32) {
+    agent_plugins::registry::release(handle);
+}
+
+/// The step's text for a name and arguments as bytes.
+#[must_use]
+pub fn step(name: &[u8], args: &[u8]) -> String {
+    match (std::str::from_utf8(name), std::str::from_utf8(args)) {
+        (Ok(name), Ok(args)) => agent_plugins::registry::start_json(name, args),
+        (Err(_), _) | (_, Err(_)) => {
+            r#"{"done":{"fault":"the name or the arguments are not UTF-8"}}"#.to_owned()
+        }
+    }
+}
+
+/// The next step's text for a task and the host's answers as bytes.
+#[must_use]
+pub fn resumed(task: u32, answers: &[u8]) -> String {
+    match std::str::from_utf8(answers) {
+        Ok(answers) => agent_plugins::registry::resume_json(task, answers),
+        Err(_) => {
+            agent_plugins::registry::cancel(task);
+            r#"{"done":{"fault":"the answers are not UTF-8"}}"#.to_owned()
+        }
+    }
 }
 
 /// The answer's text for a name and arguments as bytes.

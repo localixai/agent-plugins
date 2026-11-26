@@ -39,14 +39,11 @@ export const configDirectoryOf = (
   home: string,
   configDir: string | undefined,
   join: Join,
-): string => {
-  const { base, folder } = configFolderOf(home, configDir);
-  return folder === '' ? base : join(base, folder);
-};
+): string => call('configDirectoryOf', home, configDir, join);
 
 /** The global config file: `.claude.json` in `CLAUDE_CONFIG_DIR` when set, else in the home. */
 export const globalConfigFileOf = (
   home: string,
   configDir: string | undefined,
   join: Join,
-): string => join(configFolderOf(home, configDir).base, '.claude.json');
+): string => call('globalConfigFileOf', home, configDir, join);

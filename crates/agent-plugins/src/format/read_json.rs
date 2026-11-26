@@ -1,11 +1,13 @@
 //! Port of `src/format/read-json.ts`, switched.
 //!
-//! Reading a plugin's JSON files: the value, or the reason it cannot be used.
+//! Reading a JSON file of a plugin: the bytes come through the `PluginFiles` port, and the core
+//! parses them.
 
 use crate::js::JsValue;
 use crate::js::json_parse::json_parse;
-use crate::ports::BoxFuture;
 use crate::ports::files::PluginFiles;
+use crate::ports::{BoxFuture, Signal};
+use crate::registry::Port;
 use serde::Serialize;
 
 /// A JSON file's value, or the reason it cannot be used; `missing` when there was no text to
@@ -56,9 +58,13 @@ fn unreadable() -> JsonRead {
 
 /// Reads and parses one file of the plugin; a missing file or invalid JSON is a `problem`, never
 /// a panic.
-pub fn read_json<'a>(files: &'a dyn PluginFiles, path: &'a str) -> BoxFuture<'a, JsonRead> {
+pub fn read_json<'a>(
+    files: &'a dyn PluginFiles,
+    path: &'a str,
+    signal: Option<&'a Signal>,
+) -> BoxFuture<'a, JsonRead> {
     Box::pin(async move {
-        match files.read_text(path).await {
+        match files.read_text(path, signal).await {
             None => unreadable(),
             Some(text) => parse_json(&text),
         }
@@ -85,9 +91,10 @@ pub fn opens_with_bom(bytes: &[u8]) -> bool {
 pub fn read_json_without_bom<'a>(
     files: &'a dyn PluginFiles,
     path: &'a str,
+    signal: Option<&'a Signal>,
 ) -> BoxFuture<'a, JsonRead> {
     Box::pin(async move {
-        let Some(bytes) = files.read_bytes(path).await else {
+        let Some(bytes) = files.read_bytes(path, signal).await else {
             return unreadable();
         };
         if opens_with_bom(&bytes) {
@@ -104,7 +111,11 @@ crate::registry::exports! {
     "format/read-json" {
         "parseJson" => ok |text: String| parse_json(&text);
         "invalidJsonSyntax" => ok |problem: String| invalid_json_syntax(&problem);
+        "readJson" => async ok |files: Port, path: String, signal: Option<Signal>|
+            read_json(&files, &path, signal.as_ref()).await;
         "BOM_PARSE_ERROR" => ok || BOM_PARSE_ERROR;
         "opensWithBom" => ok |bytes: crate::registry::Bytes| opens_with_bom(&bytes.0);
+        "readJsonWithoutBom" => async ok |files: Port, path: String, signal: Option<Signal>|
+            read_json_without_bom(&files, &path, signal.as_ref()).await;
     }
 }

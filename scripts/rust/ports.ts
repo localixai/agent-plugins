@@ -105,9 +105,11 @@ function switchedProblems(port: Port): string[] {
     found.push(`${port.source}: no coreModule('${expected}')`);
   }
   const called = new Set(
-    [...wrapper.matchAll(/\bcall(?:Core)?(?:<[^>]*>)?\(\s*'(?:[^'#]+#)?([A-Za-z_$][\w$]*)'/gu)].map(
-      (match) => match[1] ?? '',
-    ),
+    [
+      ...wrapper.matchAll(
+        /\bcall(?:Core|\.async)?(?:<[^>]*>)?\(\s*'(?:[^'#]+#)?([A-Za-z_$][\w$]*)'/gu,
+      ),
+    ].map((match) => match[1] ?? ''),
   );
   for (const name of names) {
     if (!called.has(name)) found.push(`${port.source}: never calls the core's ${name}`);

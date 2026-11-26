@@ -1,0 +1,156 @@
+//! Results with methods: what the TypeScript returns as an object whose members are functions (a
+//! hook engine, a plugin host) crosses as a handle, `{"$handle": h, "sync": [names], "async":
+//! [names]}`. The core keeps the object under `h`; the host calls a method by the name
+//! `<h>#<method>` through `registry::start` and `resume`, as it calls an export, and gives the
+//! handle back with `registry::release` when it no longer holds it. A sync method is one the
+//! TypeScript returns a value from, an async one a promise; the host's wrapper builds its object
+//! with the same kinds.
+//!
+//! A type declares its methods with `methods!` (below), the way a module declares its exports.
+
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex, PoisonError};
+
+use serde::Serialize;
+use serde::ser::{SerializeMap, Serializer};
+
+use super::task::Started;
+use crate::js::JsValue;
+
+/// An object the host calls methods of, by name (`methods!` implements it).
+pub trait Methods: Send + Sync + 'static {
+    /// The names of the methods that answer at once (a value in the TypeScript).
+    fn sync_methods(&self) -> &'static [&'static str];
+    /// The names of the methods that wait on the host (a promise in the TypeScript).
+    fn async_methods(&self) -> &'static [&'static str];
+    /// Starts `method` with `args`, or `None` for a name it does not have.
+    fn start(self: Arc<Self>, method: &str, args: &[JsValue]) -> Option<Started>;
+}
+
+/// A result the host holds by a handle: it serializes as `{"$handle": h, …}` and the core keeps
+/// the object under `h` until the host releases it.
+#[derive(Clone)]
+pub struct Handle(Arc<dyn Methods>);
+
+impl Handle {
+    /// The object as a result.
+    pub fn new(object: impl Methods) -> Self {
+        Self(Arc::new(object))
+    }
+}
+
+impl std::fmt::Debug for Handle {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Handle")
+            .field("sync", &self.0.sync_methods())
+            .field("async", &self.0.async_methods())
+            .finish()
+    }
+}
+
+#[derive(Default)]
+struct Handles {
+    next: u32,
+    held: BTreeMap<u32, Arc<dyn Methods>>,
+}
+
+thread_local! {
+    static HANDLES: Mutex<Handles> = Mutex::new(Handles::default());
+}
+
+fn with_handles<R>(body: impl FnOnce(&mut Handles) -> R) -> R {
+    HANDLES.with(|handles| body(&mut handles.lock().unwrap_or_else(PoisonError::into_inner)))
+}
+
+impl Serialize for Handle {
+    /// Keeps the object under a new number, which it writes with the names of its methods.
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let number = with_handles(|handles| {
+            let number = handles.next;
+            handles.next = handles.next.wrapping_add(1);
+            handles.held.insert(number, Arc::clone(&self.0));
+            number
+        });
+        let mut map = serializer.serialize_map(Some(3))?;
+        map.serialize_entry("$handle", &number)?;
+        map.serialize_entry("sync", self.0.sync_methods())?;
+        map.serialize_entry("async", self.0.async_methods())?;
+        map.end()
+    }
+}
+
+/// Starts `method` of the object held under `handle`; `None` when there is no such handle or
+/// method.
+pub(crate) fn start(handle: u32, method: &str, args: &[JsValue]) -> Option<Started> {
+    let object = with_handles(|handles| handles.held.get(&handle).cloned())?;
+    object.start(method, args)
+}
+
+/// Forgets the object held under `handle` (a call of one of its methods already started keeps
+/// it until it ends); whether there was one.
+pub fn release(handle: u32) -> bool {
+    with_handles(|handles| handles.held.remove(&handle).is_some())
+}
+
+/// How many objects are held, for the tests.
+#[cfg(test)]
+pub(crate) fn held() -> usize {
+    with_handles(|handles| handles.held.len())
+}
+
+/// Declares a type's methods for its [`Handle`], as `exports!` declares a module's exports; the
+/// first parameter is the object (an `Arc<Self>`):
+///
+/// ```ignore
+/// crate::registry::methods! {
+///     Counter {
+///         "add" => ok |this, by: f64| this.add(by);
+///         "settle" => async ok |this, path: String| this.settle(&path).await;
+///     }
+/// }
+/// ```
+macro_rules! methods {
+    ($type:ty { $($entries:tt)* }) => {
+        $crate::registry::methods!(@munch $type [] [] [] $($entries)*);
+    };
+    (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$(($name:literal $this:ident $how:tt))*]) => {
+        impl $crate::registry::Methods for $type {
+            fn sync_methods(&self) -> &'static [&'static str] {
+                &[$($sync),*]
+            }
+
+            fn async_methods(&self) -> &'static [&'static str] {
+                &[$($async),*]
+            }
+
+            fn start(
+                self: ::std::sync::Arc<Self>,
+                method: &str,
+                args: &[$crate::js::JsValue],
+            ) -> Option<$crate::registry::Started> {
+                match method {
+                    $($name => {
+                        let $this = self;
+                        Some($crate::registry::exports!(@start $how args))
+                    })*
+                    _ => None,
+                }
+            }
+        }
+    };
+    (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
+        $name:literal => async $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;
+        $($rest:tt)*) => {
+        $crate::registry::methods!(@munch $type [$($sync)*] [$($async)* $name]
+            [$($done)* ($name $this [async $kind ($($param: $ptype),*) $body])] $($rest)*);
+    };
+    (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
+        $name:literal => $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;
+        $($rest:tt)*) => {
+        $crate::registry::methods!(@munch $type [$($sync)* $name] [$($async)*]
+            [$($done)* ($name $this [sync $kind (move |$($param: $ptype),*| $body)])] $($rest)*);
+    };
+}
+
+pub(crate) use methods;

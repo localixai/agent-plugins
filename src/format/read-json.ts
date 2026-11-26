@@ -1,5 +1,5 @@
 /**
- * Reading a JSON file of a plugin: the bytes come through the `PluginFiles` port here, and the core
+ * Reading a JSON file of a plugin: the bytes come through the `PluginFiles` port, and the core
  * parses them.
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/format/read_json.rs`, docs/RUST.md).
@@ -21,16 +21,11 @@ export const parseJson = (text: string): JsonRead => call('parseJson', text);
 export const invalidJsonSyntax = (problem: string): string => call('invalidJsonSyntax', problem);
 
 /** Reads and parses one file of the plugin; a missing file or invalid JSON is a `problem`, never a throw. */
-export async function readJson(
+export const readJson = (
   files: PluginFiles,
   path: string,
   signal?: AbortSignal,
-): Promise<JsonRead> {
-  const text = await files.readText(path, signal);
-  return text === undefined
-    ? { problem: 'the file could not be read', missing: true }
-    : parseJson(text);
-}
+): Promise<JsonRead> => call.async('readJson', files, path, signal);
 
 /** What Claude Code's JSON parser says of a file that opens with a UTF-8 byte order mark. */
 export const BOM_PARSE_ERROR: string = call('BOM_PARSE_ERROR');
@@ -44,14 +39,8 @@ export const opensWithBom = (bytes: Uint8Array): boolean => call('opensWithBom',
  * manifest names, which load no hooks with a BOM (spec §2.1 item 2, J2.3; load oracle 2.1.319 and
  * 2.1.322: Hooks (0)). One read either way.
  */
-export async function readJsonWithoutBom(
+export const readJsonWithoutBom = (
   files: PluginFiles,
   path: string,
   signal?: AbortSignal,
-): Promise<JsonRead> {
-  const bytes = await files.readBytes(path, signal);
-  if (bytes === undefined) return { problem: 'the file could not be read', missing: true };
-  return opensWithBom(bytes)
-    ? { problem: BOM_PARSE_ERROR }
-    : parseJson(new TextDecoder().decode(bytes));
-}
+): Promise<JsonRead> => call.async('readJsonWithoutBom', files, path, signal);

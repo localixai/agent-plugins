@@ -215,6 +215,11 @@ pub fn take_args<P: Params>(args: &[JsValue]) -> Result<P, String> {
     P::params(args)
 }
 
+/// An answer already given, as a task's future (a sync export started as a task).
+pub fn ready(answer: Answer) -> super::Started {
+    Box::pin(std::future::ready(answer))
+}
+
 /// The answer of a call's body, a decoding failure as a fault.
 pub fn run(body: impl FnOnce() -> Result<Answer, String>) -> Answer {
     body().unwrap_or_else(Answer::Fault)

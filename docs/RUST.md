@@ -52,13 +52,78 @@ from data crosses. The ports (`src/ports/`) are the host's types and stay TypeSc
   `module.ts` (in `src/wasm/`) (not committed), so the package still reads nothing of the machine it runs
   on (L3). Run it before the package's tests, type check or build.
 
+### Effects: an export that waits on the host
+
+An export that takes a port, a callback or an `AbortSignal`, or that the TypeScript declares
+`async`, runs in the core too, and the core still does no I/O and calls nothing across the
+boundary: the host drives it with a plain loop, so any language can, and a Rust host implements
+its ports without an async runtime.
+
+1. `registry::start(name, args)` runs the export until it is done or waits, and answers a step:
+   `{"done": answer}`, or `{"task": t, "needs": [{"id", "port", "method", "args"}]}`. A need is
+   a method of a value the host keeps (`port`, its number), named and called as the TypeScript
+   port's (`files.readText(path, signal)` is `readText` with `[path, signal]`); a callback's
+   method is `call`.
+2. The host does each need and gives its answer to `registry::resume(t, {"answers": [{"id",
+   "result"} | {"id", "throws"}], "aborted": [n]})`, which runs the task on to its next step.
+   Every need asked in one poll comes in one step, so a `join` in the core is concurrent work on
+   the host, as `Promise.all` was. A host that throws ends the task with `{"rethrow": id}`: the
+   call throws the very value the host threw, as an `await` in the TypeScript did (a port's own
+   failure is a `PortFailure` in its result, `src/ports/failure.ts`, never a throw).
+3. What the host keeps crosses as its number, at any depth, both ways (`registry/remote.rs`,
+   `src/wasm/wire.ts`): a port (an object with methods) `{"$port": n}`, a function `{"$fn": n}`,
+   an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
+   a resume lists it in `aborted`: the core never waits on an abort, the host's port watches its
+   own signal. A signal the core makes itself crosses as `{"$signal": null, "aborted": bool}`.
+
+The core keeps each waiting task's future in a table of its thread and polls it with a waker that
+does nothing (`registry/task.rs`); a port method of the host's writes its need and is pending
+until the answer is in. In `exports!`, `async` before the kind marks such an export, its
+parameters `registry::Port`, `registry::Callback`, `ports::Signal` or data, and its body may
+`.await`:
+
+```rust
+"readJson" => async ok |files: Port, path: String, signal: Option<Signal>|
+    read_json(&files, &path, signal.as_ref()).await;
+```
+
+Its wrapper is `call.async('readJson', files, path, signal)`, which returns a promise; a
+function the TypeScript declares synchronous keeps `call('f', …)`, and a callback among its
+arguments is answered as the core asks (a callback that returns a promise there is refused).
+`registry::call` answers such an export with a fault. A Rust host passes its own port values and
+closures, each answering with a ready future, and takes the answer with `ports::now(future)`.
+
+### Handles: a result with methods
+
+A result the TypeScript returns as an object with methods (a hook engine, a plugin host) is a
+`registry::Handle` in the core, declared with `methods!` as a module declares its exports, each
+method sync or `async`:
+
+```rust
+crate::registry::methods! {
+    Counter {
+        "add" => ok |this, by: f64| this.add(by);
+        "addLater" => async ok |this, by: Callback| this.add(by.call::<f64>(vec![]).await);
+    }
+}
+```
+
+It crosses as `{"$handle": h, "sync": ["add"], "async": ["addLater"]}`; the core keeps the object
+under `h`. The host calls a method by the name `<h>#<method>` through `start` and `resume` (a sync
+one through `call` too), and `registry::release(h)` forgets it. The wrapper builds an object with
+those methods (`src/wasm/drive.ts`) and releases the handle when the object is collected
+(`FinalizationRegistry`); a method's call reads the host values of the call that made the handle,
+so a port the core keeps in it is still the host's. `registry/probe` holds an export of each kind
+for the loop's tests (`tests/wasm/loop.test.ts`); no module of `src/` names it.
+
 ## Switching a module
 
 1. The module is ported and its exports are held to every recorded call
    (`cargo test --test differential`).
 2. Rewrite `src/<module>.ts` as its wrapper: the same exports, types and doc comments, each
    function calling the core through `const call = coreModule('<module>')`, as `call('<export>',
-   …args)`; the module comment names the Rust file. Types stay TypeScript until they are generated from the core.
+   …args)` (`call.async` for one that returns a promise, "Effects" above); the module comment
+   names the Rust file. Types stay TypeScript until they are generated from the core.
 3. `bun run build:wasm`, then the module's tests and the tests of the modules that import it.
 4. Its header becomes ``//! Port of `src/<module>.ts`, switched.`` and its vectors are deleted:
    the package's tests hold it now. `bun scripts/rust/ports.ts --check` checks that a switched

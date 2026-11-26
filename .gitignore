@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 dist/
 coverage/
 # Test and comparison reports: produced locally, never committed.

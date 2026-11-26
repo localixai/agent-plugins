@@ -9,6 +9,10 @@
   stay TypeScript. The package carries the module (about 1.7 MB) and compiles it once when it
   loads (about 35 ms); `bun run build:wasm` builds it, with a stable Rust and the
   `wasm32-unknown-unknown` target (`rust-toolchain.toml`).
+- The core also runs functions that wait on the host: a port, a callback or an `AbortSignal` is
+  kept by the wrapper and crosses as a number, and the wrapper answers what the core asks of it
+  in a plain loop (docs/RUST.md, "Effects"). `readJson`, `readJsonWithoutBom`, `listSorted`,
+  `configDirectoryOf` and `globalConfigFileOf` now run there; the host's ports see the same calls.
 
 ## [0.2.0] - 2026-11-23
 

@@ -19,14 +19,32 @@
 //! `$bytes`, `$regexp`: [`Set`], [`Map`], [`Bytes`], [`RegExp`]); a result that is `None` is `undefined`
 //! unless the export says `nullable`. Each module declares its exports with `exports!` at the end of its file, and
 //! [`MODULES`] lists those modules.
+//!
+//! An export that waits on the host (it takes a port, a callback or an `AbortSignal`, or the
+//! TypeScript declares it `async`) is driven by the host with a plain loop, no callback crossing
+//! the boundary: [`start`] runs it until it waits and answers a [`Step`], the [`Need`]s it waits
+//! on; the host does each (calls its port's method, its callback) and gives the answers to
+//! [`resume`], until the step is done. The values the host keeps are numbers here
+//! ([`Port`], [`Callback`], the `Signal` of `crate::ports`), and a result with methods is a
+//! [`Handle`] (`registry/handle.rs`). docs/RUST.md, "The boundary", has the protocol.
 
 mod exports;
+mod handle;
+mod probe;
+mod remote;
+mod steps;
+mod task;
 mod wire;
 
 pub(crate) use exports::exports;
+pub(crate) use handle::methods;
+pub use handle::{Handle, Methods, release};
+pub use remote::{Callback, Port};
+pub use steps::{resume, resume_json, start, start_json};
+pub use task::{Need, Reply, Started, Step, cancel};
 pub use wire::{Answer, Bytes, Map, RegExp, Set};
 #[doc(hidden)]
-pub use wire::{apply, fallible, nullable, ok, run, sign, take_args};
+pub use wire::{apply, fallible, nullable, ok, ready, run, sign, take_args};
 
 use serde::Deserialize as _;
 
@@ -42,6 +60,8 @@ pub struct Module {
     pub functions: &'static [&'static str],
     /// Answers a call of one of `functions`, or `None` for a name it does not export.
     pub call: fn(&str, &[JsValue]) -> Option<Answer>,
+    /// Starts one of `functions` as a task (`start`), or `None` for a name it does not export.
+    pub start: fn(&str, &[JsValue]) -> Option<Started>,
 }
 
 /// Every module with exports.
@@ -88,14 +108,26 @@ pub const MODULES: &[Module] = &[
     crate::format::validate::shell_command::EXPORTS,
     crate::format::versions::EXPORTS,
     crate::format::wildcard::EXPORTS,
+    probe::EXPORTS,
 ];
 
-/// Answers a call: `name` is `<module>#<function>`, `args` the arguments as they decoded.
+/// Answers a call: `name` is `<module>#<function>`, `args` the arguments as they decoded. A
+/// handle's method (`<handle>#<method>`) is answered too, when it answers at once.
 #[must_use]
 pub fn answer(name: &str, args: &[JsValue]) -> Answer {
     let Some((module, function)) = name.split_once('#') else {
         return Answer::Fault(format!("`{name}` names no function: <module>#<function>"));
     };
+    if module.parse::<u32>().is_ok() {
+        return match start(name, args) {
+            Step::Done(answer) => answer,
+            Step::Needs { task, .. } => {
+                cancel(task);
+                Answer::Fault(format!("`{name}` waits on the host: a host starts it"))
+            }
+            Step::Rethrow { .. } => Answer::Fault(format!("`{name}` waits on the host")),
+        };
+    }
     MODULES
         .iter()
         .find(|candidate| candidate.name == module)
@@ -104,7 +136,7 @@ pub fn answer(name: &str, args: &[JsValue]) -> Answer {
 }
 
 /// The arguments' JSON text as values, each wire tag read back as the value it stands for.
-fn decoded(args: &str) -> Result<Vec<JsValue>, String> {
+pub(crate) fn decoded(args: &str) -> Result<Vec<JsValue>, String> {
     let raw =
         json_parse(args).map_err(|problem| format!("the arguments are not JSON: {problem}"))?;
     match JsValue::deserialize(raw) {
