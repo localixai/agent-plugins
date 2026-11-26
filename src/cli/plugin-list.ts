@@ -1,5 +1,8 @@
 import type { JsonObject, JsonValue } from '../foundation/plain-data.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { Rendered } from './result.ts';
+
+const call = coreModule('cli/plugin-list');
 
 /**
  * `claude plugin list` (plugins/cli-reference.md, "plugin list" and "JSON output"): the groups of
@@ -7,6 +10,8 @@ import type { Rendered } from './result.ts';
  * `--data-size`. Pure: the host reads the records, the settings and the data directories and passes
  * them in. The layout of a plugin's text lines is the kit's (spec/judgments.md); the group headings,
  * the empty line and every JSON field are the docs'.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/plugin_list.rs`, docs/RUST.md).
  */
 
 /** One installation, as the list shows it. Optional fields "appear only when they apply". */
@@ -67,151 +72,23 @@ export interface ListOptions {
   readonly sizes?: Readonly<Record<string, DataSize | undefined>>;
 }
 
-/** How the page's four groups are named and which ids belong to them. */
-const GROUPS: readonly { readonly suffix: string | undefined; readonly heading: string }[] = [
-  { suffix: undefined, heading: 'Installed plugins:' },
-  { suffix: 'inline', heading: 'Session-only plugins (--plugin-dir / --plugin-url):' },
-  { suffix: 'skills-dir', heading: 'Skills-directory plugins (.claude/skills/*):' },
-  { suffix: 'synced', heading: 'Synced from claude.ai' },
-];
-
-const NOTHING = 'No plugins installed. Use `claude plugin install` to install a plugin.';
-
-const suffixOf = (id: string): string => id.slice(id.lastIndexOf('@') + 1);
-const OTHER_SUFFIXES = new Set(
-  GROUPS.flatMap((group) => (group.suffix === undefined ? [] : [group.suffix])),
-);
-
-const inGroup = (plugin: ListedPlugin, suffix: string | undefined): boolean =>
-  suffix === undefined ? !OTHER_SUFFIXES.has(suffixOf(plugin.id)) : suffixOf(plugin.id) === suffix;
-
-const isSessionOnly = (plugin: ListedPlugin): boolean => suffixOf(plugin.id) === 'inline';
-
-/** J17.9: a session-only plugin shows its path instead of a scope, and `loaded` (oracle 2.1.325). */
-const whereLine = (plugin: ListedPlugin): string =>
-  isSessionOnly(plugin)
-    ? `    Path: ${plugin.installPath ?? plugin.readFromFolder ?? ''}`
-    : `    Scope: ${plugin.scope}`;
-
-const statusOf = (plugin: ListedPlugin): string => {
-  if (!plugin.enabled) return '✘ disabled';
-  return isSessionOnly(plugin) ? '✔ loaded' : '✔ enabled';
-};
-
-const lines = (plugin: ListedPlugin): readonly string[] => [
-  `  ❯ ${plugin.id}`,
-  `    Version: ${plugin.version}`,
-  whereLine(plugin),
-  `    Status: ${statusOf(plugin)}`,
-  ...(plugin.errors ?? []).map((message) => `    Error: ${message}`),
-  ...(plugin.notes ?? []).map((message) => `    Note: ${message}`),
-];
-
 /** The text listing, grouped by how each plugin loads; nothing in any group is one line. */
-export function listText(installed: readonly ListedPlugin[]): readonly string[] {
-  const groups = GROUPS.flatMap((group) => {
-    const members = installed.filter((plugin) => inGroup(plugin, group.suffix));
-    return members.length === 0 ? [] : [group.heading, ...members.flatMap(lines)];
-  });
-  return groups.length === 0 ? [NOTHING] : groups;
-}
-
-const KILO = 1024;
-/** `human` of `dataDirSize`: the byte count in the largest binary unit that keeps it above 1. */
-function humanBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= KILO && unit < units.length - 1) {
-    value /= KILO;
-    unit += 1;
-  }
-  return unit === 0 ? `${bytes} B` : `${value.toFixed(1)} ${units[unit]}`;
-}
-
-/** Whether a plugin keeps a saved data directory: "Marketplace installs only". */
-const isMarketplaceInstall = (plugin: ListedPlugin): boolean =>
-  !OTHER_SUFFIXES.has(suffixOf(plugin.id));
-
-function sizeFields(plugin: ListedPlugin, options: ListOptions): JsonObject {
-  const wanted =
-    options.dataSize === true || (options.dataSize !== undefined && options.dataSize === plugin.id);
-  const found = options.sizes?.[plugin.id];
-  if (!wanted || !isMarketplaceInstall(plugin) || found === undefined) return {};
-  if (found === 'unreadable') return { dataDirUnreadable: true };
-  return found.bytes > 0
-    ? { dataDirSize: { bytes: found.bytes, human: humanBytes(found.bytes) } }
-    : {};
-}
-
-/** The fields of an object that are set; an empty list of errors or notes does not "apply" either. */
-function present(fields: Readonly<Record<string, JsonValue | undefined>>): JsonObject {
-  const kept: Record<string, JsonValue> = {};
-  for (const [key, value] of Object.entries(fields)) {
-    const empty = Array.isArray(value) && value.length === 0;
-    if (value !== undefined && !empty) kept[key] = value;
-  }
-  return kept;
-}
+export const listText = (installed: readonly ListedPlugin[]): readonly string[] =>
+  call('listText', installed);
 
 /** One installed plugin as a JSON object, only the fields that apply. */
-export function installedJson(
+export const installedJson = (
   plugin: ListedPlugin,
   options: ListOptions = { json: true },
-): JsonObject {
-  return present({
-    id: plugin.id,
-    version: plugin.version,
-    scope: plugin.scope,
-    enabled: plugin.enabled,
-    installPath: plugin.readFromFolder === undefined ? plugin.installPath : undefined,
-    readFromFolder: plugin.readFromFolder,
-    folderVersion: plugin.folderVersion,
-    installedAt: plugin.installedAt,
-    lastUpdated: plugin.lastUpdated,
-    projectPath: plugin.projectPath,
-    mcpServers: plugin.mcpServers,
-    errors: plugin.errors,
-    notes: plugin.notes,
-    errorDetails: plugin.errorDetails,
-    noteDetails: plugin.noteDetails,
-    hasUserConfig: plugin.hasUserConfig,
-    projectEnabled: plugin.projectEnabled,
-    ...sizeFields(plugin, options),
-  });
-}
+): JsonObject => call('installedJson', plugin, options);
 
 /** The `available` entry. */
-export const availableJson = (plugin: AvailablePlugin): JsonObject =>
-  present({
-    pluginId: plugin.pluginId,
-    name: plugin.name,
-    marketplaceName: plugin.marketplaceName,
-    source: plugin.source,
-    description: plugin.description,
-    version: plugin.version,
-    installCount: plugin.installCount,
-  });
-
-const NOT_INSTALLED = '--data-size names a plugin that is not installed';
+export const availableJson = (plugin: AvailablePlugin): JsonObject => call('availableJson', plugin);
 
 /**
  * What `claude plugin list` prints. `--json` is an array with one object per installation, or with
  * `--available` one object holding `installed` and `available`. A `--data-size` plugin with no install
  * record prints its message and exits `1` "instead of printing the list".
  */
-export function planPluginList(request: ListRequest, options: ListOptions): Rendered {
-  if (typeof options.dataSize === 'string' && options.json) {
-    const named = options.dataSize;
-    if (!request.installed.some((plugin) => plugin.id === named)) {
-      return { stdout: [], stderr: [NOT_INSTALLED], exitCode: 1 };
-    }
-  }
-  if (!options.json) return { stdout: [...listText(request.installed)], stderr: [], exitCode: 0 };
-  const installed = request.installed.map((plugin) => installedJson(plugin, options));
-  const printed =
-    options.available === true
-      ? { installed, available: (request.available ?? []).map(availableJson) }
-      : installed;
-  return { stdout: [JSON.stringify(printed)], stderr: [], exitCode: 0 };
-}
+export const planPluginList = (request: ListRequest, options: ListOptions): Rendered =>
+  call('planPluginList', request, options);

@@ -7,6 +7,7 @@ pub mod hook_matcher;
 pub mod memo;
 pub mod path;
 pub mod restricts;
+pub mod rule_warnings;
 pub mod sources;
 pub mod target;
 pub mod tool_pattern;

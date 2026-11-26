@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/safe-env.ts`, switched.
+//! Ported from `src/rules/bash/safe-env.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! "Certain known-safe environment variables" (permissions.md, "Bash > Wrappers"): the docs name
 //! `NODE_ENV`, `LANG` and `NO_COLOR`; the rest of the set, and the values each accepts, are what
@@ -10,31 +10,10 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 
 use crate::js::{Pattern, code_unit_length, regex_test, slice_code_units};
 
-/// A word of the command as written and as the shell reads it: `ShellWord` of
-/// `src/rules/bash/words.ts` (its `Word` and `WordValue` of `unquote.ts`), declared here until that
-/// module is ported.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ShellWord {
-    /// The word as written.
-    pub text: String,
-    /// Where it starts in the command.
-    pub start: f64,
-    /// Where it ends in the command.
-    pub end: f64,
-    /// A redirection operator (`>`, `2>&`, `<<`), whose target is the next word.
-    pub operator: bool,
-    /// The word with its quotes, escapes and line continuations removed.
-    pub value: String,
-    /// A `$` or backtick outside single quotes: a variable or substitution may change the value.
-    pub expands: bool,
-    /// A `*`, `?` or `[` outside quotes: the shell may expand the word to file names.
-    pub globs: bool,
-}
+pub use crate::rules::bash::words::ShellWord;
 
 type ValueCheck = fn(&str) -> bool;
 
@@ -128,14 +107,6 @@ pub fn is_safe_assignment(word: &ShellWord, host_safe: &HashSet<String>) -> bool
             None,
         ))
     })
-}
-
-crate::registry::exports! {
-    "rules/bash/safe-env" {
-        "assignedVariable" => ok |word: ShellWord| assigned_variable(&word).map(str::to_owned);
-        "isSafeAssignment" => ok |word: ShellWord, host_safe: Option<crate::registry::Set<String>>|
-            is_safe_assignment(&word, &host_safe.map(|set| set.members.into_iter().collect()).unwrap_or_default());
-    }
 }
 
 #[cfg(test)]

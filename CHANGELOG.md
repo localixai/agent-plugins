@@ -1993,7 +1993,7 @@ once, in Changed or Removed.
 - **BREAKING** a cancellable function's `signal` anywhere → `{ signal }` as its last argument. Every kit function that can be cancelled takes `{ signal }` as its last argument
   (`loadSettingsLayers(sources, { signal, scopes })`, `fetchArchive(plan, ports, { signal })` and 20 more);
   port methods keep the signal as their last parameter.
-- `SAFE_ENVIRONMENT_VARIABLES` is replaced by `src/rules/bash/safe-env.ts`
+- `SAFE_ENVIRONMENT_VARIABLES` is replaced by `crates/agent-plugins/src/rules/bash/safe_env.rs`
   (`isSafeAssignment`, `assignedVariable`), and `redirectFacts` and `fileTargetFacts` by
   `targetFacts(commandTargets(command), ctx, resolvedPaths)`; `Target.tee` is `Target.source`.
 - An empty `CLAUDE_CONFIG_DIR` counts as unset everywhere (`settingsLocations`, saved workflows,

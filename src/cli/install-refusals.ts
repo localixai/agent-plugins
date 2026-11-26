@@ -1,17 +1,17 @@
-/** The refusals of `claude plugin install` before anything is written: bad `--config` values, a dependency closure that cannot be met. */
+import { coreModule } from '../wasm/bridge.ts';
 import type { ConfigOutcome } from './install-config.ts';
-import { commandFailed, type CommandOutput } from './result.ts';
+import type { CommandOutput } from './result.ts';
 
-export function configRefusal(config: ConfigOutcome): CommandOutput {
-  const lines = config.refused.map((problem) => `--config ${problem.key}: ${problem.message}`);
-  return commandFailed('install', ['Failed to install plugin:', ...lines].join('\n'), {
-    failureCode: 'invalid_config',
-    fields: { invalidKeys: config.refused.map((problem) => problem.key) },
-  });
-}
+const call = coreModule('cli/install-refusals');
 
-export function closureRefusal(id: string, messages: readonly string[]): CommandOutput {
-  return commandFailed('install', [`Failed to install plugin "${id}":`, ...messages].join('\n'), {
-    failureCode: 'dependency_error',
-  });
-}
+/**
+ * The refusals of `claude plugin install` before anything is written: bad `--config` values, a dependency closure that cannot be met.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/install_refusals.rs`, docs/RUST.md).
+ */
+
+export const configRefusal = (config: ConfigOutcome): CommandOutput =>
+  call('configRefusal', config);
+
+export const closureRefusal = (id: string, messages: readonly string[]): CommandOutput =>
+  call('closureRefusal', id, messages);

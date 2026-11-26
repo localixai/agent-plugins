@@ -171,7 +171,6 @@ crate::registry::exports! {
         "toPosixPath" => ok |path: String, platform: Platform| to_posix_path(&path, platform);
         "normalizeAbsolute" => ok |path: String| normalize_absolute(&path);
         "resolvePath" => ok |base: String, path: String| resolve_path(&base, &path);
-        "homeExpanded" => ok |path: String, home: String| home_expanded(&path, &home);
         "absolutePath" => ok |path: String, paths: HostPaths| absolute_path(&path, &paths);
         "foldPath" => ok |path: String, platform: Platform| fold_path(&path, platform);
         "relativeWithin" => ok |root: String, path: String, platform: Option<Platform>| relative_within(&root, &path, platform);

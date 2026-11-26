@@ -27,10 +27,6 @@ export const normalizeAbsolute = (path: string): string => call('normalizeAbsolu
 /** `path` against `base` (a normalised absolute path), normalised; an absolute `path` ignores `base`. */
 export const resolvePath = (base: string, path: string): string => call('resolvePath', base, path);
 
-/** A path with a leading `~` spelled as the home directory. */
-export const homeExpanded = (path: string, home: string): string =>
-  call('homeExpanded', path, home);
-
 /**
  * A host path in POSIX form, `~` expanded and resolved against the session's current directory:
  * the one reading of a path the rules, the working directories and the modes share.

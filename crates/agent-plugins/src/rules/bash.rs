@@ -10,4 +10,6 @@ pub mod scanner;
 pub mod split;
 pub mod text_pattern;
 pub mod unquote;
+pub mod wildcard;
 pub mod words;
+pub mod wrappers;

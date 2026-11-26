@@ -22,6 +22,7 @@ pub mod issues;
 pub mod layout;
 pub mod link_rule;
 pub mod listing;
+pub mod locate;
 pub mod marketplace;
 pub mod mcp_elicitation_check;
 pub mod mcp_elicitation_form;
