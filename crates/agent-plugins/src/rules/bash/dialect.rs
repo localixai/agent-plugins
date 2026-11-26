@@ -4,10 +4,17 @@
 //! separators, their escape character and what a backtick is, so each is data here and the one
 //! scanner (`split.ts`) reads it.
 
-use serde::Serialize;
+use std::borrow::Cow;
 
-/// A shell's spelling of what the splitter tells apart.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+use serde::{Deserialize, Serialize};
+
+/// A list of texts a dialect holds: its own constants borrow theirs, one read from a call owns it.
+pub type Texts = Cow<'static, [Cow<'static, str>]>;
+
+/// A shell's spelling of what the splitter tells apart. The scanner reads any dialect it is
+/// given, as the TypeScript reads the object passed, so one that crosses the boundary is read
+/// whole rather than matched to the two below.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[expect(
     clippy::struct_excessive_bools,
@@ -15,11 +22,11 @@ use serde::Serialize;
 )]
 pub struct ShellDialect {
     /// The command separators, longest first (permissions.md, "Compound commands" and "PowerShell").
-    pub separators: &'static [&'static str],
+    pub separators: Texts,
     /// The separators after which the command goes on, so one with nothing after it is unparseable.
-    pub chains: &'static [&'static str],
+    pub chains: Texts,
     /// The character that makes the next one literal.
-    pub escape: &'static str,
+    pub escape: Cow<'static, str>,
     /// A backtick opens a command substitution (Bash) rather than escaping a character (PowerShell).
     pub backtick_substitutes: bool,
     /// `{ ... }` holds commands of its own (a PowerShell script block).
@@ -32,9 +39,17 @@ pub struct ShellDialect {
 
 /// permissions.md, "Compound commands": `&&`, `||`, `;`, `|`, `|&`, `&` and newlines.
 pub const BASH_DIALECT: ShellDialect = ShellDialect {
-    separators: &["&&", "||", "|&", ";", "|", "&", "\n"],
-    chains: &["&&", "||"],
-    escape: "\\",
+    separators: Cow::Borrowed(&[
+        Cow::Borrowed("&&"),
+        Cow::Borrowed("||"),
+        Cow::Borrowed("|&"),
+        Cow::Borrowed(";"),
+        Cow::Borrowed("|"),
+        Cow::Borrowed("&"),
+        Cow::Borrowed("\n"),
+    ]),
+    chains: Cow::Borrowed(&[Cow::Borrowed("&&"), Cow::Borrowed("||")]),
+    escape: Cow::Borrowed("\\"),
     backtick_substitutes: true,
     braces_hold_commands: false,
     has_keywords: true,
@@ -44,9 +59,15 @@ pub const BASH_DIALECT: ShellDialect = ShellDialect {
 /// permissions.md, "PowerShell": `|`, `;` and on PowerShell 7+ `&&` and `||` split a compound
 /// command. `&` is the call operator there, and the backtick is the escape character.
 pub const POWERSHELL_DIALECT: ShellDialect = ShellDialect {
-    separators: &["&&", "||", ";", "|", "\n"],
-    chains: &["&&", "||"],
-    escape: "`",
+    separators: Cow::Borrowed(&[
+        Cow::Borrowed("&&"),
+        Cow::Borrowed("||"),
+        Cow::Borrowed(";"),
+        Cow::Borrowed("|"),
+        Cow::Borrowed("\n"),
+    ]),
+    chains: Cow::Borrowed(&[Cow::Borrowed("&&"), Cow::Borrowed("||")]),
+    escape: Cow::Borrowed("`"),
     backtick_substitutes: false,
     braces_hold_commands: true,
     has_keywords: false,

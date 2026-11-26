@@ -18,6 +18,7 @@ mod slice;
 mod string_to_number;
 mod uri;
 pub mod url;
+pub mod utf16;
 pub mod value;
 
 pub use json_stringify::{json_stringify, json_stringify_indented};

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Bash command lines are cut into words and commands on the core, CLI results are written there,
+  and npm semver (ported by hand, held to npm semver 7.8.6 on 21,473 cases) decides marketplace
+  dependency versions, their graph and install scopes.
 - Marketplaces and updates run more of their work on the core: CLI plugin hints, copy-mode,
   link-mode and `git-subdir` version hashes, an archive's totals and unsafe entries, and the
   variables that stop updates and traffic. An archive's names fold by Unicode 18, where Bun's

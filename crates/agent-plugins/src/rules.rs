@@ -3,6 +3,7 @@
 
 pub mod bash;
 pub mod decide;
+pub mod memo;
 pub mod path;
 pub mod restricts;
 pub mod sources;

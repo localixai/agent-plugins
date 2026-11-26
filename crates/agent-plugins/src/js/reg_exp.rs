@@ -11,7 +11,8 @@
 //! `\xHH`, `\uHHHH` (a surrogate pair of two is one character) and `\u{…}`, and a syntax
 //! character, `/` or any character past ASCII escaped (the last as JavaScriptCore reads it). A
 //! lone surrogate is never in a Rust text, so it matches nothing. `tests/differential/js.rs`
-//! holds it to what Bun answered (`scripts/rust/js-oracle/reg-exp.ts`).
+//! holds it to what Bun answered (`scripts/rust/js-oracle/reg-exp.ts`). `capturing_reg_exp` keeps
+//! the capturing groups, numbered as JavaScript numbers them, for a pattern that is replaced by.
 //!
 //! What it refuses, `Unrun::Unsupported`, though JavaScript runs it: lookahead and lookbehind,
 //! backreferences (`\1`, `\k<name>`), `\p{…}` and `\P{…}`, the modifiers `(?i:…)`, a group name
@@ -46,11 +47,26 @@ const SYNTAX: &str = "^$\\.*+?()[]{}|/";
 ///
 /// `Invalid` where JavaScript throws, `Unsupported` where the crate cannot run what it would.
 pub fn unicode_reg_exp(source: &str) -> Result<Regex, Unrun> {
+    compile(source, false)
+}
+
+/// `new RegExp(source, 'u')` with its capturing groups kept, numbered as JavaScript numbers
+/// them, for `exec` and `replace` (`Regex::captures`).
+///
+/// # Errors
+///
+/// As `unicode_reg_exp`.
+pub fn capturing_reg_exp(source: &str) -> Result<Regex, Unrun> {
+    compile(source, true)
+}
+
+fn compile(source: &str, captures: bool) -> Result<Regex, Unrun> {
     let mut reader = Reader {
         chars: source.chars().collect(),
         at: 0,
         depth: 0,
         names: Vec::new(),
+        captures,
     };
     let written = reader.disjunction()?;
     if reader.at < reader.chars.len() {
@@ -70,6 +86,8 @@ struct Reader {
     at: usize,
     depth: usize,
     names: Vec<String>,
+    /// Whether a capturing group is written as one (else every group is `(?:…)`).
+    captures: bool,
 }
 
 fn literal(point: u32) -> String {
@@ -151,7 +169,9 @@ impl Reader {
     }
 
     fn group(&mut self) -> Result<String, Unrun> {
+        let mut capturing = true;
         if self.eat('?') {
+            capturing = matches!(self.peek(), Some('<'));
             match self.next()? {
                 ':' => {}
                 '<' if !matches!(self.peek(), Some('=' | '!')) => self.group_name()?,
@@ -168,7 +188,12 @@ impl Reader {
         if !self.eat(')') {
             return Err(Unrun::Invalid);
         }
-        Ok(format!("(?:{inner})"))
+        let open = if capturing && self.captures {
+            "("
+        } else {
+            "(?:"
+        };
+        Ok(format!("{open}{inner})"))
     }
 
     fn group_name(&mut self) -> Result<(), Unrun> {

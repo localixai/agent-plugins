@@ -1,9 +1,7 @@
-//! Port of `src/rules/bash/keywords.ts` at sha256:313e6ef8b3a1.
+//! Ported from `src/rules/bash/keywords.ts`; only the core uses it now, so it has no wrapper.
 //!
-//! Not switched: `stripKeywords` pushes each name it reads into the caller's own `defined` array,
-//! which a call across the boundary cannot reach (it gets a copy). The scanner that calls it
-//! (`scanner.ts`) uses this port once it is ported itself; until then the package runs the
-//! TypeScript and the vectors hold this to its answers.
+//! `strip_keywords` pushes each name it reads into the caller's own `defined` list: the scanner's
+//! (`scanner.rs`), which is in the core with it.
 
 use std::sync::LazyLock;
 
@@ -76,15 +74,6 @@ pub fn strip_keywords(segment: &str, defined: &mut Vec<String>) -> Option<String
     }
 }
 
-crate::registry::exports! {
-    "rules/bash/keywords" {
-        "stripKeywords" => ok |segment: String, defined: Vec<String>| {
-            let mut defined = defined;
-            strip_keywords(&segment, &mut defined)
-        };
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,9 +85,8 @@ mod tests {
         assert!(STRUCTURE.is_some());
     }
 
-    // bun -e 'import { stripKeywords } from "./src/rules/bash/keywords.ts"; const d = [];
-    //   console.log(JSON.stringify([stripKeywords("do ls", d), stripKeywords("then\u0085ls", d),
-    //   stripKeywords("f﻿() { ls; }", d), stripKeywords("for x", d), d]))'
+    // What Bun answered for these with `stripKeywords` of `src/rules/bash/keywords.ts`, since
+    // deleted.
     // JavaScript's `\s` holds U+00A0, U+2028 and U+FEFF and not U+0085.
     #[test]
     fn keywords_end_at_javascript_whitespace() {

@@ -14,3 +14,4 @@ mod support;
 
 mod js;
 mod registry;
+mod semver;

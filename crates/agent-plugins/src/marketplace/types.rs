@@ -32,3 +32,18 @@ pub enum SubmoduleRule {
     #[serde(rename = "whole-repository")]
     WholeRepository,
 }
+
+/// A dependency with its defaults applied (plugins/dependencies.md): the marketplace is the
+/// declaring one when omitted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NormalizedDependency {
+    /// The plugin's name.
+    pub name: String,
+    /// Its marketplace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marketplace: Option<String>,
+    /// Its node-semver range.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub range: Option<String>,
+}
