@@ -320,9 +320,6 @@ crate::registry::exports! {
     "hooks/output/worktree-path" {
         "stripAnsi" => ok |text: String| strip_ansi(&text);
         "lastPathLine" => ok |stdout: String| last_path_line(&stdout);
-        "isAbsolute" => ok |path: String| is_absolute(&path);
-        "resolveRelative" => ok |base: String, relative: String| resolve_relative(&base, &relative);
-        "worktreeCandidate" => ok |answer: WorktreeAnswer| worktree_candidate(&answer);
         "resolveWorktreePath" => async ok |answer: WorktreeAnswer, location: LocationGiven|
             resolve_worktree_path(&answer, &location.read().await).await;
     }

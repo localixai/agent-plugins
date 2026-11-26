@@ -10,7 +10,7 @@
  * docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Decision, DecisionReason } from '../types.ts';
+import type { Decision } from '../types.ts';
 import type { DecideContext } from './context.ts';
 
 const call = coreModule('rules/decide/unanswered');
@@ -20,10 +20,3 @@ export type PromptFacts = Pick<DecideContext, 'cannotPrompt' | 'denyInsteadOfPro
 /** The decision once the session's prompt facts apply: an `ask` nobody may answer is denied. */
 export const settlePrompt = (decision: Decision, facts: PromptFacts): Decision =>
   call('settlePrompt', decision, facts);
-
-/**
- * The denials a `PermissionRequest` hook may still turn into an approval: they stand in for the
- * prompt the hook answers ("Anything that would prompt is denied unless a `PermissionRequest` hook
- * allows it", headless.md; "A `PermissionRequest` hook still answers", settings-reference.md).
- */
-export const PROMPT_DENIALS: ReadonlySet<DecisionReason> = call('PROMPT_DENIALS');

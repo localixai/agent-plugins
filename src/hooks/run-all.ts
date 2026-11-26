@@ -102,15 +102,18 @@ async function runGuarded(
 /**
  * Ends the `once` hold of each run and caps what a background run delivers. A foreground run
  * settles now, a background one when its process ends: hooks.md, "Common fields", consumes a
- * skill's `once` hook "after its first successful run", async completion included.
+ * skill's `once` hook "after its first successful run", async completion included. The hold is
+ * the registration the selection gave (`handler`), told apart by identity: the verdict's copy,
+ * read in the core, is not that object.
  */
 function settled(
   request: Pick<DispatchRequest<HookEvent>, 'event' | 'signal'>,
   config: DispatchConfig,
+  handler: RegisteredHandler,
   verdict: HandlerVerdict,
 ): HandlerVerdict {
   const { onceClaims: claims } = config;
-  const { delivery, handler } = verdict;
+  const { delivery } = verdict;
   if (delivery === undefined) {
     claims?.settle(handler, verdict.succeeded);
     return verdict;
@@ -167,7 +170,7 @@ export async function runAll<E extends HookEvent>(
       gitBashMissing: config.windows && config.defaultShell === 'powershell',
       teammateStopped: request.taskCompletedBy === 'teammate-turn',
     });
-    return settled(request, config, {
+    return settled(request, config, entry, {
       ...verdict,
       ran: facts,
       issues: [...verdict.issues, ...result.issues],

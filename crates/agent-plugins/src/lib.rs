@@ -15,6 +15,7 @@ pub mod convert;
 pub mod format;
 pub mod foundation;
 pub mod hooks;
+pub mod host;
 pub mod js;
 pub mod loading;
 pub mod marketplace;

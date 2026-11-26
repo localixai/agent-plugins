@@ -59,6 +59,5 @@ pub const PROMPT_DENIALS: [DecisionReason; 2] = [
 crate::registry::exports! {
     "rules/decide/unanswered" {
         "settlePrompt" => ok |decision: Decision, facts: PromptFacts| settle_prompt(decision, facts);
-        "PROMPT_DENIALS" => ok || crate::registry::Set { members: PROMPT_DENIALS.to_vec() };
     }
 }

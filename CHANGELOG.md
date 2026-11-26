@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The SDK hook answer, `watchPaths` resolution and the `FileChanged` watch list, the runnable
+  handlers a host lists, the Stop block cap, block routing and the original prompt of a blocked
+  prompt, the effects a block leaves, `systemMessage` routing, the MCP client skip, the observer's
+  start notice, the debug-log notes, the `PermissionRequest` decision and the permission updates in
+  effect run on the core. A `once` hook's hold is settled on the registration the selection gave.
 - A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
   in the order the manifest declares them (run together, the order followed how long each path
   took to resolve).
