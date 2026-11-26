@@ -2,8 +2,14 @@
  * What a check found, in the shape `claude plugin validate` reports (plugins/manifest-reference.md,
  * "Validate the manifest"): an error keeps the plugin from loading, a warning does not. `path`
  * names the field (`userConfig.api_token`) or the file the issue is about.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/issues.rs`, docs/RUST.md).
  */
-export const SEVERITIES = ['error', 'warning'] as const;
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('format/issues');
+
+export const SEVERITIES: readonly ['error', 'warning'] = call('SEVERITIES');
 export type Severity = (typeof SEVERITIES)[number];
 
 export interface PluginIssue {
@@ -18,20 +24,11 @@ export interface PluginIssue {
   readonly guidance?: string;
 }
 
-export const error = (path: string, message: string): PluginIssue => ({
-  severity: 'error',
-  path,
-  message,
-});
+export const error = (path: string, message: string): PluginIssue => call('error', path, message);
 
-export const warning = (path: string, message: string): PluginIssue => ({
-  severity: 'warning',
-  path,
-  message,
-});
-
-const BLOCKS: { readonly [S in Severity]: boolean } = { error: true, warning: false };
+export const warning = (path: string, message: string): PluginIssue =>
+  call('warning', path, message);
 
 /** True when any issue keeps the plugin from loading. */
 export const blocksLoading = (issues: readonly PluginIssue[]): boolean =>
-  issues.some((found) => BLOCKS[found.severity]);
+  call('blocksLoading', issues);

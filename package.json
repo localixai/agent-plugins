@@ -178,7 +178,8 @@
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "bun run build:wasm && rm -rf dist && tsc -p tsconfig.build.json",
+    "build:wasm": "bun scripts/wasm/build.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "bun test",
     "lint": "oxlint --type-aware && oxlint -c config/lint/quality.json src",
@@ -186,6 +187,7 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "spec:sync": "bun scripts/spec/sync.ts",
+    "spec:behind": "bun scripts/spec/behind.ts",
     "compat": "bun scripts/compat/report.ts",
     "bench": "bun scripts/bench/run.ts",
     "bench:update": "bun scripts/bench/counts.ts",

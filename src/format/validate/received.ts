@@ -2,16 +2,14 @@
  * How the validator names the kind of a JSON value in its messages. Zod's wording
  * ("expected string, received number") uses the bare name; the hooks messages use an article
  * ("received a number").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/validate/received.rs`, docs/RUST.md).
  */
-export function kindOf(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
-  return typeof value;
-}
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('format/validate/received');
+
+export const kindOf = (value: unknown): string => call('kindOf', value);
 
 /** `a string`, `an object`, `null`. */
-export function withArticle(value: unknown): string {
-  const kind = kindOf(value);
-  if (kind === 'null' || kind === 'undefined') return kind;
-  return /^[aeiou]/.test(kind) ? `an ${kind}` : `a ${kind}`;
-}
+export const withArticle = (value: unknown): string => call('withArticle', value);

@@ -1,0 +1,53 @@
+# The Rust crate (crates/agent-plugins, docs/RUST.md): crates/agent-plugins/scripts/check, as it
+# runs locally, on every change that can move it. That includes src/ and spec/: a TypeScript
+# change or a spec sync leaves a port or the vectors stale (RS9), and this run says so.
+name: Rust
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/**'
+      - 'src/**'
+      - 'spec/**'
+      - 'scripts/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'clippy.toml'
+      - '.github/workflows/rust.yml'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'src/**'
+      - 'spec/**'
+      - 'scripts/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'clippy.toml'
+      - '.github/workflows/rust.yml'
+
+permissions: {}
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      # The currency and coverage checks are Bun scripts with no dependencies of their own.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+      # rust-toolchain.toml names the toolchain and its components.
+      - run: rustup toolchain install
+      - run: crates/agent-plugins/scripts/check

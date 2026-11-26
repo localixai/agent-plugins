@@ -3,34 +3,24 @@
  * (`2e3` is 2000) and digit separators (`64_000` is 64000), unless the variable's row says plain
  * digits only. A sign, a blank or any other character makes the value unreadable (judgment). A value that cannot be read is `undefined`, so the caller
  * keeps its default.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/env_number.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
 
-const DIGITS = String.raw`\d+(?:_\d+)*`;
-const NUMERIC = new RegExp(`^${DIGITS}(?:\\.${DIGITS})?(?:[eE][+-]?\\d+)?$`);
-const PLAIN = /^\d+$/;
+const call = coreModule('format/env-number');
 
 /** The number a numeric variable holds, or `undefined` when it holds none. */
-export function readNumberEnv(text: string | undefined): number | undefined {
-  if (text === undefined || !NUMERIC.test(text)) return undefined;
-  const value = Number(text.replaceAll('_', ''));
-  return Number.isFinite(value) ? value : undefined;
-}
+export const readNumberEnv = (text: string | undefined): number | undefined =>
+  call('readNumberEnv', text);
 
 /** A whole number, `0` included, read as `readNumberEnv` reads it. */
-export function wholeEnv(text: string | undefined): number | undefined {
-  const value = readNumberEnv(text);
-  return value !== undefined && Number.isSafeInteger(value) ? value : undefined;
-}
+export const wholeEnv = (text: string | undefined): number | undefined => call('wholeEnv', text);
 
 /** A whole number above zero, read as `readNumberEnv` reads it. */
-export function positiveWholeEnv(text: string | undefined): number | undefined {
-  const value = wholeEnv(text);
-  return value !== undefined && value > 0 ? value : undefined;
-}
+export const positiveWholeEnv = (text: string | undefined): number | undefined =>
+  call('positiveWholeEnv', text);
 
 /** A whole number above zero in plain digits only, for a variable whose row says so. */
-export function plainPositiveWholeEnv(text: string | undefined): number | undefined {
-  if (text === undefined || !PLAIN.test(text)) return undefined;
-  const value = Number(text);
-  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-}
+export const plainPositiveWholeEnv = (text: string | undefined): number | undefined =>
+  call('plainPositiveWholeEnv', text);

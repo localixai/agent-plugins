@@ -101,6 +101,10 @@ or calls.
   `cpu.RegExp` (patterns built at run time, never a literal), `cpu.RegExp.exec` (matches run; a
   `split` by a pattern tries it at each position), `cpu.yaml.parse` and `cpu.acorn.parse`
   (documents). What a fake port does to answer is not counted.
+- Not counted: the work of a module switched to the Rust core (docs/RUST.md), which runs inside
+  the WebAssembly module, and the boundary's own JSON (`src/wasm/wire.ts` takes `JSON`'s functions
+  before the meter wraps them). A count that falls when a module is switched is that work moving
+  out of sight; the core has no counts of its own yet.
 
 The inputs are generated in memory (`scripts/bench/inputs.ts`): no corpus, no disk, no clock. Each
 scenario (`scripts/bench/scenarios/`) measures one entry point at three sizes, N, 2N and 4N, and

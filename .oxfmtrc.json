@@ -4,5 +4,15 @@
   "semi": true,
   "singleQuote": true,
   "trailingComma": "all",
-  "ignorePatterns": ["**/dist/**", ".cache/**", "bun.lock", "CHANGELOG.md", "docs/**", "spec/**"]
+  "ignorePatterns": [
+    "**/dist/**",
+    ".cache/**",
+    "bun.lock",
+    "CHANGELOG.md",
+    "docs/**",
+    "spec/**",
+    "target/**",
+    "crates/agent-plugins/COVERAGE.md",
+    "crates/agent-plugins/tests/vectors/**"
+  ]
 }

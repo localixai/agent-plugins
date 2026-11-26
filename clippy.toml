@@ -1,0 +1,46 @@
+# The lints are in Cargo.toml; this is their configuration (AGENTS.md, rule RS5).
+
+# Tests may unwrap, panic and print: a failed test is the panic's job (RS4).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-print-in-tests = true
+allow-dbg-in-tests = true
+
+too-many-lines-threshold = 100
+cognitive-complexity-threshold = 25
+max-fn-params-bools = 2
+max-struct-bools = 3
+
+# The crate does no I/O and reads no ambient state (RS3): every effect is a port, a trait the
+# host implements, as in the npm package (L3).
+disallowed-methods = [
+  { path = "std::process::exit", reason = "a library never ends the process" },
+  { path = "std::process::Command::new", reason = "commands run through the CommandRunner port" },
+  { path = "std::env::var", reason = "the environment comes through the Environment port" },
+  { path = "std::env::var_os", reason = "the environment comes through the Environment port" },
+  { path = "std::env::vars", reason = "the environment comes through the Environment port" },
+  { path = "std::env::set_var", reason = "a library never changes the environment" },
+  { path = "std::env::current_dir", reason = "the host's paths come through the Locations port" },
+  { path = "std::fs::read", reason = "files are read through the PluginFiles port" },
+  { path = "std::fs::read_to_string", reason = "files are read through the PluginFiles port" },
+  { path = "std::fs::read_dir", reason = "folders are listed through the PluginFiles port" },
+  { path = "std::fs::write", reason = "the crate writes no file" },
+  { path = "std::fs::metadata", reason = "files are read through the PluginFiles port" },
+  { path = "std::thread::spawn", reason = "the crate runs on its caller's thread" },
+  { path = "std::thread::sleep", reason = "time comes through the Clock port" },
+  { path = "std::time::SystemTime::now", reason = "time comes through the Clock port" },
+  { path = "std::time::Instant::now", reason = "time comes through the Clock port" },
+  { path = "serde_json::from_str", reason = "JSON text is read by js::json_parse, as JavaScript reads it" },
+]
+disallowed-types = [
+  { path = "std::cell::RefCell", reason = "the crate's values are Send + Sync" },
+  { path = "std::cell::Cell", reason = "the crate's values are Send + Sync" },
+  { path = "std::rc::Rc", reason = "the crate's values are Send + Sync: Arc" },
+  { path = "std::fs::File", reason = "files are read through the PluginFiles port" },
+  { path = "std::net::TcpStream", reason = "requests go through the HttpClient port" },
+  # The library depends on no JSON library: a value the package types `unknown` is a
+  # `js::JsValue`, read by `js::json_parse` and written by `JsValue::to_json_text` (docs/RUST.md,
+  # RS7). Only the differential tests, which read the recorded vectors, use serde_json.
+  { path = "serde_json::Value", reason = "a JavaScript value is js::JsValue" },
+]

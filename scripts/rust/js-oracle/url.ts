@@ -1,0 +1,183 @@
+/** `new URL(text)`: the members the package reads of it. */
+import { edits, line, outcome, write } from './shared.ts';
+
+/**
+ * URLs of the kinds plugins hold (a server's `url`, a marketplace's source, a fetched address):
+ * http and https with user information and ports, IPv4 in every spelling, IPv6, IDN and uppercase
+ * hosts, percent-encoding, the other schemes, backslashes, and tabs, newlines and spaces.
+ */
+const URL_SEEDS = [
+  'https://user:p%40ss@Example.COM:8443/a/b?q=1&r=%7E#frag',
+  'http://localhost:3000/mcp',
+  'http://0x7f.1/',
+  'http://127.1:80/x',
+  'http://[::ffff:1.2.3.4]:8080/',
+  'http://[FE80::0:1%25eth0]/',
+  'https://b\u00fccher.example/p\u00e4th?s=\u00e9',
+  'file:///C:/dir/a%20b.txt',
+  'ws://h:80/a\\b',
+  'wss://h:443/',
+  'data:text/plain;base64,aGk=',
+  'mailto:a@b.example?subject=x',
+  'git+ssh://git@github.com:22/o/r.git',
+  '\t https://exa\tmple.com/\n ',
+];
+const URL_EDITS = [
+  '',
+  '/',
+  '\\',
+  ':',
+  '@',
+  '[',
+  ']',
+  '%',
+  '.',
+  '#',
+  '?',
+  ' ',
+  '\t',
+  'A',
+  '\u00e9',
+  '0',
+];
+
+/** Texts no single edit reaches: ports and numbers at their limits, odd hosts, long paths. */
+const URL_CASES = [
+  'http://h:65535/',
+  'http://h:65536/',
+  'http://h:0080/',
+  'http://4294967295/',
+  'http://4294967296/',
+  'http://1.2.3.256/',
+  'http://0300.0250.1.1/',
+  'http://0x7f000001/',
+  'http://[::]/',
+  'http://[1:0:0:2:0:0:0:3]/',
+  'http://[::1.2.3.4]/',
+  'http://a..b/',
+  'http://xn--bcher-kva.example/',
+  'http://\u00df.example/',
+  'http://\uff21\uff22\uff23.example/',
+  'http://a\u00adb.example/',
+  'http://exa%6dple.com/',
+  'http://a%2fb/',
+  'http://ex ample.com/',
+  'http://h/%zz?%zz#%zz',
+  'http://h/a/./b/../c/%2e%2E/d',
+  'http://h/\u00e9\u{1F600}?\u00e9#\u00e9',
+  'http://u:p:q@h/',
+  'http://@h/',
+  'http://:@h/',
+  'http://u@/',
+  'https://h:@x/',
+  'foo://Host:80/p',
+  'foo://u:p@h/x',
+  'foo:/a/b',
+  'foo:a b',
+  'a:',
+  'C:\\dir',
+  // `file:` paths keep their leading empty segments; a non-special path with no host that starts
+  // `/.`; user information before an empty path and a query or fragment.
+  'file://h//a',
+  'file:////../a',
+  'file://///',
+  'file:////',
+  'file:/./a',
+  'file:/.//a',
+  'file:.//a',
+  'file:\\\\\\a',
+  'file://h/..//a',
+  'file:///..//a',
+  'file:///a//b',
+  'file:////a//b',
+  'file:%2e//a',
+  'file:/%2E//a',
+  'file:?x',
+  'file:////?x',
+  'file:///#x',
+  'file:////#x',
+  'file://host//',
+  'file:////C:/a',
+  'file://h////a?q',
+  'foo:/.x',
+  'foo:///.x',
+  'foo://u@h?',
+  'foo://u@h#',
+  'foo:/a/.b',
+  'foo:/.',
+  'foo:/%2ex',
+  'foo:/.?x',
+  'foo:/..x',
+  'foo:/.//x',
+  'foo:/.x//y',
+  'foo://u@h:1?x',
+  'foo://u@h:#x',
+  'foo://@h#x',
+  'foo://h?x',
+  'foo://h',
+  // Domains the IDNA mapping and the IPv4 parser decide, and ports.
+  'http://a\u200db.example/',
+  'http://xn--/',
+  'http://xn--a.example/',
+  'http://-a.example/',
+  'http://a_b.example/',
+  'http://\u2488.example/',
+  'http://\u3002.example/',
+  'http://fa\u00df.de/',
+  'http://\uff27\uff2f.com/',
+  'http://\u{1F600}.example/',
+  'http://a\u0301.example/',
+  'http://%E2%80%8B.example/',
+  'http://1.2.3/',
+  'http://1.2.3.4.5/',
+  'http://0x/',
+  'http://09/',
+  'http://1e3/',
+  'http://[::1%25a]/',
+  'http://[::1]x/',
+  'http://h:99999/',
+  'http://h:-1/',
+  'http://h:1a/',
+  'http://foo.0x4/',
+  'http://foo.09/',
+  'http://\u00bd/',
+  'http://a\u00a0b/',
+  'http://\ud7ff.example/',
+  'javascript:alert(1)',
+  'blob:https://h/uuid',
+  `http://h/${'a'.repeat(2000)}`,
+  `http://${'a'.repeat(300)}.example/`,
+];
+
+/** The members of a URL the package reads, as `new URL(text)` gives them. */
+function urlFields(text: string): unknown {
+  const url = new URL(text);
+  const { href, origin, protocol, username, password, host, hostname, port } = url;
+  const { pathname, search, hash } = url;
+  return {
+    href,
+    origin,
+    protocol,
+    username,
+    password,
+    host,
+    hostname,
+    port,
+    pathname,
+    search,
+    hash,
+  };
+}
+
+export const recordUrls = (): void => {
+  write(
+    'url',
+    [...edits(URL_SEEDS, URL_EDITS), ...URL_CASES].map((text) =>
+      line(
+        'URL',
+        [text],
+        outcome(() => urlFields(text)),
+      ),
+    ),
+  );
+};

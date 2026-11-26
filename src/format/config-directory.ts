@@ -7,10 +7,15 @@
  * memory, the `headersHelper` directory, `.claude.json`) starts here. An empty value counts as unset
  * (judgment, spec/judgments.md). Probed against Claude Code 2.1.322 as a black box: with the variable
  * set, `~/.claude/{skills,agents,commands,settings.json}` are not read and the directory's own are.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/config_directory.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('format/config-directory');
 
 /** The variable, as the host's `Environment` port reads it. */
-export const CONFIG_DIR_VARIABLE = 'CLAUDE_CONFIG_DIR';
+export const CONFIG_DIR_VARIABLE: string = call('CONFIG_DIR_VARIABLE');
 
 /** `base` and a `/`-separated relative path joined the way the host writes paths (`Locations.joinPath`). */
 type Join = (base: string, relativePath: string) => string;
@@ -26,22 +31,22 @@ export interface ConfigFolder {
   readonly folder: string;
 }
 
-const isSet = (configDir: string | undefined): configDir is string =>
-  configDir !== undefined && configDir !== '';
-
 export const configFolderOf = (home: string, configDir: string | undefined): ConfigFolder =>
-  isSet(configDir) ? { base: configDir, folder: '' } : { base: home, folder: '.claude' };
+  call('configFolderOf', home, configDir);
 
 /** The configuration directory as one path: `CLAUDE_CONFIG_DIR`, else `<home>/.claude`. */
 export const configDirectoryOf = (
   home: string,
   configDir: string | undefined,
   join: Join,
-): string => (isSet(configDir) ? configDir : join(home, '.claude'));
+): string => {
+  const { base, folder } = configFolderOf(home, configDir);
+  return folder === '' ? base : join(base, folder);
+};
 
 /** The global config file: `.claude.json` in `CLAUDE_CONFIG_DIR` when set, else in the home. */
 export const globalConfigFileOf = (
   home: string,
   configDir: string | undefined,
   join: Join,
-): string => join(isSet(configDir) ? configDir : home, '.claude.json');
+): string => join(configFolderOf(home, configDir).base, '.claude.json');

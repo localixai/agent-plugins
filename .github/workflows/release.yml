@@ -31,6 +31,9 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: test "$TAG" = "v$(bun -e 'console.log(require("./package.json").version)')"
       - run: bun install --frozen-lockfile
+      # The package runs on the Rust core (docs/RUST.md): build it before the checks read it.
+      - run: rustup toolchain install
+      - run: bun run build:wasm
       # The lint reads the example's types, so its dependencies are installed before the check.
       - run: bun install --frozen-lockfile
         working-directory: examples/ai-sdk-agent

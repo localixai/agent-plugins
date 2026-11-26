@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- The package starts running on a Rust core: `crates/agent-plugins` (docs/RUST.md), compiled to
+  WebAssembly and loaded by `src/wasm/bridge.ts`. The modules of `format` and `protocol` that
+  read and check values are now thin wrappers over it, with the same exports, types and answers;
+  the whole test suite and the compatibility report run on the Rust. `isRecord` and the ports
+  stay TypeScript. The package carries the module (about 1.7 MB) and compiles it once when it
+  loads (about 35 ms); `bun run build:wasm` builds it, with a stable Rust and the
+  `wasm32-unknown-unknown` target (`rust-toolchain.toml`).
+
 ## [0.2.0] - 2026-11-23
 
 - The kit follows Agent Plugins Extended `0ed968b`, where the 48 disagreements its judgments

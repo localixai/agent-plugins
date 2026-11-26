@@ -1,5 +1,3 @@
-import { error, type PluginIssue } from '../issues.ts';
-
 /**
  * The `renames` map of `marketplace.json` (plugins/host-marketplace.md, "Migrate users with a
  * renames map"; plugins/marketplace-reference.md, "Validation messages"): each former plugin name
@@ -7,7 +5,12 @@ import { error, type PluginIssue } from '../issues.ts';
  * from the oldest name", so a name may map to a name that is itself a key, and the chain must end
  * at `null` or at a name in `plugins` (`claude plugin validate` rejects one that cycles or ends
  * anywhere else).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/marketplace/renames.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../issues.ts';
+
 export type Renames = Readonly<Record<string, string | null>>;
 
 /**
@@ -21,33 +24,13 @@ export type Chain =
   | { readonly end: 'dangling'; readonly name: string }
   | { readonly end: 'cycle'; readonly path: readonly string[] };
 
-const isKey = (renames: Renames, name: string): boolean => Object.hasOwn(renames, name);
+const call = coreModule('format/marketplace/renames');
 
-export function followRenames(
+export const followRenames = (
   renames: Renames,
   start: string,
   plugins: ReadonlySet<string>,
-): Chain {
-  const path = [start];
-  let current = start;
-  for (;;) {
-    const target = renames[current];
-    if (target === undefined || target === null) return { end: 'removed' };
-    if (plugins.has(target)) return { end: 'plugin', name: target };
-    if (!isKey(renames, target)) return { end: 'dangling', name: target };
-    if (path.includes(target)) return { end: 'cycle', path: [...path, target] };
-    path.push(target);
-    current = target;
-  }
-}
-
-const UNRESOLVED_TARGET = 'target must be a name in plugins[], a key in renames, or null';
-
-/** The reason in the parentheses: `cycle`, or `target-missing` for a chain that ends at no plugin and no key (spec J15.11). */
-const REASON: { readonly [E in 'dangling' | 'cycle']: string } = {
-  dangling: 'target-missing',
-  cycle: 'cycle',
-};
+): Chain => call('followRenames', renames, start, plugins);
 
 /**
  * What `claude plugin validate` reports about `renames`, on `renames.<old>`: a chain that cycles or
@@ -56,19 +39,5 @@ const REASON: { readonly [E in 'dangling' | 'cycle']: string } = {
  * so `"bad name"` draws that reason and a target that is itself a key (`"bad key"`) is followed
  * (spec J15.11, oracle 2.1.325): the docs' PluginIdSchema row is never the one printed.
  */
-export function validateRenames(renames: Renames, pluginNames: readonly string[]): PluginIssue[] {
-  const plugins = new Set(pluginNames);
-  const found: PluginIssue[] = [];
-  for (const old of Object.keys(renames)) {
-    const chain = followRenames(renames, old, plugins);
-    if (chain.end === 'cycle' || chain.end === 'dangling') {
-      found.push(
-        error(
-          `renames.${old}`,
-          `chain does not resolve (${REASON[chain.end]}) — ${UNRESOLVED_TARGET}`,
-        ),
-      );
-    }
-  }
-  return found;
-}
+export const validateRenames = (renames: Renames, pluginNames: readonly string[]): PluginIssue[] =>
+  call('validateRenames', renames, pluginNames);

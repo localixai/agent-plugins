@@ -1,0 +1,34 @@
+[package]
+name = "agent-plugins"
+version = "0.1.0"
+description = "Claude Code plugin support for any agent written in Rust: the Rust implementation of Agent Plugins Extended. Reads, validates and runs plugins through ports the host implements"
+readme = "README.md"
+keywords = ["claude-code", "plugins", "agent", "skills", "hooks"]
+categories = ["parser-implementations", "development-tools"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+# Taken by git tag (`rust-v<version>`) for now, as flowdown's crate is; crates.io comes later.
+publish = false
+include = ["/src/**/*.rs", "/README.md", "/CHANGELOG.md"]
+
+[dependencies]
+# What a JavaScript object keeps and Rust's maps do not: the order its members were written in.
+indexmap = { version = "2", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+# A pattern the package writes as a regular expression literal stays one here (RS6 spells how).
+regex = "1"
+# `new URL(text)`, the WHATWG URL Standard's parser (hosts, IDNA, IPv4 and IPv6, percent-encoding)
+# that a plugin's addresses are read by; held to Bun's answers by `tests/differential/js.rs`.
+url = "2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+# The tests read the recorded vectors, JSON text, with it: object members keep the order they were
+# written in, and a number's text reads back correctly rounded. The library has no JSON library:
+# its values are `js::JsValue`, read by `js::json_parse` and written by `JsValue::to_json_text`.
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }

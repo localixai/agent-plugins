@@ -10,3 +10,14 @@ coverage/
 
 # Mutation testing sandboxes (bun run mutation).
 .stryker-tmp*/
+
+# The Rust crate's build output (Cargo.toml).
+/target/
+
+# The Rust core as WebAssembly for src/wasm/bridge.ts, written by scripts/wasm/build.ts.
+/src/wasm/module.ts
+# The vectors the TypeScript's tests record (bun scripts/rust/record.ts) are a local cache: they
+# hold a ported module only until it is switched (docs/RUST.md). The JavaScript built-ins' oracle
+# (js/) is the crate's own test data and is kept.
+/crates/agent-plugins/tests/vectors/*
+!/crates/agent-plugins/tests/vectors/js/

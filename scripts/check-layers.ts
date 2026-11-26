@@ -15,26 +15,28 @@ import { finish, repositoryFiles } from './lib/files.ts';
 
 /** Lower number, lower layer. `index.ts` at the root of `src/` is the top. */
 const LAYERS: Readonly<Record<string, number>> = {
-  protocol: 0,
-  ports: 1,
-  format: 2,
-  rules: 3,
-  settings: 3,
-  marketplace: 3,
-  loading: 3,
-  foundation: 3,
-  agents: 4,
-  hooks: 4,
-  skills: 4,
-  mods: 4,
-  updates: 4,
-  host: 5,
-  cli: 5,
+  /** The bridge into the Rust core (docs/RUST.md): below every layer, it imports none. */
+  wasm: 0,
+  protocol: 1,
+  ports: 2,
+  format: 3,
+  rules: 4,
+  settings: 4,
+  marketplace: 4,
+  loading: 4,
+  foundation: 4,
+  agents: 5,
+  hooks: 5,
+  skills: 5,
+  mods: 5,
+  updates: 5,
+  host: 6,
+  cli: 6,
   /** Conversion between the two plugin forms: loading, the skills scan and the validator below it. */
-  convert: 5,
-  testing: 6,
+  convert: 6,
+  testing: 7,
   /** The package's subpath entries: each re-exports one domain (docs/API.md, "Entry points"). */
-  entry: 7,
+  entry: 8,
 };
 const TOP = 99;
 
