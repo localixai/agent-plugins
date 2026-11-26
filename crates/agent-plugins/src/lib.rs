@@ -10,7 +10,10 @@
 //! (docs/RUST.md).
 
 pub mod agents;
+pub mod cli;
+pub mod convert;
 pub mod format;
+pub mod foundation;
 pub mod hooks;
 pub mod js;
 pub mod loading;

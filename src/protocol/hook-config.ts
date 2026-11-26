@@ -1,5 +1,11 @@
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/protocol/hook_config.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
 import type { Settings } from './official.ts';
 import type { Assert, Equal } from './type-equality.ts';
+
+const call = coreModule('protocol/hook-config');
 
 /**
  * The shape of hook configuration, derived from the official `Settings` type (the `hooks` key of
@@ -21,13 +27,8 @@ export type HookHandlerType = HookHandler['type'];
 export type HookHandlerOf<T extends HookHandlerType> = Extract<HookHandler, { type: T }>;
 
 /** Every handler type, in the order hooks.md lists them ("Hook handler fields"). */
-export const HOOK_HANDLER_TYPES = [
-  'command',
-  'http',
-  'mcp_tool',
-  'prompt',
-  'agent',
-] as const satisfies readonly HookHandlerType[];
+export const HOOK_HANDLER_TYPES: readonly ['command', 'http', 'mcp_tool', 'prompt', 'agent'] =
+  call('HOOK_HANDLER_TYPES');
 
 /** @public A compile-time drift guard: the typecheck fails when the SDK changes the union. */
 export type HookHandlerTypesMatchSdk = Assert<

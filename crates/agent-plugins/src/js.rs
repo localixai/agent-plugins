@@ -8,6 +8,7 @@
 pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;
+mod promise;
 mod radix;
 mod slice;
 mod string_to_number;
@@ -16,6 +17,7 @@ pub mod url;
 pub mod value;
 
 pub use json_stringify::{json_stringify, json_stringify_indented};
+pub use promise::{promise_all, promise_all_pair};
 pub use radix::{to_exponential, to_radix_string};
 pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;

@@ -1,18 +1,25 @@
 import type { PluginForm } from '../loading/core/form.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * What a conversion between the two plugin forms gives (Agent Plugins Extended §18.4): the files to
  * write beside the source, as data, and a note for everything it could not carry over or carried
  * over with a difference (§18.4.1 item 1). The kit writes nothing: a host writes `files` into the
  * plugin root, which makes a dual package (§18.4.1 item 4), and shows `notes`.
+ *
+ * The constant is implemented by the Rust core (`crates/agent-plugins/src/convert/types.rs`,
+ * docs/RUST.md); the shapes are TypeScript's.
  */
+
+const call = coreModule('convert/types');
 
 /**
  * `stopped`: nothing is written (a name the target refuses, a file already there, output the target
  * would not accept); `not-converted`: a field, entry, file or behaviour the target form does not
  * get; `reported`: carried over, but it acts differently or the target warns about it.
  */
-export const CONVERSION_OUTCOMES = ['stopped', 'not-converted', 'reported'] as const;
+export const CONVERSION_OUTCOMES: readonly ['stopped', 'not-converted', 'reported'] =
+  call('CONVERSION_OUTCOMES');
 export type ConversionOutcome = (typeof CONVERSION_OUTCOMES)[number];
 
 export interface ConversionNote {

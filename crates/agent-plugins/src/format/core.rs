@@ -3,6 +3,7 @@
 pub mod command;
 pub mod document;
 pub mod extensions;
+pub mod icon;
 pub mod manifest;
 pub mod mcp_server;
 pub mod name;
