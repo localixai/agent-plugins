@@ -16,12 +16,3 @@ const call = coreModule('format/core/extensions');
 /** Why an `extensions` value breaks core §8.1, or `undefined` when its shape is right. */
 export const extensionsProblem = (value: unknown): string | undefined =>
   call('extensionsProblem', value);
-
-/**
- * The members of a valid `extensions` value that the host implements (core §8.1: the others are
- * ignored). `undefined` when nothing implemented is there, so a result carries no empty object.
- */
-export const implementedExtensions = (
-  value: unknown,
-  implemented: readonly string[],
-): CoreExtensions | undefined => call('implementedExtensions', value, implemented);

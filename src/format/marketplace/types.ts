@@ -1,4 +1,5 @@
 import { MARKETPLACE_SOURCE_KINDS } from '../../protocol/settings-keys.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginDependency, PluginManifest } from '../manifest-schema.ts';
 import type { PluginIssue } from '../issues.ts';
 import type { Renames } from './renames.ts';
@@ -10,7 +11,12 @@ import type { SOURCE_FAILURE } from './source-failures.ts';
  * closed lists of source kinds; nothing here runs.
  * Pages: plugins/marketplace-reference.md ("Top-level fields", "Plugin entries", "Plugin sources",
  * "Marketplace sources").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/marketplace/types.rs`, docs/RUST.md);
+ * the types are TypeScript's.
  */
+
+const call = coreModule('format/marketplace/types');
 
 /**
  * The seven ways a plugin entry's `source` can name where the plugin lives: a relative path string,
@@ -18,7 +24,7 @@ import type { SOURCE_FAILURE } from './source-failures.ts';
  * sources"). `command` is the kit's name for the command source; the SDK has no type for any of
  * them, they are `marketplace.json` shapes.
  */
-export const PLUGIN_SOURCE_KINDS = [
+export const PLUGIN_SOURCE_KINDS: readonly [
   'relative',
   'github',
   'url',
@@ -26,7 +32,7 @@ export const PLUGIN_SOURCE_KINDS = [
   'npm',
   'archive',
   'command',
-] as const;
+] = call('PLUGIN_SOURCE_KINDS');
 export type PluginSourceKind = (typeof PLUGIN_SOURCE_KINDS)[number];
 
 /** A parsed plugin source. Registries are typed over `PluginSourceKind`, never a `switch`. */

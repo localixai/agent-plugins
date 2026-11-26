@@ -52,7 +52,6 @@ pub fn implemented_extensions(value: &JsValue, implemented: &[String]) -> Option
 crate::registry::exports! {
     "format/core/extensions" {
         "extensionsProblem" => ok |value: JsValue| extensions_problem(&value);
-        "implementedExtensions" => ok |value: JsValue, implemented: Vec<String>| implemented_extensions(&value, &implemented);
     }
 }
 

@@ -6,6 +6,7 @@ pub mod merge_rules;
 pub mod pre_tool_use_outcome;
 pub mod reminder_tags;
 pub mod terminal_sequence;
+pub mod text_cap;
 pub mod tool_output;
 pub mod tool_shape;
 pub mod tool_shapes;

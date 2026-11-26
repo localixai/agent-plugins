@@ -7,6 +7,7 @@ pub mod env_file;
 pub mod handlers;
 pub mod input;
 pub mod output;
+pub mod register;
 pub mod select;
 pub mod source_kind;
 pub mod verdict;

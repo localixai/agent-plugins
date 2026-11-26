@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Hooks and plugin file readers run more of their work on the core: a hook's output and profile
+  results, the remote handlers' environment, `ok: false` and failure runs, timeouts, permission
+  mode and conditional input fields, the text cap, registration, the event catalog and gates;
+  agent scalars, the dual, hooks, MCP and skill cores, marketplace archive URLs, entry checks and
+  schema, elicitation forms, output styles and component frontmatter.
 - Marketplaces and updates run more of their work on the core: CLI plugin hints, copy-mode,
   link-mode and `git-subdir` version hashes, an archive's totals and unsafe entries, and the
   variables that stop updates and traffic. An archive's names fold by Unicode 18, where Bun's

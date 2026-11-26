@@ -6,6 +6,7 @@
 //! `scripts/rust/js-oracle.ts` records the built-ins themselves, which `tests/differential/js.rs`
 //! holds these to.
 
+pub mod array_join;
 pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;
@@ -18,6 +19,7 @@ mod uri;
 pub mod url;
 pub mod value;
 
+pub use array_join::array_join;
 pub use json_stringify::{json_stringify, json_stringify_indented};
 pub use promise::{promise_all, promise_all_pair};
 pub use radix::{to_exponential, to_radix_string};
