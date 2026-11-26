@@ -1,5 +1,6 @@
-import { warning, type PluginIssue } from '../format/issues.ts';
+import type { PluginIssue } from '../format/issues.ts';
 import type { ScanFolder } from '../ports/folder-scan.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * A file of a scope folder read through the host's port, for the skills and the agents scans.
@@ -7,7 +8,11 @@ import type { ScanFolder } from '../ports/folder-scan.ts';
  * changed while it was read): the scan skips that file with a warning that carries the port's
  * message and goes on. An aborted `signal` still rejects, so a cancelled scan never turns into a
  * quiet partial answer (judgment, spec/judgments.md, "metadata-first catalog").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/foundation/folder_read.rs`, docs/RUST.md).
  */
+
+const call = coreModule('foundation/folder-read');
 
 export interface TextRead {
   /** `undefined` when the file is absent or the port refused it (then `issue` says why). */
@@ -15,19 +20,8 @@ export interface TextRead {
   readonly issue?: PluginIssue;
 }
 
-export async function readTextOf(
+export const readTextOf = (
   folder: ScanFolder,
   path: string,
   signal?: AbortSignal,
-): Promise<TextRead> {
-  try {
-    return { text: await folder.files.readText(path, signal) };
-  } catch (cause) {
-    if (signal?.aborted === true) throw cause;
-    const reason = cause instanceof Error ? cause.message : String(cause);
-    return {
-      text: undefined,
-      issue: warning(folder.hostPath(path), `cannot be read: ${reason}; skipped`),
-    };
-  }
-}
+): Promise<TextRead> => call.async('readTextOf', folder, path, signal);

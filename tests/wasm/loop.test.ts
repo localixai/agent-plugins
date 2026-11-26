@@ -1,13 +1,16 @@
 /**
  * The host's loop over the Rust core (docs/RUST.md, "The boundary", effects and handles): a port,
  * a callback and a signal cross as numbers and stay the host's own objects; needs asked together
- * run together; what the host throws, the call throws; a handle's methods call the core.
+ * run together; what the host throws, the call throws, unless the core catches it (and then a
+ * rethrow is the very value); a handle's methods call the core.
  */
 import { describe, expect, test } from 'bun:test';
 import { configDirectoryOf } from '../../src/format/config-directory.ts';
 import { listSorted } from '../../src/format/listing.ts';
+import { readTextOf } from '../../src/foundation/folder-read.ts';
 import { readJson, readJsonWithoutBom } from '../../src/format/read-json.ts';
 import type { DirectoryEntry, PluginFiles } from '../../src/ports/files.ts';
+import type { ScanFolder } from '../../src/ports/folder-scan.ts';
 import { coreModule } from '../../src/wasm/bridge.ts';
 
 const probe = coreModule('registry/probe');
@@ -113,6 +116,45 @@ describe('a port with both kinds of method', () => {
     };
     expect(await probe.async('opened', scan, '/p/.claude')).toBe('/p/.claude');
     expect(await probe.async('opened', scan, '/q')).toBeUndefined();
+  });
+});
+
+/** A `ScanFolder` at `/p/.claude` whose files' `readText` is `readText`. */
+const folderReading = (readText: PluginFiles['readText']): ScanFolder => ({
+  dir: '/p/.claude',
+  files: filesReading(readText),
+  hostPath: (path) => `/p/.claude/${path}`,
+  canonicalPath: () => Promise.resolve(undefined),
+});
+
+const refusing = (): never => {
+  throw new RangeError('no');
+};
+
+describe('a throw the core catches', () => {
+  test('is what the catch makes of it, with the message and the name of what was thrown', async () => {
+    const folder = folderReading(() => Promise.reject(new RangeError('file is 2 MiB')));
+    expect(await readTextOf(folder, 'big/SKILL.md')).toEqual({
+      text: undefined,
+      issue: {
+        severity: 'warning',
+        path: '/p/.claude/big/SKILL.md',
+        message: 'cannot be read: file is 2 MiB; skipped',
+      },
+    });
+    expect(await probe.async('caught', refusing)).toEqual(['no', 'RangeError']);
+    // A host that rejects with a value that is no Error: its text, and no name.
+    // oxlint-disable-next-line prefer-promise-reject-errors -- the host under test throws a string.
+    expect(await probe.async('caught', () => Promise.reject('plain'))).toEqual(['plain', null]);
+  });
+
+  test('that the catch throws again is the very value the host threw', async () => {
+    const failure = new Error('aborted');
+    const abort = new AbortController();
+    abort.abort();
+    const folder = folderReading(() => Promise.reject(failure));
+    const caught = await readTextOf(folder, 'a.md', abort.signal).catch((error: unknown) => error);
+    expect(caught).toBe(failure);
   });
 });
 

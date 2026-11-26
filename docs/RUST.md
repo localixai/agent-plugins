@@ -78,11 +78,14 @@ its ports without an async runtime.
    port's (`files.readText(path, signal)` is `readText` with `[path, signal]`); a callback's
    method is `call`.
 2. The host does each need and gives its answer to `registry::resume(t, {"answers": [{"id",
-   "result"} | {"id", "throws"}], "aborted": [n]})`, which runs the task on to its next step.
+   "result"} | {"id", "throws", "name"?}], "aborted": [n]})`, which runs the task on to its next
+   step (`throws` is `cause instanceof Error ? cause.message : String(cause)`, `name` an
+   `Error`'s `name`).
    Every need asked in one poll comes in one step, so a `join` in the core is concurrent work on
    the host, as `Promise.all` was. A host that throws ends the task with `{"rethrow": id}`: the
    call throws the very value the host threw, as an `await` in the TypeScript did (a port's own
-   failure is a `PortFailure` in its result, `src/ports/failure.ts`, never a throw).
+   failure is a `PortFailure` in its result, `src/ports/failure.ts`, never a throw), unless the
+   core catches it (item 6).
 3. What the host keeps crosses as its number, at any depth, both ways (`registry/remote.rs`,
    `src/wasm/wire.ts`): a port (an object with methods) `{"$port": n}`, a function `{"$fn": n}`,
    an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
@@ -96,6 +99,31 @@ its ports without an async runtime.
 5. A function of the core's that the host calls later (a timer's `fire`) crosses as `{"$call":
    h}`, a `registry::Function`: a handle (below) whose one sync method is `call`, which the host
    makes a function.
+6. A `try { await port.method(…) } catch (cause) { … }` is `registry::catch_host(future).await`,
+   `Ok` with the future's output or `Err(registry::Thrown { message, name, need })` with the
+   host's throw (`registry/catch.rs`). The scope that catches is the one awaiting the need when
+   its answer comes, as the `try` awaiting a promise in JavaScript, wherever the call was made;
+   the innermost catches, and on a throw the scope drops its future, so a need it was still
+   waiting on is never asked (asked in the same poll) or its late answer is dropped. A catch that
+   throws again (`if (signal?.aborted === true) throw cause`) writes `return
+   cause.rethrow().await;` (a future that never completes, so it is any type): the scope around
+   it catches it, or the task ends with `{"rethrow": need}` and the call throws the very value.
+   The host keeps what it threw by need until the call ends. A Rust host's ports never throw, so
+   for it `catch_host` answers `Ok`. `foundation/folder_read.rs` is the pattern:
+
+   ```rust
+   let read = catch_host(async { folder.files().await.read_text(path, signal).await }).await;
+   match read {
+       Ok(text) => TextRead { text, issue: None },
+       Err(cause) => {
+           if signal.is_some_and(Signal::is_aborted) {
+               return cause.rethrow().await;
+           }
+           let reason = cause.message;
+           // … the warning
+       }
+   }
+   ```
 
 `registry::Port` implements every port trait of `crates/agent-plugins/src/ports/`, one file of
 `registry/remote/` each, each method the need of its TypeScript namesake with its arguments, the

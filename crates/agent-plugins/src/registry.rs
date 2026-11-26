@@ -26,8 +26,10 @@
 //! on; the host does each (calls its port's method, its callback) and gives the answers to
 //! [`resume`], until the step is done. The values the host keeps are numbers here
 //! ([`Port`], [`Callback`], the `Signal` of `crate::ports`), and a result with methods is a
-//! [`Handle`] (`registry/handle.rs`). docs/RUST.md, "The boundary", has the protocol.
+//! [`Handle`] (`registry/handle.rs`). A host's throw ends the task unless [`catch_host`] catches
+//! it (`registry/catch.rs`). docs/RUST.md, "The boundary", has the protocol.
 
+mod catch;
 mod exports;
 mod handle;
 mod probe;
@@ -37,6 +39,7 @@ mod task;
 mod wire;
 mod wire_json;
 
+pub use catch::{Thrown, catch_host};
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
 pub use handle::{Function, Handle, Methods, release};
@@ -173,6 +176,7 @@ pub const MODULES: &[Module] = &[
     crate::format::validate::unknown_fields::EXPORTS,
     crate::format::versions::EXPORTS,
     crate::format::wildcard::EXPORTS,
+    crate::foundation::folder_read::EXPORTS,
     crate::foundation::folder_walk::EXPORTS,
     crate::foundation::project_directories::EXPORTS,
     crate::hooks::core::profiles::EXPORTS,
