@@ -3,43 +3,34 @@
  * §18.4.3 item 4, the table of §18.2.7): a Claude Code matcher converts when it names one profile's
  * tools, and a core handler that a converted adapter limits to one profile converts back to that
  * matcher.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/convert/profiles.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
 
-export const PROFILE_NAMES = [
+const call = coreModule('convert/profiles');
+
+export const PROFILE_NAMES: readonly [
   'shell',
   'file.read',
   'file.modify',
   'web.fetch',
   'web.search',
   'mcp',
-] as const;
+] = call('PROFILE_NAMES');
+
 export type ProfileName = (typeof PROFILE_NAMES)[number];
 
-/** Each profile's Claude Code tools, as the matcher of §18.3.4 lists them. */
-const TOOLS: { readonly [P in ProfileName]: readonly string[] } = {
-  shell: ['Bash', 'PowerShell'],
-  'file.read': ['Read'],
-  'file.modify': ['Edit', 'Write', 'NotebookEdit'],
-  'web.fetch': ['WebFetch'],
-  'web.search': ['WebSearch'],
-  mcp: ['mcp__.*'],
-};
-
 export const isProfileName = (value: string | undefined): value is ProfileName =>
-  PROFILE_NAMES.some((name) => name === value);
+  call('isProfileName', value);
 
 /** The matcher that selects a profile's tools. */
-export const matcherOf = (profile: ProfileName): string => TOOLS[profile].join('|');
+export const matcherOf = (profile: ProfileName): string => call('matcherOf', profile);
 
 /** A matcher that matches every tool (hooks.md, "Matcher patterns": omitted, `""` or `*`). */
 export const matchesEverything = (matcher: string | undefined): boolean =>
-  matcher === undefined || matcher === '' || matcher === '*';
-
-const sameSet = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && a.every((name) => b.includes(name));
+  call('matchesEverything', matcher);
 
 /** The one profile a matcher selects, in any order of its names; `undefined` for any other matcher. */
-export function profileOfMatcher(matcher: string): ProfileName | undefined {
-  const names = matcher.split('|');
-  return PROFILE_NAMES.find((profile) => sameSet(TOOLS[profile], names));
-}
+export const profileOfMatcher = (matcher: string): ProfileName | undefined =>
+  call('profileOfMatcher', matcher);

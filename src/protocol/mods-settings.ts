@@ -3,7 +3,13 @@
  * (plugins/mods/reference.md, "Settings and environment variables", "Where"). Pure data: what a
  * setting does is the code of `mods/load/policy` and its neighbours, which read a name only from
  * the homes this table gives it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/protocol/mods_settings.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+import type { Assert } from './type-equality.ts';
+
+const call = coreModule('protocol/mods-settings');
 
 /**
  * Where a name is read: the process `environment`, the `env` of the user's settings
@@ -11,14 +17,15 @@
  * (`any-file`), or `guard-option`, an entry under `pluginConfigs` for the built-in guard that only
  * managed settings can set.
  */
-export const SETTING_HOMES = [
+export const SETTING_HOMES: readonly [
   'environment',
   'user-env',
   'managed',
   'user',
   'any-file',
   'guard-option',
-] as const;
+] = call('SETTING_HOMES');
+
 export type SettingHome = (typeof SETTING_HOMES)[number];
 
 export interface ModSetting {
@@ -32,23 +39,36 @@ export interface ModSetting {
   readonly userOnlyWithoutPolicy?: true;
 }
 
-export const MOD_SETTINGS = {
-  CLAUDE_CODE_PLUGIN_DIRS: { homes: ['environment', 'user-env'] },
-  CLAUDE_CODE_PLUGIN_DIR_WATCH: { homes: ['environment'] },
-  prependPlugins: { homes: ['managed', 'user'], userOnlyWithoutPolicy: true },
-  appendPlugins: { homes: ['managed', 'user'], userOnlyWithoutPolicy: true },
-  allowManagedModsOnly: { homes: ['guard-option'] },
-  allowModsToOverrideDenyRules: { homes: ['guard-option'] },
-  allowManagedHooksOnly: { homes: ['managed'] },
-  disableAllHooks: { homes: ['any-file'] },
-  disableSideloadFlags: { homes: ['managed'] },
-  pluginConfigs: { homes: ['user', 'managed'] },
-} as const satisfies Readonly<Record<string, ModSetting>>;
+export const MOD_SETTINGS: {
+  readonly CLAUDE_CODE_PLUGIN_DIRS: { readonly homes: readonly ['environment', 'user-env'] };
+  readonly CLAUDE_CODE_PLUGIN_DIR_WATCH: { readonly homes: readonly ['environment'] };
+  readonly prependPlugins: {
+    readonly homes: readonly ['managed', 'user'];
+    readonly userOnlyWithoutPolicy: true;
+  };
+  readonly appendPlugins: {
+    readonly homes: readonly ['managed', 'user'];
+    readonly userOnlyWithoutPolicy: true;
+  };
+  readonly allowManagedModsOnly: { readonly homes: readonly ['guard-option'] };
+  readonly allowModsToOverrideDenyRules: { readonly homes: readonly ['guard-option'] };
+  readonly allowManagedHooksOnly: { readonly homes: readonly ['managed'] };
+  readonly disableAllHooks: { readonly homes: readonly ['any-file'] };
+  readonly disableSideloadFlags: { readonly homes: readonly ['managed'] };
+  readonly pluginConfigs: { readonly homes: readonly ['user', 'managed'] };
+} = call('MOD_SETTINGS');
+
+/** @public Drift guard: every setting has the shape of `ModSetting`. */
+export type ModSettingsHaveShape = Assert<
+  typeof MOD_SETTINGS extends Readonly<Record<string, ModSetting>> ? true : false
+>;
 
 export type ModSettingName = keyof typeof MOD_SETTINGS;
 
 /** The built-in guard's id in `pluginConfigs` (the only form there) and, as `prependPlugins` also accepts, its short id. */
-export const GUARD_CONFIG_ID = 'cc-plugin-sec-default@builtin';
-export const GUARD_ID = 'sec-default@builtin';
+export const GUARD_CONFIG_ID: 'cc-plugin-sec-default@builtin' = call('GUARD_CONFIG_ID');
+
+export const GUARD_ID: 'sec-default@builtin' = call('GUARD_ID');
+
 /** What `/plugin` and the debug log call the guard. */
-export const GUARD_NAME = 'cc-plugin-sec-default';
+export const GUARD_NAME: 'cc-plugin-sec-default' = call('GUARD_NAME');

@@ -87,9 +87,13 @@ macro_rules! exports {
         })
     };
     (@call [async $kind:ident $params:tt $body:expr] $args:ident) => {
-        $crate::registry::Answer::Fault(
-            "it waits on the host: a host starts it (registry::start)".to_owned(),
-        )
+        {
+            // A module whose exports all wait on the host reads no argument here.
+            let _ = $args;
+            $crate::registry::Answer::Fault(
+                "it waits on the host: a host starts it (registry::start)".to_owned(),
+            )
+        }
     };
     (@start [sync $kind:ident $body:expr] $args:ident) => {
         $crate::registry::ready($crate::registry::exports!(@call [sync $kind $body] $args))

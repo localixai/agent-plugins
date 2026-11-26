@@ -42,6 +42,7 @@ pub mod read_json;
 pub mod remote_mcp_credentials;
 pub mod settings_files;
 pub mod skill_name;
+pub mod skill_types;
 pub mod theme;
 pub mod theme_color;
 pub mod theme_tokens;

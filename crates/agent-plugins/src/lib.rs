@@ -9,7 +9,10 @@
 //! function here answers what its namesake there answers, which the differential tests hold it to
 //! (docs/RUST.md).
 
+pub mod cli;
+pub mod convert;
 pub mod format;
+pub mod foundation;
 pub mod hooks;
 pub mod js;
 pub mod ports;

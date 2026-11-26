@@ -3,7 +3,12 @@
  * fresh `CLAUDE_CONFIG_DIR`, and `--setting-sources user`, so that the session has none of your own
  * configuration; then what each outcome of reproducing the problem points to. Pure: it only builds
  * the launch and the advice, the host or the person runs them.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/clean_configuration.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('cli/clean-configuration');
 
 export interface CleanLaunch {
   /** The empty directory to run in. */
@@ -17,35 +22,17 @@ export interface CleanLaunch {
 }
 
 /** The launch for a home directory: `~/claude-clean/empty` and `~/claude-clean/config`. */
-export function cleanLaunch(home: string): CleanLaunch {
-  const root = `${home.replace(/[\\/]+$/, '')}/claude-clean`;
-  return {
-    directory: `${root}/empty`,
-    configDir: `${root}/config`,
-    env: { CLAUDE_CONFIG_DIR: `${root}/config` },
-    args: ['--setting-sources', 'user'],
-  };
-}
+export const cleanLaunch = (home: string): CleanLaunch => call('cleanLaunch', home);
 
 /** The documented commands, per shell. */
 export type CleanShell = 'posix' | 'powershell';
 
-export function cleanLaunchCommands(shell: CleanShell): {
+export const cleanLaunchCommands = (
+  shell: CleanShell,
+): {
   readonly create: string;
   readonly launch: string;
-} {
-  return shell === 'posix'
-    ? {
-        create: 'mkdir -p ~/claude-clean/empty && cd ~/claude-clean/empty',
-        launch: 'CLAUDE_CONFIG_DIR=~/claude-clean/config claude --setting-sources user',
-      }
-    : {
-        create:
-          'New-Item -ItemType Directory -Force "$HOME/claude-clean/empty" | Out-Null\nSet-Location "$HOME/claude-clean/empty"',
-        launch:
-          '$env:CLAUDE_CONFIG_DIR = "$HOME/claude-clean/config"\nclaude --setting-sources user',
-      };
-}
+} => call('cleanLaunchCommands', shell);
 
 /** What reproducing the problem in the clean session means. */
 export type CleanOutcome = 'problem-gone' | 'problem-persists';
@@ -56,23 +43,9 @@ export type CleanOutcome = 'problem-gone' | 'problem-persists';
  * `--setting-sources user`. "Problem persists": the cause is outside it; check `/status` for managed
  * settings and the shell for environment variables.
  */
-export function afterCleanRun(outcome: CleanOutcome): {
+export const afterCleanRun = (
+  outcome: CleanOutcome,
+): {
   readonly cause: 'user-or-project-configuration' | 'outside-user-and-project-configuration';
   readonly next: readonly string[];
-} {
-  return outcome === 'problem-gone'
-    ? {
-        cause: 'user-or-project-configuration',
-        next: [
-          'Copy ~/.claude.json and the files in ~/.claude into the clean configuration directory one at a time',
-          'If none brings the problem back, start Claude Code in your project directory without --setting-sources user, with CLAUDE_CONFIG_DIR still pointing at the clean directory',
-        ],
-      }
-    : {
-        cause: 'outside-user-and-project-configuration',
-        next: [
-          'Run /status in the session to check for managed settings',
-          'Check your shell for environment variables',
-        ],
-      };
-}
+} => call('afterCleanRun', outcome);

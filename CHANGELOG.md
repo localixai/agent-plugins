@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- The protocol tables (efforts, exit reasons, hook events and config, permission modes, settings
+  keys, tool names, the mods API names, limits, settings, tiers and UI names), the CLI's command
+  table, flags and uninstall checks, the converter's profiles, adapters, namespaces, notes and
+  placeholders, icon candidates, and the folder walk run on the core.
 - Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
   output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
   times slower. The core reads and writes the JSON of a call in one pass over its text.
