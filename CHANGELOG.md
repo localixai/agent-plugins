@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
+  verdict notices and model switches, output caps and deferral, tool output shapes, matcher
+  values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the
+  `CLAUDE_ENV_FILE` readers.
 - The package starts running on a Rust core: `crates/agent-plugins` (docs/RUST.md), compiled to
   WebAssembly and loaded by `src/wasm/bridge.ts`. The modules of `format` and `protocol` that
   read and check values are now thin wrappers over it, with the same exports, types and answers;

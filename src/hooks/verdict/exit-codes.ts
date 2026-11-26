@@ -2,15 +2,19 @@
  * The table of "Exit code output" (hooks.md): what a hook's stdout and its exit code come to
  * together. The rows are the kinds of stdout, the columns the exit codes; each cell is what the
  * doc says, as data.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/verdict/exit_codes.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('hooks/verdict/exit-codes');
 
 export type ExitClass = 'zero' | 'two' | 'other';
 
 /** "JSON object that passes schema validation", "JSON that can't be parsed or fails schema validation", "Plain text, or nothing". */
 export type StdoutClass = 'json-valid' | 'json-invalid' | 'plain';
 
-export const exitClassOf = (exitCode: number): ExitClass =>
-  exitCode === 0 ? 'zero' : exitCode === 2 ? 'two' : 'other';
+export const exitClassOf = (exitCode: number): ExitClass => call('exitClassOf', exitCode);
 
 export type Result =
   /** "Success". */
@@ -52,29 +56,6 @@ export interface Cell {
   readonly failure: boolean;
 }
 
-const cell = (
-  result: Result,
-  fields: Fields,
-  message: MessageFrom,
-  failure = result === 'non-blocking-error',
-): Cell => ({ result, fields, message, failure });
-
 export const EXIT_TABLE: {
   readonly [X in ExitClass]: { readonly [S in StdoutClass]: Cell };
-} = {
-  zero: {
-    'json-valid': cell('success', 'apply', 'none'),
-    'json-invalid': cell('non-blocking-error', 'none', 'validation'),
-    plain: cell('success', 'none', 'none'),
-  },
-  two: {
-    'json-valid': cell('blocking', 'read-no-override', 'stderr'),
-    'json-invalid': cell('blocking', 'none', 'stderr'),
-    plain: cell('blocking', 'none', 'stderr'),
-  },
-  other: {
-    'json-valid': cell('success', 'decide-alone', 'none', true),
-    'json-invalid': cell('non-blocking-error', 'none', 'validation'),
-    plain: cell('non-blocking-error', 'none', 'first-stderr-line'),
-  },
-};
+} = call('EXIT_TABLE');

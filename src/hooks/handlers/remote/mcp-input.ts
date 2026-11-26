@@ -1,6 +1,3 @@
-import { warning, type PluginIssue } from '../../../format/issues.ts';
-import { isRecord } from '../../../protocol/is-record.ts';
-
 /**
  * The arguments of an `mcp_tool` hook (hooks.md, "MCP tool hook fields"): `input` holds "arguments
  * passed to the tool. String values support `${path}` substitution from the hook's JSON input,
@@ -11,23 +8,13 @@ import { isRecord } from '../../../protocol/is-record.ts';
  * substituted too; the text a path brings in is not read again; a value that is not a string is
  * written as text (an object as JSON); a path with no value is an empty string and a warning.
  * Numbers, booleans and null stay as they are, and so do keys.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/remote/mcp_input.rs`, docs/RUST.md).
  */
+import type { PluginIssue } from '../../../format/issues.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
 
-/** `${a.b_c.0}`: text that is not a path (`${not a path}`, `${}`) is not a reference. */
-const REFERENCE = /\$\{([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)\}/g;
-
-function valueAt(root: unknown, path: string): unknown {
-  let current = root;
-  for (const key of path.split('.')) {
-    if (Array.isArray(current)) current = current[Number(key)];
-    else if (isRecord(current)) current = Object.hasOwn(current, key) ? current[key] : undefined;
-    else return undefined;
-  }
-  return current;
-}
-
-const asText = (value: unknown): string =>
-  typeof value === 'string' ? value : value === null ? '' : (JSON.stringify(value) ?? '');
+const call = coreModule('hooks/handlers/remote/mcp-input');
 
 /** The arguments to send, and a warning for each path that had no value. */
 export interface McpArguments {
@@ -36,43 +23,8 @@ export interface McpArguments {
 }
 
 /** `input` with every string's references read from `hookInputJson`, the input the hook receives. */
-export function substituteInput(
+export const substituteInput = (
   input: Readonly<Record<string, unknown>> | undefined,
   hookInputJson: string,
   issuePath: string,
-): McpArguments {
-  const hookInput = parse(hookInputJson);
-  const missing = new Set<string>();
-  const text = (template: string): string =>
-    template.replace(REFERENCE, (_reference, path: string) => {
-      const value = valueAt(hookInput, path);
-      if (value === undefined) missing.add(path);
-      return value === undefined ? '' : asText(value);
-    });
-  const walk = (value: unknown): unknown => {
-    if (typeof value === 'string') return text(value);
-    if (Array.isArray(value)) return value.map(walk);
-    if (isRecord(value)) {
-      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, walk(inner)]));
-    }
-    return value;
-  };
-  const substituted = Object.fromEntries(
-    Object.entries(input ?? {}).map(([key, value]) => [key, walk(value)]),
-  );
-  const issues = [...missing].map((path) =>
-    warning(
-      issuePath,
-      `\${${path}} is not in the hook input and is replaced with an empty string.`,
-    ),
-  );
-  return { input: substituted, issues };
-}
-
-function parse(json: string): unknown {
-  try {
-    return JSON.parse(json);
-  } catch {
-    return undefined;
-  }
-}
+): McpArguments => call('substituteInput', input, hookInputJson, issuePath);
