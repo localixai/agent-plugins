@@ -3,4 +3,5 @@
 pub mod command;
 pub mod context;
 pub mod remote;
+pub mod status;
 pub mod timeouts;

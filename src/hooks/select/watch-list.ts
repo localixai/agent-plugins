@@ -1,8 +1,6 @@
-import { dedupeSettingsHandlers } from './dedupe.ts';
 import type { HookEvent } from '../../protocol/official.ts';
 import type { HookSession, RegisteredHandler } from '../contracts.ts';
-import { supportsHandlerType } from './event-catalog.ts';
-import { passesGates } from './gates.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * hooks.md, "FileChanged": the matcher "serves two roles". Its value builds the watch list: "split
@@ -14,19 +12,16 @@ import { passesGates } from './gates.ts';
  * Judgments (spec/judgments.md): an empty segment (`".env|"`, or the empty string) names no file;
  * a handler that never runs (gated off by `disableAllHooks`, trust, a disabled plugin or a managed
  * lock, or of a type `FileChanged` does not support) adds nothing, since no run would follow.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/select/watch_list.rs`,
+ * docs/RUST.md).
  */
-export function fileChangedWatchList(
+const call = coreModule('hooks/select/watch-list');
+
+export const fileChangedWatchList = (
   entries: readonly RegisteredHandler[],
   session: HookSession,
-): readonly string[] {
-  const names = entries
-    .filter((entry) => entry.event === 'FileChanged')
-    .filter((entry) => supportsHandlerType('FileChanged', entry.handler.type))
-    .filter((entry) => passesGates(entry, session))
-    .flatMap((entry) => (entry.matcher ?? '').split('|'))
-    .filter((name) => name !== '');
-  return [...new Set(names)];
-}
+): readonly string[] => call('fileChangedWatchList', entries, session);
 
 /**
  * hooks.md, "CwdChanged" and "FileChanged" output: `watchPaths` "Replaces the current dynamic watch
@@ -35,12 +30,10 @@ export function fileChangedWatchList(
  * the field (`[]` empties it), else the list as it was. Judgment (spec/judgments.md): an output that
  * names no `watchPaths` leaves the list alone, since only a returned field replaces it.
  */
-export function mergeWatchPaths(
+export const mergeWatchPaths = (
   current: readonly string[],
   effect: readonly string[] | undefined,
-): readonly string[] {
-  return effect === undefined ? current : [...new Set(effect)];
-}
+): readonly string[] => call('mergeWatchPaths', current, effect);
 
 /**
  * Whether some registered handler of the event could run in this session: it passes the gates
@@ -49,32 +42,18 @@ export function mergeWatchPaths(
  * occurrence the question is asked before; a handler gated off or of an unsupported type never
  * counts, as no run would follow.
  */
-export function hasRunnableHandler(
+export const hasRunnableHandler = (
   entries: readonly RegisteredHandler[],
   session: HookSession,
   event: HookEvent,
-): boolean {
-  return entries.some(
-    (entry) =>
-      entry.event === event &&
-      supportsHandlerType(event, entry.handler.type) &&
-      passesGates(entry, session),
-  );
-}
+): boolean => call('hasRunnableHandler', entries, session, event);
 
 /**
  * The handlers of `entries` that would run in the session, in order: they pass the gates and have a
  * type their event supports (matchers and `if` are not read), and a handler written in several
  * settings files is listed once (hooks.md, "Hook handler fields"). What a host lists in a `/hooks` view.
  */
-export function runnableHandlers(
+export const runnableHandlers = (
   entries: readonly RegisteredHandler[],
   session: HookSession,
-): readonly RegisteredHandler[] {
-  return dedupeSettingsHandlers(
-    entries.filter(
-      (entry) =>
-        supportsHandlerType(entry.event, entry.handler.type) && passesGates(entry, session),
-    ),
-  );
-}
+): readonly RegisteredHandler[] => call('runnableHandlers', entries, session);

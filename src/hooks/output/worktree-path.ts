@@ -44,20 +44,6 @@ export interface WorktreeAnswer {
   readonly effects: { readonly worktreePath?: string };
 }
 
-export const isAbsolute = (path: string): boolean => call('isAbsolute', path);
-
-/** `relative` resolved against `base`, the `.` and `..` segments collapsed (`..` stops at the root). */
-export const resolveRelative = (base: string, relative: string): string =>
-  call('resolveRelative', base, relative);
-
-/**
- * The candidate text of the hooks' answers. The merge has already picked the last answer in handler
- * order, an HTTP hook's `worktreePath` and a command hook's last line alike (Judgment J7.143), into
- * `effects.worktreePath`; an answer built without the merge falls back to the last command line.
- */
-export const worktreeCandidate = (answer: WorktreeAnswer): string | undefined =>
-  call('worktreeCandidate', answer);
-
 /**
  * The worktree path a `WorktreeCreate` outcome asks the session to use, or why creation fails.
  *

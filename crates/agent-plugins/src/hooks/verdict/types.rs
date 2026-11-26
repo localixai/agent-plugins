@@ -92,3 +92,78 @@ pub struct RunFacts {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<f64>,
 }
+
+/// How a block came about.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BlockVia {
+    /// Exit code 2.
+    #[serde(rename = "exit2")]
+    Exit2,
+    /// A blocking decision.
+    Decision,
+    /// A failure that blocks.
+    Failure,
+    /// `continue: false`.
+    ContinueFalse,
+    /// A timeout that blocks.
+    Timeout,
+}
+
+/// Who is shown the text of a block, as the docs route it: `claude` (the denial reason, the
+/// feedback), `user` (the block message), both (`PostToolBatch`: "a warning in the transcript, and
+/// it stays in the conversation"), or `none` (`ConfigChange`: "A blocked change surfaces no message
+/// to you or to Claude"; `Elicitation`: "Claude Code doesn't show your stderr").
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BlockRoute {
+    /// Claude.
+    Claude,
+    /// The user.
+    User,
+    /// Both.
+    UserAndClaude,
+    /// No one.
+    None,
+}
+
+/// The action is held back; `reason` is the text Claude or the user is given, as the docs route it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlockInfo {
+    /// How.
+    pub via: BlockVia,
+    /// Where `reason` and `message` are shown.
+    pub to: BlockRoute,
+    /// The hook's own words: its stderr, or the failure text. Empty when `to` is `none`.
+    pub reason: String,
+    /// The line the docs show. Empty when `to` is `none`.
+    pub message: String,
+    /// `to` is `none` and the docs send the hook's command and stderr to the debug log: that line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debug: Option<String>,
+    /// `WorktreeRemove` only: it fails "if the directory still exists afterward".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
+}
+
+/// A `<hook name> hook error` notice, verbatim as the docs show it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HookNotice {
+    /// The handler.
+    pub handler_id: String,
+    /// The text.
+    pub message: String,
+}
+
+/// Text from a hook that goes to Claude or to the user without blocking anything.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Feedback {
+    /// The handler.
+    pub handler_id: String,
+    /// `claude` or `user`.
+    pub to: String,
+    /// The text.
+    pub text: String,
+}
