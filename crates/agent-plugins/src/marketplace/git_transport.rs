@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
 use crate::ports::BoxFuture;
-use crate::registry::Callback;
+use crate::registry::{Callback, Port};
 
 /// How a GitHub shorthand is cloned.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,15 +168,24 @@ pub async fn shorthand_attempts<A: SshAuthenticates>(
     }
 }
 
-// A record that holds a function crosses as a port, which this core cannot read members of yet
-// (docs/RUST.md, "Effects"), so the wrapper hands over `preferHttps` and the function apart.
+/// `ShorthandFacts` as it crosses: a record holding a function, so a port whose members are read
+/// (docs/RUST.md, "Effects").
+async fn shorthand_facts(record: Port) -> ShorthandFacts<Callback> {
+    let prefer_https = record.member("preferHttps");
+    let ssh_authenticates = record.member("sshAuthenticates");
+    ShorthandFacts {
+        prefer_https: prefer_https.await,
+        ssh_authenticates: ssh_authenticates.await,
+    }
+}
+
 crate::registry::exports! {
     "marketplace/git-transport" {
-        "shorthandTransport" => async ok |prefer_https: bool, ssh_authenticates: Callback|
-            shorthand_transport(&ShorthandFacts { prefer_https, ssh_authenticates }).await;
+        "shorthandTransport" => async ok |facts: Port|
+            shorthand_transport(&shorthand_facts(facts).await).await;
         "NO_PROMPT_ENVIRONMENT" => ok no_prompt_environment;
         "clonePlan" => ok |ssh: Option<SshProgramFacts>| clone_plan(&ssh.unwrap_or_default());
-        "shorthandAttempts" => async ok |prefer_https: bool, ssh_authenticates: Callback|
-            shorthand_attempts(&ShorthandFacts { prefer_https, ssh_authenticates }).await;
+        "shorthandAttempts" => async ok |facts: Port|
+            shorthand_attempts(&shorthand_facts(facts).await).await;
     }
 }

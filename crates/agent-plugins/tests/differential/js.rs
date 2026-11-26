@@ -1,7 +1,8 @@
 //! Differential checks of `src/js.rs` against the built-ins themselves, as
 //! `scripts/rust/js-oracle.ts` recorded them in the runtime Claude Code runs on.
 
-use agent_plugins::js::url::{INVALID_URL_MESSAGE, parse};
+use agent_plugins::js::normalize::{NormalForm, normalize};
+use agent_plugins::js::url::{INVALID_URL_MESSAGE, parse, parse_with_base};
 use agent_plugins::js::{JsValue, json_parse::json_parse, number, number_to_string, trim};
 use serde_json::{Value, json};
 
@@ -85,5 +86,31 @@ fn trim_answers_as_javascript_core() {
 fn url_answers_as_javascript_core() {
     check_fallible("js/url", "URL", |(text,): (String,)| {
         parse(&text).ok_or(INVALID_URL_MESSAGE)
+    });
+}
+
+#[test]
+fn url_with_a_base_answers_as_javascript_core() {
+    check_fallible("js/url-base", "URL", |(text, base): (String, String)| {
+        parse_with_base(&text, &base).ok_or(INVALID_URL_MESSAGE)
+    });
+}
+
+#[test]
+fn normalize_answers_as_javascript_core() {
+    check(
+        "js/normalize",
+        "normalize",
+        |(text, form): (String, NormalForm)| normalize(&text, form),
+    );
+}
+
+#[test]
+fn case_mapping_answers_as_javascript_core() {
+    check("js/case", "toUpperCase", |(text,): (String,)| {
+        text.to_uppercase()
+    });
+    check("js/case", "toLowerCase", |(text,): (String,)| {
+        text.to_lowercase()
     });
 }

@@ -216,6 +216,7 @@ pub const MODULES: &[Module] = &[
     crate::loading::validate::links::EXPORTS,
     crate::loading::validate::paths::EXPORTS,
     crate::loading::validate::report::EXPORTS,
+    crate::marketplace::archive_scan::EXPORTS,
     crate::marketplace::command_mode::EXPORTS,
     crate::marketplace::command_output::EXPORTS,
     crate::marketplace::folder_collision::EXPORTS,
@@ -223,6 +224,7 @@ pub const MODULES: &[Module] = &[
     crate::marketplace::header_map::EXPORTS,
     crate::marketplace::header_policy::EXPORTS,
     crate::marketplace::headless_report::EXPORTS,
+    crate::marketplace::http_download::EXPORTS,
     crate::marketplace::install_failures::EXPORTS,
     crate::marketplace::install_hosts::EXPORTS,
     crate::marketplace::lfs_pointer::EXPORTS,
@@ -288,6 +290,7 @@ pub const MODULES: &[Module] = &[
     crate::skills::shell_scan::EXPORTS,
     crate::skills::skill_rule::EXPORTS,
     crate::updates::auto_update_skips::EXPORTS,
+    crate::updates::env_flags::EXPORTS,
     crate::updates::update_targets::EXPORTS,
     probe::EXPORTS,
 ];

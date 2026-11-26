@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/version-hash.ts` at sha256:7499b30a1fa0.
+//! Port of `src/marketplace/version-hash.ts`, switched.
 //!
 //! What a plugin version is hashed from (plugins/loading.md, "How Claude Code computes the version";
 //! plugins/marketplace-reference.md, "Copy mode and link mode"): the files a `command` source copied,
@@ -6,9 +6,6 @@
 //! `git-subdir` source. The docs say what the hash covers, not how its input is laid out, so the
 //! layouts below are judgments (spec/judgments.md). Every listing is sorted here by code unit, never
 //! trusted from the port, so a digest never depends on the order a folder lists its entries in.
-//!
-//! Not switched: every export but `shortHash12` takes the host's `Sha256` port, which the boundary
-//! has no port for yet, so the package runs the TypeScript and the core uses this port.
 
 use crate::format::listing::list_sorted;
 use crate::format::path_text::{child_path, without_trailing_slashes};
@@ -16,6 +13,8 @@ use crate::js::slice_code_units;
 use crate::ports::files::PluginFiles;
 use crate::ports::marketplace::Sha256;
 use crate::ports::{BoxFuture, Signal};
+use crate::registry::Port;
+use serde::Deserialize;
 
 /// "The commit SHA of the source, shortened to 12 characters": a hex digest cut to 12, lower case.
 #[must_use]
@@ -129,8 +128,22 @@ pub async fn subdirectory_path_hash(path: &str, sha256: &dyn Sha256) -> String {
     )
 }
 
+/// `{ signal }`, the options of `copyModeHash` and `linkModeHash`.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct HashOptions {
+    /// Its cancellation.
+    #[serde(default)]
+    pub signal: Option<Signal>,
+}
+
 crate::registry::exports! {
     "marketplace/version-hash" {
         "shortHash12" => ok |hex: String| short_hash_12(&hex);
+        "copyModeHash" => async ok |files: Port, sha256: Port, options: Option<HashOptions>|
+            copy_mode_hash(&files, &sha256, options.unwrap_or_default().signal.as_ref()).await;
+        "linkModeHash" => async ok |real_path: String, files: Port, sha256: Port, options: Option<HashOptions>|
+            link_mode_hash(&real_path, &files, &sha256, options.unwrap_or_default().signal.as_ref()).await;
+        "subdirectoryPathHash" => async ok |path: String, sha256: Port|
+            subdirectory_path_hash(&path, &sha256).await;
     }
 }

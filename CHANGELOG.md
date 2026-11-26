@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Marketplaces and updates run more of their work on the core: CLI plugin hints, copy-mode,
+  link-mode and `git-subdir` version hashes, an archive's totals and unsafe entries, and the
+  variables that stop updates and traffic. An archive's names fold by Unicode 18, where Bun's
+  ICU is Unicode 17: a character Unicode 18 added may fold where it did not (docs/RUST.md).
 - Marketplaces and updates run more of their work on the core: install hosts, modes and failures,
   git transports and submodules, download header policy, name and folder conflicts, a plugin's
   content and footprint, reload summaries, remote and seeded plugins, telemetry names, and which
