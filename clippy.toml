@@ -41,6 +41,7 @@ disallowed-types = [
   { path = "std::net::TcpStream", reason = "requests go through the HttpClient port" },
   # The library depends on no JSON library: a value the package types `unknown` is a
   # `js::JsValue`, read by `js::json_parse` and written by `JsValue::to_json_text` (docs/RUST.md,
-  # RS7). Only the differential tests, which read the recorded vectors, use serde_json.
+  # RS7). The differential tests read the recorded vectors with serde_json, and `js::json_value`
+  # alone builds a `serde_json::Value`, the one flowschema checks (its `expect` names why).
   { path = "serde_json::Value", reason = "a JavaScript value is js::JsValue" },
 ]

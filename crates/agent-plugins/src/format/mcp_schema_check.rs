@@ -2,269 +2,127 @@
 //!
 //! The check mcp.md ("Tools with invalid input schemas") names: "The schema must be valid against
 //! the JSON Schema draft 2020-12 meta-schema", and "Top-level property names must be 1 to 64
-//! characters long and use only ASCII letters and digits, `_`, `.`, and `-`". The crate has no
-//! JSON Schema validator, so the meta-schema is carried as a table: each keyword of its
-//! vocabularies (core, applicator, unevaluated, validation, format, content, meta-data, and the
-//! deprecated `definitions` and `dependencies`) with the shape its value must have. A keyword the
-//! vocabularies do not define is allowed, as in the meta-schema.
+//! characters long and use only ASCII letters and digits, `_`, `.`, and `-`". The meta-schema is
+//! the official one, checked by `flowschema` (docs/RUST.md, RS8): its root and the documents of its
+//! seven vocabularies, in `mcp_schema_check/` as json-schema.org serves them
+//! (`https://json-schema.org/draft/2020-12/schema` and `.../draft/2020-12/meta/<name>`, fetched
+//! 2026-11-27). A keyword the vocabularies do not define is allowed, as in the meta-schema.
+//!
+//! Each document is resolved in two steps before it is compiled (`resolve`), so that flowschema
+//! gives the meta-schema's own verdict:
+//!
+//! - `"$dynamicRef": "#meta"` is a `$ref` to the root. A check starts at the root, whose
+//!   `$dynamicAnchor` is the outermost `meta` of every dynamic scope, so each one lands there;
+//!   flowschema does not follow a `$dynamicRef` across resources (its `unchecked` names it), which
+//!   would check a nested schema by the one vocabulary that refers to it.
+//! - A `format` is taken out. The root declares the format-annotation vocabulary, under which
+//!   `format` asserts nothing (JSON Schema Validation 2020-12, 7.2.1); flowschema asserts every
+//!   format, which would refuse a valid `"$ref": "a b"` or `"pattern": "("`.
 
-use std::collections::HashSet;
+use std::sync::LazyLock;
 
-use crate::js::JsValue;
+use flowschema::Schema;
 
-use crate::js::property_order;
+use crate::js::json_parse::json_parse;
+use crate::js::json_value::json_value;
+use crate::js::{JsValue, property_order};
 
-type Report<'a> = &'a mut dyn FnMut(&str, &str);
+/// The meta-schema's root, as the dialect names it.
+const ROOT: &str = include_str!("mcp_schema_check/schema.json");
 
-/// How the value of a keyword is checked (the package's `Check` functions).
-#[derive(Clone, Copy)]
-enum Check {
-    /// `typed('a string', ...)`.
-    Text,
-    /// `typed('a boolean', ...)`.
-    Flag,
-    /// Accepts any value.
-    Anything,
-    /// `typed('a number', ...)`.
-    Number,
-    /// `typed('a number above 0', ...)`.
-    Positive,
-    /// `typed('a non-negative integer', ...)`.
-    Count,
-    /// `typed('an array', ...)`.
-    List,
-    StringSet,
-    TypeName,
-    Schema,
-    Schemas,
-    SchemaOrStrings,
-    /// `mapOf(each)`.
-    MapOf(&'static Check),
-}
-
-const SIMPLE_TYPES: [&str; 7] = [
-    "array", "boolean", "integer", "null", "number", "object", "string",
+/// The vocabularies' documents, each with the URI the root's `$ref`s resolve to.
+const VOCABULARIES: [(&str, &str); 7] = [
+    (
+        "https://json-schema.org/draft/2020-12/meta/core",
+        include_str!("mcp_schema_check/meta/core.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/applicator",
+        include_str!("mcp_schema_check/meta/applicator.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/unevaluated",
+        include_str!("mcp_schema_check/meta/unevaluated.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/validation",
+        include_str!("mcp_schema_check/meta/validation.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/meta-data",
+        include_str!("mcp_schema_check/meta/meta-data.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/format-annotation",
+        include_str!("mcp_schema_check/meta/format-annotation.json"),
+    ),
+    (
+        "https://json-schema.org/draft/2020-12/meta/content",
+        include_str!("mcp_schema_check/meta/content.json"),
+    ),
 ];
 
-fn is_finite_number(value: &JsValue) -> bool {
-    value.as_f64().is_some_and(f64::is_finite)
-}
-
-/// `typed(what, test)`: reports `must be <what>` when the test fails.
-fn typed(what: &str, test: impl Fn(&JsValue) -> bool, value: &JsValue, at: &str, report: Report) {
-    if !test(value) {
-        report(at, &format!("must be {what}"));
-    }
-}
-
-/// Whether the items are pairwise different as `JSON.stringify` writes them; both callers pass
-/// only strings, whose text the wire's is.
-fn unique(items: &[JsValue]) -> bool {
-    let written: HashSet<String> = items.iter().map(JsValue::to_json_text).collect();
-    written.len() == items.len()
-}
-
-fn string_set(value: &JsValue, at: &str, report: Report) {
-    let fine = value
-        .as_array()
-        .is_some_and(|items| items.iter().all(JsValue::is_string) && unique(items));
-    if !fine {
-        report(at, "must be an array of unique strings");
-    }
-}
-
-fn type_name(value: &JsValue, at: &str, report: Report) {
-    let names: Vec<JsValue> = match value.as_array() {
-        Some(items) => items.clone(),
-        None => vec![value.clone()],
-    };
-    let fine = !names.is_empty()
-        && names.iter().all(|name| {
-            name.as_str()
-                .is_some_and(|text| SIMPLE_TYPES.contains(&text))
-        })
-        && unique(&names);
-    if !fine {
-        report(
-            at,
-            &format!(
-                "must be one of {}, or a list of unique ones",
-                SIMPLE_TYPES.join(", ")
-            ),
-        );
-    }
-}
-
-/// Keywords whose value is a schema and that the table below does not list: an object literal
-/// member named `then` reads as a thenable to the linter.
-const SCHEMA_BRANCHES: [&str; 1] = ["then"];
-
-fn schema(value: &JsValue, at: &str, report: Report) {
-    if value.is_boolean() {
-        return;
-    }
-    let Some(members) = value.as_object() else {
-        report(at, "must be a schema (an object or a boolean)");
-        return;
-    };
-    for (keyword, inner) in property_order(members) {
-        let check = keyword_check(keyword).or_else(|| {
-            SCHEMA_BRANCHES
-                .contains(&keyword.as_str())
-                .then_some(Check::Schema)
-        });
-        if let Some(check) = check {
-            run(check, inner, &format!("{at}/{keyword}"), report);
+/// The two steps of the module comment, at every depth of a document.
+fn resolve(node: &mut JsValue) {
+    match node {
+        JsValue::Object(members) => {
+            if members.get("$dynamicRef").and_then(JsValue::as_str) == Some("#meta") {
+                members.shift_remove("$dynamicRef");
+                members.insert("$ref".to_owned(), DRAFT_2020_12.into());
+            }
+            if members.get("format").is_some_and(JsValue::is_string) {
+                members.shift_remove("format");
+            }
+            members.values_mut().for_each(resolve);
         }
+        JsValue::Array(items) => items.iter_mut().for_each(resolve),
+        JsValue::Undefined
+        | JsValue::Null
+        | JsValue::Bool(_)
+        | JsValue::Number(_)
+        | JsValue::String(_) => {}
     }
 }
 
-fn map_of(each: Check, value: &JsValue, at: &str, report: Report) {
-    let Some(members) = value.as_object() else {
-        report(at, "must be an object");
-        return;
-    };
-    for (key, inner) in property_order(members) {
-        run(each, inner, &format!("{at}/{key}"), report);
-    }
+/// A document read and resolved; one that does not read is `false`, which refuses every schema
+/// rather than passing them unchecked (a test reads each).
+fn document(text: &str) -> JsValue {
+    let mut read = json_parse(text).unwrap_or(JsValue::Bool(false));
+    resolve(&mut read);
+    read
 }
 
-fn schemas(value: &JsValue, at: &str, report: Report) {
-    let Some(items) = value.as_array().filter(|items| !items.is_empty()) else {
-        report(at, "must be a non-empty array of schemas");
-        return;
-    };
-    for (index, inner) in items.iter().enumerate() {
-        schema(inner, &format!("{at}/{index}"), report);
-    }
-}
-
-fn schema_or_strings(value: &JsValue, at: &str, report: Report) {
-    if value.is_array() {
-        string_set(value, at, report);
-    } else {
-        schema(value, at, report);
-    }
-}
-
-/// Applies one check to a value.
-fn run(check: Check, value: &JsValue, at: &str, report: Report) {
-    match check {
-        Check::Text => typed("a string", JsValue::is_string, value, at, report),
-        Check::Flag => typed("a boolean", JsValue::is_boolean, value, at, report),
-        Check::Anything => {}
-        Check::Number => typed("a number", is_finite_number, value, at, report),
-        Check::Positive => typed(
-            "a number above 0",
-            |value| value.as_f64().is_some_and(|number| number > 0.0),
-            value,
-            at,
-            report,
-        ),
-        Check::Count => typed(
-            "a non-negative integer",
-            |value| {
-                value.as_f64().is_some_and(|number| {
-                    number.is_finite() && number.fract() == 0.0 && number >= 0.0
-                })
-            },
-            value,
-            at,
-            report,
-        ),
-        Check::List => typed("an array", JsValue::is_array, value, at, report),
-        Check::StringSet => string_set(value, at, report),
-        Check::TypeName => type_name(value, at, report),
-        Check::Schema => schema(value, at, report),
-        Check::Schemas => schemas(value, at, report),
-        Check::SchemaOrStrings => schema_or_strings(value, at, report),
-        Check::MapOf(each) => map_of(*each, value, at, report),
-    }
-}
-
-/// The table of the meta-schema's keywords, in the package's order.
-const KEYWORDS: &[(&str, Check)] = &[
-    // core
-    ("$id", Check::Text),
-    ("$schema", Check::Text),
-    ("$ref", Check::Text),
-    ("$anchor", Check::Text),
-    ("$dynamicRef", Check::Text),
-    ("$dynamicAnchor", Check::Text),
-    ("$vocabulary", Check::MapOf(&Check::Flag)),
-    ("$comment", Check::Text),
-    ("$defs", Check::MapOf(&Check::Schema)),
-    ("definitions", Check::MapOf(&Check::Schema)),
-    // applicator
-    ("prefixItems", Check::Schemas),
-    ("items", Check::Schema),
-    ("contains", Check::Schema),
-    ("additionalProperties", Check::Schema),
-    ("properties", Check::MapOf(&Check::Schema)),
-    ("patternProperties", Check::MapOf(&Check::Schema)),
-    ("dependentSchemas", Check::MapOf(&Check::Schema)),
-    ("dependencies", Check::MapOf(&Check::SchemaOrStrings)),
-    ("propertyNames", Check::Schema),
-    ("if", Check::Schema),
-    ("else", Check::Schema),
-    ("allOf", Check::Schemas),
-    ("anyOf", Check::Schemas),
-    ("oneOf", Check::Schemas),
-    ("not", Check::Schema),
-    // unevaluated
-    ("unevaluatedItems", Check::Schema),
-    ("unevaluatedProperties", Check::Schema),
-    // validation
-    ("type", Check::TypeName),
-    ("const", Check::Anything),
-    ("enum", Check::List),
-    ("multipleOf", Check::Positive),
-    ("maximum", Check::Number),
-    ("exclusiveMaximum", Check::Number),
-    ("minimum", Check::Number),
-    ("exclusiveMinimum", Check::Number),
-    ("maxLength", Check::Count),
-    ("minLength", Check::Count),
-    ("pattern", Check::Text),
-    ("maxItems", Check::Count),
-    ("minItems", Check::Count),
-    ("uniqueItems", Check::Flag),
-    ("maxContains", Check::Count),
-    ("minContains", Check::Count),
-    ("maxProperties", Check::Count),
-    ("minProperties", Check::Count),
-    ("required", Check::StringSet),
-    ("dependentRequired", Check::MapOf(&Check::StringSet)),
-    // format, content and meta-data
-    ("format", Check::Text),
-    ("contentEncoding", Check::Text),
-    ("contentMediaType", Check::Text),
-    ("contentSchema", Check::Schema),
-    ("title", Check::Text),
-    ("description", Check::Text),
-    ("default", Check::Anything),
-    ("deprecated", Check::Flag),
-    ("readOnly", Check::Flag),
-    ("writeOnly", Check::Flag),
-    ("examples", Check::List),
-];
-
-/// The check of a keyword, `Object.hasOwn(KEYWORDS, keyword)` and its value.
-fn keyword_check(keyword: &str) -> Option<Check> {
-    KEYWORDS
+/// The meta-schema, compiled once.
+static META_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
+    let vocabularies: Vec<_> = VOCABULARIES
         .iter()
-        .find(|(name, _)| *name == keyword)
-        .map(|(_, check)| *check)
-}
+        .map(|(uri, text)| {
+            (
+                (*uri).to_owned(),
+                json_value(&document(text)).unwrap_or_default(),
+            )
+        })
+        .collect();
+    Schema::with_documents(
+        &json_value(&document(ROOT)).unwrap_or_default(),
+        &vocabularies,
+    )
+});
 
-/// The places in `value` that break the draft 2020-12 meta-schema, as `path: message`.
+/// The places in `value` that break the draft 2020-12 meta-schema, each once, as flowschema words
+/// them with the place named from the tool's `inputSchema` (`inputSchema.properties.a.type
+/// matches none of the 2 schemas of anyOf`).
 #[must_use]
 pub fn meta_schema_problems(value: &JsValue) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
-    schema(value, "", &mut |path, message| {
-        let shown = if path.is_empty() { "(root)" } else { path };
-        found.push(format!("{shown} {message}"));
-    });
+    for problem in META_SCHEMA.mismatches(&json_value(value).unwrap_or_default()) {
+        let shown = problem
+            .strip_prefix("data")
+            .map_or_else(|| problem.clone(), |place| format!("inputSchema{place}"));
+        if !found.contains(&shown) {
+            found.push(shown);
+        }
+    }
     found
 }
 
@@ -304,3 +162,6 @@ pub fn checks_meta_schema(value: &JsValue) -> bool {
         Some(declared) => declared.strip_suffix('#').unwrap_or(declared) == DRAFT_2020_12,
     }
 }
+
+#[cfg(test)]
+mod tests;

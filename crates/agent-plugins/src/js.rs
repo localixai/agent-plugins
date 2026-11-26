@@ -11,6 +11,7 @@ pub mod array_join;
 pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;
+pub mod json_value;
 mod math;
 pub mod normalize;
 mod promise;
