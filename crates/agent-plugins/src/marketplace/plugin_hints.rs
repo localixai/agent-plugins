@@ -1,13 +1,9 @@
-//! Port of `src/marketplace/plugin-hints.ts` at sha256:da12180e51ff.
+//! Port of `src/marketplace/plugin-hints.ts`, switched.
 //!
 //! The `<claude-code-hint />` tag a CLI writes to stderr to recommend its plugin (plugins/cli-hints.md,
 //! "Emit the hint", "Hint format", "Check when the prompt appears", "Preview what the user sees"): pure,
 //! over output text and facts the host holds. The kit strips the lines and decides whether a prompt
 //! shows; the host draws the dialog and installs at user scope.
-//!
-//! Not switched: `shouldEmitHint` takes the host's environment object, a value with methods that
-//! the boundary has no port for yet (a port the core can call is a plugin's files so far), so the
-//! package runs the TypeScript and the vectors hold the other exports to its answers.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -18,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::format::marketplace::marketplace_name_lists::OFFICIAL_NAMES;
 use crate::js::{Pattern, SPACE_CLASS, is_whitespace, trim};
 use crate::ports::environment::Environment;
+use crate::registry::Port;
 
 /// A hint that parsed: `value` is `name@marketplace`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -373,6 +370,7 @@ crate::registry::exports! {
     "marketplace/plugin-hints" {
         "stripHints" => ok |output: String| strip_hints(&output);
         "supportedHint" => ok |hint: PluginHint| supported_hint(&hint);
+        "shouldEmitHint" => async ok |env: Port| should_emit_hint(&env).await;
         "hintLine" => ok |value: String| hint_line(&value);
         "HINT_PROMPT_LIMIT" => ok || HINT_PROMPT_LIMIT;
         "promptVerdict" => ok |hint: PluginHint, facts: PromptFacts| prompt_verdict(&hint, &facts);

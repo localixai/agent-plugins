@@ -1,6 +1,7 @@
 //! Layer 3: what installing, updating and removing plugins from marketplaces decides, as pure
 //! plans and messages a host runs (`src/marketplace/` in the npm package).
 
+pub mod archive_scan;
 pub mod command_mode;
 pub mod command_output;
 pub mod folder_collision;
@@ -8,6 +9,7 @@ pub mod git_transport;
 pub mod header_map;
 pub mod header_policy;
 pub mod headless_report;
+pub mod http_download;
 pub mod install_failures;
 pub mod install_hosts;
 pub mod lfs_pointer;

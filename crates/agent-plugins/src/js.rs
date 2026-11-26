@@ -1,12 +1,14 @@
 //! What the npm package gets from JavaScript itself and Rust spells differently: strings are
 //! UTF-16 code units there (their length, their order), a number has one text and reads from a
-//! text by JavaScript's grammar, `JSON.parse` words its errors and `new URL` reads an address.
+//! text by JavaScript's grammar, `JSON.parse` words its errors, `new URL` reads an address and
+//! `normalize` composes a text.
 //! The ports of its modules use these wherever JavaScript's own semantics reach a result;
 //! `scripts/rust/js-oracle.ts` records the built-ins themselves, which `tests/differential/js.rs`
 //! holds these to.
 
 pub mod json_parse;
 pub mod json_stringify;
+pub mod normalize;
 mod radix;
 mod slice;
 mod string_to_number;

@@ -26,7 +26,7 @@ export interface ShorthandFacts {
  * the check.
  */
 export const shorthandTransport = (facts: ShorthandFacts): CloneTransport =>
-  call('shorthandTransport', facts.preferHttps, facts.sshAuthenticates);
+  call('shorthandTransport', facts);
 
 /** Environment settings that make git fail instead of asking. They replace what the user's environment holds. */
 export const NO_PROMPT_ENVIRONMENT: Readonly<Record<string, string>> =
@@ -68,4 +68,4 @@ export const clonePlan = (ssh: SshProgramFacts = {}): ClonePlan => call('clonePl
  * the probe.
  */
 export const shorthandAttempts = (facts: ShorthandFacts): readonly CloneTransport[] =>
-  call('shorthandAttempts', facts.preferHttps, facts.sshAuthenticates);
+  call('shorthandAttempts', facts);

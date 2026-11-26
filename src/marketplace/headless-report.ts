@@ -83,5 +83,4 @@ export interface PluginInstallStamp {
 export const pluginInstallEvents = (
   outcomes: readonly MarketplaceInstallOutcome[],
   stamp: PluginInstallStamp,
-): readonly SDKPluginInstallMessage[] =>
-  call('pluginInstallEvents', outcomes, stamp.sessionId, stamp.uuid);
+): readonly SDKPluginInstallMessage[] => call('pluginInstallEvents', outcomes, stamp);

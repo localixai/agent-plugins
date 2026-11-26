@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::js::number_to_string;
 use crate::ports::BoxFuture;
-use crate::registry::Callback;
+use crate::registry::{Callback, Port};
 
 /// A load-time error: a category from an open set (`path-not-found`, `dependency-unsatisfied`, ...) and display text.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -284,12 +284,21 @@ pub async fn plugin_install_events<U: NextUuid>(
     events
 }
 
-// A record that holds a function crosses as a port, which this core cannot read members of yet
-// (docs/RUST.md, "Effects"), so the wrapper hands over `sessionId` and `uuid` apart.
+/// `PluginInstallStamp` as it crosses: a record holding a function, so a port whose members are
+/// read (docs/RUST.md, "Effects").
+async fn install_stamp(record: Port) -> PluginInstallStamp<Callback> {
+    let session_id = record.member("sessionId");
+    let uuid = record.member("uuid");
+    PluginInstallStamp {
+        session_id: session_id.await,
+        uuid: uuid.await,
+    }
+}
+
 crate::registry::exports! {
     "marketplace/headless-report" {
         "initPluginFields" => ok |facts: InitPluginFacts| init_plugin_fields(&facts);
-        "pluginInstallEvents" => async ok |outcomes: Vec<MarketplaceInstallOutcome>, session_id: String, uuid: Callback|
-            plugin_install_events(&outcomes, &PluginInstallStamp { session_id, uuid }).await;
+        "pluginInstallEvents" => async ok |outcomes: Vec<MarketplaceInstallOutcome>, stamp: Port|
+            plugin_install_events(&outcomes, &install_stamp(stamp).await).await;
     }
 }
