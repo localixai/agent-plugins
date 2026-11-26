@@ -1,14 +1,19 @@
+import { coreModule } from '../wasm/bridge.ts';
+
 /**
  * The plugin and marketplace names an OpenTelemetry event reports (plugins/security.md, "Find plugins
  * in telemetry"; plugins/measure.md, "Redacted plugin names in your backend"). Pure: the host says
  * whether the plugin is from the official tier and whether `OTEL_LOG_TOOL_DETAILS=1`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/telemetry_names.rs`, docs/RUST.md).
  */
+const call = coreModule('marketplace/telemetry-names');
 
-export const PLUGIN_TELEMETRY_EVENTS = [
+export const PLUGIN_TELEMETRY_EVENTS: readonly [
   'plugin_loaded',
   'plugin_installed',
   'skill_activated',
-] as const;
+] = call('PLUGIN_TELEMETRY_EVENTS');
 export type TelemetryEvent = (typeof PLUGIN_TELEMETRY_EVENTS)[number];
 
 export interface TelemetryNameFacts {
@@ -25,22 +30,6 @@ export interface ReportedNames {
   readonly 'marketplace.name'?: string;
 }
 
-const REAL = (facts: TelemetryNameFacts): ReportedNames => ({
-  'plugin.name': facts.plugin,
-  'marketplace.name': facts.marketplace,
-});
-
-/** The literal `third-party` replaces the names on `plugin_loaded`. */
-const LITERAL = { 'plugin.name': 'third-party', 'marketplace.name': 'third-party' } as const;
-
-/** What a non-official plugin's event reports by default, per event: `plugin_loaded` redacts, the others omit. */
-const REDACTED: { readonly [E in TelemetryEvent]: ReportedNames } = {
-  plugin_loaded: LITERAL,
-  plugin_installed: {},
-  skill_activated: {},
-};
-
 /** The names the event carries: real for the official tier or with `OTEL_LOG_TOOL_DETAILS=1`, else redacted or omitted. */
-export function reportedNames(event: TelemetryEvent, facts: TelemetryNameFacts): ReportedNames {
-  return facts.official || facts.logToolDetails ? REAL(facts) : REDACTED[event];
-}
+export const reportedNames = (event: TelemetryEvent, facts: TelemetryNameFacts): ReportedNames =>
+  call('reportedNames', event, facts);

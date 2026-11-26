@@ -236,6 +236,18 @@ pub fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_whitespace)
 }
 
+/// `text.split(/\r?\n/)`: the lines of a text, each cut at a `\n` or a `\r\n`. A `\r` that is
+/// not followed by a `\n` stays in its line, and so does one at the very end of the text.
+#[must_use]
+pub fn split_line_breaks(text: &str) -> Vec<&str> {
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    let last = lines.len().saturating_sub(1);
+    for line in lines.iter_mut().take(last) {
+        *line = line.strip_suffix('\r').unwrap_or(line);
+    }
+    lines
+}
+
 /// The shortest round-trip digits of a positive finite number and `n`, the position of the
 /// decimal point after the first digit counted as JavaScript's algorithm counts it. Of the
 /// shortest, the closest to the number, the even one of two as close (Number::toString, ECMA-262
@@ -424,6 +436,17 @@ mod tests {
         ]);
         let keys: Vec<String> = in_key_order(map).into_keys().collect();
         assert_eq!(keys, ["2", "10", "b", "a"]);
+    }
+
+    // bun -e 'console.log(JSON.stringify(["a\r\nb","a\r\r\nb\r","\n","", "a\rb"].map((t) => t.split(/\r?\n/))))' prints
+    // [["a","b"],["a\r","b\r"],["",""],[""],["a\rb"]]
+    #[test]
+    fn lines_are_cut_at_a_line_feed_with_one_carriage_return() {
+        assert_eq!(split_line_breaks("a\r\nb"), ["a", "b"]);
+        assert_eq!(split_line_breaks("a\r\r\nb\r"), ["a\r", "b\r"]);
+        assert_eq!(split_line_breaks("\n"), ["", ""]);
+        assert_eq!(split_line_breaks(""), [""]);
+        assert_eq!(split_line_breaks("a\rb"), ["a\rb"]);
     }
 
     #[test]
