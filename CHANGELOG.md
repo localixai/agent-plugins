@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Promises cross into and out of the core: background deliveries are settled there, an async
+  command hook's background run is a core promise, and `withInterrupt` runs on the core.
 - Hooks and plugin file readers run more of their work on the core: a hook's output and profile
   results, the remote handlers' environment, `ok: false` and failure runs, timeouts, permission
   mode and conditional input fields, the text cap, registration, the event catalog and gates;

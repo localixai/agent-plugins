@@ -40,7 +40,7 @@ pub enum CommandSpec {
 }
 
 /// One run of a command.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandRun {
     /// What to run.
@@ -50,13 +50,14 @@ pub struct CommandRun {
     /// The whole environment of the process.
     pub env: IndexMap<String, String>,
     /// Text written to its standard input, then closed.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stdin: Option<String>,
-    /// After how long the host stops it and answers `timed_out`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeout_ms: Option<u64>,
-    /// Whether standard error is read into `stdout`, in order.
-    pub merge_stderr: bool,
+    /// After how long the host stops it and answers `timed_out`, in milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_ms: Option<f64>,
+    /// Whether standard error is read into `stdout`, in order; absent is no.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub merge_stderr: Option<bool>,
     /// Its cancellation.
     pub signal: Signal,
 }
@@ -76,6 +77,10 @@ pub struct CommandResult {
     /// Why it could not start, when it could not.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_error: Option<String>,
+    /// A process the command started still held its output open when it ended, so the capture is
+    /// suspect: a field a runner may add (`HeldOpenResult`, `hooks/handlers/command/async`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_held_open: Option<bool>,
 }
 
 /// The host's way to run commands.

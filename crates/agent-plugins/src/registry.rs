@@ -27,12 +27,17 @@
 //! [`resume`], until the step is done. The values the host keeps are numbers here
 //! ([`Port`], [`Callback`], the `Signal` of `crate::ports`), and a result with methods is a
 //! [`Handle`] (`registry/handle.rs`). A host's throw ends the task unless [`catch_host`] catches
-//! it (`registry/catch.rs`). docs/RUST.md, "The boundary", has the protocol.
+//! it (`registry/catch.rs`). A promise crosses as a value both ways: the host's is a
+//! [`HostPromise`], a future the core awaits; a future of the core's in an answer is a
+//! [`CorePromise`], kept as a task the host drives (`registry/promise.rs`).
+//! docs/RUST.md, "The boundary", has the protocol.
 
+mod asked;
 mod catch;
 mod exports;
 mod handle;
 mod probe;
+mod promise;
 mod remote;
 mod steps;
 mod task;
@@ -43,6 +48,7 @@ pub use catch::{Thrown, catch_host};
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
 pub use handle::{Function, Handle, Methods, release};
+pub use promise::{CorePromise, HostPromise};
 pub use remote::{Callback, Port};
 #[doc(hidden)]
 pub use steps::settled;
@@ -201,6 +207,7 @@ pub const MODULES: &[Module] = &[
     crate::hooks::env_file::events::EXPORTS,
     crate::hooks::env_file::ports::EXPORTS,
     crate::hooks::env_file::powershell_reader::EXPORTS,
+    crate::hooks::handlers::command::r#async::EXPORTS,
     crate::hooks::handlers::command::shell::EXPORTS,
     crate::hooks::handlers::remote::failure_run::EXPORTS,
     crate::hooks::handlers::remote::http_env::EXPORTS,
@@ -211,6 +218,8 @@ pub const MODULES: &[Module] = &[
     crate::hooks::handlers::timeouts::EXPORTS,
     crate::hooks::input::conditional_fields::EXPORTS,
     crate::hooks::input::permission_mode::EXPORTS,
+    crate::hooks::interrupt::EXPORTS,
+    crate::hooks::output::background::EXPORTS,
     crate::hooks::output::caps::EXPORTS,
     crate::hooks::output::defer::EXPORTS,
     crate::hooks::output::merge_rules::EXPORTS,

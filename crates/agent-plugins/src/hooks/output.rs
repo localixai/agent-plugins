@@ -1,5 +1,6 @@
 //! The core's hook output readers (`src/hooks/output/` in the npm package).
 
+pub mod background;
 pub mod caps;
 pub mod defer;
 pub mod merge_rules;

@@ -1,8 +1,8 @@
 /**
  * The values of one call the host keeps by identity (docs/RUST.md, "The boundary"): its ports,
- * callbacks and signals, each crossing as a number. Numbers are never reused, so a handle's call
- * reads the table of the call that made the handle as its parent: a port the core keeps in a
- * handle is still found. The tables are dropped with the calls and handles that hold them.
+ * callbacks, signals and promises, each crossing as a number. Numbers are never reused, so a handle's call
+ * reads the table of the call that made the handle as its parent, and a core promise's loop the
+ * table of the call that answered it: a port the core keeps in a handle or a promise is still found. The tables are dropped with the calls and handles that hold them.
  */
 import type { HostValues } from './wire.ts';
 
@@ -14,17 +14,23 @@ export interface HostTable extends HostValues {
   readonly aborted: () => readonly number[];
 }
 
-/** What a table makes a handle into: the object whose methods call the core. */
-export type HandleMaker = (
-  handle: number,
-  methods: { readonly sync: readonly string[]; readonly async: readonly string[] },
-  hosts: HostTable,
-) => object;
+/**
+ * What a table makes of the core's values: a handle, the object whose methods call the core; a
+ * core promise, the promise that drives its task (`drive.ts`).
+ */
+export interface Makers {
+  readonly handle: (
+    handle: number,
+    methods: { readonly sync: readonly string[]; readonly async: readonly string[] },
+    hosts: HostTable,
+  ) => object;
+  readonly promise: (task: number, hosts: HostTable) => Promise<unknown>;
+}
 
 let lastNumber = 0;
 
 /** A new table for one call; `parent` is the table of the call that made the handle it calls. */
-export function hostTable(makeHandle: HandleMaker, parent?: HostTable): HostTable {
+export function hostTable(makers: Makers, parent?: HostTable): HostTable {
   const values = new Map<number, unknown>();
   const numbers = new Map<object, number>();
   const signals = new Map<number, AbortSignal>();
@@ -39,7 +45,8 @@ export function hostTable(makeHandle: HandleMaker, parent?: HostTable): HostTabl
       return lastNumber;
     },
     find: (number) => (values.has(number) ? values.get(number) : parent?.find(number)),
-    handle: (handle, sync, async) => makeHandle(handle, { sync, async }, table),
+    handle: (handle, sync, async) => makers.handle(handle, { sync, async }, table),
+    promise: (task) => makers.promise(task, table),
     empty: () => values.size === 0,
     aborted() {
       const now = [...signals].filter(([, signal]) => signal.aborted).map(([number]) => number);

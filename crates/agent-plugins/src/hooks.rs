@@ -6,6 +6,7 @@ pub mod core;
 pub mod env_file;
 pub mod handlers;
 pub mod input;
+pub mod interrupt;
 pub mod output;
 pub mod register;
 pub mod select;
