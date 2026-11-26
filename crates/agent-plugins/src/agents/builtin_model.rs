@@ -95,6 +95,5 @@ pub fn builtin_model_alias(
 crate::registry::exports! {
     "agents/builtin-model" {
         "CONNECTIONS" => ok || CONNECTIONS;
-        "builtinModelAlias" => ok |input: Option<BuiltinModelInput>, main_family: Option<String>| builtin_model_alias(input.as_ref(), main_family.as_deref());
     }
 }

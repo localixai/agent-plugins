@@ -22,9 +22,6 @@ const call = coreModule('format/marketplace/marketplace-names');
 /** Which reserved name a trailing dot or a symbol in place of a hyphen spells ("v2.1.280"), if any. */
 export const spellingOf = (name: string): string | undefined => call('spellingOf', name);
 
-/** Names such as `official-claude-plugins` or `claude-plugins-v2`, and any non-ASCII name (even one that spells a reserved name). */
-export const impersonates = (name: string): boolean => call('impersonates', name);
-
 /** What `claude plugin validate` reports about a marketplace's name beyond the id grammar. */
 export const validationNameIssues = (name: string): PluginIssue[] =>
   call('validationNameIssues', name);

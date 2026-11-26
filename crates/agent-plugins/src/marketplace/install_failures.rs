@@ -282,7 +282,6 @@ crate::registry::exports! {
     "marketplace/install-failures" {
         "archiveIntegrityMessage" => ok |url: String, expected: String, actual: String| archive_integrity_message(&url, &expected, &actual);
         "npmRefusalMessage" => ok |value: String, reason: String| npm_refusal_message(&value, &reason);
-        "NOT_A_LINK" => ok || NOT_A_LINK;
         "UNSUPPORTED_SOURCE_TYPE" => ok || UNSUPPORTED_SOURCE_TYPE;
         "failedToInstallPlugin" => ok |id: String, message: String| failed_to_install_plugin(&id, &message);
         "manifestFailureMessage" => ok |name: String, problem: ManifestProblem| manifest_failure_message(&name, &problem);

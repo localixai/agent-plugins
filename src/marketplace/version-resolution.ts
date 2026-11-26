@@ -1,6 +1,6 @@
 import type { PluginSourceKind } from '../format/marketplace/types.ts';
 import type { Sha256 } from '../ports/marketplace.ts';
-import { shortHash12, subdirectoryPathHash } from './version-hash.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The version of an installed plugin as Claude Code computes it (plugins/loading.md, "How Claude
@@ -9,10 +9,14 @@ import { shortHash12, subdirectoryPathHash } from './version-hash.ts';
  * produced. The version names the cache directory and decides whether an update changes anything,
  * so it is a decision the host reads, never recomputes. Pure over what the host reports; only the
  * hash of a `git-subdir` path goes through the `Sha256` port.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/version_resolution.rs`,
+ * docs/RUST.md).
  */
+const call = coreModule('marketplace/version-resolution');
 
 /** The version of a source that gives nothing to version it by (loading.md: "`unknown`"). */
-export const UNKNOWN_VERSION = 'unknown';
+export const UNKNOWN_VERSION: 'unknown' = call('UNKNOWN_VERSION');
 
 /** Where a version came from; `claude-ai` is the version a marketplace hosted on claude.ai records. */
 export type VersionOrigin =
@@ -71,104 +75,15 @@ export type VersionInput = VersionFacts & VersionSource;
  * `cache/<marketplace>/<plugin>/`. The docs do not restrict the characters; any other text is kept
  * verbatim (spec/judgments.md).
  */
-export const isVersionSegment = (version: string): boolean =>
-  version !== '' && version !== '.' && version !== '..' && !/[/\\\0]/u.test(version);
-
-const UNKNOWN: PluginVersion = { version: UNKNOWN_VERSION, origin: 'unknown' };
-
-/** A version field that says something: an empty or blank string is no version (spec/judgments.md). */
-const statedVersion = (value: string | undefined): string | undefined =>
-  value === undefined || value.trim() === '' ? undefined : value;
+export const isVersionSegment = (version: string): boolean => call('isVersionSegment', version);
 
 /** A stated version that also names one folder; one that does not is skipped, as if unset (spec/judgments.md). */
-export const usableVersion = (value: string | undefined): string | undefined => {
-  const text = statedVersion(value);
-  return text !== undefined && isVersionSegment(text) ? text : undefined;
-};
-
-const fromCommit = (input: VersionInput): PluginVersion => {
-  const commit = statedVersion(input.commitSha);
-  return commit === undefined ? UNKNOWN : { version: shortHash12(commit), origin: 'sha' };
-};
-
-type Derive = (input: VersionInput, sha256: Sha256) => Promise<PluginVersion> | PluginVersion;
-
-const fromSubdirectory: Derive = async (input, sha256) => {
-  const commit = fromCommit(input);
-  if (commit.origin === 'unknown' || input.subdir === undefined) return UNKNOWN;
-  const pathHash = await subdirectoryPathHash(input.subdir, sha256);
-  return { version: `${commit.version}-${pathHash}`, origin: 'sha' };
-};
-
-const fromArchive: Derive = (input) => {
-  const digest = statedVersion(input.archiveSha256) ?? statedVersion(input.archiveDigest);
-  return digest === undefined ? UNKNOWN : { version: shortHash12(digest), origin: 'sha256' };
-};
-
-/** A relative path is versioned by a commit only inside a Git-hosted marketplace and outside an enclosing repository. */
-const fromRelative: Derive = (input) =>
-  input.inGitRepository && !input.enclosingRepoIgnored ? fromCommit(input) : UNKNOWN;
-
-/** What each source type gives when neither the manifest nor the entry has a `version`. */
-const FROM_SOURCE: { readonly [K in Exclude<PluginSourceKind, 'command'>]: Derive } = {
-  relative: fromRelative,
-  github: fromCommit,
-  url: fromCommit,
-  'git-subdir': fromSubdirectory,
-  npm: () => UNKNOWN,
-  archive: fromArchive,
-};
-
-/** The manifest's `version`, else the entry's (loading.md, "How Claude Code computes the version", steps 1 and 2). */
-function declared(input: VersionInput): PluginVersion | undefined {
-  const manifest = usableVersion(input.manifestVersion);
-  if (manifest !== undefined) return { version: manifest, origin: 'manifest' };
-  const entry = usableVersion(input.entryVersion);
-  return entry === undefined ? undefined : { version: entry, origin: 'entry' };
-}
-
-const declaredThen =
-  (derive: Derive): Derive =>
-  (input, sha256) =>
-    declared(input) ?? derive(input, sha256);
-
-/**
- * "A 12-character hash on its own, or `<manifest version>-<hash>` when the manifest sets one. The
- * marketplace entry's `version` is ignored for command sources." A command source whose hash the
- * host did not supply is `unknown`, never the entry's version (spec/judgments.md).
- */
-const fromCommand: Derive = (input) => {
-  const hash = statedVersion(input.commandHash);
-  if (hash === undefined) return UNKNOWN;
-  const manifest = usableVersion(input.manifestVersion);
-  const short = shortHash12(hash);
-  return {
-    version: manifest === undefined ? short : `${manifest}-${short}`,
-    origin: 'command-hash',
-  };
-};
-
-/** One rule per source type, typed over the union so a new type cannot be forgotten. */
-const VERSION_RULES: { readonly [K in PluginSourceKind]: Derive } = {
-  relative: declaredThen(FROM_SOURCE.relative),
-  github: declaredThen(FROM_SOURCE.github),
-  url: declaredThen(FROM_SOURCE.url),
-  'git-subdir': declaredThen(FROM_SOURCE['git-subdir']),
-  npm: declaredThen(FROM_SOURCE.npm),
-  archive: declaredThen(FROM_SOURCE.archive),
-  command: fromCommand,
-};
+export const usableVersion = (value: string | undefined): string | undefined =>
+  call('usableVersion', value);
 
 /**
  * The version of a plugin. A plugin of a marketplace hosted on claude.ai has "the version claude.ai
  * records for the plugin ... and the manifest's `version` isn't read".
  */
-export async function resolvePluginVersion(
-  input: VersionInput,
-  sha256: Sha256,
-): Promise<PluginVersion> {
-  const recorded = usableVersion(input.recordedByClaudeAi);
-  if (recorded !== undefined) return { version: recorded, origin: 'claude-ai' };
-  const computed = await VERSION_RULES[input.sourceKind](input, sha256);
-  return isVersionSegment(computed.version) ? computed : UNKNOWN;
-}
+export const resolvePluginVersion = (input: VersionInput, sha256: Sha256): Promise<PluginVersion> =>
+  call.async('resolvePluginVersion', input, sha256);

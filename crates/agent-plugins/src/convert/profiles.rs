@@ -103,7 +103,5 @@ crate::registry::exports! {
         "PROFILE_NAMES" => ok || PROFILE_NAMES;
         "isProfileName" => ok |value: Option<String>| is_profile_name(value.as_deref());
         "matcherOf" => ok |profile: ProfileName| matcher_of(profile);
-        "matchesEverything" => ok |matcher: Option<String>| matches_everything(matcher.as_deref());
-        "profileOfMatcher" => ok |matcher: String| profile_of_matcher(&matcher);
     }
 }

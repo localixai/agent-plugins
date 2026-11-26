@@ -2,6 +2,7 @@
 
 pub mod arguments;
 pub mod expand_policy;
+pub mod file_references;
 pub mod folder_line;
 pub mod fork;
 pub mod hook_limits;
@@ -11,3 +12,4 @@ pub mod scan;
 pub mod shell_refusal;
 pub mod shell_scan;
 pub mod skill_rule;
+pub mod visibility;

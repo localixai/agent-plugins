@@ -1,4 +1,4 @@
-//! Port of `src/convert/adapters/claude-code-runner-source.ts`, switched.
+//! Ported from `src/convert/adapters/claude-code-runner-source.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The body of `run-claude-code-handler.mjs` (Agent Plugins Extended §18.4.4): a Claude Code `command`
 //! hook run under a core client. Its input is built from the core input by §18.2, leaving out what the
@@ -166,9 +166,3 @@ function main() {
 
 main();
 "#;
-
-crate::registry::exports! {
-    "convert/adapters/claude-code-runner-source" {
-        "CLAUDE_CODE_RUNNER_SOURCE" => ok || CLAUDE_CODE_RUNNER_SOURCE;
-    }
-}

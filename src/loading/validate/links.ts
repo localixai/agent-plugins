@@ -1,4 +1,3 @@
-import type { ValidationIssue } from '../../format/validate/finding.ts';
 import type { PluginFiles } from '../../ports/index.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
@@ -17,23 +16,6 @@ export type FolderStyle = (typeof FOLDER_STYLES)[number];
 
 export const isLink = (files: PluginFiles, path: string, signal?: AbortSignal): Promise<boolean> =>
   call.async('isLink', files, path, signal);
-
-/** A folder that is itself a link: nothing in it is read. */
-export const linkedFolder = (folder: string): ValidationIssue => call('linkedFolder', folder);
-
-/** The entries of a folder that are links and were skipped: "3 entries here are symlinks …". */
-export const linkedEntries = (
-  folder: string,
-  count: number,
-  style: FolderStyle,
-): ValidationIssue[] => call('linkedEntries', folder, count, style);
-
-/** Skill files that exist but are not regular files: "1 component here was not read — …". */
-export const unreadComponents = (
-  folder: string,
-  count: number,
-  style: FolderStyle,
-): ValidationIssue[] => call('unreadComponents', folder, count, style);
 
 /** The hooks folder is a link, or `hooks.json` is not a regular file. */
 export const HOOKS_LINK: { readonly folder: string; readonly file: string } = call('HOOKS_LINK');

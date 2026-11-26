@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/http-download.ts` at sha256:b533d79b6570.
+//! Port of `src/marketplace/http-download.ts` at sha256:29d9e6aa147d.
 //!
 //! One download through `HttpClient` with its redirects followed by hand, so each hop is judged
 //! (plugins/host-marketplace.md, "Stay within the download limits for hosted files"): at most
@@ -212,7 +212,6 @@ async fn download_of(record: Port) -> Download<Callback> {
 
 crate::registry::exports! {
     "marketplace/http-download" {
-        "originOf" => ok |url: String| origin_of(&url);
         "downloadFollowing" => async ok |download: Port, http: Port, signal: Signal|
             Downloaded::from(download_following(&download_of(download).await, &http, &signal).await);
     }

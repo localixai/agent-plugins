@@ -1,6 +1,6 @@
-import { error, type PluginIssue } from '../format/issues.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { StagedCommit, StagedDirectory } from './ports.ts';
-import { moveFailureMessage } from './install-failures.ts';
 
 /**
  * Installing a fetched plugin by moving the directory the host staged it in into the version folder
@@ -11,23 +11,20 @@ import { moveFailureMessage } from './install-failures.ts';
  * holds symbolic links is installed with the `TreePlan` of `planTreeCopy`, which the port applies;
  * a plain move would ship the links that point outside the marketplace and could not dereference
  * the ones inside it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/staged_commit.rs`,
+ * docs/RUST.md).
  */
+const call = coreModule('marketplace/staged-commit');
 
 /**
  * Installs `stagedPath` at `destination` (moved whole, or materialized by `plan`). `undefined` on success; otherwise the issue that says why it
  * is not installed, with what became of the copy installed before. An abort is an issue of its own:
  * nothing moved, so there is no earlier copy to report.
  */
-export async function commitStagedPlugin(
+export const commitStagedPlugin = (
   input: StagedCommit & {
     readonly staged: StagedDirectory;
     readonly signal: AbortSignal;
   },
-): Promise<PluginIssue | undefined> {
-  const { staged, signal, ...request } = input;
-  const failure = await staged.commit(request, signal);
-  if (failure === undefined) return undefined;
-  const message =
-    moveFailureMessage(request.destination, failure) ?? 'The install was aborted before the move';
-  return error('source', message);
-}
+): Promise<PluginIssue | undefined> => call.async('commitStagedPlugin', input);

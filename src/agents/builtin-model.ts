@@ -27,9 +27,3 @@ export interface BuiltinModelInput {
   readonly name: string;
   readonly connection: Connection;
 }
-
-/** The alias a built-in's rule picks, or `undefined` when it follows the main conversation's model. */
-export const builtinModelAlias = (
-  input: BuiltinModelInput | undefined,
-  mainFamily: string | undefined,
-): string | undefined => call('builtinModelAlias', input, mainFamily);

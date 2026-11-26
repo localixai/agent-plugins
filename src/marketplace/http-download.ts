@@ -31,7 +31,7 @@ const FAILURES: { readonly [F in HttpFailure['failure']]: string } = {
   aborted: 'The download was aborted',
 };
 
-export const originOf = (url: string): string | undefined => {
+const originOf = (url: string): string | undefined => {
   try {
     return new URL(url).origin;
   } catch {

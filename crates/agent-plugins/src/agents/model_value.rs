@@ -98,7 +98,6 @@ crate::registry::exports! {
     "agents/model-value" {
         "MODEL_ALIASES" => ok || MODEL_ALIASES;
         "modelFamily" => ok |model: String| model_family(&model);
-        "isModelAlias" => ok |value: Option<String>| is_model_alias(value.as_deref());
         "modelValueKind" => ok |value: String| model_value_kind(&value);
     }
 }

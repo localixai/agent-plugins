@@ -1,8 +1,5 @@
-import { isCoreManifestValue } from '../../format/core/versions.ts';
-import { STANDARD_LAYOUT } from '../../format/layout.ts';
-import { leavesFolder } from '../../format/path-text.ts';
-import { readJson } from '../../format/read-json.ts';
 import type { PluginFiles } from '../../ports/index.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * The form of a plugin root, decided before any component is read (Agent Plugins Extended §1.3):
@@ -21,9 +18,12 @@ import type { PluginFiles } from '../../ports/index.ts';
  * Judgment (spec/judgments.md): a root `plugin.json` that is a link leading outside the root is not
  * read, so it is not a core manifest: the root is then a Claude Code plugin, which Claude Code would
  * load the same way since it never reads that file.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/core/form.rs`, docs/RUST.md).
  */
+const call = coreModule('loading/core/form');
 
-export const PLUGIN_FORMS = ['claude-code', 'core'] as const;
+export const PLUGIN_FORMS: readonly ['claude-code', 'core'] = call('PLUGIN_FORMS');
 export type PluginForm = (typeof PLUGIN_FORMS)[number];
 
 export interface PluginFormDecision {
@@ -32,28 +32,12 @@ export interface PluginFormDecision {
   readonly dual: boolean;
 }
 
-const CORE_MANIFEST = 'plugin.json';
-
 /** Whether the root holds a core manifest: a contained regular file with a canonical core `$schema`. */
-export async function hasCoreManifest(files: PluginFiles, signal?: AbortSignal): Promise<boolean> {
-  const stat = await files.stat(CORE_MANIFEST, signal);
-  if (stat?.isFile !== true || stat.checkFailed !== undefined) return false;
-  if (stat.isSymlink && stat.realPath !== undefined && leavesFolder(stat.realPath, 'posix'))
-    return false;
-  const read = await readJson(files, CORE_MANIFEST, signal);
-  return 'value' in read && isCoreManifestValue(read.value);
-}
+export const hasCoreManifest = (files: PluginFiles, signal?: AbortSignal): Promise<boolean> =>
+  call.async('hasCoreManifest', files, signal);
 
 /** Decides the form of the plugin root `files` reads (§1.3). */
-export async function detectPluginForm(input: {
+export const detectPluginForm = (input: {
   readonly files: PluginFiles;
   readonly signal?: AbortSignal | undefined;
-}): Promise<PluginFormDecision> {
-  const { files, signal } = input;
-  const [claude, core] = await Promise.all([
-    files.exists(STANDARD_LAYOUT.manifest.location, signal),
-    hasCoreManifest(files, signal),
-  ]);
-  if (claude) return { form: 'claude-code', dual: core };
-  return { form: core ? 'core' : 'claude-code', dual: false };
-}
+}): Promise<PluginFormDecision> => call.async('detectPluginForm', input);
