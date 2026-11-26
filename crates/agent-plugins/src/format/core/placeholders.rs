@@ -176,6 +176,5 @@ crate::registry::exports! {
         "CORE_VARIABLES" => ok || CORE_VARIABLES;
         "expandPlaceholders" => ok |text: String, paths: CorePaths| expand_placeholders(&text, &paths);
         "resolveCwd" => ok |cwd: String, paths: CorePaths| resolve_cwd(&cwd, &paths);
-        "SYMBOLIC_PATHS" => ok symbolic_paths;
     }
 }

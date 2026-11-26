@@ -12,9 +12,6 @@ const call = coreModule('convert/adapters/sources');
 
 export const ADAPTER_RUNTIME: string = call('ADAPTER_RUNTIME');
 
-/** Runs a core hook handler under Claude Code: `run-core-handler.mjs <event> -- <command> [args...]`. */
-export const RUN_CORE_HANDLER_SOURCE: string = call('RUN_CORE_HANDLER_SOURCE');
-
 /**
  * Runs a Claude Code `command` hook under a core client: `run-claude-code-handler.mjs --event <event>
  * [--profile <name>] [--timeout <seconds>] [--shell bash|powershell] [--exec] -- <command> [args...]`.

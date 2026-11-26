@@ -17,6 +17,10 @@
   removals, the read and write blocks, the read-only set, tool availability and host tool names,
   the startup warnings of a rule list and the tools' limits; so do the mods event catalog, the
   object plugin sources and MCP elicitation answers.
+- Core packages load on the core (manifest step, fixed locations, `mcp.json` and `hooks.json`,
+  skills, icons, dual check), and so do both converters' hooks and skills, discovery of hooks, LSP,
+  monitors, settings and `bin/`, the text readers, plugin variables, `headersHelper` plans, skill
+  invocation and execution, and subagent tool lists and permission modes.
 - A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
   in the order the manifest declares them (run together, the order followed how long each path
   took to resolve).

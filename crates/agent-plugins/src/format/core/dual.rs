@@ -202,8 +202,6 @@ pub fn check_dual_manifests(core: &JsValue, claude: &JsValue) -> Vec<DualIssue> 
 
 crate::registry::exports! {
     "format/core/dual" {
-        "CORE_MANIFEST_FILE" => ok || CORE_MANIFEST_FILE;
-        "CLAUDE_MANIFEST_FILE" => ok || CLAUDE_MANIFEST_FILE;
         "checkDualManifests" => ok |core: JsValue, claude: JsValue| check_dual_manifests(&core, &claude);
     }
 }

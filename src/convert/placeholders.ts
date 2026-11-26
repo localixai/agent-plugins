@@ -12,10 +12,6 @@ import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('convert/placeholders');
 
-/** `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` written as Claude Code's names. */
-export const toClaudeCodePlaceholders = (text: string): string =>
-  call('toClaudeCodePlaceholders', text);
-
 /** `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}` written as the core's names. */
 export const toCorePlaceholders = (text: string): string => call('toCorePlaceholders', text);
 
@@ -25,9 +21,6 @@ export const holdsReference = (text: string): boolean => call('holdsReference', 
 /** Whether text written for `form` holds a `${` other than that form's two path placeholders. */
 export const holdsOtherReference = (text: string, form: PluginForm): boolean =>
   call('holdsOtherReference', text, form);
-
-/** Whether text holds the core's own placeholders, which a core client expands in `args`. */
-export const holdsCorePlaceholder = (text: string): boolean => call('holdsCorePlaceholder', text);
 
 /**
  * The `env` entries that bridge the environment in configuration (J18.18), by the form whose

@@ -3,7 +3,6 @@
 use crate::format::listing::list_sorted;
 use crate::ports::Signal;
 use crate::ports::files::{DirectoryEntry, PluginFiles};
-use crate::registry::Port;
 
 /// A manifest path (`./skills/a`, `./`) as a `PluginFiles` path: no `./`, no trailing slash, `.` for the root.
 #[must_use]
@@ -46,7 +45,5 @@ crate::registry::exports! {
     "loading/validate/paths" {
         "pluginPath" => ok |path: String| plugin_path(&path);
         "childOf" => ok |dir: String, name: String| child_of(&dir, &name);
-        "entriesOf" => async ok |files: Port, dir: String, signal: Option<Signal>|
-            entries_of(&files, &dir, signal.as_ref()).await;
     }
 }

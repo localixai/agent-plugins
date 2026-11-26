@@ -65,7 +65,6 @@ pub static RUN_CLAUDE_CODE_HANDLER_SOURCE: LazyLock<String> = LazyLock::new(|| {
 crate::registry::exports! {
     "convert/adapters/sources" {
         "ADAPTER_RUNTIME" => ok || ADAPTER_RUNTIME;
-        "RUN_CORE_HANDLER_SOURCE" => ok || RUN_CORE_HANDLER_SOURCE.clone();
         "RUN_CLAUDE_CODE_HANDLER_SOURCE" => ok || RUN_CLAUDE_CODE_HANDLER_SOURCE.clone();
     }
 }

@@ -2,7 +2,6 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/headers_helper_trust.rs`,
  * docs/RUST.md).
  */
-import type { HelperContext, TrustGate } from './headers-helper-origins.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
 const call = coreModule('loading/resolve/headers-helper-trust');
@@ -39,21 +38,3 @@ export interface HelperNotice {
   /** "Claude Code writes this line in non-interactive mode only"; an interactive session logs it. */
   readonly channel: 'stderr' | 'debug-log';
 }
-
-/** Whether the gate lets the helper through; otherwise what the host does instead. */
-export type GateResult =
-  | { readonly open: true }
-  | { readonly open: false; readonly loaded: true; readonly notice: HelperNotice }
-  | { readonly open: false; readonly loaded: false };
-
-/**
- * `helper`: a project or local server connects with its static `headers` alone, with the notice.
- * `load`: an agent file's inline server from the project or an `--add-dir` directory "doesn't load at
- * all" until that folder is trusted.
- */
-export const passGate = (
-  gate: TrustGate,
-  name: string,
-  trust: HelperTrust,
-  context: HelperContext,
-): GateResult => call('passGate', gate, name, trust, context);

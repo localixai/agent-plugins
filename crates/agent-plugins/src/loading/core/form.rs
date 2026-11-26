@@ -114,8 +114,6 @@ pub struct DetectInput {
 crate::registry::exports! {
     "loading/core/form" {
         "PLUGIN_FORMS" => ok || PLUGIN_FORMS;
-        "hasCoreManifest" => async ok |files: Port, signal: Option<Signal>|
-            has_core_manifest(&files, signal.as_ref()).await;
         "detectPluginForm" => async ok |input: DetectInput|
             detect_plugin_form(&input.files, input.signal.as_ref()).await;
     }

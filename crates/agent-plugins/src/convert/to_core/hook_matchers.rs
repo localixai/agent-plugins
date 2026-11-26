@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-core/hook-matchers.ts`, switched.
+//! Ported from `src/convert/to-core/hook-matchers.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Which Claude Code matchers convert, per core event (Agent Plugins Extended §18.4.3 item 4): on the
 //! tool events a matcher that selects one profile's tools, or everything; on `SessionStart` the new
@@ -89,10 +89,4 @@ fn matcher_of(event: CoreHookEvent) -> fn(Option<&str>) -> MatcherReading {
 #[must_use]
 pub fn read_matcher(event: CoreHookEvent, matcher: Option<&str>) -> MatcherReading {
     matcher_of(event)(matcher)
-}
-
-crate::registry::exports! {
-    "convert/to-core/hook-matchers" {
-        "readMatcher" => ok |event: CoreHookEvent, matcher: Option<String>| read_matcher(event, matcher.as_deref());
-    }
 }

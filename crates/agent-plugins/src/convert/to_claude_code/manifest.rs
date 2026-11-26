@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-claude-code/manifest.ts`, switched.
+//! Ported from `src/convert/to-claude-code/manifest.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `.claude-plugin/plugin.json` from a core manifest (Agent Plugins Extended §18.4.2 item 1): the
 //! nine shared fields copied, `$schema` dropped, `extensions` reported. An `author` without `name` and
@@ -113,12 +113,4 @@ pub fn claude_code_manifest(manifest: &CoreManifest) -> ManifestPart {
         })
         .collect();
     ManifestPart { value, notes }
-}
-
-crate::registry::exports! {
-    "convert/to-claude-code/manifest" {
-        "CLAUDE_MANIFEST" => ok || CLAUDE_MANIFEST;
-        "SHARED_FIELDS" => ok || SHARED_FIELDS;
-        "claudeCodeManifest" => ok |manifest: CoreManifest| claude_code_manifest(&manifest);
-    }
 }

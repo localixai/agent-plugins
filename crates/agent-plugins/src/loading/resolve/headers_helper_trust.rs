@@ -196,7 +196,5 @@ crate::registry::exports! {
     "loading/resolve/headers-helper-trust" {
         "TRUST_SOURCES" => ok || TRUST_SOURCES;
         "persistedTrust" => ok |claude_json: JsValue, key: String| persisted_trust(&claude_json, &key);
-        "passGate" => async ok |gate: TrustGate, name: String, trust: HelperTrust, context: HelperContext<Port>|
-            pass_gate(gate, &name, &trust, &context).await;
     }
 }

@@ -72,7 +72,8 @@ pub fn locate_context(files: Port, options: LocateOptions) -> LocateContext {
 
 impl LocateContext {
     /// The context as the host holds it: `{ files, platform, roots?, signal? }`.
-    fn to_js(&self) -> JsValue {
+    #[must_use]
+    pub fn to_js(&self) -> JsValue {
         let mut context = JsObject::new();
         context.insert(
             "files".to_owned(),

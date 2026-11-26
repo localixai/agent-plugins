@@ -41,9 +41,3 @@ export const resolveCwd = (
   cwd: string,
   paths: CorePaths,
 ): { readonly cwd: ResolvedCwd } | { readonly problem: string } => call('resolveCwd', cwd, paths);
-
-/**
- * Paths to judge a configuration by before the host knows the real ones: absolute paths that hold
- * no `..`, as any real resolved directory does, so containment comes out the same.
- */
-export const SYMBOLIC_PATHS: CorePaths = call('SYMBOLIC_PATHS');

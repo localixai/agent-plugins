@@ -1,4 +1,4 @@
-//! Port of `src/convert/profiles.ts`, switched.
+//! Ported from `src/convert/profiles.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The tool matchers that select exactly one core tool profile (Agent Plugins Extended §18.3.4,
 //! §18.4.3 item 4, the table of §18.2.7): a Claude Code matcher converts when it names one profile's
@@ -53,7 +53,8 @@ const fn tools_of(profile: ProfileName) -> &'static [&'static str] {
 }
 
 /// The text of a profile's name.
-const fn name_of(profile: ProfileName) -> &'static str {
+#[must_use]
+pub const fn name_of(profile: ProfileName) -> &'static str {
     match profile {
         ProfileName::Shell => "shell",
         ProfileName::FileRead => "file.read",
@@ -62,14 +63,6 @@ const fn name_of(profile: ProfileName) -> &'static str {
         ProfileName::WebSearch => "web.search",
         ProfileName::Mcp => "mcp",
     }
-}
-
-/// Whether a text names a profile.
-#[must_use]
-pub fn is_profile_name(value: Option<&str>) -> bool {
-    PROFILE_NAMES
-        .iter()
-        .any(|name| Some(name_of(*name)) == value)
 }
 
 /// The matcher that selects a profile's tools.
@@ -96,12 +89,4 @@ pub fn profile_of_matcher(matcher: &str) -> Option<ProfileName> {
         .iter()
         .find(|profile| same_set(tools_of(**profile), &names))
         .copied()
-}
-
-crate::registry::exports! {
-    "convert/profiles" {
-        "PROFILE_NAMES" => ok || PROFILE_NAMES;
-        "isProfileName" => ok |value: Option<String>| is_profile_name(value.as_deref());
-        "matcherOf" => ok |profile: ProfileName| matcher_of(profile);
-    }
 }

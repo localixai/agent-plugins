@@ -5,7 +5,7 @@
 //! declares are not read for frontmatter. A link is never followed: the folder or entry is skipped,
 //! and a skills folder says so.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use super::links::{FolderStyle, linked_entries, linked_folder, unread_components};
 use super::paths::{child_of, entries_of, plugin_path};
@@ -164,17 +164,6 @@ async fn scan_default(
     }
 }
 
-/// What `frontmatterIssues` is given besides the files.
-#[derive(Debug, Default, Deserialize)]
-pub struct FrontmatterOptions {
-    /// Cancels the reads.
-    #[serde(default)]
-    pub signal: Option<Signal>,
-    /// Where the files sit; a plugin's folder by default.
-    #[serde(default)]
-    pub place: Option<ComponentPlace>,
-}
-
 /// The frontmatter findings of the files of a scan.
 pub async fn frontmatter_issues(
     kind: ComponentKind,
@@ -211,14 +200,6 @@ pub async fn component_issues(
 crate::registry::exports! {
     "loading/validate/components" {
         "manifestPaths" => ok |value: JsValue| manifest_paths(&value);
-        "scanSkillFolders" => async ok |files: Port, dir: String, style: FolderStyle, signal: Option<Signal>|
-            scan_skill_folders(&files, &dir, style, signal.as_ref()).await;
-        "scanMarkdownFolder" => async ok |files: Port, dir: String, style: FolderStyle, signal: Option<Signal>|
-            scan_markdown_folder(&files, &dir, style, signal.as_ref()).await;
-        "frontmatterIssues" => async ok |kind: ComponentKind, files: Port, paths: Vec<String>, options: Option<FrontmatterOptions>| {
-            let options = options.unwrap_or_default();
-            frontmatter_issues(kind, &files, &paths, options.signal.as_ref(), options.place.unwrap_or_default()).await
-        };
         "componentIssues" => async ok |files: Port, signal: Option<Signal>|
             component_issues(&files, signal.as_ref()).await;
     }

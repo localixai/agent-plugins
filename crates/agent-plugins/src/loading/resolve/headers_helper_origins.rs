@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::config_directory::{CONFIG_DIR_VARIABLE, JoinPath, config_directory_of};
 use crate::ports::locations::Locations;
-use crate::registry::{Function, Port};
+use crate::registry::Port;
 
 /// Every place, in the TypeScript's order.
 pub const HEADERS_HELPER_ORIGINS: [HeadersHelperOrigin; 13] = [
@@ -232,35 +232,9 @@ pub async fn directory_of<L: Locations>(
     }
 }
 
-/// One kind's entry of `DIRECTORIES`, a function the host calls.
-#[derive(Debug)]
-struct Directory(DirectoryKind);
-
-crate::registry::methods! {
-    Directory {
-        "call" => async ok |this, context: HelperContext<Port>| directory_of(this.0, &context).await;
-    }
-}
-
-/// The kinds `DIRECTORIES` has a function for, in the TypeScript's order.
-const DIRECTORY_KINDS: [DirectoryKind; 4] = [
-    DirectoryKind::PluginRoot,
-    DirectoryKind::ProjectDirectory,
-    DirectoryKind::PrimaryDirectory,
-    DirectoryKind::ConfigDirectory,
-];
-
 crate::registry::exports! {
     "loading/resolve/headers-helper-origins" {
         "HEADERS_HELPER_ORIGINS" => ok || HEADERS_HELPER_ORIGINS;
-        "ORIGIN_RULES" => ok || HEADERS_HELPER_ORIGINS
-            .map(|origin| (origin, origin_rule(origin)))
-            .into_iter()
-            .collect::<IndexMap<_, _>>();
         "configDirectory" => async ok |context: HelperContext<Port>| config_directory(&context).await;
-        "DIRECTORIES" => ok || DIRECTORY_KINDS
-            .map(|kind| (kind, Function::new(Directory(kind))))
-            .into_iter()
-            .collect::<IndexMap<_, _>>();
     }
 }
