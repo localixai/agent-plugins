@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
+  verdict notices and model switches, output caps and deferral, tool output shapes, matcher
+  values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the
+  `CLAUDE_ENV_FILE` readers.
 - More of `format` runs on the core: agent and skill names, agent records, MCP server, prompt,
   elicitation and tool-schema checks, `.mcpb` manifests, theme colours and writing, marketplace
   entry fields and ids, path claims and unknown fields. A table looked up by a name from a file

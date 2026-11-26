@@ -1,0 +1,8 @@
+//! The core's hook output readers (`src/hooks/output/` in the npm package).
+
+pub mod caps;
+pub mod defer;
+pub mod pre_tool_use_outcome;
+pub mod reminder_tags;
+pub mod terminal_sequence;
+pub mod tool_shape;

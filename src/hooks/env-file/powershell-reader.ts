@@ -1,5 +1,3 @@
-import { warning, type PluginIssue } from '../../format/issues.ts';
-
 /**
  * hooks.md, "Persisted variables in PowerShell commands": PowerShell never runs `CLAUDE_ENV_FILE`;
  * "Claude Code reads the assignments out of it and copies them into the PowerShell command's
@@ -21,67 +19,16 @@ import { warning, type PluginIssue } from '../../format/issues.ts';
  * space; in double quotes a backslash before any character other than `$`, a backtick, `"` or
  * another backslash stays a literal backslash, as in Bash; a name is a Bash identifier; a repeated
  * name takes its last value.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/env-file/powershell_reader.rs`, docs/RUST.md).
  */
+import type { PluginIssue } from '../../format/issues.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('hooks/env-file/powershell-reader');
 
 /** The message `claude --debug` logs, as an issue's text. */
-export const NOT_PLAIN_ASSIGNMENTS = 'Session environment is not all plain assignments';
-
-const BLANK = /^[ \t]*$/;
-const COMMENT = /^[ \t]*#/;
-const ASSIGNMENT = /^(?:(?:export|declare -x)[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/;
-
-const UNQUOTED = /^[A-Za-z0-9_@%+=:,./-]+/;
-const SINGLE_QUOTED = /^'([^']*)'/;
-const DOUBLE_QUOTED = /^"((?:[^"\\$`]|\\.)*)"/;
-
-/** A value part reads off the front of the text: its value and what is left, or no match. */
-interface Part {
-  readonly value: string;
-  readonly rest: string;
-}
-
-type PartReader = (text: string) => Part | undefined;
-
-const take =
-  (pattern: RegExp, valueOf: (match: RegExpExecArray) => string): PartReader =>
-  (text) => {
-    const match = pattern.exec(text);
-    return match === null
-      ? undefined
-      : { value: valueOf(match), rest: text.slice(match[0].length) };
-  };
-
-/** In double quotes a backslash escapes `$`, a backtick, `"` and a backslash; before anything else it stays. */
-const unescapeDouble = (inner: string): string => inner.replace(/\\([$`"\\])/g, '$1');
-
-const PARTS: readonly PartReader[] = [
-  take(UNQUOTED, ([all]) => all),
-  take(SINGLE_QUOTED, ([, inner]) => inner ?? ''),
-  // The pattern lets `$`, a backtick and `"` through only after a backslash.
-  take(DOUBLE_QUOTED, ([, inner]) => unescapeDouble(inner ?? '')),
-];
-
-/** The value of an assignment's right-hand side, or `undefined` when a part of it is not plain. */
-function plainValue(text: string): string | undefined {
-  let rest = text;
-  let value = '';
-  while (rest !== '') {
-    const part = PARTS.map((read) => read(rest)).find((found) => found !== undefined);
-    if (part === undefined) return undefined;
-    value += part.value;
-    rest = part.rest;
-  }
-  return value;
-}
-
-/** A line's assignment, `undefined` for a blank or a comment, `null` for a line of another kind. */
-function readLine(line: string): readonly [string, string] | undefined | null {
-  if (BLANK.test(line) || COMMENT.test(line)) return undefined;
-  const match = ASSIGNMENT.exec(line);
-  if (match === null) return null;
-  const value = plainValue(match[2] ?? '');
-  return value === undefined ? null : [match[1] ?? '', value];
-}
+export const NOT_PLAIN_ASSIGNMENTS: string = call('NOT_PLAIN_ASSIGNMENTS');
 
 export interface PowershellVariables {
   /** What PowerShell commands receive: nothing when a line is not plain. */
@@ -94,25 +41,8 @@ export interface PowershellReadOptions {
   readonly windows: boolean;
 }
 
-const NONE: PowershellVariables = { variables: {}, issues: [] };
-
 /** The variables a PowerShell command receives out of the text of every file the session's hooks wrote. */
-export function readPowershellVariables(
+export const readPowershellVariables = (
   text: string,
   options: PowershellReadOptions,
-): PowershellVariables {
-  const assigned = new Map<string, string>();
-  for (const line of text.split('\n')) {
-    const read = readLine(line);
-    if (read === null) {
-      return {
-        variables: {},
-        issues: [warning('CLAUDE_ENV_FILE', NOT_PLAIN_ASSIGNMENTS)],
-      };
-    }
-    if (read !== undefined) assigned.set(read[0], read[1]);
-  }
-  const received = [...assigned].filter(([, value]) => !(options.windows && /[/\\]/.test(value)));
-  // `Object.fromEntries` defines own properties, so a `__proto__` name stays a name.
-  return { ...NONE, variables: Object.fromEntries(received) };
-}
+): PowershellVariables => call('readPowershellVariables', text, options);
