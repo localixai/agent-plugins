@@ -1,4 +1,4 @@
-//! Port of `src/format/marketplace/archive-url.ts`, switched.
+//! Ported from `src/format/marketplace/archive-url.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! An archive source's `url` "must use `https://` and can't point at a loopback, link-local, or
 //! cloud-metadata host" (plugins/marketplace-reference.md, "archive plugin source"). The validator
@@ -35,10 +35,4 @@ pub fn archive_url_issues(url: &str, site: &SourceSite) -> Vec<PluginIssue> {
     }
     issues.push(field_error(site, "url", ARCHIVE_URL));
     issues
-}
-
-crate::registry::exports! {
-    "format/marketplace/archive-url" {
-        "archiveUrlIssues" => ok |url: String, site: SourceSite| archive_url_issues(&url, &site);
-    }
 }

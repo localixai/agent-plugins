@@ -58,7 +58,6 @@ pub fn match_bash_pattern(pattern: &str, subcommand: &str, options: PatternOptio
 crate::registry::exports! {
     "rules/bash/wildcard" {
         "normalizePattern" => ok |pattern: String| normalize_pattern(&pattern);
-        "hasWildcard" => ok |pattern: String| has_wildcard(&pattern);
         "matchBashPattern" => ok |pattern: String, subcommand: String, options: Option<PatternOptions>| match_bash_pattern(&pattern, &subcommand, options.unwrap_or_default());
     }
 }

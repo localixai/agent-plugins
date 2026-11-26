@@ -13,7 +13,8 @@ import { operandPath, type Walk } from './shell-words.ts';
  * permission-modes.md, "Auto-approve file edits with acceptEdits mode": "When the PowerShell tool is
  * enabled, `acceptEdits` mode also auto-approves `Set-Content`, `Add-Content`, `Clear-Content`, and
  * `Remove-Item` on in-scope paths, along with their common aliases." The aliases are the rules'
- * own (`powershell-aliases.ts`), and so is the reading of the name (`&`, a module qualifier).
+ * own (`crates/agent-plugins/src/rules/bash/powershell_aliases.rs`), and so is the reading of the
+ * name (`&`, a module qualifier).
  */
 /** How many positional arguments a cmdlet takes after its path: `Set-Content` and `Add-Content` take the content. */
 const CONTENT_ARGUMENTS: { readonly [cmdlet: string]: number } = {

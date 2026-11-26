@@ -4,11 +4,14 @@
 pub mod bash;
 pub mod decide;
 pub mod hook_matcher;
+pub mod issues;
 pub mod memo;
 pub mod path;
 pub mod restricts;
 pub mod rule_warnings;
 pub mod sources;
+pub mod specifier_formats;
+pub mod specifier_guards;
 pub mod target;
 pub mod tool_pattern;
 pub mod tools;

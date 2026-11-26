@@ -21,7 +21,7 @@ pub const RULE_FORMATS: [RuleFormatId; 8] = [
 ];
 
 /// One of `RULE_FORMATS`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[expect(missing_docs, reason = "each variant is its kebab-case id")]
 pub enum RuleFormatId {

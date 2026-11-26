@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/words.ts`, switched.
+//! The core's counterpart of `src/rules/bash/words.ts` at sha256:f30e7a2805ce, which stays TypeScript: it declares types only, so it has nothing to run (docs/RUST.md, "What stays TypeScript").
 //!
 //! The words and redirections of one command (bash(1), "SHELL GRAMMAR" and "REDIRECTION"). An
 //! unquoted `<` or `>` ends a word wherever it stands, so `echo x>/etc/x` is `echo x` writing
@@ -334,13 +334,4 @@ pub fn spoken_form(words: &[ShellWord], dialect: &ShellDialect) -> String {
         .chain(args)
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-crate::registry::exports! {
-    "rules/bash/words" {
-        "wordsOf" => ok |command: String, dialect: Option<ShellDialect>| words_of(&command, dialect.as_ref());
-        "readCommand" => ok |text: String, dialect: Option<ShellDialect>| read_command(&text, dialect.as_ref());
-        "spellingsOf" => ok |word: ShellWord| spellings_of(&word);
-        "spokenForm" => ok |words: Vec<ShellWord>, dialect: ShellDialect| spoken_form(&words, &dialect);
-    }
 }

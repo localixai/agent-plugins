@@ -37,14 +37,6 @@ export const absolutePath = (
 ): string => call('absolutePath', path, paths);
 
 /**
- * The spelling two paths are compared in. Windows names compare without case and drop the dots and
- * spaces that end them (`.GIT`, `.git.` and `.git ` are `.git`); POSIX names compare as written,
- * macOS included (spec/judgments.md).
- */
-export const foldPath = (path: string, platform: Platform): string =>
-  call('foldPath', path, platform);
-
-/**
  * The text of `path` below `root` (`''` for the root itself), or `undefined` when it is not below;
  * on Windows both are folded first (`foldPath`), and so is the text returned.
  */

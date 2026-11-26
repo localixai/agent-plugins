@@ -1,4 +1,4 @@
-//! Port of `src/rules/tools/names.ts`, switched.
+//! Ported from `src/rules/tools/names.ts`; only the core uses it now, so it has no wrapper.
 
 use crate::js::trim;
 
@@ -15,11 +15,4 @@ const MCP_PREFIX: &str = "mcp__";
 #[must_use]
 pub fn is_mcp_tool_name(tool_name: &str) -> bool {
     tool_name.starts_with(MCP_PREFIX)
-}
-
-crate::registry::exports! {
-    "rules/tools/names" {
-        "toolNameOfEntry" => ok |entry: String| tool_name_of_entry(&entry).to_owned();
-        "isMcpToolName" => ok |tool_name: String| is_mcp_tool_name(&tool_name);
-    }
 }

@@ -1,4 +1,4 @@
-import type { ElicitationRequest, ElicitationResult } from '../protocol/official.ts';
+import type { ElicitationResult } from '../protocol/official.ts';
 import { coreModule } from '../wasm/bridge.ts';
 
 /**
@@ -55,10 +55,6 @@ export const elicitationFormFields = (
   schema: Readonly<Record<string, unknown>> | undefined,
 ): readonly ElicitationField[] => call('elicitationFormFields', schema);
 
-export const contentOf = (
-  values: Readonly<Record<string, unknown>>,
-): Record<string, ElicitationValue> => call('contentOf', values);
-
 /**
  * The problem each field's value has, by field name; empty when the values fit. A field with no value
  * is a problem only when it is required. Judgment (spec/judgments.md): the wording is the kit's.
@@ -71,8 +67,3 @@ export const elicitationFieldProblems = (
 export type ElicitationAnswer =
   | { readonly result: ElicitationResult }
   | { readonly problems: readonly string[] };
-
-export const formAnswer = (
-  request: ElicitationRequest,
-  values: Readonly<Record<string, unknown>>,
-): ElicitationAnswer => call('formAnswer', request, values);

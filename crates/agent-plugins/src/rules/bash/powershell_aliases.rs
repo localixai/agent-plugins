@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/powershell-aliases.ts`, switched.
+//! Ported from `src/rules/bash/powershell-aliases.ts`; only the core uses it now, so it has no wrapper.
 
 use indexmap::IndexMap;
 use std::sync::LazyLock;
@@ -62,9 +62,3 @@ pub static POWERSHELL_ALIASES: LazyLock<IndexMap<&'static str, &'static str>> =
             .flat_map(|(cmdlet, aliases)| aliases.iter().map(move |alias| (*alias, *cmdlet)))
             .collect()
     });
-
-crate::registry::exports! {
-    "rules/bash/powershell-aliases" {
-        "POWERSHELL_ALIASES" => ok || crate::registry::Map { entries: POWERSHELL_ALIASES.iter().collect::<Vec<_>>() };
-    }
-}
