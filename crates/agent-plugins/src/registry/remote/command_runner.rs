@@ -28,8 +28,8 @@ mod tests {
             cwd: "/p".to_owned(),
             env: IndexMap::from([("A".to_owned(), "1".to_owned())]),
             stdin: None,
-            timeout_ms: Some(5),
-            merge_stderr: false,
+            timeout_ms: Some(5.0),
+            merge_stderr: Some(false),
             signal: Signal::new(),
         };
         let (asked, read) = exchange(
@@ -44,7 +44,7 @@ mod tests {
         assert_eq!(asked, need("run", vec![sent]));
         assert_eq!(
             read,
-            r#"CommandResult { exit_code: Some(0), stdout: "ok", stderr: "", timed_out: false, start_error: None }"#
+            r#"CommandResult { exit_code: Some(0), stdout: "ok", stderr: "", timed_out: false, start_error: None, output_held_open: None }"#
         );
     }
 }

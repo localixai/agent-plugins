@@ -5,14 +5,14 @@ Lines are the TypeScript files as they are now: a switched module counts its wra
 
 | Module | switched | ported | stays TypeScript | TypeScript |
 | --- | --- | --- | --- | --- |
-| all | 264 (12521 lines) | 2 (134 lines) | 30 (2007 lines) | 975 (98469 lines) |
+| all | 267 (12676 lines) | 2 (134 lines) | 32 (2461 lines) | 970 (97847 lines) |
 | `agents` | 20 (1276 lines) |  |  | 17 (1997 lines) |
 | `cli` | 8 (476 lines) |  |  | 45 (5583 lines) |
 | `convert` | 8 (291 lines) |  |  | 19 (1522 lines) |
 | `entry` |  |  |  | 16 (261 lines) |
 | `format` | 85 (4128 lines) |  | 1 (21 lines) | 71 (9129 lines) |
 | `foundation` | 3 (105 lines) |  |  | 8 (603 lines) |
-| `hooks` | 37 (1401 lines) |  | 3 (261 lines) | 90 (7392 lines) |
+| `hooks` | 40 (1556 lines) |  | 5 (649 lines) | 85 (6770 lines) |
 | `host` |  |  |  | 49 (5793 lines) |
 | `index.ts` |  |  |  | 1 (112 lines) |
 | `loading` | 23 (816 lines) |  |  | 72 (6974 lines) |
@@ -25,4 +25,4 @@ Lines are the TypeScript files as they are now: a switched module counts its wra
 | `skills` | 11 (445 lines) |  |  | 30 (3886 lines) |
 | `testing` |  |  |  | 27 (2369 lines) |
 | `updates` | 3 (125 lines) |  |  | 7 (1122 lines) |
-| `wasm` |  |  | 7 (683 lines) |  |
+| `wasm` |  |  | 7 (749 lines) |  |

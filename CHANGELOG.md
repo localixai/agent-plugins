@@ -5,6 +5,8 @@
 - A hook matcher tested against a value that is not text (an input that fails its schema) answers
   as before the move to the core: no list names it, and a pattern tests `String(value)`. A tool
   pattern's RegExp is compiled once per pattern again.
+- Promises cross into and out of the core: background deliveries are settled there, an async
+  command hook's background run is a core promise, and `withInterrupt` runs on the core.
 - Hooks and plugin file readers run more of their work on the core: a hook's output and profile
   results, the remote handlers' environment, `ok: false` and failure runs, timeouts, permission
   mode and conditional input fields, the text cap, registration, the event catalog and gates;

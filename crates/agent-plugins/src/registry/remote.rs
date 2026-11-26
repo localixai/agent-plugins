@@ -45,7 +45,7 @@ use crate::ports::{BoxFuture, PortFailure, Signal};
 
 /// The host's answer to `method` of value `id`, read as `R`. An answer `R` cannot hold ends the
 /// task with a fault: the host broke the port's contract.
-fn answered<R: DeserializeOwned + Send + 'static>(
+pub(super) fn answered<R: DeserializeOwned + Send + 'static>(
     id: u32,
     method: &str,
     args: Vec<JsValue>,

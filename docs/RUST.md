@@ -88,9 +88,10 @@ its ports without an async runtime.
    core catches it (item 6).
 3. What the host keeps crosses as its number, at any depth, both ways (`registry/remote.rs`,
    `src/wasm/wire.ts`): a port (an object with methods) `{"$port": n}`, a function `{"$fn": n}`,
-   an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
-   a resume lists it in `aborted`: the core never waits on an abort, the host's port watches its
-   own signal. A signal the core makes itself crosses as `{"$signal": null, "aborted": bool}`.
+   an `AbortSignal` `{"$signal": n, "aborted": bool}`, a promise `{"$promise": …}` (item 7). The
+   signal's flag in the core is set when a resume lists it in `aborted`: the core never waits on
+   an abort, the host's port watches its own signal. A signal the core makes itself crosses as
+   `{"$signal": null, "aborted": bool}`.
 4. A property is read by the need `.<name>` with no arguments (`Port::member`): a port's own
    (`ScanFolder.dir`, `.files`), or a member of a record that crossed as a port because one of
    its members is a function (a `WorktreeLocation` with its `isSymlink`); a function read that
@@ -128,6 +129,55 @@ its ports without an async runtime.
        }
    }
    ```
+
+7. A promise crosses as a value, at any depth, both ways (`registry/promise.rs`):
+   - **The host's promise** (a `HookOutcome.background` given to `settleDeliveries`) crosses as
+     `{"$promise": n}` and is a `registry::HostPromise<T>` in the core: a future whose first poll
+     asks the need `then` of value `n` with no arguments, which the host answers when the promise
+     settles, with its value, or with a throw for a rejection, so `catch_host` catches it as any
+     need's. Given back, it crosses as `{"$promise": n}` again and is the host's own promise (a
+     `JsValue` that holds the tag gives it back the same way).
+
+     ```rust
+     "settleDeliveries" => async ok |background: Vec<HostPromise<BackgroundDelivery>>|
+         settle_deliveries(background).await;
+     // in the body: match catch_host(promise).await { Ok(delivery) => …, Err(_) => … }
+     ```
+
+     Its wrapper is the plain one, `call.async('settleDeliveries', background)`; a sync
+     `call('f', …)` given a promise refuses it when the core awaits it, as for any need.
+   - **A promise of the core's** (`startInBackground`'s `done`) is a `registry::CorePromise<T>`,
+     made from any `Send` future with `CorePromise::new(async move { … })`; it is a future a Rust
+     host awaits. In an answer it crosses as `{"$promise": {"task": t}}`: the core keeps the
+     future as task `t`, not polled yet, and the host's first `resume(t)` with no answers polls
+     it. The wrapper makes it a JavaScript `Promise` that drives task `t` with the loop of
+     `call.async` (`src/wasm/drive.ts`), its needs answered with the host values of the call that
+     answered it (as a handle's), and that settles with the task's answer: its value, or the very
+     value a host's throw it did not catch was. The task ends when it settles, or when the host
+     cancels it (`registry::cancel`): the wrapper does when the loop is collected, as it can
+     never go on (it waits on a host promise nothing holds). Make it from an `async` block or an
+     `async fn`'s call, which asks nothing until polled: a port method already called has asked in
+     the task that called it, and awaiting it in another task is a fault.
+
+     ```rust
+     pub struct BackgroundRun { pub done: CorePromise<BackgroundResult> } // serde tag "kind"
+     let done = CorePromise::new(async move { settle(&runner, request).await … });
+     "startInBackground" => ok |runner: Port, request: CommandRun, mode: Mode|
+         start_in_background(runner, request, mode);
+     ```
+
+     Its wrapper keeps the TypeScript's kind: `call('startInBackground', runner, request, mode)`
+     for a sync function, `call.async` for an `async` one; the `Promise` comes out of the answer.
+   - **Order.** What JavaScript's microtask order gave the package's tests, and the bridge keeps:
+     the core's promise runs at once to its first wait when the answer that holds it is read, so
+     the host work it starts (`runner.run`) has started before the call returns, as an `async`
+     function runs to its first `await` when called; it settles only after every host promise it
+     awaits has, and never before the call that made it has answered, so the answer that holds it
+     resolves first unless its host work is already done; two core promises are two tasks and two
+     loops, each settling when its own needs do, in no order between them; the host's promises
+     are awaited in one step, so `then` of each is asked together, as `Promise.all` did, and the
+     results keep the order given. The number of microtask turns between a host promise settling
+     and the core's answer is not kept: no test may count them.
 
 `registry::Port` implements every port trait of `crates/agent-plugins/src/ports/`, one file of
 `registry/remote/` each, each method the need of its TypeScript namesake with its arguments, the
