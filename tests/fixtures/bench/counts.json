@@ -4,7 +4,7 @@
     "counts": {
       "4": {
         "run": {
-          "cpu.RegExp.exec": 557,
+          "cpu.RegExp.exec": 556,
           "cpu.yaml.parse": 12,
           "files.bytes": 2077,
           "files.exists": 4,
@@ -16,7 +16,7 @@
       },
       "8": {
         "run": {
-          "cpu.RegExp.exec": 1113,
+          "cpu.RegExp.exec": 1112,
           "cpu.yaml.parse": 24,
           "files.bytes": 4037,
           "files.exists": 4,
@@ -28,7 +28,7 @@
       },
       "16": {
         "run": {
-          "cpu.RegExp.exec": 2225,
+          "cpu.RegExp.exec": 2224,
           "cpu.yaml.parse": 48,
           "files.bytes": 7957,
           "files.exists": 4,
@@ -86,19 +86,19 @@
     "counts": {
       "64": {
         "create": {
-          "cpu.RegExp.exec": 29,
+          "cpu.RegExp.exec": 25,
           "cpu.yaml.parse": 1
         }
       },
       "128": {
         "create": {
-          "cpu.RegExp.exec": 29,
+          "cpu.RegExp.exec": 25,
           "cpu.yaml.parse": 1
         }
       },
       "256": {
         "create": {
-          "cpu.RegExp.exec": 29,
+          "cpu.RegExp.exec": 25,
           "cpu.yaml.parse": 1
         }
       }
@@ -109,19 +109,19 @@
     "counts": {
       "4": {
         "create": {
-          "cpu.RegExp.exec": 988,
+          "cpu.RegExp.exec": 724,
           "cpu.yaml.parse": 16
         }
       },
       "8": {
         "create": {
-          "cpu.RegExp.exec": 1976,
+          "cpu.RegExp.exec": 1448,
           "cpu.yaml.parse": 32
         }
       },
       "16": {
         "create": {
-          "cpu.RegExp.exec": 3952,
+          "cpu.RegExp.exec": 2896,
           "cpu.yaml.parse": 64
         }
       }
@@ -305,7 +305,7 @@
     "counts": {
       "4": {
         "update": {
-          "cpu.RegExp.exec": 302,
+          "cpu.RegExp.exec": 226,
           "cpu.yaml.parse": 5
         },
         "skills": {
@@ -320,7 +320,7 @@
       },
       "8": {
         "update": {
-          "cpu.RegExp.exec": 302,
+          "cpu.RegExp.exec": 226,
           "cpu.yaml.parse": 5
         },
         "skills": {
@@ -335,7 +335,7 @@
       },
       "16": {
         "update": {
-          "cpu.RegExp.exec": 302,
+          "cpu.RegExp.exec": 226,
           "cpu.yaml.parse": 5
         },
         "skills": {
@@ -644,7 +644,7 @@
     "counts": {
       "4": {
         "reload": {
-          "cpu.RegExp.exec": 1347,
+          "cpu.RegExp.exec": 1279,
           "cpu.yaml.parse": 8,
           "environment.get": 1,
           "environment.snapshot": 1,
@@ -660,7 +660,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
@@ -671,7 +671,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
@@ -684,7 +684,7 @@
       },
       "8": {
         "reload": {
-          "cpu.RegExp.exec": 2563,
+          "cpu.RegExp.exec": 2427,
           "cpu.yaml.parse": 16,
           "environment.get": 1,
           "environment.snapshot": 1,
@@ -700,7 +700,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
@@ -711,7 +711,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
@@ -724,7 +724,7 @@
       },
       "16": {
         "reload": {
-          "cpu.RegExp.exec": 4995,
+          "cpu.RegExp.exec": 4723,
           "cpu.yaml.parse": 32,
           "environment.get": 1,
           "environment.snapshot": 1,
@@ -740,7 +740,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
@@ -751,7 +751,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 66,
+          "cpu.RegExp.exec": 58,
           "cpu.yaml.parse": 1,
           "environment.get": 3,
           "environment.snapshot": 4,
