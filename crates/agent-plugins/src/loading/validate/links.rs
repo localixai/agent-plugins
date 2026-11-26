@@ -15,9 +15,6 @@ use crate::ports::files::PluginFiles;
 use crate::registry::Port;
 
 /// The two kinds of folder the validator reads.
-pub const FOLDER_STYLES: [FolderStyle; 2] = [FolderStyle::Plugin, FolderStyle::Project];
-
-/// One of `FOLDER_STYLES`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FolderStyle {
@@ -150,7 +147,6 @@ pub const MCP_PAST_CAP: &str = concat!(
 
 crate::registry::exports! {
     "loading/validate/links" {
-        "FOLDER_STYLES" => ok || FOLDER_STYLES;
         "isLink" => async ok |files: Port, path: String, signal: Option<Signal>|
             is_link(&files, &path, signal.as_ref()).await;
         "HOOKS_LINK" => ok || HOOKS_LINK;

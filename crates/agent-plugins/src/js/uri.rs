@@ -1,4 +1,7 @@
-//! `decodeURIComponent`, which the YAML reader applies to a tag's suffix (`!!str`, `!e!%21`).
+//! `decodeURIComponent`, which the YAML reader applies to a tag's suffix (`!!str`, `!e!%21`), and
+//! `encodeURIComponent`, which a `headersHelper`'s redaction looks for.
+
+use std::fmt::Write;
 
 /// The value of a hexadecimal digit.
 fn hex_value(byte: u8) -> Option<u8> {
@@ -59,9 +62,39 @@ pub fn decode_uri_component(text: &str) -> Result<String, String> {
     String::from_utf8(out).ok().ok_or_else(|| ERROR.to_owned())
 }
 
+/// `encodeURIComponent(text)`: every character but the letters, the digits and `-_.!~*'()` as the
+/// `%XX` escapes of its UTF-8 bytes, in capitals. (A lone surrogate, where JavaScript throws, is
+/// never in a Rust string.)
+#[must_use]
+pub fn encode_uri_component(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for byte in text.bytes() {
+        if byte.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&byte) {
+            out.push(char::from(byte));
+        } else {
+            let _ = write!(out, "%{byte:02X}");
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
-    use super::decode_uri_component;
+    use super::{decode_uri_component, encode_uri_component};
+
+    /// What Bun answers: `bun -e "for (const s of ['abc','a b/c','-_.!~*\'()','é€😀',
+    /// '%?#&=+$,;:@[]']) console.log(encodeURIComponent(s))"`.
+    #[test]
+    fn encodes_as_javascript_does() {
+        assert_eq!(encode_uri_component("abc"), "abc");
+        assert_eq!(encode_uri_component("a b/c"), "a%20b%2Fc");
+        assert_eq!(encode_uri_component("-_.!~*'()"), "-_.!~*'()");
+        assert_eq!(encode_uri_component("é€😀"), "%C3%A9%E2%82%AC%F0%9F%98%80");
+        assert_eq!(
+            encode_uri_component("%?#&=+$,;:@[]"),
+            "%25%3F%23%26%3D%2B%24%2C%3B%3A%40%5B%5D"
+        );
+    }
 
     /// What Bun answers: `bun -e "for (const s of ['str','%21','%zz','%E2%82%AC','%C0%80',
     /// '%ED%A0%80','a%','%F4%90%80%80','%C3']) { try { console.log(decodeURIComponent(s)) }

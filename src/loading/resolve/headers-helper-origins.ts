@@ -39,26 +39,6 @@ export type DirectoryKind =
   | 'primary-directory'
   | 'config-directory';
 
-/** Who must be trusted before anything runs: nobody, the helper alone, or the server's loading. */
-export type TrustGate = 'none' | 'helper' | 'load';
-
-export interface OriginRule {
-  readonly directory: DirectoryKind;
-  /** "Removed" in the "Which variables a helper can read" lists. */
-  readonly removesCredentials: boolean;
-  readonly gate: TrustGate;
-  /** A plugin-provided server has a plugin root: the helper gets `CLAUDE_PLUGIN_ROOT`. */
-  readonly providesPluginRoot: boolean;
-}
-
-/**
- * The three tables of mcp.md in one row per place. Judgments (spec/judgments.md): an inline server
- * of an agent from managed settings or `--agents` is "from outside your project", so it runs in the
- * configuration directory; the docs list both only under "Not removed".
- */
-export const ORIGIN_RULES: { readonly [O in HeadersHelperOrigin]: OriginRule } =
-  call('ORIGIN_RULES');
-
 /** What the plan reads from the host: the environment it inherits and the directories it picks from. */
 export interface HelperContext {
   /** The environment the helper starts from, before any removal. */
@@ -74,7 +54,3 @@ export interface HelperContext {
 
 /** "Your configuration directory, `~/.claude` unless you set `CLAUDE_CONFIG_DIR`." */
 export const configDirectory = (context: HelperContext): string => call('configDirectory', context);
-
-export const DIRECTORIES: {
-  readonly [D in DirectoryKind]: (context: HelperContext) => string | undefined;
-} = call('DIRECTORIES');

@@ -32,10 +32,6 @@ export interface PluginFormDecision {
   readonly dual: boolean;
 }
 
-/** Whether the root holds a core manifest: a contained regular file with a canonical core `$schema`. */
-export const hasCoreManifest = (files: PluginFiles, signal?: AbortSignal): Promise<boolean> =>
-  call.async('hasCoreManifest', files, signal);
-
 /** Decides the form of the plugin root `files` reads (§1.3). */
 export const detectPluginForm = (input: {
   readonly files: PluginFiles;

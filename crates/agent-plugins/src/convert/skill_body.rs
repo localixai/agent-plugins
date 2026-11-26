@@ -1,4 +1,4 @@
-//! Port of `src/convert/skill-body.ts`, switched.
+//! Ported from `src/convert/skill-body.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What Claude Code expands in a skill's body and a core client shows as written (Agent Plugins
 //! Extended §18.3.2 item 3, §18.4.2 item 2, §18.4.3 item 2): argument placeholders (`$ARGUMENTS`,
@@ -86,10 +86,4 @@ pub fn expanded_features(text: &str) -> Vec<String> {
         features.push(format!("injected commands ({})", injections.join("; ")));
     }
     features
-}
-
-crate::registry::exports! {
-    "convert/skill-body" {
-        "expandedFeatures" => ok |text: String| expanded_features(&text);
-    }
 }

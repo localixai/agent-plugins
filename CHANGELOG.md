@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Core packages load on the core (manifest step, fixed locations, `mcp.json` and `hooks.json`,
+  skills, icons, dual check), and so do both converters' hooks and skills, discovery of hooks, LSP,
+  monitors, settings and `bin/`, the text readers, plugin variables, `headersHelper` plans, skill
+  invocation and execution, and subagent tool lists and permission modes.
 - A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
   in the order the manifest declares them (run together, the order followed how long each path
   took to resolve).

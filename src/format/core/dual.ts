@@ -16,9 +16,6 @@ import type { ValidationIssue } from '../validate/finding.ts';
 
 const call = coreModule('format/core/dual');
 
-export const CORE_MANIFEST_FILE: 'plugin.json' = call('CORE_MANIFEST_FILE');
-export const CLAUDE_MANIFEST_FILE: '.claude-plugin/plugin.json' = call('CLAUDE_MANIFEST_FILE');
-
 /** Checks the two parsed manifests of a dual package (§18.3.1). */
 export const checkDualManifests = (core: unknown, claude: unknown): readonly ValidationIssue[] =>
   call('checkDualManifests', core, claude);

@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-claude-code/mcp.ts`, switched.
+//! Ported from `src/convert/to-claude-code/mcp.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `.mcp.json` from a core `mcp.json` (Agent Plugins Extended §18.4.2 item 3, the table of §18.3.3):
 //! `stdio` stays, `streamable-http` is `http`, `sse` stays; a `./` command is
@@ -215,12 +215,5 @@ pub fn claude_code_mcp(servers: &IndexMap<String, CoreMcpServer>) -> McpPart {
     McpPart {
         servers: written,
         notes,
-    }
-}
-
-crate::registry::exports! {
-    "convert/to-claude-code/mcp" {
-        "CLAUDE_MCP" => ok || CLAUDE_MCP;
-        "claudeCodeMcp" => ok |servers: IndexMap<String, CoreMcpServer>| claude_code_mcp(&servers);
     }
 }

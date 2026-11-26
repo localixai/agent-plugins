@@ -143,10 +143,8 @@ pub fn bridged_environment(
 
 crate::registry::exports! {
     "convert/placeholders" {
-        "toClaudeCodePlaceholders" => ok |text: String| to_claude_code_placeholders(&text);
         "toCorePlaceholders" => ok |text: String| to_core_placeholders(&text);
         "holdsReference" => ok |text: String| holds_reference(&text);
         "holdsOtherReference" => ok |text: String, form: String| holds_other_reference(&text, &form);
-        "holdsCorePlaceholder" => ok |text: String| holds_core_placeholder(&text);
     }
 }

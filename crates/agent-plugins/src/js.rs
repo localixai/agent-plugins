@@ -31,7 +31,7 @@ pub use promise::{promise_all, promise_all_pair};
 pub use radix::{to_exponential, to_radix_string};
 pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;
-pub use uri::decode_uri_component;
+pub use uri::{decode_uri_component, encode_uri_component};
 pub use value::{JsObject, JsValue};
 
 use std::cmp::Ordering;

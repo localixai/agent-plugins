@@ -11,9 +11,6 @@ import { coreModule } from '../../wasm/bridge.ts';
  */
 const call = coreModule('loading/validate/links');
 
-export const FOLDER_STYLES: readonly ['plugin', 'project'] = call('FOLDER_STYLES');
-export type FolderStyle = (typeof FOLDER_STYLES)[number];
-
 export const isLink = (files: PluginFiles, path: string, signal?: AbortSignal): Promise<boolean> =>
   call.async('isLink', files, path, signal);
 
