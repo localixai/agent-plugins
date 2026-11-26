@@ -48,7 +48,11 @@ port once and stays there. The ports (`src/ports/`) are the host's types and sta
   |param: Type, …| body; … } }` listing every name its TypeScript exports at run time, in order;
   `registry::MODULES` lists the modules. How a result is answered is `ok` (`None` is
   `undefined`), `nullable` (`None` is `null`) or `fallible` (`Err` is the thrown message).
-  Missing arguments are `undefined` and extra ones ignored, as in JavaScript.
+  Missing arguments are `undefined` and extra ones ignored, as in JavaScript. A rest parameter
+  (`...events: HookEvent[]`) is a last parameter `events: registry::Rest<String>`, the call's
+  arguments from its place on, each decoded (`"eventSet" => ok |events: Rest<String>|
+  event_set(events.0);`); its wrapper spreads them: `export const eventSet = (...events:
+  readonly HookEvent[]): ReadonlySet<HookEvent> => call('eventSet', ...events)`.
 - An answer is `{"result"}`, `{"throws"}` (the wrapper throws an `Error` with the message) or
   `{"fault"}` (a bug: an unknown name, arguments that do not decode).
 - Values are JavaScript's, `js::JsValue` in the core: `undefined` and the numbers JSON has no
@@ -84,6 +88,21 @@ its ports without an async runtime.
    an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
    a resume lists it in `aborted`: the core never waits on an abort, the host's port watches its
    own signal. A signal the core makes itself crosses as `{"$signal": null, "aborted": bool}`.
+4. A property is read by the need `.<name>` with no arguments (`Port::member`): a port's own
+   (`ScanFolder.dir`, `.files`), or a member of a record that crossed as a port because one of
+   its members is a function (a `WorktreeLocation` with its `isSymlink`); a function read that
+   way is a `Callback`, an absent member `undefined`. A parameter that may be either takes both
+   shapes, `#[serde(untagged)] enum { Host(Port), Data(T) }` (`hooks/output/worktree_path.rs`).
+5. A function of the core's that the host calls later (a timer's `fire`) crosses as `{"$call":
+   h}`, a `registry::Function`: a handle (below) whose one sync method is `call`, which the host
+   makes a function.
+
+`registry::Port` implements every port trait of `crates/agent-plugins/src/ports/`, one file of
+`registry/remote/` each, each method the need of its TypeScript namesake with its arguments, the
+answer read as the Rust type: `T | PortFailure` is a `Result`, an answer the type cannot hold a
+fault. A method the TypeScript port answers at once (`Environment.get`, `Locations.homeDir`,
+`Clock.now`) returns a future in the Rust trait too, as the host answers it as a need; a Rust host
+returns a ready one.
 
 The core keeps each waiting task's future in a table of its thread and polls it with a waker that
 does nothing (`registry/task.rs`); a port method of the host's writes its need and is pending

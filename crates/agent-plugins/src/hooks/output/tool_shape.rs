@@ -2,9 +2,9 @@
 //!
 //! The shape of a built-in tool's output as `sdk-tools.d.ts` types it (Agent Plugins Extended J7.138:
 //! a `PostToolUse` hook's `updatedToolOutput` is checked against the tool's output type), as data the
-//! kit can test a value against. `scripts/tool-output-shapes.ts` writes the tables of
-//! `tool-shapes/` from the SDK's file (they stay TypeScript: the script writes them); a test checks
-//! they are current.
+//! kit can test a value against. `scripts/tool-output-shapes.ts` writes the tables from the SDK's
+//! file, here as the core's own JSON tables (`tool_shapes.rs` and `tool_shapes/`, read by
+//! [`read_table`]); a test checks they are current.
 //!
 //! A primitive is named; `literal` is one value; `array` its element; `object` its fields by name,
 //! a name ending in `?` an optional field, and any other key allowed, as the SDK's types are open;
@@ -13,6 +13,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use crate::js::json_parse::json_parse;
 use crate::js::{JsValue, key_order};
 
 /// A primitive shape: a type's name.
@@ -74,6 +75,16 @@ pub enum Shape {
 
 /// The output shape of each built-in tool, by the tool's name.
 pub type ShapeTable = IndexMap<String, Shape>;
+
+/// A generated table's JSON text as its shapes. The script writes only tables that read (the
+/// unit test below reads every one), so a text that does not is an empty table.
+#[must_use]
+pub fn read_table(text: &str) -> ShapeTable {
+    json_parse(text)
+        .ok()
+        .and_then(|value| ShapeTable::deserialize(value).ok())
+        .unwrap_or_default()
+}
 
 fn alternatives(shape: Option<&Shape>) -> Vec<Shape> {
     match shape {
@@ -258,9 +269,27 @@ pub fn shape_problem(shape: &Shape, value: &JsValue, path: &str) -> Option<Strin
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::super::tool_shapes::TOOL_SHAPES;
+    use super::{Shape, read_table, shape_problem};
+    use crate::js::JsValue;
+
+    #[test]
+    fn every_generated_table_reads_and_a_tool_split_over_two_holds_both_halves() {
+        assert!(TOOL_SHAPES.len() > 40, "{} tools", TOOL_SHAPES.len());
+        assert!(matches!(
+            TOOL_SHAPES.get("Bash"),
+            Some(Shape::Object { .. } | Shape::OneOf { .. })
+        ));
+        assert!(read_table("{").is_empty());
+        let read = TOOL_SHAPES.get("Read").unwrap();
+        assert!(shape_problem(read, &JsValue::from("text"), "").is_some());
+    }
+}
+
 crate::registry::exports! {
     "hooks/output/tool-shape" {
-        "joinTables" => ok |tables: Vec<ShapeTable>| join_tables(&tables);
         "shapeProblem" => ok |shape: Shape, value: JsValue, path: Option<String>| shape_problem(&shape, &value, path.as_deref().unwrap_or(""));
     }
 }

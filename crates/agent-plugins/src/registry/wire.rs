@@ -106,6 +106,33 @@ impl<'de> Deserialize<'de> for Bytes {
     }
 }
 
+/// The base64 alphabet, by each character's value.
+const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+impl Serialize for Bytes {
+    /// `{"$bytes": base64}`, padded, as the wrapper reads it.
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut base64 = String::new();
+        for chunk in self.0.chunks(3) {
+            let group = chunk.iter().enumerate().fold(0u32, |group, (at, byte)| {
+                group | u32::from(*byte) << (16 - 8 * at)
+            });
+            for at in 0..4 {
+                let sextet = usize::try_from((group >> (18 - 6 * at)) & 0x3f).unwrap_or_default();
+                let character = ALPHABET.get(sextet).copied().unwrap_or(b'=');
+                base64.push(if at <= chunk.len() {
+                    char::from(character)
+                } else {
+                    '='
+                });
+            }
+        }
+        let mut map = serializer.serialize_map(Some(1))?;
+        serde::ser::SerializeMap::serialize_entry(&mut map, "$bytes", &base64)?;
+        serde::ser::SerializeMap::end(map)
+    }
+}
+
 /// One parameter, decoded from the argument at its place.
 pub trait Param: Sized {
     /// The argument at `index` (missing: `undefined`) as this parameter.
@@ -123,6 +150,25 @@ impl<T: DeserializeOwned> Param for T {
     fn param(args: &[JsValue], index: usize) -> Result<Self, String> {
         let raw = args.get(index).cloned().unwrap_or_default();
         T::deserialize(raw).map_err(|error| format!("argument {index} does not decode: {error}"))
+    }
+}
+
+/// A TypeScript rest parameter (`...events: HookEvent[]`): the call's arguments from this
+/// parameter's place on, each decoded as `T`. It is an export's last parameter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rest<T>(pub Vec<T>);
+
+impl<T: DeserializeOwned> Param for Rest<T> {
+    fn param(args: &[JsValue], index: usize) -> Result<Self, String> {
+        let rest = args.get(index..).unwrap_or_default();
+        rest.iter()
+            .zip(index..)
+            .map(|(arg, at)| {
+                T::deserialize(arg.clone())
+                    .map_err(|error| format!("argument {at} does not decode: {error}"))
+            })
+            .collect::<Result<_, _>>()
+            .map(Self)
     }
 }
 

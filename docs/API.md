@@ -1391,7 +1391,7 @@ session removes) and `background` (the `additionalContext`, `systemMessage` or `
 a `defer` applies: `-p` and a single tool call); `permissionRequest` (the `decision`
 object: `allow` with `updatedInput` and `updatedPermissions`, or `deny` with `message` and
 `interrupt`); `updatedToolOutput` (a built-in tool's value that does not match its output type in
-`sdk-tools.d.ts`, read into `tool-shapes/` by `scripts/tool-output-shapes.ts`, is dropped with an
+`sdk-tools.d.ts`, read into the core's `tool_shapes/` by `scripts/tool-output-shapes.ts`, is dropped with an
 issue; MCP output and a tool without an output type pass through) and `classifierContext` (at most 2,000 characters over every hook); `elicitation`
 (`action` and `content` the MCP server receives: any decline wins); `initialUserMessage`,
 `sessionTitle`, `reloadSkills`, `suppressOriginalPrompt`, `watchPaths`, `displayContent`, `retry`,

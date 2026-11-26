@@ -40,7 +40,8 @@ pub enum CommandSpec {
 }
 
 /// One run of a command.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandRun {
     /// What to run.
     pub spec: CommandSpec,
@@ -49,8 +50,10 @@ pub struct CommandRun {
     /// The whole environment of the process.
     pub env: IndexMap<String, String>,
     /// Text written to its standard input, then closed.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stdin: Option<String>,
     /// After how long the host stops it and answers `timed_out`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<u64>,
     /// Whether standard error is read into `stdout`, in order.
     pub merge_stderr: bool,

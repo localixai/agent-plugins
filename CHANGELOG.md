@@ -9,6 +9,8 @@
   environment variables and text patterns, approval memory, hook permission updates and
   rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the
   Edit, Read, Grep, WebFetch and WebSearch rules check.
+- **Breaking** (`/layout`): a `ManifestKey` is the key alone (`{ key }`); its `read` member is
+  gone, as `declaredKey` reads the manifest in the core. The `/layout` entry now loads the core.
 - Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
   verdict notices and model switches, output caps and deferral, tool output shapes, matcher
   values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the
@@ -33,6 +35,12 @@
   their places, the same written text. Where it answers differently is in docs/RUST.md, "Where the
   crate answers differently": YAML nested past 128 collections is refused, the YAML 1.1 tags and
   schema are not read, and an alias inside its own anchor reads as an empty list.
+
+- The core reaches every port: each one a host passes crosses whole, a record that holds a
+  function crosses as one and its members are read when needed, and a timer's callback is a
+  function of the core's. The `WorktreeCreate` path, the hook merge's shared rules and the
+  `PostToolUse` output check now run there; the built-in tools' output shapes are generated as the
+  core's own tables (`bun scripts/tool-output-shapes.ts`) and the TypeScript copies are gone.
 
 ## [0.2.0] - 2026-11-23
 

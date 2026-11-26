@@ -39,11 +39,11 @@ mod wire_json;
 
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
-pub use handle::{Handle, Methods, release};
+pub use handle::{Function, Handle, Methods, release};
 pub use remote::{Callback, Port};
 pub use steps::{resume, resume_json, start, start_json};
 pub use task::{Need, Reply, Started, Step, cancel};
-pub use wire::{Answer, Bytes, Map, RegExp, Set};
+pub use wire::{Answer, Bytes, Map, RegExp, Rest, Set};
 #[doc(hidden)]
 pub use wire::{apply, fallible, nullable, ok, ready, run, sign, take_args};
 
@@ -92,6 +92,7 @@ pub const MODULES: &[Module] = &[
     crate::format::helper_headers::EXPORTS,
     crate::format::host_errors::EXPORTS,
     crate::format::issues::EXPORTS,
+    crate::format::layout::EXPORTS,
     crate::format::link_rule::EXPORTS,
     crate::format::listing::EXPORTS,
     crate::format::marketplace::blocked_hosts::EXPORTS,
@@ -105,6 +106,8 @@ pub const MODULES: &[Module] = &[
     crate::format::marketplace::renames::EXPORTS,
     crate::format::marketplace::source_failures::EXPORTS,
     crate::format::mcp_elicitation_check::EXPORTS,
+    crate::format::mcp_knobs::EXPORTS,
+    crate::format::mcp_output::EXPORTS,
     crate::format::mcp_prompts::EXPORTS,
     crate::format::mcp_reserved::EXPORTS,
     crate::format::mcp_tool::EXPORTS,
@@ -130,6 +133,7 @@ pub const MODULES: &[Module] = &[
     crate::format::validate::mcp_remote_checks::EXPORTS,
     crate::format::validate::path_claims::EXPORTS,
     crate::format::validate::plugin_name::EXPORTS,
+    crate::format::validate::plugin_paths::EXPORTS,
     crate::format::validate::received::EXPORTS,
     crate::format::validate::shell_command::EXPORTS,
     crate::format::validate::unknown_fields::EXPORTS,
@@ -146,10 +150,13 @@ pub const MODULES: &[Module] = &[
     crate::hooks::input::background_tasks::EXPORTS,
     crate::hooks::output::caps::EXPORTS,
     crate::hooks::output::defer::EXPORTS,
+    crate::hooks::output::merge_rules::EXPORTS,
     crate::hooks::output::pre_tool_use_outcome::EXPORTS,
     crate::hooks::output::reminder_tags::EXPORTS,
     crate::hooks::output::terminal_sequence::EXPORTS,
+    crate::hooks::output::tool_output::EXPORTS,
     crate::hooks::output::tool_shape::EXPORTS,
+    crate::hooks::output::worktree_path::EXPORTS,
     crate::hooks::select::lock_gates::EXPORTS,
     crate::hooks::select::matcher_values::EXPORTS,
     crate::hooks::source_kind::EXPORTS,
