@@ -26,11 +26,3 @@ export const isProfileName = (value: string | undefined): value is ProfileName =
 
 /** The matcher that selects a profile's tools. */
 export const matcherOf = (profile: ProfileName): string => call('matcherOf', profile);
-
-/** A matcher that matches every tool (hooks.md, "Matcher patterns": omitted, `""` or `*`). */
-export const matchesEverything = (matcher: string | undefined): boolean =>
-  call('matchesEverything', matcher);
-
-/** The one profile a matcher selects, in any order of its names; `undefined` for any other matcher. */
-export const profileOfMatcher = (matcher: string): ProfileName | undefined =>
-  call('profileOfMatcher', matcher);

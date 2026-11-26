@@ -27,9 +27,6 @@ export const modelFamily = (model: string): ModelAlias | undefined => call('mode
 /** The three forms the frontmatter `model` field takes. */
 export type ModelValueKind = 'alias' | 'full-id' | 'inherit';
 
-export const isModelAlias = (value: string | undefined): value is ModelAlias =>
-  call('isModelAlias', value);
-
 /**
  * Which form a `model` value is: one of the aliases `sonnet`, `opus`, `haiku`, `fable`; `inherit`; or
  * anything else, a full model ID that "accepts the same values as the `--model` flag" (so the kit

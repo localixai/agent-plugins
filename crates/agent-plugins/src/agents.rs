@@ -3,8 +3,12 @@
 pub mod builtin_model;
 pub mod catalog;
 pub mod handback_denial;
+pub mod hooks;
+pub mod launch;
+pub mod launch_model;
 pub mod mcp_scope;
 pub mod memory;
+pub mod model_choice;
 pub mod model_value;
 pub mod permission_baseline;
 pub mod preload_skills;

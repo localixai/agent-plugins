@@ -1,4 +1,4 @@
-//! Port of `src/convert/adapters/core-profiles-source.ts`, switched.
+//! Ported from `src/convert/adapters/core-profiles-source.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The tool profiles of the core (Agent Plugins Extended §18.2.7; core §7.3.6, §7.3.7) as JavaScript
 //! text, part of the program `run-core-handler.mjs`: the same table as `hooks/core/profiles.ts` and
@@ -162,9 +162,3 @@ function completedProfile(toolName, toolInput, call, cwd) {
   return result === undefined ? undefined : { ...pending, result };
 }
 "#;
-
-crate::registry::exports! {
-    "convert/adapters/core-profiles-source" {
-        "CORE_PROFILES_SOURCE" => ok || CORE_PROFILES_SOURCE;
-    }
-}

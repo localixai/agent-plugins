@@ -3,4 +3,6 @@
 
 pub mod auto_update_skips;
 pub mod env_flags;
+pub mod private_marketplace;
+pub mod refresh_before_install;
 pub mod update_targets;

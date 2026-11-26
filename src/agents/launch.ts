@@ -1,7 +1,6 @@
-import { isFalsyEnv } from '../format/env-flag.ts';
-import { AUTO_COMPACT_RANGE } from '../format/agent-scalars.ts';
 import type { CacheTtl } from '../format/agent-scalars.ts';
 import type { AgentIsolation } from '../format/agent-fields.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * Small pure decisions a host takes when it starts a subagent, one per frontmatter field that
@@ -9,9 +8,10 @@ import type { AgentIsolation } from '../format/agent-fields.ts';
  * foreground or background", "What loads at startup", "Set the auto-compact window for one
  * subagent"). The kit decides; compacting, running the turn loop, creating a worktree and loading
  * files are the host's. The model and effort decisions are in `launch-model.ts`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/launch.rs`, docs/RUST.md).
  */
-
-const { min: WINDOW_MIN, max: WINDOW_MAX } = AUTO_COMPACT_RANGE;
+const call = coreModule('agents/launch');
 
 export interface AutoCompactInput {
   /** The definition's `autoCompactWindow` (already read; a dropped field is undefined). */
@@ -24,28 +24,14 @@ export interface AutoCompactInput {
   readonly asMainSession: boolean;
 }
 
-const clamp = (tokens: number): number => Math.min(Math.max(tokens, WINDOW_MIN), WINDOW_MAX);
-
-/** model-config.md: a value below the minimum or above the maximum is treated as the limit. */
-const usableEnv = (env: number | undefined): number | undefined =>
-  env !== undefined && Number.isFinite(env) && env > 0 ? clamp(env) : undefined;
-
-const inRange = (tokens: number): boolean =>
-  Number.isSafeInteger(tokens) && tokens >= WINDOW_MIN && tokens <= WINDOW_MAX;
-
 /**
  * The auto-compact window a subagent compacts at. The variable wins ("the subagent uses that
  * variable's window instead and the field has no effect, unless Claude Code ignores the variable's
  * value"); the field only lowers ("To compact earlier, set a value below that window") and "has no
  * effect" for a session run as the agent.
  */
-export function effectiveAutoCompactWindow(input: AutoCompactInput): number {
-  const env = usableEnv(input.env);
-  if (env !== undefined) return env;
-  const { field, inherited } = input;
-  if (input.asMainSession || field === undefined || !inRange(field)) return inherited;
-  return Math.min(field, inherited);
-}
+export const effectiveAutoCompactWindow = (input: AutoCompactInput): number =>
+  call('effectiveAutoCompactWindow', input);
 
 export interface TurnLimitOutcome {
   readonly stop: boolean;
@@ -57,29 +43,20 @@ export interface TurnLimitOutcome {
  * Whether the subagent has reached `maxTurns`: "Maximum number of agentic turns before the
  * subagent stops". No limit unless it is a positive whole number (judgment, spec/judgments.md).
  */
-export function turnLimitOutcome(
+export const turnLimitOutcome = (
   maxTurns: number | undefined,
   turnsTaken: number,
-): TurnLimitOutcome {
-  const reached =
-    maxTurns !== undefined && Number.isInteger(maxTurns) && maxTurns >= 1 && turnsTaken >= maxTurns;
-  return { stop: reached, partial: reached };
-}
-
-const LONG_TTL: CacheTtl = '1h';
+): TurnLimitOutcome => call('turnLimitOutcome', maxTurns, turnsTaken);
 
 /**
  * The `cacheTtl` the frontmatter contributes to a subagent's requests: it "ignores `1h` while your
  * Claude subscription is using usage credits" (prompt-caching.md, "Choose the TTL yourself"). The
  * result is the frontmatter's step of the precedence; `undefined` leaves the decision to the next one.
  */
-export function effectiveCacheTtl(input: {
+export const effectiveCacheTtl = (input: {
   readonly cacheTtl?: CacheTtl | undefined;
   readonly usingUsageCredits: boolean;
-}): CacheTtl | undefined {
-  const { cacheTtl, usingUsageCredits } = input;
-  return usingUsageCredits && cacheTtl === LONG_TTL ? undefined : cacheTtl;
-}
+}): CacheTtl | undefined => call('effectiveCacheTtl', input);
 
 export interface BackgroundInput {
   /** The definition's `background`. */
@@ -98,7 +75,7 @@ export interface BackgroundInput {
 }
 
 /** Fork mode: on by default, `CLAUDE_CODE_FORK_SUBAGENT=0` (any off spelling) turns it off (spec §5.12.3). */
-export const forkModeOn = (value: string | undefined): boolean => !isFalsyEnv(value);
+export const forkModeOn = (value: string | undefined): boolean => call('forkModeOn', value);
 
 /**
  * Whether a subagent runs in the background. "With nothing configured, a subagent that Claude
@@ -106,11 +83,8 @@ export const forkModeOn = (value: string | undefined): boolean => !isFalsyEnv(va
  * "even when Claude asks to wait for it". With fork mode on, an interactive main conversation cannot
  * wait, so the subagent starts in the background there (env-vars.md, `CLAUDE_CODE_FORK_SUBAGENT`).
  */
-export function runsInBackground(input: BackgroundInput): boolean {
-  if (input.backgroundDisabled === true) return false;
-  const cannotWait = input.interactive === true && forkModeOn(input.forkSubagent);
-  return input.background === true || cannotWait || !input.claudeWillWait;
-}
+export const runsInBackground = (input: BackgroundInput): boolean =>
+  call('runsInBackground', input);
 
 export interface ClaudeMdScopes {
   readonly user: boolean;
@@ -121,34 +95,17 @@ export interface ClaudeMdScopes {
   readonly nested: boolean;
 }
 
-const ALL_CLAUDE_MD: ClaudeMdScopes = {
-  user: true,
-  project: true,
-  local: true,
-  managedPolicy: true,
-  nested: true,
-};
-
 /**
  * The CLAUDE.md files a subagent starts with. `omitClaudeMd` drops the user, project and local
  * files; "managed policy files still load, except for managed subagents"; it is "Ignored when the
  * agent runs as the main session agent". A subdirectory's CLAUDE.md and matching path-scoped rules
  * "still load when the subagent works with files there", with or without `omitClaudeMd` (`nested`).
  */
-export function claudeMdScopes(input: {
+export const claudeMdScopes = (input: {
   readonly omitClaudeMd?: boolean | undefined;
   readonly asMainSession: boolean;
   readonly managedSubagent: boolean;
-}): ClaudeMdScopes {
-  if (input.omitClaudeMd !== true || input.asMainSession) return ALL_CLAUDE_MD;
-  return {
-    user: false,
-    project: false,
-    local: false,
-    managedPolicy: !input.managedSubagent,
-    nested: true,
-  };
-}
+}): ClaudeMdScopes => call('claudeMdScopes', input);
 
 export type WorktreeDisposition = 'none' | 'cleanup' | 'keep';
 
@@ -158,29 +115,18 @@ export type WorktreeDisposition = 'none' | 'cleanup' | 'keep';
  * and one with changes "stays on disk until the periodic sweep" (worktrees.md, "Isolate subagents
  * with worktrees"). Without `isolation` there is no worktree: `none`.
  */
-export function worktreeDisposition(input: {
+export const worktreeDisposition = (input: {
   readonly isolation?: AgentIsolation | undefined;
   readonly hasChanges: boolean;
-}): WorktreeDisposition {
-  if (input.isolation !== 'worktree') return 'none';
-  return input.hasChanges ? 'keep' : 'cleanup';
-}
-
-/** Judgment: the docs say "Prepended to any user-provided prompt" and no separator; a blank line. */
-const PROMPT_SEPARATOR = '\n\n';
+}): WorktreeDisposition => call('worktreeDisposition', input);
 
 /**
  * The first user turn to submit for an agent run as the main session agent: its `initialPrompt`,
  * "Prepended to any user-provided prompt". A subagent run submits nothing (undefined). Processing
  * commands and skills in the text is the host's.
  */
-export function mainSessionFirstTurn(input: {
+export const mainSessionFirstTurn = (input: {
   readonly initialPrompt?: string | undefined;
   readonly asMainSession: boolean;
   readonly userPrompt?: string | undefined;
-}): string | undefined {
-  const initial = input.initialPrompt?.trim();
-  if (!input.asMainSession || initial === undefined || initial === '') return undefined;
-  const user = input.userPrompt?.trim();
-  return user === undefined || user === '' ? initial : `${initial}${PROMPT_SEPARATOR}${user}`;
-}
+}): string | undefined => call('mainSessionFirstTurn', input);

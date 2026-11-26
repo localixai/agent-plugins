@@ -127,6 +127,5 @@ crate::registry::exports! {
         "CORE_VERSIONS" => ok || CORE_VERSIONS;
         "coreSchemaId" => ok |version: CoreVersion, document: CoreDocument| core_schema_id(version, document);
         "coreSchemaVersion" => ok |value: JsValue, document: CoreDocument| core_schema_version(&value, document);
-        "isCoreManifestValue" => ok |raw: JsValue| is_core_manifest_value(&raw);
     }
 }

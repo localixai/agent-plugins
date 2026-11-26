@@ -197,7 +197,6 @@ crate::registry::exports! {
     "format/marketplace/ids" {
         "PLUGIN_ID_PART" => ok || crate::registry::RegExp { source: "^[A-Za-z0-9][A-Za-z0-9._-]*$".to_owned(), flags: String::new() };
         "isPluginIdPart" => ok |name: String| is_plugin_id_part(&name);
-        "INSTALL_RULE" => ok || INSTALL_RULE;
         "pluginIdIssues" => ok |part: IdPart, name: String, path: String| plugin_id_issues(part, &name, &path);
         "desktopNameIssues" => ok |part: IdPart, name: String, path: String| desktop_name_issues(part, &name, &path);
         "parsePluginRef" => ok |text: String| parse_plugin_ref(&text);

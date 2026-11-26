@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- More of loading, conversion, agents, marketplace installs, updates and skills run on the core:
+  trust checks (workspace, repository, local settings, headers helpers), manifest gates, the
+  subprocess scrub, bundle scopes and monitor triggers, the converters both ways, launch models,
+  marketplace downloads, version resolution, staged commits and install records, skill visibility
+  and file references.
 - A hook matcher tested against a value that is not text (an input that fails its schema) answers
   as before the move to the core: no list names it, and a pattern tests `String(value)`. A tool
   pattern's RegExp is compiled once per pattern again.

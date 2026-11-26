@@ -22,7 +22,3 @@ export const pathNotFound = (component: string, path: string): string =>
  */
 export const missingPath = (component: string, path: string): PluginIssue =>
   call('missingPath', component, path);
-
-/** The warning for a default folder a replacing manifest key leaves unscanned. */
-export const defaultFolderIgnored = (folder: string, key: string): string =>
-  call('defaultFolderIgnored', folder, key);

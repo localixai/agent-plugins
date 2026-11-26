@@ -26,9 +26,6 @@ export const archiveIntegrityMessage = (url: string, expected: string, actual: s
 export const npmRefusalMessage = (value: string, reason: string): string =>
   call('npmRefusalMessage', value, reason);
 
-/** The reason the docs give for a value that is not a package name and not a link, such as `github:acme/formatter`. */
-export const NOT_A_LINK: string = call('NOT_A_LINK');
-
 /** The message of a source type this version cannot fetch, with the line the docs say follows it. */
 export const UNSUPPORTED_SOURCE_TYPE: string = call('UNSUPPORTED_SOURCE_TYPE');
 

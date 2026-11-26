@@ -81,6 +81,5 @@ crate::registry::exports! {
     "format/messages" {
         "pathNotFound" => ok |component: String, path: String| path_not_found(&component, &path);
         "missingPath" => ok |component: String, path: String| missing_path(&component, &path);
-        "defaultFolderIgnored" => ok |folder: String, key: String| default_folder_ignored(&folder, &key);
     }
 }

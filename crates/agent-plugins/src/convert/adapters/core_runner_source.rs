@@ -1,4 +1,4 @@
-//! Port of `src/convert/adapters/core-runner-source.ts`, switched.
+//! Ported from `src/convert/adapters/core-runner-source.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The body of `run-core-handler.mjs` (Agent Plugins Extended §18.4.4): which Claude Code occurrences
 //! are core occurrences (§18.1.2: `SessionStart` on `startup`, `clear` and `fork` outside a subagent,
@@ -161,9 +161,3 @@ function main() {
 
 main();
 "#;
-
-crate::registry::exports! {
-    "convert/adapters/core-runner-source" {
-        "CORE_RUNNER_SOURCE" => ok || CORE_RUNNER_SOURCE;
-    }
-}

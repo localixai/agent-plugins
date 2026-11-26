@@ -17,9 +17,43 @@ pub fn math_min(first: f64, second: f64) -> f64 {
     first.min(second)
 }
 
+/// `Math.round(x)`: the nearest integer, a half toward `+Infinity` (Rust's `f64::round` takes it
+/// away from zero), `-0` for a value in `[-0.5, 0)`, and a value with no fraction as it is.
+#[must_use]
+pub fn math_round(value: f64) -> f64 {
+    if !value.is_finite() || value.abs() >= 4_503_599_627_370_496.0 {
+        return value;
+    }
+    let floor = value.floor();
+    let rounded = if value - floor >= 0.5 {
+        floor + 1.0
+    } else {
+        floor
+    };
+    if rounded == 0.0 && value.is_sign_negative() {
+        -0.0
+    } else {
+        rounded
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::math_min;
+    use super::{math_min, math_round};
+
+    #[test]
+    fn round_is_javascripts() {
+        assert_eq!(math_round(2.5).to_bits(), 3.0_f64.to_bits());
+        assert_eq!(math_round(-2.5).to_bits(), (-2.0_f64).to_bits());
+        assert_eq!(math_round(2.4).to_bits(), 2.0_f64.to_bits());
+        assert_eq!(
+            math_round(0.499_999_999_999_999_94).to_bits(),
+            0.0_f64.to_bits()
+        );
+        assert!(math_round(-0.3).is_sign_negative());
+        assert!(math_round(f64::NAN).is_nan());
+        assert_eq!(math_round(f64::INFINITY), f64::INFINITY);
+    }
 
     #[test]
     fn min_is_javascripts() {

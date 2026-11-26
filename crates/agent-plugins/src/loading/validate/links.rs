@@ -153,9 +153,6 @@ crate::registry::exports! {
         "FOLDER_STYLES" => ok || FOLDER_STYLES;
         "isLink" => async ok |files: Port, path: String, signal: Option<Signal>|
             is_link(&files, &path, signal.as_ref()).await;
-        "linkedFolder" => ok |folder: String| linked_folder(&folder);
-        "linkedEntries" => ok |folder: String, count: f64, style: FolderStyle| linked_entries(&folder, count, style);
-        "unreadComponents" => ok |folder: String, count: f64, style: FolderStyle| unread_components(&folder, count, style);
         "HOOKS_LINK" => ok || HOOKS_LINK;
         "MCP_NOT_REGULAR" => ok || MCP_NOT_REGULAR;
         "MCP_FILE_CAP_BYTES" => ok || MCP_FILE_CAP_BYTES;
