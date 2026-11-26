@@ -3,6 +3,7 @@
 
 pub mod agent_name;
 pub mod agent_record;
+pub mod agent_scalars;
 pub mod canonical_json;
 pub mod code_points;
 pub mod config_directory;
@@ -23,6 +24,7 @@ pub mod link_rule;
 pub mod listing;
 pub mod marketplace;
 pub mod mcp_elicitation_check;
+pub mod mcp_elicitation_form;
 pub mod mcp_knobs;
 pub mod mcp_output;
 pub mod mcp_prompts;
@@ -35,6 +37,7 @@ pub mod messages;
 pub mod mod_files;
 pub mod model_id;
 pub mod names;
+pub mod output_style;
 pub mod path_escape;
 pub mod path_text;
 pub mod permission_rule_shape;

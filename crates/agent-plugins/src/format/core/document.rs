@@ -1,4 +1,4 @@
-//! Port of `src/format/core/document.ts`, switched.
+//! Ported from `src/format/core/document.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The outer object of `mcp.json` and `hooks.json` (core §7.2.1, §7.3.1, §10.1): exactly `$schema`
 //! and one member (`mcpServers`, `hooks`) that is an object; a `$schema` the kit implements, of the
@@ -67,11 +67,5 @@ pub fn document_members(
     match fields.get(member) {
         Some(JsValue::Object(members)) => DocumentMembers::Members(members.clone()),
         Some(_) | None => DocumentMembers::Problem(format!("\"{member}\" must be an object")),
-    }
-}
-
-crate::registry::exports! {
-    "format/core/document" {
-        "documentMembers" => ok |raw: JsValue, document: CoreDocument, member: String, manifest_version: CoreVersion| document_members(&raw, document, &member, manifest_version);
     }
 }

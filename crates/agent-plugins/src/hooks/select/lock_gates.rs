@@ -76,6 +76,5 @@ pub fn passes_locks(entry: &RegisteredHandler, session: &HookSession) -> bool {
 crate::registry::exports! {
     "hooks/select/lock-gates" {
         "pluginOnlyAllows" => ok |entry: RegisteredHandler| plugin_only_allows(&entry);
-        "passesLocks" => ok |entry: RegisteredHandler, session: HookSession| passes_locks(&entry, &session);
     }
 }

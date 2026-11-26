@@ -6,31 +6,13 @@
 //! `Agent`, `Skill`, `AskUserQuestion` and every bookkeeping tool), and so does a call the entry's
 //! criteria exclude (a `Monitor` with `ws`, a `WebFetch` of a relative URL).
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
+use super::types::{CoreCallFacts, CoreToolProfile};
 use crate::js::JsValue;
 use crate::js::url;
 use crate::js::value::JsObject;
 use crate::protocol::is_record::is_record;
-
-/// What the host knows of a call that Claude Code's input does not carry (`CoreCallFacts`); only
-/// the field a profile reads is named.
-#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CoreCallFacts {
-    /// The tool name an MCP server declared, as sent in `tools/call` (`latest_tag`).
-    #[serde(default)]
-    pub mcp_tool_name: Option<String>,
-}
-
-/// A portable tool profile: its name and its input projection.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct CoreToolProfile {
-    /// The profile's name (`shell`, `file.modify`, …).
-    pub name: String,
-    /// The input projection.
-    pub input: JsObject,
-}
 
 /// What a projector reads besides the input.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -51,6 +33,7 @@ fn profile(name: &str, input: JsObject) -> CoreToolProfile {
     CoreToolProfile {
         name: name.to_owned(),
         input,
+        result: None,
     }
 }
 

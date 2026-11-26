@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/background-tasks.ts`, switched.
+//! Ported from `src/hooks/input/background-tasks.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `background_tasks` and `session_crons` of a `Stop` or `SubagentStop` input (hooks.md, "Stop
 //! input"): free text is "capped at 1000 characters with an in-string `… [+N chars]` marker when
@@ -123,11 +123,4 @@ pub fn normalize_session_crons(crons: &[SessionCron]) -> Vec<SessionCron> {
             kept
         })
         .collect()
-}
-
-crate::registry::exports! {
-    "hooks/input/background-tasks" {
-        "normalizeBackgroundTasks" => ok |tasks: Vec<BackgroundTask>, path: String| normalize_background_tasks(&tasks, &path);
-        "normalizeSessionCrons" => ok |crons: Vec<SessionCron>| normalize_session_crons(&crons);
-    }
 }

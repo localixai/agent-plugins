@@ -1,11 +1,15 @@
-import { parseFrontmatter } from './frontmatter.ts';
-import { readFlag, readText, type FieldRead } from './frontmatter-values.ts';
-import { warning, type PluginIssue } from './issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
 
 /**
  * A custom output style (output-styles.md, "Create a custom output style"): a Markdown file whose
  * frontmatter is metadata and whose body is the instructions Claude Code sends with every request.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/output_style.rs`, docs/RUST.md).
  */
+
+const call = coreModule('format/output-style');
+
 export interface OutputStyle {
   /** `name`, else the file name without `.md`. */
   readonly name: string;
@@ -36,78 +40,17 @@ export interface OutputStyleRead {
   readonly issues: readonly PluginIssue[];
 }
 
-/** `output-styles/terse.md` is `terse`; both `/` and `\` separate a path. */
-function fileName(path: string): string {
-  const base = path.split(/[\\/]/).pop() ?? path;
-  return base.replace(/\.md$/i, '');
-}
-
-/**
- * A `name` that is not a string is read as its JavaScript string conversion (spec J6.2, oracle
- * 2.1.319 and 2.1.322): `[a, b]` is `a,b`, a map `[object Object]`; a blank one is absent.
- */
-function styleName(
-  value: unknown,
-  take: (read: FieldRead<string>) => string | undefined,
-): string | undefined {
-  if (typeof value !== 'object' || value === null) return take(readText(FIELD_KEYS.name, value));
-  // JavaScript's conversion, written out: a list joins its items with `,`, a map is `[object Object]`.
-  const text = (Array.isArray(value) ? value.join(',') : '[object Object]').trim();
-  return text === '' ? undefined : text;
-}
-
-const FIELD_KEYS = {
-  name: 'name',
-  description: 'description',
-  keep: 'keep-coding-instructions',
-  force: 'force-for-plugin',
-} as const;
-
 /**
  * Read one output style file. Never throws and never refuses a file (output-styles.md: "If the
  * YAML doesn't parse, the style still loads under its file name with no fields set"; "A misspelled
  * field is ignored without an error"). What the docs leave open is in spec/judgments.md: a YAML
  * error and a value of the wrong shape are warnings, never errors.
  */
-export function readOutputStyle(
+export const readOutputStyle = (
   path: string,
   text: string,
   context: OutputStyleContext = {},
-): OutputStyleRead {
-  const parsed = parseFrontmatter(text);
-  const issues: PluginIssue[] = [];
-  if (parsed.problem !== undefined) {
-    const where = parsed.line === undefined ? '' : ` (line ${parsed.line})`;
-    issues.push(
-      warning(
-        path,
-        `frontmatter ${parsed.problem}${where}; the style loads under its file name with no fields set`,
-      ),
-    );
-  }
-  const take = <T>(read: FieldRead<T>): T | undefined => {
-    if (read.problem) issues.push(warning(path, `${read.problem.key} ${read.problem.reason}`));
-    return read.value;
-  };
-  const { fields } = parsed;
-  const name = styleName(fields[FIELD_KEYS.name], take) ?? fileName(path);
-  const description = take(readText(FIELD_KEYS.description, fields[FIELD_KEYS.description]));
-  const keep = take(readFlag(FIELD_KEYS.keep, fields[FIELD_KEYS.keep])) ?? false;
-  const force = take(readFlag(FIELD_KEYS.force, fields[FIELD_KEYS.force])) ?? false;
-  const { plugin } = context;
-  return {
-    style: {
-      name,
-      id: plugin === undefined ? name : `${plugin}:${name}`,
-      ...(description === undefined ? {} : { description }),
-      keepCodingInstructions: keep,
-      forceForPlugin: plugin !== undefined && force,
-      instructions: parsed.body.trim(),
-      path,
-    },
-    issues,
-  };
-}
+): OutputStyleRead => call('readOutputStyle', path, text, context);
 
 /**
  * Of one plugin's styles that give the same `name`, exactly one is kept: the one whose path
@@ -115,11 +58,5 @@ export function readOutputStyle(
  * `terse.md` and `terse2.md` both named `Terse`, `terse2.md` is listed). A fixed order keeps the
  * result independent of the file system's. The kept style stays where it was.
  */
-export function lastPerName(styles: readonly OutputStyle[]): OutputStyle[] {
-  const kept = new Map<string, OutputStyle>();
-  for (const style of styles) {
-    const held = kept.get(style.name);
-    if (held === undefined || held.path < style.path) kept.set(style.name, style);
-  }
-  return styles.filter((style) => kept.get(style.name) === style);
-}
+export const lastPerName = (styles: readonly OutputStyle[]): OutputStyle[] =>
+  call('lastPerName', styles);
