@@ -11,17 +11,6 @@ import type { ShellCommand, ShellWord } from './words.ts';
  */
 const call = coreModule('rules/bash/wrappers');
 
-/**
- * Where each form of a command starts among its words: at its first word, then after each wrapper
- * or assignment is removed in turn, so `timeout 5 nohup npm test` is also `nohup npm test` and `npm
- * test`.
- */
-export const formStarts = (
-  words: readonly ShellWord[],
-  behavior: PermissionBehavior,
-  safeEnv?: ReadonlySet<string>,
-): readonly number[] => call('formStarts', words, behavior, safeEnv);
-
 /** The words of the command a subcommand runs once every leading wrapper and assignment is removed. */
 export const strippedWords = (
   command: ShellCommand,

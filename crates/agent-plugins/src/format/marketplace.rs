@@ -12,6 +12,7 @@ pub mod marketplace_name_lists;
 pub mod marketplace_names;
 pub mod marketplace_schema;
 pub mod plugin_source_fields;
+pub mod plugin_source_kinds;
 pub mod renames;
 pub mod source_failures;
 pub mod types;

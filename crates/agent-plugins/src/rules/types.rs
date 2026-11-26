@@ -216,3 +216,41 @@ pub struct ToolCall {
     #[serde(default)]
     pub input: crate::js::JsValue,
 }
+
+/// A tool call with what the host resolved for it (`PreparedCall`).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreparedCall {
+    /// The call.
+    #[serde(flatten)]
+    pub call: ToolCall,
+    /// The paths the call resolves to.
+    #[serde(default)]
+    pub resolved_paths: Option<Vec<String>>,
+    /// Every name the called skill goes by (its alias, its display name, a qualified form), which a
+    /// `Skill(skill:<name>)` deny rule matches (permissions.md, "Match by input parameter"). The
+    /// host knows its skills; the kit holds no skill catalog.
+    #[serde(default)]
+    pub skill_names: Option<Vec<String>>,
+    /// The hosts a sandboxed Bash, PowerShell or Monitor command names for itself in auto mode
+    /// (sandboxing.md, "Per-command allowed domains in auto mode"). The SDK types no field for
+    /// them, so the host reads them from its input. A command that carries hosts "goes to the
+    /// classifier instead of being approved by a permission rule".
+    #[serde(default)]
+    pub allowed_domains: Option<Vec<String>>,
+}
+
+/// Everything a rule needs beside the call itself (`MatchContext`).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchContext {
+    /// The folders and platform.
+    pub paths: PathContext,
+    /// Environment variables an allow rule may see through when it strips `VAR=value` prefixes.
+    #[serde(default)]
+    pub safe_env_vars: Option<crate::registry::Set<String>>,
+    /// The rule type whose depth rule reads a single-directory relative path pattern, when it is
+    /// not the rule's own behaviour.
+    #[serde(default)]
+    pub depth_of: Option<PermissionBehavior>,
+}

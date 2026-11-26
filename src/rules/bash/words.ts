@@ -3,12 +3,9 @@
  * unquoted `<` or `>` ends a word wherever it stands, so `echo x>/etc/x` is `echo x` writing
  * `/etc/x`; a descriptor number or `{name}` written right before the operator is part of it.
  *
- * Implemented by the Rust core (`crates/agent-plugins/src/rules/bash/words.rs`, docs/RUST.md).
+ * Types only: the Rust core reads commands (`crates/agent-plugins/src/rules/bash/words.rs`,
+ * docs/RUST.md), and these are the shapes it answers in.
  */
-import { coreModule } from '../../wasm/bridge.ts';
-import { BASH_DIALECT, type ShellDialect } from './dialect.ts';
-
-const call = coreModule('rules/bash/words');
 
 /**
  * One shell word as the shell passes it to the command, and what in it the shell still expands
@@ -59,21 +56,3 @@ export interface ShellCommand {
   readonly words: readonly ShellWord[];
   readonly redirects: readonly Redirect[];
 }
-
-/** The words and operators of one command, quoted and nested parts kept whole. */
-export const wordsOf = (command: string, dialect: ShellDialect = BASH_DIALECT): readonly Word[] =>
-  call('wordsOf', command, dialect);
-
-/** One command read into its words and redirections. */
-export const readCommand = (text: string, dialect: ShellDialect = BASH_DIALECT): ShellCommand =>
-  call('readCommand', text, dialect);
-
-/**
- * A word as the shell passes it and as written. A Windows path is read both ways: its `\` is a
- * separator to the program though Bash reads it as an escape (`C:\Windows`, `\\server\share`).
- */
-export const spellingsOf = (word: ShellWord): readonly string[] => call('spellingsOf', word);
-
-/** The command's words as a rule reads them: the name unquoted, one space apart, continuations cut. */
-export const spokenForm = (words: readonly ShellWord[], dialect: ShellDialect): string =>
-  call('spokenForm', words, dialect);

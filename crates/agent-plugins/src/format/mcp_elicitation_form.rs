@@ -294,8 +294,6 @@ crate::registry::exports! {
     "format/mcp-elicitation-form" {
         "ELICITATION_FORMATS" => ok || ELICITATION_FORMATS;
         "elicitationFormFields" => ok |schema: Option<JsObject>| elicitation_form_fields(schema.as_ref());
-        "contentOf" => ok |values: JsObject| content_of(&values);
         "elicitationFieldProblems" => ok |schema: Option<JsObject>, values: JsObject| elicitation_field_problems(schema.as_ref(), &values);
-        "formAnswer" => ok |request: JsValue, values: JsObject| form_answer(&request, &values);
     }
 }

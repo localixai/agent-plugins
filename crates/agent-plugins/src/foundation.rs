@@ -2,5 +2,7 @@
 
 pub mod folder_read;
 pub mod folder_walk;
+pub mod json_size;
 pub mod json_value;
+pub mod plain_data;
 pub mod project_directories;

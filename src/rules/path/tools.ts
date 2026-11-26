@@ -13,21 +13,6 @@ import type { PathContext, ToolCall } from '../types.ts';
 
 const call = coreModule('rules/path/tools');
 
-/**
- * The path tools and the field each carries its path in: `file_path` for Read, Edit and Write, `path`
- * for Grep and Glob, `notebook_path` for NotebookEdit (permissions.md, "Match by input parameter";
- * hooks.md, the PreToolUse input tables). A search tool's path is a directory and, when omitted, "the
- * current working directory will be used" (the SDK's own field description).
- */
-export interface PathTool {
-  readonly field: string;
-  readonly searches: boolean;
-  /** "file-reading tools, such as Read, Grep, and Glob" (permissions.md, "Network paths"). */
-  readonly reads: boolean;
-  /** The field of a pattern that, written as an absolute or `~` path, says where the search is. */
-  readonly pattern?: string;
-}
-
 /** @public A compile-time drift guard: the SDK's path fields are strings (Glob and Grep optional). */
 export type PathFieldsAreText = Assert<
   Equal<
@@ -42,8 +27,6 @@ export type PathFieldsAreText = Assert<
     [string, string, string, string, string, string]
   >
 >;
-
-export const PATH_TOOLS: ReadonlyMap<string, PathTool> = call('PATH_TOOLS');
 
 /**
  * The text of the path a call acts on, as sent (a rooted Glob pattern's directory before the `path`

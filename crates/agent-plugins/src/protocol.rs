@@ -7,6 +7,7 @@ pub mod hook_config;
 pub mod hook_events;
 pub mod is_record;
 pub mod mods_api_names;
+pub mod mods_events;
 pub mod mods_limits;
 pub mod mods_settings;
 pub mod mods_tiers;

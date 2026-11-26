@@ -36,3 +36,35 @@ pub enum HookPermissionDecision {
     /// `defer`.
     Defer,
 }
+
+/// The paths beside the protected lists that a session protects (`ProtectedPathOptions`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtectedPathOptions {
+    /// Files passed to `--settings`, `--mcp-config` or `--agents`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub files: Option<Vec<String>>,
+    /// The files that a symlinked settings file points to. Unlike `files`, a write to one prompts
+    /// in the modes that route protected-path writes to the classifier, "even when an allow rule
+    /// matches".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symlink_targets: Option<Vec<String>>,
+    /// The directory `CLAUDE_CONFIG_DIR` points to, in place of `~/.claude` (default
+    /// `~/.claude`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_directory: Option<String>,
+    /// Directories loaded with `--plugin-dir`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub directories: Option<Vec<String>>,
+    /// The `plansDirectory` setting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plans_directory: Option<String>,
+    /// The signature, sync and consent files the host keeps beside `remote-settings.json`, by
+    /// path. The docs name them by role only, so the kit protects these and guesses no name (Agent
+    /// Plugins Extended J13.35).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_settings_files: Option<Vec<String>>,
+    /// A session started with `--restricted`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub restricted: Option<bool>,
+}

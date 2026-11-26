@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Permission rules run more of their work on the core: Bash, Monitor and PowerShell command
+  rules, WebFetch domain, Agent and Skill rules, protected paths, critical and PowerShell
+  removals, the read and write blocks, the read-only set, tool availability and host tool names,
+  the startup warnings of a rule list and the tools' limits; so do the mods event catalog, the
+  object plugin sources and MCP elicitation answers.
 - A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
   in the order the manifest declares them (run together, the order followed how long each path
   took to resolve).

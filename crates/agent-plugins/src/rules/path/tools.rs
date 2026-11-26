@@ -67,7 +67,9 @@ const PATH_TOOLS: [(&str, PathTool); 8] = [
     ("LSP", tool(LSP_FIELD, false, false)),
 ];
 
-fn path_tool(tool_name: &str) -> Option<&'static PathTool> {
+/// The path tool of this name, if it is one.
+#[must_use]
+pub fn path_tool(tool_name: &str) -> Option<&'static PathTool> {
     PATH_TOOLS
         .iter()
         .find(|(name, _)| *name == tool_name)
@@ -228,7 +230,6 @@ pub fn coverage() -> Map<&'static str, Coverage> {
 
 crate::registry::exports! {
     "rules/path/tools" {
-        "PATH_TOOLS" => ok path_tools;
         "pathText" => ok |call: ToolCall| path_text(&call);
         "requestedPath" => ok |call: ToolCall, paths: PathContext| requested_path(&call, &paths);
         "searchesDirectory" => ok |tool_name: String| searches_directory(&tool_name);

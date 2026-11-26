@@ -228,12 +228,5 @@ pub fn read_git_pin(raw: &RawSource, site: &SourceSite) -> Option<Checked<GitPin
 crate::registry::exports! {
     "format/marketplace/plugin-source-fields" {
         "invalidInput" => ok |site: SourceSite| invalid_input(&site);
-        "isText" => ok |value: JsValue| is_text(&value);
-        "refined" => ok |source: JsValue, issues: Vec<PluginIssue>| refined(&source, &issues);
-        "fieldError" => ok |site: SourceSite, key: String, message: String| field_error(&site, &key, &message);
-        "required" => ok |raw: RawSource, key: String| required(&raw, &key);
-        "optionalText" => ok |raw: RawSource, key: String| optional_text(&raw, &key);
-        "optionalDigest" => ok |raw: RawSource, site: SourceSite| optional_digest(&raw, &site);
-        "readGitPin" => ok |raw: RawSource, site: SourceSite| read_git_pin(&raw, &site);
     }
 }

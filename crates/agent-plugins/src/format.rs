@@ -24,6 +24,7 @@ pub mod link_rule;
 pub mod listing;
 pub mod locate;
 pub mod marketplace;
+pub mod mcp_elicitation;
 pub mod mcp_elicitation_check;
 pub mod mcp_elicitation_form;
 pub mod mcp_knobs;

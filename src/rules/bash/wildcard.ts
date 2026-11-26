@@ -10,9 +10,6 @@ const call = coreModule('rules/bash/wildcard');
 /** `ls:*` is `ls *`: "an equivalent way to write a trailing wildcard", recognized only at the end. */
 export const normalizePattern = (pattern: string): string => call('normalizePattern', pattern);
 
-/** Whether a Bash pattern holds a `*`, `:*` suffix included: an exact rule holds none. */
-export const hasWildcard = (pattern: string): boolean => call('hasWildcard', pattern);
-
 export interface PatternOptions {
   /** PowerShell matches without regard to case. */
   readonly ignoreCase?: boolean;

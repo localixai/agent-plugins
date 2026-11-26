@@ -97,6 +97,18 @@ pub struct HostPaths {
     pub platform: Platform,
 }
 
+impl From<&crate::rules::types::PathContext> for HostPaths {
+    /// The `cwd`, `home` and `platform` of a `PathContext`, as the TypeScript passes one where a
+    /// `Pick` of it is asked.
+    fn from(paths: &crate::rules::types::PathContext) -> Self {
+        Self {
+            cwd: paths.cwd.clone(),
+            home: paths.home.clone(),
+            platform: paths.platform,
+        }
+    }
+}
+
 /// A host path in POSIX form, `~` expanded and resolved against the session's current directory:
 /// the one reading of a path the rules, the working directories and the modes share.
 #[must_use]
@@ -172,7 +184,6 @@ crate::registry::exports! {
         "normalizeAbsolute" => ok |path: String| normalize_absolute(&path);
         "resolvePath" => ok |base: String, path: String| resolve_path(&base, &path);
         "absolutePath" => ok |path: String, paths: HostPaths| absolute_path(&path, &paths);
-        "foldPath" => ok |path: String, platform: Platform| fold_path(&path, platform);
         "relativeWithin" => ok |root: String, path: String, platform: Option<Platform>| relative_within(&root, &path, platform);
         "dirnameOf" => ok |path: String| dirname_of(&path);
         "hasGlobSyntax" => ok |segment: String| has_glob_syntax(&segment);
