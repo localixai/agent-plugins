@@ -4,6 +4,7 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/rules/tool_pattern.rs`, docs/RUST.md).
  */
 import { coreModule } from '../wasm/bridge.ts';
+import { memoize } from './memo.ts';
 import type { PermissionRule } from './types.ts';
 
 const call = coreModule('rules/tool-pattern');
@@ -13,7 +14,13 @@ const call = coreModule('rules/tool-pattern');
  * sequence of characters, spaces and slashes included, and every other character is literal.
  */
 export const wildcardRegExp = (pattern: string, flags = ''): RegExp =>
-  call('wildcardRegExp', pattern, flags);
+  compiled(`${flags}/${pattern}`);
+
+/** One RegExp per flags and pattern, as the callers in TypeScript test one many times. */
+const compiled = memoize((key): RegExp => {
+  const cut = key.indexOf('/');
+  return call('wildcardRegExp', key.slice(cut + 1), key.slice(0, cut));
+});
 
 /**
  * Whether an allow rule's tool-name glob names one server: permissions.md ("Tool name wildcards")

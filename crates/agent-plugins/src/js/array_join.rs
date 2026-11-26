@@ -13,6 +13,20 @@ pub fn array_join(items: &[JsValue], separator: &str) -> String {
         .join(separator)
 }
 
+/// `String(value)`: what `join` writes for an item, but `undefined` and `null` named.
+#[must_use]
+pub fn string_of(value: &JsValue) -> String {
+    match value {
+        JsValue::Undefined => "undefined".to_owned(),
+        JsValue::Null => "null".to_owned(),
+        other @ (JsValue::Bool(_)
+        | JsValue::Number(_)
+        | JsValue::String(_)
+        | JsValue::Array(_)
+        | JsValue::Object(_)) => item_text(other),
+    }
+}
+
 /// What `join` writes for one item.
 fn item_text(item: &JsValue) -> String {
     match item {
@@ -40,5 +54,8 @@ mod tests {
             JsValue::Object(crate::js::JsObject::new()),
         ];
         assert_eq!(array_join(&items, ","), "a,,1.5,true,1,,[object Object]");
+        assert_eq!(string_of(&JsValue::Null), "null");
+        assert_eq!(string_of(&JsValue::Undefined), "undefined");
+        assert_eq!(string_of(&JsValue::Number(5.0)), "5");
     }
 }

@@ -22,7 +22,7 @@ mod uri;
 pub mod url;
 pub mod value;
 
-pub use array_join::array_join;
+pub use array_join::{array_join, string_of};
 pub use json_stringify::{json_stringify, json_stringify_indented};
 pub use math::math_min;
 pub use promise::{promise_all, promise_all_pair};
