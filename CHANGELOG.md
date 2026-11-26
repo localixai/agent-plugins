@@ -9,6 +9,11 @@
   stay TypeScript. The package carries the module (about 1.7 MB) and compiles it once when it
   loads (about 35 ms); `bun run build:wasm` builds it, with a stable Rust and the
   `wasm32-unknown-unknown` target (`rust-toolchain.toml`).
+- The frontmatter reader and writer (`format/frontmatter`, `format/frontmatter-write`) run on the
+  core, which reads and writes YAML as the `yaml` package does: the same values, errors and
+  their places, the same written text. Where it answers differently is in docs/RUST.md, "Where the
+  crate answers differently": YAML nested past 128 collections is refused, the YAML 1.1 tags and
+  schema are not read, and an alias inside its own anchor reads as an empty list.
 
 ## [0.2.0] - 2026-11-23
 

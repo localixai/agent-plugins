@@ -314,7 +314,6 @@ pub fn read_enum(key: &str, value: &JsValue, allowed: &[&str]) -> FieldRead<Stri
 
 crate::registry::exports! {
     "format/frontmatter-values" {
-        "NOT_A_TABLE" => ok || NOT_A_TABLE;
         "readFlag" => ok |key: String, value: JsValue| read_flag(&key, &value);
         "readText" => ok |key: String, value: JsValue| read_text(&key, &value);
         "readList" => ok |key: String, value: JsValue, options: ListOptions| read_list(&key, &value, options);
