@@ -1,0 +1,836 @@
+{"fn":"RegExp","args":["(",""],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["(","u"],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":[")",""],"outcomes":[{"throws":"Invalid regular expression: unmatched parentheses"}],"spec":[]}
+{"fn":"RegExp","args":[")","u"],"outcomes":[{"throws":"Invalid regular expression: unmatched parentheses"}],"spec":[]}
+{"fn":"RegExp","args":["a)",""],"outcomes":[{"throws":"Invalid regular expression: unmatched parentheses"}],"spec":[]}
+{"fn":"RegExp","args":["a)","u"],"outcomes":[{"throws":"Invalid regular expression: unmatched parentheses"}],"spec":[]}
+{"fn":"RegExp","args":["((a)",""],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["((a)","u"],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["[",""],"outcomes":[{"throws":"Invalid regular expression: missing terminating ] for character class"}],"spec":[]}
+{"fn":"RegExp","args":["[","u"],"outcomes":[{"throws":"Invalid regular expression: missing terminating ] for character class"}],"spec":[]}
+{"fn":"RegExp","args":["[a",""],"outcomes":[{"throws":"Invalid regular expression: missing terminating ] for character class"}],"spec":[]}
+{"fn":"RegExp","args":["[a","u"],"outcomes":[{"throws":"Invalid regular expression: missing terminating ] for character class"}],"spec":[]}
+{"fn":"RegExp","args":["[b-a]",""],"outcomes":[{"throws":"Invalid regular expression: range out of order in character class"}],"spec":[]}
+{"fn":"RegExp","args":["[b-a]","u"],"outcomes":[{"throws":"Invalid regular expression: range out of order in character class"}],"spec":[]}
+{"fn":"RegExp","args":["a{2,1}",""],"outcomes":[{"throws":"Invalid regular expression: numbers out of order in {} quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["a{2,1}","u"],"outcomes":[{"throws":"Invalid regular expression: numbers out of order in {} quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["*",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["+a",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["+a","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["?",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["?","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a**",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a**","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a{1}{2}",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a{1}{2}","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\",""],"outcomes":[{"throws":"Invalid regular expression: \\ at end of pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\","u"],"outcomes":[{"throws":"Invalid regular expression: \\ at end of pattern"}],"spec":[]}
+{"fn":"RegExp","args":["a\\",""],"outcomes":[{"throws":"Invalid regular expression: \\ at end of pattern"}],"spec":[]}
+{"fn":"RegExp","args":["a\\","u"],"outcomes":[{"throws":"Invalid regular expression: \\ at end of pattern"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)(?<a>y)",""],"outcomes":[{"throws":"Invalid regular expression: duplicate group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)(?<a>y)","u"],"outcomes":[{"throws":"Invalid regular expression: duplicate group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<1a>x)",""],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<1a>x)","u"],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a",""],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a","u"],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<>x)",""],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["(?<>x)","u"],"outcomes":[{"throws":"Invalid regular expression: invalid group specifier name"}],"spec":[]}
+{"fn":"RegExp","args":["\\k<b>(?<a>x)",""],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["\\k<b>(?<a>x)","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)\\k<b>",""],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)\\k<b>","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)\\k",""],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>x)\\k","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["(?",""],"outcomes":[{"throws":"Invalid regular expression: unrecognized character after (?"}],"spec":[]}
+{"fn":"RegExp","args":["(?","u"],"outcomes":[{"throws":"Invalid regular expression: unrecognized character after (?"}],"spec":[]}
+{"fn":"RegExp","args":["(?x)",""],"outcomes":[{"throws":"Invalid regular expression: unrecognized character after (?"}],"spec":[]}
+{"fn":"RegExp","args":["(?x)","u"],"outcomes":[{"throws":"Invalid regular expression: unrecognized character after (?"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=a",""],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=a","u"],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["(?=a",""],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["(?=a","u"],"outcomes":[{"throws":"Invalid regular expression: missing )"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{Foo}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\p{Foo}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{L",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\p{L","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["\\P",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\P","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{110000}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{110000}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\c1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\q",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\q","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\00",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\00","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\d-z]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\d-z]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid range in character class for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["a{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a{","u"],"outcomes":[{"throws":"Invalid regular expression: incomplete {} quantifier for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["{","u"],"outcomes":[{"throws":"Invalid regular expression: incomplete {} quantifier for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["]","u"],"outcomes":[{"throws":"Invalid regular expression: unmatched ] or } bracket for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["}","u"],"outcomes":[{"throws":"Invalid regular expression: unmatched ] or } bracket for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["(?i-i:a)",""],"outcomes":[{"throws":"Invalid regular expression: invalid regular expression modifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?i-i:a)","u"],"outcomes":[{"throws":"Invalid regular expression: invalid regular expression modifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?ii:a)",""],"outcomes":[{"throws":"Invalid regular expression: invalid regular expression modifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?ii:a)","u"],"outcomes":[{"throws":"Invalid regular expression: invalid regular expression modifier"}],"spec":[]}
+{"fn":"RegExp","args":["x{99999999999}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["x{99999999999}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[[a-z]--b]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[[a-z]--b]","u"],"outcomes":[{"throws":"Invalid regular expression: unmatched ] or } bracket for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\u12",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u12","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["^*",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["^*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a|*",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["a|*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\ ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ ","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\ ]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\ ]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\!",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\!","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\!]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\!]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\\"",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\\"","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\\"]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\\"]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\#",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\#","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\#]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\#]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\$","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\$]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\$]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\%",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\%","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\%]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\%]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\&",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\&","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\&]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\&]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\'",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\'","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\']",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\']","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\(",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\(","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\(]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\(]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\)","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\)]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\)]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\*","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\*]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\*]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\+","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\+]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\+]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\,",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\,","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\,]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\,]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\-",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\-","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\-]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\-]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\.",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\.","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\.]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\.]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\/",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\/","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\/]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\/]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\0",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\0","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\0]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\0]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\2",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\2","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\2]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\2]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\3",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\3","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\3]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\3]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\4",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\4","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\4]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\4]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\5",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\5","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\5]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\5]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\6",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\6","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\6]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\6]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\7",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\7","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\7]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\7]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\8",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\8","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\8]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\8]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\9",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\9","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\9]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\9]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\:",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\:","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\:]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\:]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\;",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\;","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\;]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\;]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\<",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\<","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\<]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\<]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\=",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\=","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\=]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\=]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\>",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\>","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\>]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\>]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\?",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\?","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\?]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\?]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\@",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\@","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\@]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\@]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\A",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\A","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\A]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\A]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\B",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\B","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\B]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\B]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\C",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\C","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\C]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\C]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\D",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\D","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\D]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\D]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\E",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\E","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\E]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\E]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\F",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\F","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\F]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\F]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\G",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\G","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\G]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\G]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\H",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\H","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\H]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\H]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\I",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\I","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\I]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\I]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\J",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\J","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\J]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\J]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\K",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\K","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\K]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\K]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\L",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\L","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\L]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\L]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\M",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\M","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\M]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\M]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\N",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\N","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\N]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\N]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\O",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\O","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\O]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\O]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\P",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\P","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["[\\P]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\P]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["\\Q",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\Q","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\Q]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\Q]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\R",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\R","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\R]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\R]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\S",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\S","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\S]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\S]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\T",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\T","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\T]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\T]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\U",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\U","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\U]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\U]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\V",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\V","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\V]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\V]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\W",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\W","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\X",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\X","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\X]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\X]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\Y",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\Y","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\Y]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\Y]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\Z",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\Z","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\Z]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\Z]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\[",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\[","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\[]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\[]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\\\",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\\\","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\\\]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\\\]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\]]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\]]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\^",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\^","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\^]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\^]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\_",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\_","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\_]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\_]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\`",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\`","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\`]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\`]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\a",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\a","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\a]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\a]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\b","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\b]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\b]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\c",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\c]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\c]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\d",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\d","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\d]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\d]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\e",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\e","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\e]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\e]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\f",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\f","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\f]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\f]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\g",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\g","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\g]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\g]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\h",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\h","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\h]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\h]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\i",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\i","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\i]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\i]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\j",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\j","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\j]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\j]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\k",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\k","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\k]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\k]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\l",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\l","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\l]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\l]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\m",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\m","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\m]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\m]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\n",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\n","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\n]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\n]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\o",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\o","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\o]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\o]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\p",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\p","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["[\\p]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\p]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid property expression"}],"spec":[]}
+{"fn":"RegExp","args":["\\q",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\q","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\q]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\q]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\r",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\r","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\r]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\r]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\s",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\s","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\s]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\s]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\t",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\t","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\t]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\t]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\u",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\v",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\v","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\v]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\v]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\w",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\w","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\w]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\w]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\x",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\x","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\x]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\x]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\y",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\y","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\y]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\y]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\z",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\z","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\z]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\z]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\{","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\{]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\{]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\|",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\|","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\|]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\|]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\}]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\~",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\~","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\~]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\~]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\é",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\é","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\é]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\é]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\ÿ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ÿ","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\ÿ]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\ÿ]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\ſ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ſ","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\ſ]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\ſ]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\K",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\K","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\K]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\K]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\‌",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\‌","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\‌]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\‌]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\‍",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\‍","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\‍]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\‍]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\ ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ ","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\ ]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\ ]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\😀",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\😀","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\😀]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\😀]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\u",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u12",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u12","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u12]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u12]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u123",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u123","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u123]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u123]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u+00e",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u+00e","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u+00e]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u+00e]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u$","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u$]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u$]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode \\u escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{}]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{+41}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{+41}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{+41}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{+41}]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{-1}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{-1}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{-1}]",""],"outcomes":[{"throws":"Invalid regular expression: range out of order in character class"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{-1}]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{110000}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{110000}","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{110000}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{110000}]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid Unicode code point \\u{} escape"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{10FFFF}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{10FFFF}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{10FFFF}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{10FFFF}]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{0000000041}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{0000000041}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{0000000041}]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u{0000000041}]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\x",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\x","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\x]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\x]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\x1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\x1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\x1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\x1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\x+1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\x+1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\x+1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\x+1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\c",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\c]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\c]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\c$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c$","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\c$]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\c$]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\c1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\c1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\c1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\c escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\ca",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ca","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\ca]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\ca]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\00",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\00","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\00]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\00]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\01",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\01","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\01]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\01]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\8",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\8","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\8]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\8]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\1","u"],"outcomes":[{"throws":"Invalid regular expression: invalid backreference for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\1]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\1]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid octal escape for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\k",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\k","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["[\\k]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\k]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\k<a>",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\k<a>","u"],"outcomes":[{"throws":"Invalid regular expression: invalid \\k<> named backreference"}],"spec":[]}
+{"fn":"RegExp","args":["[\\k<a>]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\k<a>]","u"],"outcomes":[{"throws":"Invalid regular expression: invalid escaped character for Unicode pattern"}],"spec":[]}
+{"fn":"RegExp","args":["\\b*",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\b*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\B+",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\B+","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\b{2}",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\b{2}","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\B?",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["\\B?","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["[\\b]*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\b]*","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^*",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["^*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["$+",""],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["$+","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["(?=a)*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?=a)*","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["(?!a)+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?!a)+","u"],"outcomes":[{"throws":"Invalid regular expression: nothing to repeat"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=a)*",""],"outcomes":[{"throws":"Invalid regular expression: invalid quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=a)*","u"],"outcomes":[{"throws":"Invalid regular expression: invalid quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?<!a)?",""],"outcomes":[{"throws":"Invalid regular expression: invalid quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["(?<!a)?","u"],"outcomes":[{"throws":"Invalid regular expression: invalid quantifier"}],"spec":[]}
+{"fn":"RegExp","args":["a",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a","d"],"outcomes":[{"result":"d"}],"spec":[]}
+{"fn":"RegExp","args":["a","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["a","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["a","m"],"outcomes":[{"result":"m"}],"spec":[]}
+{"fn":"RegExp","args":["a","s"],"outcomes":[{"result":"s"}],"spec":[]}
+{"fn":"RegExp","args":["a","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["a","v"],"outcomes":[{"result":"v"}],"spec":[]}
+{"fn":"RegExp","args":["a","y"],"outcomes":[{"result":"y"}],"spec":[]}
+{"fn":"RegExp","args":["a","dgimsuy"],"outcomes":[{"result":"dgimsuy"}],"spec":[]}
+{"fn":"RegExp","args":["a","yg"],"outcomes":[{"result":"gy"}],"spec":[]}
+{"fn":"RegExp","args":["a","gg"],"outcomes":[{"throws":"Invalid flags supplied to RegExp constructor."}],"spec":[]}
+{"fn":"RegExp","args":["a","uv"],"outcomes":[{"throws":"Invalid flags supplied to RegExp constructor."}],"spec":[]}
+{"fn":"RegExp","args":["a","x"],"outcomes":[{"throws":"Invalid flags supplied to RegExp constructor."}],"spec":[]}
+{"fn":"RegExp","args":["a","G"],"outcomes":[{"throws":"Invalid flags supplied to RegExp constructor."}],"spec":[]}
+{"fn":"RegExp","args":["a"," "],"outcomes":[{"throws":"Invalid flags supplied to RegExp constructor."}],"spec":[]}
+{"fn":"RegExp","args":["^[A-Za-z0-9_\\- ,|]+$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^[A-Za-z0-9_|]+$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^Notebook",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["Edit.*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^Edit$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":[".*opus.*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^my-plugin:reviewer$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["Bash|PowerShell",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["mcp__.*__write.*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["mcp__plugin_my-plugin_db__.*",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":[".envrc|.env",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["my-file",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["Edit|",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":[" ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^mcp__.+__",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^mcp__github__.*$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^mcp__github__.*$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^.*$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^.*$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^.*$","s"],"outcomes":[{"result":"s"}],"spec":[]}
+{"fn":"RegExp","args":["^.*$","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^Bash\\(npm run .*\\)$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^Bash\\(npm run .*\\)$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^(?:.*/)?[^/]*\\.tf$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^infra(?:/.*)?$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^\\/work\\/repo\\/infra(?:/.*)?$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^src/[^/]*\\.ts$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["^[^/][^/]\\.md$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["(?:\\/\\*\\*)?\\/*$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^[A-Za-z_][A-Za-z0-9_]*=",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^(.*?)(?:&&|\\|\\||[;|&\\n]|$)","s"],"outcomes":[{"result":"s"}],"spec":[]}
+{"fn":"RegExp","args":["\\s+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["https?:\\/\\/([A-Za-z0-9.-]+)","gi"],"outcomes":[{"result":"gi"}],"spec":[]}
+{"fn":"RegExp","args":["https?:\\/\\/([A-Za-z0-9.-]+)","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[/\\\\]package\\.json$","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\"your-sdk\"\\s*:",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^x$","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^[a-z]+_id$","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^\\p{Lu}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=\\$)\\d+(\\.\\d+)?",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<=\\$)\\d+(\\.\\d+)?","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["(?<!\\$)\\b\\d+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<!\\$)\\b\\d+","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["(?<=(a+))b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<=\\1(a))b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(a)\\1",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(a)\\1","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\1(a)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?:(a)|b)\\1c",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(a)|(b)","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["((a)|b)+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(a*)*b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<year>\\d{4})-(?<month>\\d{2})",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<year>\\d{4})-(?<month>\\d{2})","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["(?<x>a)|(?<x>b)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>.)\\k<a>",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?<a>.)\\k<a>","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\k<a>(?<a>x)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\k",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?=a)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?=a)","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["(?!a).","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["\\bword\\b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\bword\\b","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\bword\\b","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["\\w+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\w+","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\w+","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\w+","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["\\B.","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["[^\\W]","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[^\\W]","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{L}+","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{Script=Greek}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\P{ASCII}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{Emoji_Presentation}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{L}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\p{L}--[a-z]]","v"],"outcomes":[{"result":"v"}],"spec":[]}
+{"fn":"RegExp","args":["[[a-z]&&[aeiou]]+","v"],"outcomes":[{"result":"v"}],"spec":[]}
+{"fn":"RegExp","args":["\\p{RGI_Emoji}","v"],"outcomes":[{"result":"v"}],"spec":[]}
+{"fn":"RegExp","args":["σ","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["σ","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["ß","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["ß","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["k","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["k","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["s","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["s","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["é","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["é","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["i","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["i","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[a-z]+","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[a-z]+","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[^a-z]","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[^a-z]","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[^a-z]","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["^.$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^.$","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^.$","s"],"outcomes":[{"result":"s"}],"spec":[]}
+{"fn":"RegExp","args":["^.$","su"],"outcomes":[{"result":"su"}],"spec":[]}
+{"fn":"RegExp","args":[".","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":[".","gu"],"outcomes":[{"result":"gu"}],"spec":[]}
+{"fn":"RegExp","args":[".","y"],"outcomes":[{"result":"y"}],"spec":[]}
+{"fn":"RegExp","args":[".","yu"],"outcomes":[{"result":"uy"}],"spec":[]}
+{"fn":"RegExp","args":["[😀]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[😀]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["😀+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["😀+","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\ud83d\\ude00",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\ud83d\\ude00","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\u{1F600}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u{1F600}","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["^a$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^a$","m"],"outcomes":[{"result":"m"}],"spec":[]}
+{"fn":"RegExp","args":["^b","m"],"outcomes":[{"result":"m"}],"spec":[]}
+{"fn":"RegExp","args":["^b","gm"],"outcomes":[{"result":"gm"}],"spec":[]}
+{"fn":"RegExp","args":["$","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["$","gm"],"outcomes":[{"result":"gm"}],"spec":[]}
+{"fn":"RegExp","args":["",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["","y"],"outcomes":[{"result":"y"}],"spec":[]}
+{"fn":"RegExp","args":["a","y"],"outcomes":[{"result":"y"}],"spec":[]}
+{"fn":"RegExp","args":["a","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["a","gy"],"outcomes":[{"result":"gy"}],"spec":[]}
+{"fn":"RegExp","args":["a*","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["a*","y"],"outcomes":[{"result":"y"}],"spec":[]}
+{"fn":"RegExp","args":["a{2,}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a{,2}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a{",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\c",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\cJ",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\c_]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\0",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\0","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\07",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\8",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\q",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\-",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\d-z]+",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?=a)*a",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\b]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\x4",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\u12",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?i:a)b",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?-i:a)b","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[^]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a|b|","g"],"outcomes":[{"result":"g"}],"spec":[]}
+{"fn":"RegExp","args":["(a+)+$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a.c",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["a.c","s"],"outcomes":[{"result":"s"}],"spec":[]}
+{"fn":"RegExp","args":["\\S\\D\\W",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\S\\D\\W","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[\\W]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\W","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\W","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["[^\\W\\d]+","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[^\\W\\d]+","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["(?i:[\\W])",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?i:[\\W])","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["(?i:s)(?-i:s)",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(?i:s)(?-i:s)","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[\\u0100-\\u0200]",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\u0100-\\u0200]","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[a-z\\u017F]+","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["\\u0073\\x6B\\163\\p","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["[\\x73-\\x74\\c_\\c1]","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["(s)\\1","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["(?<n>[ſk])\\k<n>","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["(?<n>[ſk])\\k<n>",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["(.)\\1(?-i:b)","i"],"outcomes":[{"result":"i"}],"spec":[]}
+{"fn":"RegExp","args":["(?<n>k)\\k<n>","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["\\x+1|\\u+00e9",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["^a{+1}$|^b{1,+2}$|^c{ 1}$",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["[\\x+1]+|\\c+|\\u{+41}",""],"outcomes":[{"result":""}],"spec":[]}
+{"fn":"RegExp","args":["\\é|[\\ÿ-\\ſ]","u"],"outcomes":[{"result":"u"}],"spec":[]}
+{"fn":"RegExp","args":["\\é|[\\ÿ-\\ſ]","iu"],"outcomes":[{"result":"iu"}],"spec":[]}
+{"fn":"RegExp","args":["\\uD83D\\u{E9}|\\uD83D\\u{DE00}|x\\u{1F600}","u"],"outcomes":[{"result":"u"}],"spec":[]}

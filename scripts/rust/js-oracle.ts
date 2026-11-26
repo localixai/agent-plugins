@@ -3,8 +3,9 @@
  * the crate's `js` module (docs/RUST.md, RS6): `JSON.parse` (its error text reaches a plugin's
  * issues: `Invalid JSON syntax: JSON Parse error: …`), `Number(text)`, `String(number)`,
  * `String.prototype.trim`, `new URL(text)` and `new URL(text, base)` (the members the package
- * reads of it), `normalize`, `toUpperCase` and `toLowerCase` (an archive's names are folded by
- * them), and `new RegExp(source, 'u')`'s `test`. The inputs are fixed seeds and every single-character edit of them,
+ * reads of it), and `normalize`, `toUpperCase` and `toLowerCase` (an archive's names are folded
+ * by them), and `new RegExp(source, flags)` with `exec`, `replace`, `split` and `matchAll`
+ * (a hook's matcher and a relevance signal are patterns from input). The inputs are fixed seeds and every single-character edit of them,
  * so the set is the same on every run and covers the edges a hand-picked list would miss; a
  * fixed list adds what one edit cannot reach (deep nesting, long numbers, every escape). The
  * runtime is the one Claude Code runs on (Bun: JavaScriptCore), whose wording the spec's oracle
@@ -16,6 +17,7 @@ import { recordJsonParse } from './js-oracle/json.ts';
 import { recordNormalize } from './js-oracle/normalize.ts';
 import { recordNumbers } from './js-oracle/number.ts';
 import { recordRegExps } from './js-oracle/reg-exp.ts';
+import { recordRegExp } from './js-oracle/regexp.ts';
 import { recordUrlBases, recordUrls } from './js-oracle/url.ts';
 
 recordJsonParse();
@@ -24,3 +26,4 @@ recordRegExps();
 recordNormalize();
 recordUrls();
 recordUrlBases();
+recordRegExp();

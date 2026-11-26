@@ -9,7 +9,6 @@
 import type { PermissionBehavior } from '../../protocol/official.ts';
 import { mcpToolName, normalizeMcpServerName, pluginMcpServerName } from '../../format/mcp-tool.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PermissionRule } from '../types.ts';
 
 const call = coreModule('rules/target/mcp');
 
@@ -24,9 +23,5 @@ export const mcpToolRuleMatches = (
   toolName: string,
   behavior: PermissionBehavior,
 ): boolean => call('mcpToolRuleMatches', ruleToolName, toolName, behavior);
-
-/** Whether `rule` is a deny rule that names a whole built-in tool and `toolName` is that tool's Cowork twin. */
-export const denyCoversCoworkTool = (rule: PermissionRule, toolName: string): boolean =>
-  call('denyCoversCoworkTool', rule, toolName);
 
 export { mcpToolName, normalizeMcpServerName, pluginMcpServerName };

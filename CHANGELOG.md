@@ -7,6 +7,10 @@
   mode and conditional input fields, the text cap, registration, the event catalog and gates;
   agent scalars, the dual, hooks, MCP and skill cores, marketplace archive URLs, entry checks and
   schema, elicitation forms, output styles and component frontmatter.
+- A hook's matcher, a rule's tool-name glob and tool-name match, and the relevance signals run on
+  the core, over its own JavaScript regular expressions (`js::regexp`, the `regress` crate held to
+  Bun's `RegExp`). A pattern reads as JavaScriptCore reads it on every host, Node's included
+  (docs/RUST.md).
 - Marketplaces and updates run more of their work on the core: CLI plugin hints, copy-mode,
   link-mode and `git-subdir` version hashes, an archive's totals and unsafe entries, and the
   variables that stop updates and traffic. An archive's names fold by Unicode 18, where Bun's

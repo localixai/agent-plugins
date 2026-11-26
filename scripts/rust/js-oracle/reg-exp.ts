@@ -1,6 +1,6 @@
 /**
  * `new RegExp(source, 'u').test(text)`, for the patterns the package takes from input (a
- * schema's `patternProperties`, `js::reg_exp`): whether the source compiles, and if it does what
+ * schema's `patternProperties`, `js::regexp`): whether the source compiles, and if it does what
  * it answers for each of a fixed set of texts.
  */
 import { edits, line, outcome, write } from './shared.ts';

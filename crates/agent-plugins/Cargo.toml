@@ -19,6 +19,9 @@ indexmap = { version = "2", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 # A pattern the package writes as a regular expression literal stays one here (RS6 spells how).
 regex = "1"
+# `new RegExp(pattern, flags)` for a pattern from input (a hook's matcher, a relevance signal):
+# ECMAScript's grammar with lookaround and backreferences, matched on UTF-16 (`js::regexp`).
+regress = { version = "0.12", default-features = false, features = ["std", "utf16"] }
 # `new URL(text)`, the WHATWG URL Standard's parser (hosts, IDNA, IPv4 and IPv6, percent-encoding)
 # that a plugin's addresses are read by; held to Bun's answers by `tests/differential/js.rs`.
 url = "2"
