@@ -7,11 +7,13 @@
 
 pub mod json_parse;
 pub mod json_stringify;
+mod slice;
 mod string_to_number;
 pub mod url;
 pub mod value;
 
 pub use json_stringify::{json_stringify, json_stringify_indented};
+pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;
 pub use value::{JsObject, JsValue};
 
@@ -57,6 +59,11 @@ pub fn is_whitespace(character: char) -> bool {
 pub fn trim(text: &str) -> &str {
     text.trim_matches(is_whitespace)
 }
+
+/// JavaScript's `\s` inside a character class of a Rust regular expression, `is_whitespace`'s
+/// set (RS6): `[{SPACE_CLASS}]` is `\s` and `[^{SPACE_CLASS}()]` is `[^\s()]`. Rust's own `\s`
+/// differs in U+0085 and U+FEFF, as `char::is_whitespace` does.
+pub const SPACE_CLASS: &str = r"\t\n\x0B\x0C\r \u{A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}";
 
 /// The largest integer a double holds exactly, `Number.MAX_SAFE_INTEGER` (2^53 - 1).
 pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
@@ -119,12 +126,6 @@ pub fn to_fixed(value: f64, digits: usize) -> String {
     let decimals: String = decimals.iter().map(|byte| char::from(*byte)).collect();
     format!("{sign}{integer}.{decimals}")
 }
-
-/// JavaScript's `\s` as the body of a character class (`[^{SPACE}@]`): its `WhiteSpace` and
-/// `LineTerminator`, which `is_whitespace` lists. Rust's `\s` is another set (it keeps U+0085 and
-/// lacks U+FEFF), so a pattern spells the class with this (RS6).
-pub const SPACE_CLASS: &str =
-    r"\t\n\x0B\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}";
 
 /// A regular expression literal of the package, compiled once. It is an `Option` because a
 /// pattern that fails to compile must never panic (RS4); a test of the module catches it.
@@ -524,6 +525,22 @@ mod tests {
         assert_eq!("\u{FF61}".cmp("\u{1F600}"), Ordering::Less);
         assert_eq!(code_unit_length("a\u{1F600}"), 3);
         assert_eq!(trim("\u{FEFF} a \u{85}"), "a \u{85}");
+    }
+
+    #[test]
+    fn the_space_class_is_is_whitespace() {
+        let class = Regex::new(&format!("^[{SPACE_CLASS}]$")).ok();
+        assert!(class.is_some(), "the class compiles");
+        for character in (0..=0xFFFF_u32).filter_map(char::from_u32) {
+            assert_eq!(
+                class
+                    .as_ref()
+                    .is_some_and(|class| class.is_match(&character.to_string())),
+                is_whitespace(character),
+                "U+{:04X}",
+                u32::from(character)
+            );
+        }
     }
 
     #[test]

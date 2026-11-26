@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Permission rules run more of their work on the core: Bash and PowerShell dialects, safe
+  environment variables and text patterns, approval memory, hook permission updates and
+  rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the
+  Edit, Read, Grep, WebFetch and WebSearch rules check.
 - Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
   verdict notices and model switches, output caps and deferral, tool output shapes, matcher
   values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the

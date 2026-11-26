@@ -1,8 +1,11 @@
-import { error, type PluginIssue } from '../../../format/issues.ts';
-import { isRecord } from '../../../protocol/is-record.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/semantics/web_search.rs`,
+ * docs/RUST.md).
+ */
+import type { PluginIssue } from '../../../format/issues.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
 
-/** An `allowed_domains` or `blocked_domains` value that holds at least one entry. */
-const isFilled = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
+const call = coreModule('rules/tools/semantics/web-search');
 
 /**
  * "Claude can scope results with `allowed_domains` to include only certain hosts, or
@@ -12,14 +15,5 @@ const isFilled = (value: unknown): boolean => Array.isArray(value) && value.leng
  * and the wording is a judgment (spec/judgments.md). How an entry matches a result's host is not in
  * the docs and is not modelled.
  */
-export function validateWebSearchDomains(input: unknown): readonly PluginIssue[] {
-  if (!isRecord(input)) return [];
-  return isFilled(input.allowed_domains) && isFilled(input.blocked_domains)
-    ? [
-        error(
-          'tool_input',
-          'allowed_domains and blocked_domains cannot be combined in a single call',
-        ),
-      ]
-    : [];
-}
+export const validateWebSearchDomains = (input: unknown): readonly PluginIssue[] =>
+  call('validateWebSearchDomains', input);

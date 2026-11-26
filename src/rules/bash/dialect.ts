@@ -2,7 +2,13 @@
  * How a shell writes what the splitter has to tell apart. Bash and PowerShell differ in their
  * separators, their escape character and what a backtick is, so each is data here and the one
  * scanner (`split.ts`) reads it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/bash/dialect.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('rules/bash/dialect');
+
 export interface ShellDialect {
   /** The command separators, longest first (permissions.md, "Compound commands" and "PowerShell"). */
   readonly separators: readonly string[];
@@ -21,26 +27,10 @@ export interface ShellDialect {
 }
 
 /** permissions.md, "Compound commands": `&&`, `||`, `;`, `|`, `|&`, `&` and newlines. */
-export const BASH_DIALECT: ShellDialect = {
-  separators: ['&&', '||', '|&', ';', '|', '&', '\n'],
-  chains: ['&&', '||'],
-  escape: '\\',
-  backtickSubstitutes: true,
-  bracesHoldCommands: false,
-  hasKeywords: true,
-  blockComments: false,
-};
+export const BASH_DIALECT: ShellDialect = call('BASH_DIALECT');
 
 /**
  * permissions.md, "PowerShell": `|`, `;` and on PowerShell 7+ `&&` and `||` split a compound
  * command. `&` is the call operator there, and the backtick is the escape character.
  */
-export const POWERSHELL_DIALECT: ShellDialect = {
-  separators: ['&&', '||', ';', '|', '\n'],
-  chains: ['&&', '||'],
-  escape: '`',
-  backtickSubstitutes: false,
-  bracesHoldCommands: true,
-  hasKeywords: false,
-  blockComments: true,
-};
+export const POWERSHELL_DIALECT: ShellDialect = call('POWERSHELL_DIALECT');

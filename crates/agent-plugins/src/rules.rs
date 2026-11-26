@@ -1,0 +1,11 @@
+//! Layer 3: permission rules, read once and matched against tool calls, and the decisions they
+//! lead to (`src/rules/` in the npm package).
+
+pub mod bash;
+pub mod decide;
+pub mod path;
+pub mod restricts;
+pub mod sources;
+pub mod target;
+pub mod tools;
+pub mod types;
