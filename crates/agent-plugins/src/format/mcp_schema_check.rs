@@ -1,4 +1,4 @@
-//! Port of `src/format/mcp-schema-check.ts`, switched.
+//! Ported from `src/format/mcp-schema-check.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The check mcp.md ("Tools with invalid input schemas") names: "The schema must be valid against
 //! the JSON Schema draft 2020-12 meta-schema", and "Top-level property names must be 1 to 64
@@ -302,13 +302,5 @@ pub fn checks_meta_schema(value: &JsValue) -> bool {
     match value.get("$schema").and_then(JsValue::as_str) {
         None => true,
         Some(declared) => declared.strip_suffix('#').unwrap_or(declared) == DRAFT_2020_12,
-    }
-}
-
-crate::registry::exports! {
-    "format/mcp-schema-check" {
-        "metaSchemaProblems" => ok |value: JsValue| meta_schema_problems(&value);
-        "propertyNameProblems" => ok |value: JsValue| property_name_problems(&value);
-        "checksMetaSchema" => ok |value: JsValue| checks_meta_schema(&value);
     }
 }

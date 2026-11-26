@@ -11,7 +11,7 @@ runtime and a wrapper of its own; nothing in the core is specific to JavaScript 
 JavaScript semantics the answers must keep.
 
 The package's TypeScript is being moved into the core module by module, bottom layer first. A
-module is in one of four states:
+module is in one of five states:
 
 1. **TypeScript**: not ported yet; the package runs it as before.
 2. **Ported**: its Rust file starts with ``//! Port of `src/<module>.ts` at sha256:<hash>.``,
@@ -23,6 +23,11 @@ module is in one of four states:
 4. **Stays TypeScript**, by its nature (below): the core may keep its own counterpart, whose
    header says ``//! The core's counterpart of `src/<module>.ts`, which stays TypeScript: …`` and
    which exports nothing.
+5. **Core only**: no TypeScript calls it any more, because every module that did now runs in the
+   core. Its wrapper is deleted, it exports nothing, and its header says ``//! Ported from
+   `src/<module>.ts`; only the core uses it now, so it has no wrapper.`` An export no TypeScript
+   calls is removed the same way, from the wrapper and from `exports!` (D1): the boundary carries
+   only what the package uses.
 
 ### What stays TypeScript
 

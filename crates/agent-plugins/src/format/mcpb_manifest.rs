@@ -316,7 +316,6 @@ pub fn bundle_server_of(manifest: &ServerInput, variables: &McpbVariables) -> Js
 
 crate::registry::exports! {
     "format/mcpb-manifest" {
-        "MCPB_OPTION_TYPES" => ok || MCPB_OPTION_TYPES;
         "readMcpbOptions" => ok |declared: JsValue| read_mcpb_options(&declared);
         "readMcpbManifest" => ok |manifest: JsValue, platform: String| read_mcpb_manifest(&manifest, &platform);
         "bundleSettingKey" => ok |server: String, key: String| bundle_setting_key(&server, &key);

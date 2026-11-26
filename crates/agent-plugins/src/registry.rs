@@ -105,7 +105,6 @@ pub const MODULES: &[Module] = &[
     crate::format::mcp_elicitation_check::EXPORTS,
     crate::format::mcp_prompts::EXPORTS,
     crate::format::mcp_reserved::EXPORTS,
-    crate::format::mcp_schema_check::EXPORTS,
     crate::format::mcp_tool::EXPORTS,
     crate::format::mcp_tool_schema::EXPORTS,
     crate::format::mcpb_manifest::EXPORTS,

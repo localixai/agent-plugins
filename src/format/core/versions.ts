@@ -30,10 +30,6 @@ export const coreSchemaId = (version: CoreVersion, document: CoreDocument): stri
 export const coreSchemaVersion = (value: unknown, document: CoreDocument): string | undefined =>
   call('coreSchemaVersion', value, document);
 
-/** The implemented version a version string is, or `undefined` when the kit does not implement it. */
-export const supportedCoreVersion = (version: string | undefined): CoreVersion | undefined =>
-  call('supportedCoreVersion', version);
-
 /**
  * Whether a root `plugin.json` value makes the folder a core package (spec §1.3): a JSON object whose
  * `$schema` is a canonical core manifest identifier of any release (Judgment J1.1: anything else is

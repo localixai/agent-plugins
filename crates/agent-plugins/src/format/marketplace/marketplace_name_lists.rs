@@ -97,7 +97,6 @@ crate::registry::exports! {
         "isOfficialButOff" => ok |name: String| is_official_but_off(&name);
         "COMMUNITY_NAMES" => ok || COMMUNITY_NAMES;
         "DIRECTORY_NAMES" => ok || DIRECTORY_NAMES;
-        "OFFICIAL_LISTS" => ok || crate::registry::Set { members: OFFICIAL_LISTS.iter().collect::<Vec<_>>() };
         "NON_MARKETPLACE_NAMES" => ok || crate::registry::Map { entries: NON_MARKETPLACE_NAMES.iter().collect::<Vec<_>>() };
         "ANY_CASING_NAMES" => ok || crate::registry::Set { members: ANY_CASING_NAMES.iter().collect::<Vec<_>>() };
         "OBJECT_MEMBER_NAMES" => ok || crate::registry::Set { members: OBJECT_MEMBER_NAMES.iter().collect::<Vec<_>>() };

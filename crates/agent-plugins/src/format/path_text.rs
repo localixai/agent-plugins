@@ -175,7 +175,6 @@ crate::registry::exports! {
         "isAbsolutePath" => ok |path: String| is_absolute_path(&path);
         "resolveSegments" => ok |path: String, platform: PathPlatform| resolve_segments(&path, platform);
         "leavesFolder" => ok |path: String, platform: PathPlatform| leaves_folder(&path, platform);
-        "refusedBackslash" => ok |path: String, platform: PathPlatform| refused_backslash(&path, platform);
         "escapesAsWritten" => ok |path: String, platform: PathPlatform| escapes_as_written(&path, platform);
         "rootRelative" => ok |path: String, platform: Option<PathPlatform>| root_relative(&path, platform.unwrap_or_default());
         "childPath" => ok |base: String, name: String| child_path(&base, &name);

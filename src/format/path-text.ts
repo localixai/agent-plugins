@@ -27,10 +27,6 @@ export const resolveSegments = (path: string, platform: PathPlatform): string[] 
 export const leavesFolder = (path: string, platform: PathPlatform): boolean =>
   call('leavesFolder', path, platform);
 
-/** A backslash in a component path, which "on macOS and Linux" is refused even inside the plugin. */
-export const refusedBackslash = (path: string, platform: PathPlatform): boolean =>
-  call('refusedBackslash', path, platform);
-
 /**
  * Whether a component path leaves the plugin as written (plugins/loading.md, "Paths that escape the
  * plugin directory"): it climbs with `..`, is absolute, or, "on macOS and Linux, contains a

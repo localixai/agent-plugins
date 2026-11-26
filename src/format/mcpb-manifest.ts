@@ -11,10 +11,6 @@ import type { UserConfigOption } from './manifest-schema.ts';
  */
 const call = coreModule('format/mcpb-manifest');
 
-export const MCPB_OPTION_TYPES: readonly ['string', 'number', 'boolean', 'directory', 'file'] =
-  call('MCPB_OPTION_TYPES');
-export type McpbOptionType = (typeof MCPB_OPTION_TYPES)[number];
-
 export interface McpbManifest {
   /** The server's name: the manifest's `name`. */
   readonly name: string;
