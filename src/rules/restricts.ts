@@ -1,4 +1,10 @@
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/restricts.rs`, docs/RUST.md).
+ */
 import type { PermissionBehavior } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('rules/restricts');
 
 /**
  * Whether a rule of each behavior restricts what runs (deny, ask) rather than grants it (allow).
@@ -7,8 +13,4 @@ import type { PermissionBehavior } from '../protocol/official.ts';
  * exact path a glob cannot express, covers what the kit cannot read, reaches the real directory of a
  * symlink, and so on. Each place that differs by behavior reads this one table.
  */
-export const RESTRICTS: { readonly [B in PermissionBehavior]: boolean } = {
-  allow: false,
-  deny: true,
-  ask: true,
-};
+export const RESTRICTS: { readonly [B in PermissionBehavior]: boolean } = call('RESTRICTS');

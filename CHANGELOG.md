@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Permission rules run more of their work on the core: Bash and PowerShell dialects, safe
+  environment variables and text patterns, approval memory, hook permission updates and
+  rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the
+  Edit, Read, Grep, WebFetch and WebSearch rules check.
 - The package starts running on a Rust core: `crates/agent-plugins` (docs/RUST.md), compiled to
   WebAssembly and loaded by `src/wasm/bridge.ts`. The modules of `format` and `protocol` that
   read and check values are now thin wrappers over it, with the same exports, types and answers;
