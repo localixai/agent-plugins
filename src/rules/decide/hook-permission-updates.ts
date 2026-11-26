@@ -23,4 +23,6 @@ type Session = Pick<DecideContext, 'bypassAvailable'>;
 export const permissionUpdatesInEffect = (
   updates: readonly PermissionUpdate[],
   session: Session,
-): readonly PermissionUpdate[] => call('permissionUpdatesInEffect', updates, session);
+): readonly PermissionUpdate[] =>
+  // The one field alone: a session's context holds functions, and crosses as a port when passed whole.
+  call('permissionUpdatesInEffect', updates, { bypassAvailable: session.bypassAvailable });

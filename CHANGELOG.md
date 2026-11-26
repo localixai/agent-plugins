@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- `permissions.denyInsteadOfPrompting` denies again a call that would prompt when the session's
+  context also holds functions (`requiresPermission`), a hook's `defaultShell` applies again when
+  its run context does, and so does `bypassAvailable` for `permissionUpdatesInEffect`: such a
+  context crossed into the core as a handle, and read as data it had none of its fields. The core
+  now refuses a handle where it reads data, so the mistake cannot pass silently.
 - The SDK hook answer, `watchPaths` resolution and the `FileChanged` watch list, the runnable
   handlers a host lists, the Stop block cap, block routing and the original prompt of a blocked
   prompt, the effects a block leaves, `systemMessage` routing, the MCP client skip, the observer's

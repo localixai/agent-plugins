@@ -19,4 +19,8 @@ export type PromptFacts = Pick<DecideContext, 'cannotPrompt' | 'denyInsteadOfPro
 
 /** The decision once the session's prompt facts apply: an `ask` nobody may answer is denied. */
 export const settlePrompt = (decision: Decision, facts: PromptFacts): Decision =>
-  call('settlePrompt', decision, facts);
+  // The two facts alone: a session's context holds functions, and crosses as a port when passed whole.
+  call('settlePrompt', decision, {
+    cannotPrompt: facts.cannotPrompt,
+    denyInsteadOfPrompting: facts.denyInsteadOfPrompting,
+  });

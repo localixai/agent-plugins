@@ -14,4 +14,6 @@ const call = coreModule('hooks/handlers/command/shell');
 export const shellOf = (
   entry: HandlerEntry<'command'>,
   context: Pick<RunContext, 'defaultShell'>,
-): ShellKind | undefined => call('shellOf', entry, context);
+): ShellKind | undefined =>
+  // The one field alone: a run context holds functions, and crosses as a port when passed whole.
+  call('shellOf', entry, { defaultShell: context.defaultShell });
