@@ -1,4 +1,6 @@
-import { parsePluginRef, pluginNameOf } from '../format/marketplace/ids.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('cli/plugin-ref');
 
 /**
  * The `<plugin>` argument of the plugin commands (plugins/cli-reference.md, "claude plugin
@@ -7,24 +9,20 @@ import { parsePluginRef, pluginNameOf } from '../format/marketplace/ids.ts';
  * "matches against your installed plugins"; when the same name is installed from different
  * marketplaces "the command refuses ... and lists the qualified `plugin-name@marketplace-name`
  * commands to run instead"). Pure over the ids the host lists.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/plugin_ref.rs`, docs/RUST.md).
  */
 
 /** The name part of an id (`formatter` of `formatter@my-marketplace`). */
-export const nameOf = pluginNameOf;
+export const nameOf = (id: string): string => call('nameOf', id);
 
 /**
  * The ids of `ids` the argument names: a qualified reference matches one id exactly, a bare name
  * every id with that name. No hit is "not installed"; two or more are ambiguous.
  */
-export function matchingIds(text: string, ids: readonly string[]): readonly string[] {
-  const ref = parsePluginRef(text);
-  if (ref === undefined) return [];
-  const unique = [...new Set(ids)];
-  return unique.filter((id) =>
-    ref.marketplace === undefined ? nameOf(id) === ref.name : id === text,
-  );
-}
+export const matchingIds = (text: string, ids: readonly string[]): readonly string[] =>
+  call('matchingIds', text, ids);
 
 /** The refusal of an ambiguous bare name: the qualified commands to run instead. */
 export const qualifiedCommands = (verb: string, ids: readonly string[]): readonly string[] =>
-  ids.map((id) => `claude plugin ${verb} ${id}`);
+  call('qualifiedCommands', verb, ids);

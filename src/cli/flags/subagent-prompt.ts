@@ -1,6 +1,7 @@
-import { isTruthyEnv } from '../../format/env-flag.ts';
-import { warning } from '../../format/issues.ts';
-import { refuse, type Contribution, type FlagContext, type FlagFacts } from './types.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+import type { Contribution, FlagContext, FlagFacts } from './types.ts';
+
+const call = coreModule('cli/flags/subagent-prompt');
 
 /**
  * `--append-subagent-system-prompt`, `--append-subagent-system-prompt-file` and
@@ -11,46 +12,20 @@ import { refuse, type Contribution, type FlagContext, type FlagFacts } from './t
  * `--print` and `--output-format stream-json`"; `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT=1` "enables the
  * same behavior" and, "unlike the flag", "is ignored" outside that mode (env-vars.md). What a flag
  * does when its requirement is missing is not stated: it has no effect (spec/judgments.md).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/subagent-prompt.rs`, docs/RUST.md).
  */
 
-const CONFLICT =
-  'Error: Cannot use both --append-subagent-system-prompt and --append-subagent-system-prompt-file. Please use only one.';
-
-const STREAM_JSON = 'stream-json';
-
 /** Both forms give a refusal; the inline form reports it, so the file form stays silent when both are given. */
-export function appendSubagentPrompt(text: string, context: FlagContext): Contribution {
-  if (context.given['--append-subagent-system-prompt-file'] !== undefined) return refuse(CONFLICT);
-  return context.facts.print ? { subagentPromptAppend: text } : {};
-}
+export const appendSubagentPrompt = (text: string, context: FlagContext): Contribution =>
+  call('appendSubagentPrompt', text, context);
 
-export function appendSubagentPromptFile(path: string, context: FlagContext): Contribution {
-  if (context.given['--append-subagent-system-prompt'] !== undefined) return {};
-  if (!context.facts.print) return {};
-  const file = context.facts.files[path];
-  if (file === undefined) {
-    return refuse(`Error: --append-subagent-system-prompt-file file not found: ${path}`);
-  }
-  return { subagentPromptAppend: file.text };
-}
-
-const streamsJson = ({ print, outputFormat }: FlagFacts): boolean =>
-  print && outputFormat === STREAM_JSON;
+export const appendSubagentPromptFile = (path: string, context: FlagContext): Contribution =>
+  call('appendSubagentPromptFile', path, context);
 
 /** The variable alone: ignored, without a warning, outside `--print` with `stream-json`. */
 export const forwardSubagentTextVariable = (facts: FlagFacts): Contribution =>
-  isTruthyEnv(facts.env.CLAUDE_CODE_FORWARD_SUBAGENT_TEXT) && streamsJson(facts)
-    ? { forwardSubagentText: true }
-    : {};
+  call('forwardSubagentTextVariable', facts);
 
-export function forwardSubagentText(_value: true, context: FlagContext): Contribution {
-  if (streamsJson(context.facts)) return { forwardSubagentText: true };
-  return {
-    warnings: [
-      warning(
-        '--forward-subagent-text',
-        'has no effect without --print and --output-format stream-json',
-      ),
-    ],
-  };
-}
+export const forwardSubagentText = (_value: true, context: FlagContext): Contribution =>
+  call('forwardSubagentText', _value, context);

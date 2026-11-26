@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/sed-script.ts`, switched.
+//! Ported from `src/rules/decide/sed-script.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Whether a `sed` call only edits the files it names (permission-modes.md, "Auto-approve file edits
 //! with acceptEdits mode" lists `sed` as an edit of its operands). A script can also write another
@@ -281,12 +281,6 @@ fn edited_files(call: &SedCall) -> Option<Vec<ShellWord>> {
             .unwrap_or_default()
             .to_vec()
     })
-}
-
-crate::registry::exports! {
-    "rules/decide/sed-script" {
-        "sedOperands" => ok |args: Vec<ShellWord>| sed_operands(&args);
-    }
 }
 
 #[cfg(test)]

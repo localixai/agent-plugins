@@ -1,4 +1,5 @@
 import type { PermissionBehavior } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * How deep a relative pattern matches (permissions.md, "How deep a pattern matches"): "A relative
@@ -13,17 +14,11 @@ import type { PermissionBehavior } from '../../protocol/official.ts';
  * it is widened). A pattern that begins with `/`, `**` or `!`, or holds two directories, is another
  * shape. Widening `src/index.ts` and `src/**` followed by more path is a judgment (the docs show
  * `src/**` only); it errs towards blocking (spec/judgments.md).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/path/depth.rs`, docs/RUST.md).
  */
-const SINGLE_DIRECTORY = /^(?!\*\*)(?!\.{1,2}\/)[^/!][^/]*\/(?:[^/]+\/?|\*\*\/.+)$/;
-
-const widen = (pattern: string): string =>
-  SINGLE_DIRECTORY.test(pattern) ? `**/${pattern}` : pattern;
-
-const KEEP = (pattern: string): string => pattern;
+const call = coreModule('rules/path/depth');
 
 /** The pattern a rule of each behaviour matches with: only deny and ask rules reach every depth. */
-export const DEPTH: { readonly [B in PermissionBehavior]: (pattern: string) => string } = {
-  allow: KEEP,
-  deny: widen,
-  ask: widen,
-};
+export const DEPTH: { readonly [B in PermissionBehavior]: (pattern: string) => string } =
+  call('DEPTH');

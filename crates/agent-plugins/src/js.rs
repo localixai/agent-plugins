@@ -25,7 +25,7 @@ pub mod value;
 
 pub use array_join::{array_join, string_of};
 pub use json_stringify::{json_stringify, json_stringify_indented};
-pub use math::math_min;
+pub use math::{math_min, math_round};
 pub use promise::{promise_all, promise_all_pair};
 pub use radix::{to_exponential, to_radix_string};
 pub use slice::{slice_code_units, slice_index};
@@ -248,6 +248,12 @@ pub fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_whitespace)
 }
 
+/// A text without the blanks after it, as JavaScript's `String.prototype.trimEnd` cuts them.
+#[must_use]
+pub fn trim_end(text: &str) -> &str {
+    text.trim_end_matches(is_whitespace)
+}
+
 /// `text.split(/\r?\n/)`: the lines of a text, each cut at a `\n` or a `\r\n`. A `\r` that is
 /// not followed by a `\n` stays in its line, and so does one at the very end of the text.
 #[must_use]
@@ -435,6 +441,13 @@ mod tests {
             JsValue::Number(1.0),
         ];
         assert!(truthy.iter().all(is_truthy));
+    }
+
+    // bun -e 'console.log(JSON.stringify(" a\u00a0\ufeff\u0085 ".trimEnd()))' prints " a" ahead of U+0085
+    #[test]
+    fn trim_end_cuts_javascripts_blanks() {
+        assert_eq!(trim_end(" a\u{A0}\u{FEFF} "), " a");
+        assert_eq!(trim_end("a\u{85}"), "a\u{85}");
     }
 
     // bun -e 'console.log(Object.keys({b:1,"10":2,a:3,"2":4}))' prints [ "2", "10", "b", "a" ]

@@ -3,8 +3,8 @@ use super::*;
 fn word(value: &str) -> ShellWord {
     ShellWord {
         text: value.to_owned(),
-        start: 0.0,
-        end: 0.0,
+        start: 0,
+        end: 0,
         operator: false,
         value: value.to_owned(),
         expands: false,

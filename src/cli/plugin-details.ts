@@ -1,4 +1,7 @@
+import { coreModule } from '../wasm/bridge.ts';
 import type { Rendered } from './result.ts';
+
+const call = coreModule('cli/plugin-details');
 
 /**
  * `claude plugin details <name>` (plugins/cli-reference.md, "plugin details"): the plugin's name,
@@ -6,6 +9,8 @@ import type { Rendered } from './result.ts';
  * `Per-component (rounded)`; a plugin that is not loaded prints a message and exits `1`. Pure: the
  * host loads the plugin and estimates the tokens. The line layout is the kit's (spec/judgments.md);
  * the section names and the two messages are the docs'.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/plugin_details.rs`, docs/RUST.md).
  */
 
 export interface ComponentCost {
@@ -36,57 +41,8 @@ export interface PluginDetails {
 }
 
 /** "rounded": to the nearest ten tokens above 100 and the nearest token below. */
-export const roundTokens = (tokens: number): number =>
-  tokens < 100 ? Math.round(tokens) : Math.round(tokens / 10) * 10;
-
-const INVENTORY_LABELS = [
-  ['skills', 'Skills'],
-  ['agents', 'Agents'],
-  ['hooks', 'Hooks'],
-  ['mcpServers', 'MCP servers'],
-  ['lspServers', 'LSP servers'],
-] as const;
-
-function textOf(details: PluginDetails): readonly string[] {
-  const head = [
-    `Name: ${details.name}`,
-    `Version: ${details.version}`,
-    ...(details.description === undefined ? [] : [`Description: ${details.description}`]),
-    `Source: ${details.source}`,
-    '',
-    'Component inventory',
-    ...INVENTORY_LABELS.map(([key, label]) => {
-      const names = details.inventory[key];
-      const listed = names.length === 0 ? '' : `  ${names.join(', ')}`;
-      return `  ${label} (${names.length})${listed}`;
-    }),
-    '',
-    'Projected token cost',
-    `  Always-on: ~${roundTokens(details.projectedTokens)} tokens per session`,
-  ];
-  if (details.components.length === 0) return head;
-  return [
-    ...head,
-    '',
-    'Per-component (rounded)',
-    ...details.components.map(
-      (one) =>
-        `  ${one.kind} ${one.name}: always-on ~${roundTokens(one.alwaysOn)}, on-invoke ~${roundTokens(one.onInvoke)}`,
-    ),
-  ];
-}
-
-const NOT_FOUND = (name: string): string =>
-  `Plugin "${name}" not found. Run \`claude plugin list\` to see installed plugins, or pass --plugin-dir <path> to load one from disk.`;
-
-const BUILTIN_NOT_FOUND = (name: string): string =>
-  `Plugin "${name}" not found. Built-in plugins don't appear in \`claude plugin list\`. To see the ones available in a session, run /plugin in Claude Code and open the Installed tab.`;
+export const roundTokens = (tokens: number): number => call('roundTokens', tokens);
 
 /** What the command prints: the details of a loaded plugin, or the message for one that is not loaded. */
-export function planPluginDetails(requested: string, found: PluginDetails | undefined): Rendered {
-  if (found !== undefined) return { stdout: [...textOf(found)], stderr: [], exitCode: 0 };
-  const message = requested.endsWith('@builtin')
-    ? BUILTIN_NOT_FOUND(requested)
-    : NOT_FOUND(requested);
-  return { stdout: [], stderr: [message], exitCode: 1 };
-}
+export const planPluginDetails = (requested: string, found: PluginDetails | undefined): Rendered =>
+  call('planPluginDetails', requested, found);

@@ -182,3 +182,37 @@ pub enum Decision {
         then_prompt: Option<bool>,
     },
 }
+
+/// The folders and platform path rules are read against. Plain data the host supplies.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PathContext {
+    /// The session's current directory.
+    pub cwd: String,
+    /// The home directory.
+    pub home: String,
+    /// The primary working directory.
+    pub primary_working_directory: String,
+    /// The additional directories.
+    pub additional_directories: Vec<String>,
+    /// How the host writes paths.
+    pub platform: Platform,
+    /// Directories as a deny or ask rule spells them (its anchor, among them the current directory, and
+    /// the directory it names) and the working directories, mapped to where they really are (`/etc` to
+    /// `/private/etc`), built with `resolveRuleDirectories`: "a deny or ask rule written through a
+    /// symlinked directory ... also applies at the directory's real location" (permissions.md, "How rules
+    /// match a symlinked path"). Allow rules never read it. Absent when nothing goes through a link.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub real_directories: Option<crate::registry::Map<String, String>>,
+}
+
+/// A tool call as a rule sees it: the canonical tool name and the input Claude sent.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolCall {
+    /// The tool's name.
+    pub tool_name: String,
+    /// What the tool is called with.
+    #[serde(default)]
+    pub input: crate::js::JsValue,
+}

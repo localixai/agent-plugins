@@ -1,6 +1,9 @@
 import type { PermissionBehavior, PermissionMode } from '../../protocol/official.ts';
 import type { Decision, PreparedCall } from '../types.ts';
-import { settlePrompt, type PromptFacts } from './unanswered.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PromptFacts } from './unanswered.ts';
+
+const call = coreModule('rules/decide/classifier');
 
 /**
  * The host's reviewer for auto mode (permission-modes.md, "Eliminate permission prompts with auto
@@ -10,6 +13,8 @@ import { settlePrompt, type PromptFacts } from './unanswered.ts';
  *
  * It names `PreparedCall`, a layer-3 type, so it lives in the rules module rather than in
  * `src/ports/` (docs/ARCHITECTURE.md, "Ports").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/decide/classifier.rs`, docs/RUST.md).
  */
 export interface PermissionClassifier {
   review(
@@ -18,13 +23,6 @@ export interface PermissionClassifier {
     signal?: AbortSignal,
   ): Promise<PermissionBehavior>;
 }
-
-/** How the reviewer's answer reads as a decision: allow runs, deny blocks, ask prompts. */
-const ANSWER: { readonly [B in PermissionBehavior]: (reason: Decision['reason']) => Decision } = {
-  allow: (reason) => ({ outcome: 'allow', reason }),
-  deny: (reason) => ({ outcome: 'deny', reason }),
-  ask: (reason) => ({ outcome: 'ask', reason }),
-};
 
 /** What a host hands `settleClassification`: the call, the mode, its reviewer and an abort signal. */
 export interface ClassificationRequest {
@@ -39,41 +37,12 @@ export interface ClassificationRequest {
   readonly prompts?: PromptFacts;
 }
 
-/** What becomes of a decision: only `classify` goes to the reviewer; the rest stand. */
-const APPROVED: Record<Decision['outcome'], boolean> = {
-  allow: true,
-  deny: false,
-  ask: false,
-  classify: false,
-};
-const SETTLE: {
-  readonly [O in Decision['outcome']]: (
-    decision: Decision,
-    request: ClassificationRequest,
-  ) => Promise<Decision>;
-} = {
-  allow: (decision) => Promise.resolve(decision),
-  deny: (decision) => Promise.resolve(decision),
-  ask: (decision) => Promise.resolve(decision),
-  classify: async (decision, { call, mode, classifier, signal, prompts = {} }) => {
-    // "Claude Code denies the action rather than run it unreviewed" when there is no verdict.
-    if (classifier === undefined) return ANSWER.deny(decision.reason);
-    const answer = ANSWER[await classifier.review(call, { mode }, signal)](decision.reason);
-    // An approval that "still goes to the prompt" asks; a denial or an `ask` stands.
-    const settled =
-      'thenPrompt' in decision && APPROVED[answer.outcome] ? ANSWER.ask(decision.reason) : answer;
-    return settlePrompt(settled, prompts);
-  },
-};
-
 /**
  * The decision once the host's reviewer has answered a `classify`. Any other decision is returned
  * unchanged and the reviewer is not asked. With no reviewer there is no verdict, and no verdict
  * denies the action (permission-modes.md, "When auto mode falls back").
  */
-export function settleClassification(
+export const settleClassification = (
   decision: Decision,
   request: ClassificationRequest,
-): Promise<Decision> {
-  return SETTLE[decision.outcome](decision, request);
-}
+): Promise<Decision> => call.async('settleClassification', decision, request);
