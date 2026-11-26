@@ -1,3 +1,13 @@
+/**
+ * What decides where a subagent's permission prompts appear (tools-reference.md, "Agent tool
+ * behavior").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/prompt_surface.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('agents/prompt-surface');
+
 /** Where a subagent's permission prompts appear (tools-reference.md, "Agent tool behavior"). */
 export interface SubagentPromptSurface {
   /** `call`: the same prompts as the main conversation, "at the moment each tool call happens"; `main-session`: surfaced in the main session. */
@@ -8,11 +18,6 @@ export interface SubagentPromptSurface {
   readonly escDeniesOneCall: boolean;
 }
 
-const SURFACES: { readonly [Mode in 'foreground' | 'background']: SubagentPromptSurface } = {
-  foreground: { appearsIn: 'call', namesSubagent: false, escDeniesOneCall: false },
-  background: { appearsIn: 'main-session', namesSubagent: true, escDeniesOneCall: true },
-};
-
 /**
  * "Launching the subagent doesn't itself prompt for permission": its own tool calls are checked
  * against the permission rules as it runs, and where the prompt shows depends on whether it runs in
@@ -20,4 +25,4 @@ const SURFACES: { readonly [Mode in 'foreground' | 'background']: SubagentPrompt
  * the subagent, because the docs say it is the one the main conversation shows.
  */
 export const permissionSubagentPromptSurface = (background: boolean): SubagentPromptSurface =>
-  SURFACES[background ? 'background' : 'foreground'];
+  call('permissionSubagentPromptSurface', background);

@@ -5,6 +5,7 @@
 //! `scripts/rust/js-oracle.ts` records the built-ins themselves, which `tests/differential/js.rs`
 //! holds these to.
 
+pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;
 mod radix;

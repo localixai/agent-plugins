@@ -1,5 +1,8 @@
-import { listSorted } from '../format/listing.ts';
 import type { PluginFiles } from '../ports/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/loading/plugin_folder.rs`, docs/RUST.md). */
+const call = coreModule('loading/plugin-folder');
 
 /**
  * What a folder passed as `--plugin-dir` is (plugins/create.md, "Load a folder of plugins"): "If the
@@ -10,41 +13,16 @@ import type { PluginFiles } from '../ports/index.ts';
  */
 export type PluginFolderKind = 'plugin' | 'folder-of-plugins';
 
-/** The top-level entries that mark a folder as one plugin: components, not metadata (oracle 2.1.319). */
-const MARKERS = [
-  'skills',
-  'commands',
-  'agents',
-  'hooks',
-  'output-styles',
-  'themes',
-  'monitors',
-  'workflows',
-  'SKILL.md',
-  '.lsp.json',
-] as const;
-
 /**
  * Judgment (spec/judgments.md, oracle 2.1.319): the docs name the rule, not its edges. A
  * `.claude-plugin/` folder marks a plugin unless it holds a `marketplace.json` and no `plugin.json`
  * (the docs' marketplace-beside-plugins case); `.mcp.json` marks one unless it is zero bytes;
  * `settings.json`, `bin/`, `CLAUDE.md` and a lower-case `skill.md` mark nothing.
  */
-export async function classifyPluginFolder(input: {
+export const classifyPluginFolder = (input: {
   readonly files: PluginFiles;
   readonly signal?: AbortSignal | undefined;
-}): Promise<PluginFolderKind> {
-  const { files, signal } = input;
-  const [marketplace, manifest, shelf, mcp, ...rest] = await Promise.all([
-    files.exists('.claude-plugin/marketplace.json', signal),
-    files.exists('.claude-plugin/plugin.json', signal),
-    files.exists('.claude-plugin', signal),
-    files.stat('.mcp.json', signal),
-    ...MARKERS.map((marker) => files.exists(marker, signal)),
-  ]);
-  const shelfMarks = shelf && (manifest || !marketplace);
-  return shelfMarks || (mcp?.size ?? 0) > 0 || rest.some(Boolean) ? 'plugin' : 'folder-of-plugins';
-}
+}): Promise<PluginFolderKind> => call.async('classifyPluginFolder', input.files, input.signal);
 
 export interface PluginDirectoryReading {
   /** The directory is a folder that holds plugins, not a plugin itself. */
@@ -58,19 +36,7 @@ export interface PluginDirectoryReading {
  * `.claude-plugin/plugin.json` manifest then loads as a separate plugin. Everything else in the
  * folder is skipped without an error, including a subfolder that has no manifest."
  */
-export async function readPluginDirectory(
+export const readPluginDirectory = (
   files: PluginFiles,
   { signal }: { readonly signal?: AbortSignal | undefined } = {},
-): Promise<PluginDirectoryReading> {
-  if ((await classifyPluginFolder({ files, signal })) === 'plugin')
-    return { isFolder: false, plugins: [] };
-  const plugins: string[] = [];
-  for (const entry of (await listSorted(files, '.', signal)) ?? []) {
-    if (
-      entry.isDirectory &&
-      (await files.exists(`${entry.name}/.claude-plugin/plugin.json`, signal))
-    )
-      plugins.push(entry.name);
-  }
-  return { isFolder: true, plugins };
-}
+): Promise<PluginDirectoryReading> => call.async('readPluginDirectory', files, signal);

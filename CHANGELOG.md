@@ -6,6 +6,11 @@
   git transports and submodules, download header policy, name and folder conflicts, a plugin's
   content and footprint, reload summaries, remote and seeded plugins, telemetry names, and which
   plugins an update targets or skips.
+- Loading, agents and skills run more of their work on the core: background trust and trust
+  gates, channels, a plugin's folder, debug and scaffold, hook merging, data ids, field maps, LSP
+  startup, path and link validation and its report; built-in agents, models, tool filters,
+  permission baselines, teammates and the workflow limits, attempts, relaunch and replay; a skill's
+  arguments, expansion policy, fork, hook limits, shell scan and refusal, and its rule.
 - Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
   output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
   times slower. The core reads and writes the JSON of a call in one pass over its text.

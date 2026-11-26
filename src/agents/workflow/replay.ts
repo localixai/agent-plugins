@@ -5,9 +5,14 @@
  * calls the script starts now, one at a time, because a rerun agent may return something else and
  * change the prompts after it. A call is its prompt and its options: the SDK's `resumeFromRunId` says
  * "Completed agent() calls with unchanged (prompt, opts) return their cached results".
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/workflow/replay.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
 
-export const SAVED_STATUSES = ['completed', 'failed', 'running'] as const;
+const call = coreModule('agents/workflow/replay');
+
+export const SAVED_STATUSES: readonly ['completed', 'failed', 'running'] = call('SAVED_STATUSES');
 export type SavedStatus = (typeof SAVED_STATUSES)[number];
 
 /** One agent of the earlier run, in the order it started. */
@@ -31,7 +36,7 @@ export interface AgentCall {
 }
 
 /** Why an agent runs again. */
-export const RERUN_CAUSES = [
+export const RERUN_CAUSES: readonly [
   'prompt-differs',
   'options-differ',
   'after-change',
@@ -39,7 +44,7 @@ export const RERUN_CAUSES = [
   'after-failed',
   'was-running',
   'not-saved',
-] as const;
+] = call('RERUN_CAUSES');
 export type RerunCause = (typeof RERUN_CAUSES)[number];
 
 export type Replay =
@@ -52,79 +57,24 @@ export interface ReplayState {
   readonly cascade: 'after-change' | 'after-failed' | undefined;
 }
 
-export const REPLAY_START: ReplayState = { next: 0, cascade: undefined };
-
-interface Step {
-  readonly replay: Replay;
-  readonly cascade?: ReplayState['cascade'];
-}
-
-const rerun = (cause: RerunCause, cascade?: ReplayState['cascade']): Step => ({
-  replay: { saved: false, cause },
-  ...(cascade === undefined ? {} : { cascade }),
-});
-
-/**
- * One rule per status of the saved agent:
- * - completed: its saved result when the prompt and the options are the same; the first one whose
- *   prompt differs "runs again, and so does every agent after it, even ones that completed" (judgment:
- *   changed options count the same, as the SDK's `(prompt, opts)` says);
- * - failed: runs again, and so does every agent after it;
- * - still running when you stopped: "starts over". Stopping the whole run does not count it as failed,
- *   so the agents after it are not dragged along unless its prompt changed (judgment: the docs say the
- *   rule for a changed prompt only of completed agents; it is applied here too).
- */
-const RULES: {
-  readonly [S in SavedStatus]: (record: SavedAgent, call: AgentCall) => Step;
-} = {
-  completed: (record, call) => {
-    if (record.prompt !== call.prompt) return rerun('prompt-differs', 'after-change');
-    if (record.options !== call.options) return rerun('options-differ', 'after-change');
-    return { replay: { saved: true, result: record.result } };
-  },
-  failed: () => rerun('failed', 'after-failed'),
-  running: (record, call) =>
-    rerun(
-      'was-running',
-      record.prompt === call.prompt && record.options === call.options ? undefined : 'after-change',
-    ),
-};
+export const REPLAY_START: ReplayState = call('REPLAY_START');
 
 /** What the agent the script starts now does: returns its saved result or runs again. */
-export function replayAgent(
+export const replayAgent = (
   saved: readonly SavedAgent[],
   state: ReplayState,
-  call: AgentCall,
-): { readonly replay: Replay; readonly state: ReplayState } {
-  const next = state.next + 1;
-  const record = saved[state.next];
-  if (state.cascade !== undefined) {
-    return {
-      replay: { saved: false, cause: state.cascade },
-      state: { next, cascade: state.cascade },
-    };
-  }
-  if (record === undefined) {
-    return { replay: { saved: false, cause: 'not-saved' }, state: { next, cascade: undefined } };
-  }
-  const step = RULES[record.status](record, call);
-  return { replay: step.replay, state: { next, cascade: step.cascade } };
-}
+  call_: AgentCall,
+): { readonly replay: Replay; readonly state: ReplayState } =>
+  call('replayAgent', saved, state, call_);
 
 /**
  * The decisions for a script that starts `calls` in this order, when no rerun agent returns anything
  * different from before (what a relaunch of an unchanged or edited-prompt script shows).
  */
-export function planReplay(saved: readonly SavedAgent[], calls: readonly AgentCall[]): Replay[] {
-  let state = REPLAY_START;
-  return calls.map((call) => {
-    const step = replayAgent(saved, state, call);
-    state = step.state;
-    return step.replay;
-  });
-}
+export const planReplay = (saved: readonly SavedAgent[], calls: readonly AgentCall[]): Replay[] =>
+  call('planReplay', saved, calls);
 
-export const STOP_SCOPES = ['whole-run', 'one-agent'] as const;
+export const STOP_SCOPES: readonly ['whole-run', 'one-agent'] = call('STOP_SCOPES');
 export type StopScope = (typeof STOP_SCOPES)[number];
 
 /**
@@ -132,7 +82,5 @@ export type StopScope = (typeof STOP_SCOPES)[number];
  * run doesn't count any agent as failed"; "Stopping one agent alone, by selecting it in `/workflows`
  * and pressing `x`, counts as failing."
  */
-export const RECORDED_WHEN_STOPPED: { readonly [S in StopScope]: SavedStatus } = {
-  'whole-run': 'running',
-  'one-agent': 'failed',
-};
+export const RECORDED_WHEN_STOPPED: { readonly [S in StopScope]: SavedStatus } =
+  call('RECORDED_WHEN_STOPPED');

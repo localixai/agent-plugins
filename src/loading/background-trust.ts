@@ -4,7 +4,12 @@
  * session"; Agent Plugins Extended §13.15 item 4). Pure over what the host knows: whether the
  * directory exists, whether it is trusted (`workspaceTrustState`), and whether a dialog can appear
  * (a terminal in the session's own directory).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/background_trust.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('loading/background-trust');
 
 export interface BackgroundTrustFacts {
   /** The session's directory, as the message names it. */
@@ -25,8 +30,6 @@ export type BackgroundTrustVerdict =
   | { readonly verdict: 'dialog' }
   | { readonly verdict: 'refuse'; readonly message: string };
 
-const refuse = (message: string): BackgroundTrustVerdict => ({ verdict: 'refuse', message });
-
 /**
  * What happens before a background session runs in `facts.directory`. A directory not found on
  * disk is refused (`<path> could not be resolved on disk`); a trusted one starts, the home directory
@@ -34,13 +37,5 @@ const refuse = (message: string): BackgroundTrustVerdict => ({ verdict: 'refuse'
  * where none can appear the command exits (`Workspace not trusted. Run \`claude\` in <path> once and
  * accept the trust prompt, then retry.`, or `The home directory is trusted one session at a time`).
  */
-export function backgroundSessionTrust(facts: BackgroundTrustFacts): BackgroundTrustVerdict {
-  if (!facts.resolved) return refuse(`${facts.directory} could not be resolved on disk`);
-  if (facts.trusted && !facts.isHome) return { verdict: 'start' };
-  if (facts.canShowDialog) return { verdict: 'dialog' };
-  return refuse(
-    facts.isHome
-      ? 'The home directory is trusted one session at a time'
-      : `Workspace not trusted. Run \`claude\` in ${facts.directory} once and accept the trust prompt, then retry.`,
-  );
-}
+export const backgroundSessionTrust = (facts: BackgroundTrustFacts): BackgroundTrustVerdict =>
+  call('backgroundSessionTrust', facts);

@@ -1,5 +1,6 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
+import type { PluginIssue } from '../../format/issues.ts';
 import type { ShellKind } from '../../ports/index.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * hooks.md, "PowerShell started no program": "A hook with this error ran in PowerShell, which prints a
@@ -15,33 +16,23 @@ import type { ShellKind } from '../../ports/index.ts';
  * exit 0, so a hook that names the shell is the author's choice and runs as written. A string is
  * `"..."` (a backtick or `""` inside is an escape) or `'...'` (`''` inside is one quote); several
  * strings separated by white space are still only strings.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/powershell_no_program.rs`, docs/RUST.md).
  */
+const call = coreModule('loading/resolve/powershell-no-program');
 
-const DOUBLE = '"(?:[^"`]|`[\\s\\S]|"")*"';
-const SINGLE = "'(?:[^']|'')*'";
-const ONLY_QUOTED_STRINGS = new RegExp(
-  `^\\s*(?:${DOUBLE}|${SINGLE})(?:\\s+(?:${DOUBLE}|${SINGLE}))*\\s*$`,
-);
-
-export const onlyQuotedStrings = (command: string): boolean => ONLY_QUOTED_STRINGS.test(command);
+export const onlyQuotedStrings = (command: string): boolean => call('onlyQuotedStrings', command);
 
 /** What the hook's error says: the docs' sentence first, then the fixes. */
-export const NO_PROGRAM =
-  'PowerShell started no program: the command is only quoted strings, which PowerShell prints instead of running. ' +
-  'Set "shell": "powershell" to print the text, put & before the quoted path to run a script, ' +
-  'remove the inner quotes to run one .exe, or use exec form ("command" and "args"), or install Git Bash for a script written for Bash.';
+export const NO_PROGRAM: string = call('NO_PROGRAM');
 
 /**
  * The hook does not start: it runs in PowerShell (`shell`) because the host defaults to it
  * (`named` is the handler's own `shell` field, absent) and the command is only quoted strings.
  */
-export function noProgramIssue(
+export const noProgramIssue = (
   shell: ShellKind,
   named: ShellKind | undefined,
   path: string,
   command: string,
-): PluginIssue | undefined {
-  return shell === 'powershell' && named === undefined && onlyQuotedStrings(command)
-    ? error(path, NO_PROGRAM)
-    : undefined;
-}
+): PluginIssue | undefined => call('noProgramIssue', shell, named, path, command);

@@ -1,5 +1,9 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
+import type { PluginIssue } from '../../format/issues.ts';
 import type { MarketplaceEntry } from '../../format/marketplace/types.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/loading/core/entry_fields.rs`, docs/RUST.md). */
+const call = coreModule('loading/core/entry-fields');
 
 /**
  * What a marketplace entry says that a core package does not read (Agent Plugins Extended §18.1.5
@@ -10,21 +14,5 @@ import type { MarketplaceEntry } from '../../format/marketplace/types.ts';
  * chapter's eight and `userConfig`, `channels`, `settings` and `workflows`, none of which a core
  * package reads either.
  */
-export function coreEntryIssues(entry: MarketplaceEntry | undefined): readonly PluginIssue[] {
-  if (entry === undefined) return [];
-  const fields = Object.keys(entry.components).map((field) =>
-    error(
-      field,
-      `marketplace entry "${entry.name}": ${field} does not apply to a core package, which loads only its own fixed locations`,
-    ),
-  );
-  const strict = entry.strict
-    ? []
-    : [
-        error(
-          'strict',
-          `marketplace entry "${entry.name}": strict: false does not apply to a core package, whose plugin.json is always its manifest`,
-        ),
-      ];
-  return [...fields, ...strict];
-}
+export const coreEntryIssues = (entry: MarketplaceEntry | undefined): readonly PluginIssue[] =>
+  call('coreEntryIssues', entry);

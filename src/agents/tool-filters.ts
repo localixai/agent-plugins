@@ -1,5 +1,10 @@
 import type { PermissionMode } from '../protocol/official.ts';
-import type { DocumentedTool } from '../protocol/tool-names.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/tool_filters.rs`, docs/RUST.md).
+ */
+const call = coreModule('agents/tool-filters');
 
 /** How a subagent is started, as far as its tools are concerned. */
 export interface SubagentRun {
@@ -30,18 +35,8 @@ export interface SubagentRun {
   readonly ownWorkingDirectory?: boolean;
 }
 
-/** The first filter, sub-agents.md "Available tools": removed "even when listed in the `tools` field". */
-const REMOVED_FROM_EVERY_SUBAGENT = [
-  'AskUserQuestion',
-  'EndConversation',
-  'EnterPlanMode',
-  'ScheduleWakeup',
-  'WaitForMcpServers',
-  'Workflow',
-] as const satisfies readonly DocumentedTool[];
-
 /** The built-in tools a background subagent keeps (the second filter); every MCP tool stays. */
-export const BACKGROUND_BUILTIN_TOOLS = [
+export const BACKGROUND_BUILTIN_TOOLS: readonly [
   'Read',
   'Grep',
   'Glob',
@@ -62,48 +57,12 @@ export const BACKGROUND_BUILTIN_TOOLS = [
   'TaskStop',
   'SendMessage',
   'Artifact',
-] as const satisfies readonly DocumentedTool[];
-
-/** What makes the first filter remove a tool of this name: always, or when the run says so. */
-const FIRST_FILTER: ReadonlyMap<string, (run: SubagentRun) => boolean> = new Map<
-  string,
-  (run: SubagentRun) => boolean
->([
-  ...REMOVED_FROM_EVERY_SUBAGENT.map((tool): [string, () => boolean] => [tool, () => true]),
-  ['Agent', (run) => run.atDepthLimit],
-  ['ExitPlanMode', (run) => run.permissionMode !== 'plan'],
-  ['ExitWorktree', (run) => run.ownWorkingDirectory === true],
-  // Never inherited: the host grants it (`SubagentRun.handback`), which also beats `disallowedTools`.
-  ['SubagentHandback', () => true],
-]);
-
-/** What a teammate keeps in the background on top of `BACKGROUND_BUILTIN_TOOLS`. */
-const TEAMMATE_BACKGROUND_TOOLS = [
-  'TaskCreate',
-  'TaskGet',
-  'TaskList',
-  'TaskUpdate',
-  'CronCreate',
-  'CronDelete',
-  'CronList',
-] as const satisfies readonly DocumentedTool[];
-
-const BACKGROUND_KEEPS: ReadonlySet<string> = new Set(BACKGROUND_BUILTIN_TOOLS);
-const TEAMMATE_KEEPS: ReadonlySet<string> = new Set(TEAMMATE_BACKGROUND_TOOLS);
-
-/** "Apart from `Agent` and `ExitPlanMode`, which follow the first filter's conditions wherever the subagent runs". */
-const FOLLOWS_FIRST_FILTER_ONLY: ReadonlySet<string> = new Set(['Agent', 'ExitPlanMode']);
+] = call('BACKGROUND_BUILTIN_TOOLS');
 
 /**
  * Whether a subagent of this run never gets the built-in tool `tool`: the first filter, then (for
  * a background run) the second. A fork and an agent running as the main thread are not narrowed
  * (spec/judgments.md).
  */
-export function removedFromSubagent(tool: string, run: SubagentRun): boolean {
-  if (run.asMainThread) return false;
-  if (FIRST_FILTER.get(tool)?.(run) === true) return true;
-  if (!run.background || FOLLOWS_FIRST_FILTER_ONLY.has(tool) || BACKGROUND_KEEPS.has(tool)) {
-    return false;
-  }
-  return !(run.teammate === true && TEAMMATE_KEEPS.has(tool));
-}
+export const removedFromSubagent = (tool: string, run: SubagentRun): boolean =>
+  call('removedFromSubagent', tool, run);

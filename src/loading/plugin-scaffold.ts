@@ -5,18 +5,17 @@
  * `.claude-plugin/plugin.json` and a root `SKILL.md`"; `--with skills` also scaffolds a skill under
  * `skills/`. To share a plugin through one repository "create the same layout yourself at
  * `<project>/.claude/skills/<name>/`".
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/plugin_scaffold.rs`, docs/RUST.md).
  */
 import type { PluginIssue } from '../format/issues.ts';
-import { nameLoadIssues } from '../format/names.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('loading/plugin-scaffold');
 
 /** Where the plugin folder goes: the personal skills directory, or a project's. */
-export const SCAFFOLD_SCOPES = ['user', 'project'] as const;
+export const SCAFFOLD_SCOPES: readonly ['user', 'project'] = call('SCAFFOLD_SCOPES');
 export type ScaffoldScope = (typeof SCAFFOLD_SCOPES)[number];
-
-const SKILLS_DIRECTORY: { readonly [S in ScaffoldScope]: string } = {
-  user: '~/.claude/skills',
-  project: '.claude/skills',
-};
 
 export interface ScaffoldFile {
   /** Relative to the plugin folder. */
@@ -41,41 +40,8 @@ export interface ScaffoldInput {
   readonly withSkills?: boolean;
 }
 
-const EXAMPLE_SKILL = 'example';
-
-/**
- * Judgment (spec/judgments.md): the docs name the files, not their text. The manifest holds the
- * name `claude plugin init <name>` gives ("the plugin's `name` in its manifest"); each `SKILL.md` has a
- * `description`, which Claude needs to know when to use a skill, and a line to replace.
- */
-const skillFile = (path: string, description: string): ScaffoldFile => ({
-  path,
-  content: `---\ndescription: ${description}\n---\n\nReplace this with the instructions Claude should follow.\n`,
-});
-
 /** The plan, or why the name cannot be a plugin's. */
-export function planPluginScaffold(
+export const planPluginScaffold = (
   input: ScaffoldInput,
-): { readonly plan: ScaffoldPlan } | { readonly issues: readonly PluginIssue[] } {
-  const issues = nameLoadIssues(input.name);
-  if (issues.length > 0) return { issues };
-  const directory = `${SKILLS_DIRECTORY[input.scope]}/${input.name}`;
-  const files: ScaffoldFile[] = [
-    {
-      path: '.claude-plugin/plugin.json',
-      content: `${JSON.stringify({ name: input.name }, null, 2)}\n`,
-    },
-    skillFile('SKILL.md', `Use when the user asks for ${input.name}`),
-    ...(input.withSkills
-      ? [skillFile(`skills/${EXAMPLE_SKILL}/SKILL.md`, `An example skill of ${input.name}`)]
-      : []),
-  ];
-  return {
-    plan: {
-      directory,
-      files,
-      created: `✔ Created plugin "${input.name}" at ${directory}`,
-      loadsAs: `It will auto-load next session as ${input.name}@skills-dir. Run /reload-plugins to load it now.`,
-    },
-  };
-}
+): { readonly plan: ScaffoldPlan } | { readonly issues: readonly PluginIssue[] } =>
+  call('planPluginScaffold', input);

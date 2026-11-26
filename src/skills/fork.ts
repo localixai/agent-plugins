@@ -1,5 +1,9 @@
-import { error, type PluginIssue } from '../format/issues.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { Execution } from './execution.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/skills/fork.rs`, docs/RUST.md). */
+const call = coreModule('skills/fork');
 
 /**
  * What a forked skill starts (skills.md, "Run skills in a subagent": "Claude Code starts a new
@@ -43,32 +47,9 @@ export type ForkResult =
  * The launch of a forked skill. Judgment (spec/judgments.md): an `agent` that is no built-in and no
  * custom agent of the session is an error naming it, not a silent fall-back to `general-purpose`.
  */
-export function launchFork(
+export const launchFork = (
   execution: ForkExecution,
   command: string,
   text: string,
   agents: ForkAgents,
-): ForkResult {
-  const loads = agents(execution.agent);
-  if (loads === undefined) {
-    return {
-      ok: false,
-      issue: error(
-        `/${command}`,
-        `The skill runs in the subagent "${execution.agent}", but no built-in or custom subagent has that name`,
-      ),
-    };
-  }
-  return {
-    ok: true,
-    launch: {
-      agent: execution.agent,
-      task: text,
-      systemPrompt: 'agent-type',
-      loads,
-      background: execution.background,
-      fullToolSet: execution.fullToolSet,
-      seesConversation: execution.seesConversation,
-    },
-  };
-}
+): ForkResult => call('launchFork', execution, command, text, agents);
