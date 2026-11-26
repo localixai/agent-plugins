@@ -439,33 +439,24 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       },
       "8": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       }
     }
   },
@@ -544,33 +535,24 @@
     "counts": {
       "8": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       },
       "32": {
         "first": {
-          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 5
-        }
+        "second": {}
       }
     }
   },
