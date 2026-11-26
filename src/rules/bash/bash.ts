@@ -17,9 +17,10 @@ function writtenForms(command: ShellCommand, start: number): readonly string[] {
 
 /**
  * Each form a subcommand takes once wrappers are stripped, as written and with its command name
- * unquoted (src/rules/bash/unquote.ts): `"rm" x` is `rm x` to a rule. A deny or ask rule also reads
- * the words as the shell passes them, one space apart and without the redirections, so a tab, a line
- * continuation or `>out` in front of the name does not hide the command from it.
+ * unquoted (crates/agent-plugins/src/rules/bash/unquote.rs): `"rm" x` is `rm x` to a rule. A deny
+ * or ask rule also reads the words as the shell passes them, one space apart and without the
+ * redirections, so a tab, a line continuation or `>out` in front of the name does not hide the
+ * command from it.
  */
 const bashForms: Shell['forms'] = (command, behavior, safeEnv) => {
   const starts = formStarts(command.words, behavior, safeEnv);

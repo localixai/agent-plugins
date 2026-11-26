@@ -7,18 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// The scopes a user chooses between in a command or the `/plugin` panel: the three settings
-/// files (`src/marketplace/install-scopes.ts`, which is not ported yet and owns this type).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ChosenScope {
-    /// `user`.
-    User,
-    /// `project`.
-    Project,
-    /// `local`.
-    Local,
-}
+use crate::marketplace::install_scopes::ChosenScope;
 
 /// Where a plugin is installed from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

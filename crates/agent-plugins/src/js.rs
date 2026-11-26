@@ -20,6 +20,7 @@ mod slice;
 mod string_to_number;
 mod uri;
 pub mod url;
+pub mod utf16;
 pub mod value;
 
 pub use array_join::{array_join, string_of};

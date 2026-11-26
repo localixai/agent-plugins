@@ -1,7 +1,7 @@
 //! The methods of `String.prototype` that take a `RegExp` and that the package's modules call:
-//! `replace` with a replacement text (`$$`, `$&`, `` $` ``, `$'`, `$1`…`$99`, `$<name>`),
-//! `split` and `matchAll`, each as ECMAScript's `RegExp.prototype[@@replace]`, `[@@split]` and
-//! `[@@matchAll]` run them.
+//! `replace` with a replacement text (`$$`, `$&`, `` $` ``, `$'`, `$1`…`$99`, `$<name>`) or a
+//! function, `split` and `matchAll`, each as ECMAScript's `RegExp.prototype[@@replace]`,
+//! `[@@split]` and `[@@matchAll]` run them.
 
 use std::ops::Range;
 
@@ -115,8 +115,30 @@ impl RegExp {
     /// `text.replace(regexp, replacement)`: the first match replaced, or every match when the
     /// pattern is global.
     pub fn replace(&mut self, text: &str, replacement: &str) -> String {
-        let units: Vec<u16> = text.encode_utf16().collect();
         let template: Vec<u16> = replacement.encode_utf16().collect();
+        self.replace_each(text, |found, units| substitution(found, units, &template))
+    }
+
+    /// `text.replace(regexp, (match, ...groups) => …)`: each match replaced by what `replacement`
+    /// answers for it, as `exec` answers it (`captures[0]` the match, then the groups).
+    pub fn replace_with(
+        &mut self,
+        text: &str,
+        mut replacement: impl FnMut(&RegExpMatch) -> String,
+    ) -> String {
+        self.replace_each(text, |found, units| {
+            replacement(&found.to_match(units)).encode_utf16().collect()
+        })
+    }
+
+    /// `RegExp.prototype[@@replace]`: the matches found first (all of them when global, from
+    /// `lastIndex` 0), then each replaced by `replacement`'s units.
+    fn replace_each(
+        &mut self,
+        text: &str,
+        mut replacement: impl FnMut(&Found, &[u16]) -> Vec<u16>,
+    ) -> String {
+        let units: Vec<u16> = text.encode_utf16().collect();
         let mut matches = Vec::new();
         if self.global() {
             self.last_index = 0;
@@ -135,7 +157,7 @@ impl RegExp {
             let start = found.range.start.min(units.len());
             if start >= next {
                 out.extend_from_slice(units_in(&units, next..start));
-                out.extend(substitution(found, &units, &template));
+                out.extend(replacement(found, &units));
                 next = found.range.end;
             }
         }
@@ -216,6 +238,21 @@ mod tests {
             replaced,
             "a[b|c|b|bc|a|ab|$|$0|$3||$<]a[b||b|b|abca||$|$0|$3||$<]"
         );
+    }
+
+    #[test]
+    fn replaces_with_what_a_function_answers() {
+        let mut first = RegExp::new("(a)(x)?", "").unwrap();
+        let replaced = first.replace_with("babab", |found| {
+            format!("<{}{:?}>", found.index, found.captures)
+        });
+        assert_eq!(replaced, r#"b<1[Some("a"), Some("a"), None]>bab"#);
+        let mut every = RegExp::new("a*", "g").unwrap();
+        assert_eq!(
+            every.replace_with("baa", |found| format!("[{}]", found.index)),
+            "[0]b[1][3]"
+        );
+        assert_eq!(every.last_index(), 0);
     }
 
     #[test]

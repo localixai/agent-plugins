@@ -194,7 +194,8 @@ function subcommandRemoves(subcommand: ShellCommand, command: Scope, depth: numb
   const words = strippedWords(subcommand, 'deny');
   const [program, ...rest] = words;
   if (program === undefined) return false;
-  // `"rm"`, `\rm` and `$'rm'` run `rm` all the same (src/rules/bash/unquote.ts).
+  // `"rm"`, `\rm` and `$'rm'` run `rm` all the same
+  // (crates/agent-plugins/src/rules/bash/unquote.rs).
   if (REMOVERS.has(program.value)) {
     const { operands, recursive } = operandsOf(rest);
     return operands.some((operand) => isCriticalTarget(operand, { ...command, recursive }));

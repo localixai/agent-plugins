@@ -32,7 +32,7 @@ const FIND_ACTIONS: ReadonlySet<string> = new Set([
  * Whether a prefix (wildcard) allow rule must not approve this command: an exec wrapper, or a
  * `find` with an action that runs, deletes or writes. Wrappers and assignments in front are seen
  * through, whichever rule is asked; quoting a name or an action changes neither (`"watch"` is
- * `watch`, src/rules/bash/unquote.ts).
+ * `watch`, crates/agent-plugins/src/rules/bash/unquote.rs).
  */
 export function promptsDespitePrefixRule(command: ShellCommand): boolean {
   const [program, ...rest] = strippedWords(command, 'deny');
