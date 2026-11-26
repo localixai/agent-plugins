@@ -1,18 +1,22 @@
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginVariable } from './variables.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/field_map.rs`, docs/RUST.md). */
+const call = coreModule('loading/resolve/field-map');
 
 /**
  * The table "Where each variable resolves" (plugins/manifest-reference.md): per plugin component,
  * the fields where `${...}` resolves inline and what the process receives in its environment.
  * Each resolver reads its field list here, so a component Claude Code adds is one row.
  */
-export const VARIABLE_COMPONENTS = [
+export const VARIABLE_COMPONENTS: readonly [
   'hook-command',
   'monitor-command',
   'mcp-stdio',
   'mcp-remote',
   'lsp',
   'markdown-content',
-] as const;
+] = call('VARIABLE_COMPONENTS');
 export type VariableComponent = (typeof VARIABLE_COMPONENTS)[number];
 
 /** A field `${...}` resolves in; `body` is "anywhere in the Markdown body". */
@@ -27,7 +31,7 @@ export type VariableField =
   | 'body';
 
 /** The name of the option variables, `CLAUDE_PLUGIN_OPTION_<KEY>`, as the table writes it. */
-export const OPTION_VARIABLES = 'CLAUDE_PLUGIN_OPTION_<KEY>';
+export const OPTION_VARIABLES: 'CLAUDE_PLUGIN_OPTION_<KEY>' = call('OPTION_VARIABLES');
 export type ExportedVariable = PluginVariable | typeof OPTION_VARIABLES;
 
 export interface ComponentVariables {
@@ -35,18 +39,5 @@ export interface ComponentVariables {
   readonly exported: readonly ExportedVariable[];
 }
 
-const PATHS: readonly ExportedVariable[] = [
-  'CLAUDE_PLUGIN_ROOT',
-  'CLAUDE_PLUGIN_DATA',
-  'CLAUDE_PROJECT_DIR',
-];
-
-export const VARIABLE_FIELDS: { readonly [C in VariableComponent]: ComponentVariables } = {
-  'hook-command': { fields: ['command', 'args'], exported: [...PATHS, OPTION_VARIABLES] },
-  'monitor-command': { fields: ['command'], exported: [] },
-  'mcp-stdio': { fields: ['command', 'args', 'env'], exported: PATHS },
-  // `http`, `sse` and `ws`: the process variables are "not applicable".
-  'mcp-remote': { fields: ['url', 'headers', 'headersHelper'], exported: [] },
-  lsp: { fields: ['command', 'args', 'env', 'workspaceFolder'], exported: PATHS },
-  'markdown-content': { fields: ['body'], exported: [] },
-};
+export const VARIABLE_FIELDS: { readonly [C in VariableComponent]: ComponentVariables } =
+  call('VARIABLE_FIELDS');

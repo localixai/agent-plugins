@@ -52,6 +52,8 @@ macro_rules! exports {
             function: &str,
             args: &[$crate::js::JsValue],
         ) -> Option<$crate::registry::Answer> {
+            // A module whose exports all wait on the host never reads the arguments here.
+            let _ = args;
             match function {
                 $($name => Some($crate::registry::exports!(@call $how args)),)*
                 _ => None,

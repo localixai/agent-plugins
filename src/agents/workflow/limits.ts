@@ -1,18 +1,16 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
+import type { PluginIssue } from '../../format/issues.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * The runtime constraints of a workflow run (workflows.md, "Behavior and limits"). Pure decisions over
  * counts the host holds: the kit runs no workflow and keeps no run state.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/workflow/limits.rs`, docs/RUST.md).
  */
-
-/** "1,000 agents total per run | Prevents runaway loops". */
-const MAX_AGENTS_PER_RUN = 1000;
-
-/** "Up to 4,096 items in a single `parallel()` or `pipeline()` call". */
-const MAX_FAN_OUT_ITEMS = 4096;
+const call = coreModule('agents/workflow/limits');
 
 /** The calls that take a list of work (workflows.md, "What the saved script looks like"). */
-export const FAN_OUT_CALLS = ['parallel', 'pipeline'] as const;
+export const FAN_OUT_CALLS: readonly ['parallel', 'pipeline'] = call('FAN_OUT_CALLS');
 export type FanOutCall = (typeof FAN_OUT_CALLS)[number];
 
 export type Admission =
@@ -24,18 +22,11 @@ export type Admission =
  * 1,000th is the last; the next call fails with an error (judgment: the docs name the cap and its
  * purpose, not the failure; a restart of an agent after a stall is the same agent and is not counted).
  */
-export function admitAgent(started: number): Admission {
-  if (started < MAX_AGENTS_PER_RUN) return { admitted: true };
-  const message = `a workflow run starts at most ${MAX_AGENTS_PER_RUN} agents; this run has started ${started}`;
-  return { admitted: false, issue: error('agent', message) };
-}
+export const admitAgent = (started: number): Admission => call('admitAgent', started);
 
 /** "the runtime rejects a longer list with an error": nothing in the list runs when it is too long. */
-export function checkFanOut(call: FanOutCall, items: number): PluginIssue | undefined {
-  if (items <= MAX_FAN_OUT_ITEMS) return undefined;
-  const message = `${call}() takes up to ${MAX_FAN_OUT_ITEMS} items; got ${items}`;
-  return error(call, message);
-}
+export const checkFanOut = (call_: FanOutCall, items: number): PluginIssue | undefined =>
+  call('checkFanOut', call_, items);
 
 /**
  * What can interrupt a run. "A run pauses on its own only for agent permission prompts and a
@@ -43,38 +34,20 @@ export function checkFanOut(call: FanOutCall, items: number): PluginIssue | unde
  * names for the two kinds of mid-run input the docs turn away ("For sign-off between stages, run each
  * stage as its own workflow"), so a host can name why it refuses (spec/judgments.md).
  */
-export const INTERRUPTIONS = [
+export const INTERRUPTIONS: readonly [
   'agent-permission-prompt',
   'usage-limit-wait',
   'script-question',
   'stage-sign-off',
-] as const;
+] = call('INTERRUPTIONS');
 export type Interruption = (typeof INTERRUPTIONS)[number];
-
-const PAUSES_RUN: { readonly [I in Interruption]: boolean } = {
-  'agent-permission-prompt': true,
-  'usage-limit-wait': true,
-  'script-question': false,
-  'stage-sign-off': false,
-};
-
-const NO_MID_RUN_INPUT = error(
-  'script',
-  'a workflow run takes no input while it runs; for sign-off between stages, run each stage as its own workflow',
-);
 
 export type Pause =
   | { readonly pauses: true }
   | { readonly pauses: false; readonly issue: PluginIssue };
 
 /** Whether the run waits for it, or refuses it (judgment: the docs give no wording for the refusal). */
-export function interruptRun(cause: Interruption): Pause {
-  return PAUSES_RUN[cause] ? { pauses: true } : { pauses: false, issue: NO_MID_RUN_INPUT };
-}
-
-/** The default and the bounds of `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (env-vars.md). */
-const DEFAULT_CONCURRENCY = 16;
-const MAX_CONCURRENCY = 256;
+export const interruptRun = (cause: Interruption): Pause => call('interruptRun', cause);
 
 /**
  * How many agents a run executes at once: 16, "fewer when Claude Code has fewer CPUs available", or the
@@ -82,12 +55,7 @@ const MAX_CONCURRENCY = 256;
  * keep the default". Whether the CPU count also caps an explicit value is not said: it does not
  * (spec/judgments.md).
  */
-export function workflowConcurrency(
+export const workflowConcurrency = (
   env: Readonly<Record<string, string | undefined>>,
   cpus: number,
-): number {
-  const asked = env.CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS;
-  const value = asked !== undefined && /^\d+$/.test(asked) ? Number(asked) : 0;
-  if (value >= 1 && value <= MAX_CONCURRENCY) return value;
-  return Math.max(1, Math.min(DEFAULT_CONCURRENCY, Math.floor(cpus)));
-}
+): number => call('workflowConcurrency', env, cpus);

@@ -1,4 +1,11 @@
 import type { PermissionBehavior, PermissionMode } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/permission_baseline.rs`,
+ * docs/RUST.md).
+ */
+const call = coreModule('agents/permission-baseline');
 
 /**
  * The kinds of action the "Available modes" table tells apart. A read-only Bash command (the
@@ -6,7 +13,8 @@ import type { PermissionBehavior, PermissionMode } from '../protocol/official.ts
  * `dontAsk` still run it and `acceptEdits` prompt for the other commands "except the built-in
  * read-only set". Classifying a command as read-only is the host's.
  */
-export const ACTION_CATEGORIES = ['read', 'edit', 'filesystem-command', 'other'] as const;
+export const ACTION_CATEGORIES: readonly ['read', 'edit', 'filesystem-command', 'other'] =
+  call('ACTION_CATEGORIES');
 export type ActionCategory = (typeof ACTION_CATEGORIES)[number];
 
 /** `classify`: the mode's background classifier decides (auto mode). */
@@ -22,62 +30,6 @@ export interface BaselineAction {
   readonly inScope: boolean;
 }
 
-/** A cell that depends on the path being in scope. */
-interface ScopedCell {
-  readonly inScope: BaselineDecision;
-  readonly outOfScope: BaselineDecision;
-}
-type Cell = BaselineDecision | ScopedCell;
-type Row = { readonly [C in ActionCategory]: Cell };
-
-const rest = (decision: BaselineDecision): Row => ({
-  read: decision,
-  edit: decision,
-  'filesystem-command': decision,
-  other: decision,
-});
-
-/**
- * In scope allowed, out of scope prompts: the `acceptEdits` cell for edits and filesystem commands,
- * and every asking mode's cell for reads (§13.1 item 2; in `auto` the first read outside prompts,
- * §13.9.4 item 2, and which read is the first is session state the baseline does not keep).
- */
-const ALLOW_IN_SCOPE: ScopedCell = { inScope: 'allow', outOfScope: 'ask' };
-
-/**
- * permission-modes.md, "Available modes", "What runs without asking", cell by cell. A "prompt"
- * is `ask`. Modelled is the baseline only, as the doc says: "Modes set the baseline" and rules,
- * hooks, protected paths and critical-path removals layer on top (spec/judgments.md).
- */
-const BASELINE: { readonly [M in PermissionMode]: Row } = {
-  // "Reads only"
-  default: { ...rest('ask'), read: ALLOW_IN_SCOPE },
-  // "Reads, file edits, and common filesystem commands" (in scope)
-  acceptEdits: {
-    ...rest('ask'),
-    read: ALLOW_IN_SCOPE,
-    edit: ALLOW_IN_SCOPE,
-    'filesystem-command': ALLOW_IN_SCOPE,
-  },
-  // "Reads, plus classifier-approved commands when auto mode is available": only the baseline.
-  plan: { ...rest('ask'), read: ALLOW_IN_SCOPE },
-  // "Everything, with background safety checks": reads and in-scope edits skip the classifier
-  // (decision order, step 2), "everything else goes to the classifier" (step 3).
-  auto: {
-    read: ALLOW_IN_SCOPE,
-    edit: { inScope: 'allow', outOfScope: 'classify' },
-    'filesystem-command': 'classify',
-    other: 'classify',
-  },
-  // "File reads inside your working directories ...; anything that would prompt is denied"
-  dontAsk: { ...rest('deny'), read: { inScope: 'allow', outOfScope: 'deny' } },
-  // "Everything"
-  bypassPermissions: rest('allow'),
-};
-
 /** What `mode` does with `action` before any rule, hook or classifier verdict. */
-export function baselineDecision(mode: PermissionMode, action: BaselineAction): BaselineDecision {
-  const cell = BASELINE[mode][action.category];
-  if (typeof cell === 'string') return cell;
-  return action.inScope ? cell.inScope : cell.outOfScope;
-}
+export const baselineDecision = (mode: PermissionMode, action: BaselineAction): BaselineDecision =>
+  call('baselineDecision', mode, action);

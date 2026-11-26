@@ -1,6 +1,10 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
+import type { PluginIssue } from '../../format/issues.ts';
 import type { CommandSpec } from '../../ports/index.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { ResolvedLspServer } from './lsp.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/lsp_startup.rs`, docs/RUST.md). */
+const call = coreModule('loading/resolve/lsp-startup');
 
 export interface LspProcessPlan {
   readonly spec: CommandSpec;
@@ -17,26 +21,7 @@ export interface LspStartupPlan {
 }
 
 /** Process lookup is a host fact. The kit never downloads or starts the binary. */
-export function planLspStartup(
+export const planLspStartup = (
   server: ResolvedLspServer,
   facts: { readonly executableAvailable: boolean; readonly cwd: string },
-): LspStartupPlan {
-  if (!facts.executableAvailable) {
-    return {
-      issues: [error(server.name, `Executable not found in $PATH: "${server.command}"`)],
-    };
-  }
-  return {
-    process: {
-      spec: { form: 'exec', command: server.command, args: server.args },
-      cwd: facts.cwd,
-      env: { ...server.env, ...server.environment },
-      transport: server.transport,
-      ...(server.startupTimeoutMs !== undefined && { startupTimeoutMs: server.startupTimeoutMs }),
-      ...(server.shutdownTimeoutMs !== undefined && {
-        shutdownTimeoutMs: server.shutdownTimeoutMs,
-      }),
-    },
-    issues: [],
-  };
-}
+): LspStartupPlan => call('planLspStartup', server, facts);

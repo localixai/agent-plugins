@@ -3,12 +3,15 @@
  * available aliases: `sonnet`, `opus`, `haiku`, or `fable`", "Full model ID ... Accepts the same
  * values as the `--model` flag", and "inherit: use the same model as the main conversation". Shared
  * by the model order (`launch-model.ts`) and the writers and allowlist (`model-choice.ts`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/model_value.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
 
-import { modelIdNames } from '../format/model-id.ts';
+const call = coreModule('agents/model-value');
 
 /** The family aliases an Agent tool call's `model` parameter takes. */
-export const MODEL_ALIASES = ['sonnet', 'opus', 'haiku', 'fable'] as const;
+export const MODEL_ALIASES: readonly ['sonnet', 'opus', 'haiku', 'fable'] = call('MODEL_ALIASES');
 export type ModelAlias = (typeof MODEL_ALIASES)[number];
 
 /**
@@ -19,22 +22,17 @@ export type ModelAlias = (typeof MODEL_ALIASES)[number];
  * an inference profile ARN Claude Code "hasn't resolved to a backing model" (sub-agents.md, "Choose
  * a model"): the `mainFamily` of `resolveSubagentModel` is then left out.
  */
-export const modelFamily = (model: string): ModelAlias | undefined =>
-  MODEL_ALIASES.find((alias) => modelIdNames(model, alias));
+export const modelFamily = (model: string): ModelAlias | undefined => call('modelFamily', model);
 
 /** The three forms the frontmatter `model` field takes. */
 export type ModelValueKind = 'alias' | 'full-id' | 'inherit';
 
 export const isModelAlias = (value: string | undefined): value is ModelAlias =>
-  MODEL_ALIASES.some((alias) => alias === value);
+  call('isModelAlias', value);
 
 /**
  * Which form a `model` value is: one of the aliases `sonnet`, `opus`, `haiku`, `fable`; `inherit`; or
  * anything else, a full model ID that "accepts the same values as the `--model` flag" (so the kit
  * does not judge whether such an ID exists).
  */
-export function modelValueKind(value: string): ModelValueKind {
-  const text = value.trim();
-  if (text === 'inherit') return 'inherit';
-  return isModelAlias(text) ? 'alias' : 'full-id';
-}
+export const modelValueKind = (value: string): ModelValueKind => call('modelValueKind', value);
