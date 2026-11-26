@@ -6,16 +6,19 @@
 //! holds these to.
 
 pub mod json_parse;
+pub mod json_stringify;
 mod string_to_number;
 pub mod url;
 pub mod value;
 
+pub use json_stringify::{json_stringify, json_stringify_indented};
 pub use string_to_number::number;
 pub use value::{JsObject, JsValue};
 
 use std::cmp::Ordering;
 use std::sync::LazyLock;
 
+use indexmap::IndexMap;
 use regex::Regex;
 
 /// The order of two texts by UTF-16 code units, JavaScript's `<` on strings. It differs from
@@ -116,6 +119,12 @@ pub fn to_fixed(value: f64, digits: usize) -> String {
     let decimals: String = decimals.iter().map(|byte| char::from(*byte)).collect();
     format!("{sign}{integer}.{decimals}")
 }
+
+/// JavaScript's `\s` as the body of a character class (`[^{SPACE}@]`): its `WhiteSpace` and
+/// `LineTerminator`, which `is_whitespace` lists. Rust's `\s` is another set (it keeps U+0085 and
+/// lacks U+FEFF), so a pattern spells the class with this (RS6).
+pub const SPACE_CLASS: &str =
+    r"\t\n\x0B\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}";
 
 /// A regular expression literal of the package, compiled once. It is an `Option` because a
 /// pattern that fails to compile must never panic (RS4); a test of the module catches it.
@@ -327,9 +336,89 @@ pub fn key_order<'a>(keys: impl IntoIterator<Item = &'a String>) -> Vec<&'a Stri
         .collect()
 }
 
+/// A record held as any ordered map, with its entries in the order an object holds them: the array
+/// indexes ascending, then the other keys as written (`key_order`). A port builds one with it
+/// wherever the TypeScript builds an object with `Object.fromEntries` or a spread.
+#[must_use]
+pub fn in_key_order<V>(map: IndexMap<String, V>) -> IndexMap<String, V> {
+    #[expect(
+        clippy::needless_collect,
+        reason = "the order borrows the map the loop below drains"
+    )]
+    let order: Vec<String> = key_order(map.keys()).into_iter().cloned().collect();
+    let mut map = map;
+    order
+        .into_iter()
+        .filter_map(|key| map.swap_remove(&key).map(|value| (key, value)))
+        .collect()
+}
+
+/// Whether JavaScript reads `value` as true in a condition: not `undefined`, `null`, `false`, `0`,
+/// `-0`, `NaN` or the empty string.
+#[must_use]
+pub fn is_truthy(value: &JsValue) -> bool {
+    match value {
+        JsValue::Undefined | JsValue::Null => false,
+        JsValue::Bool(flag) => *flag,
+        JsValue::Number(number) => *number != 0.0 && !number.is_nan(),
+        JsValue::String(text) => !text.is_empty(),
+        JsValue::Array(_) | JsValue::Object(_) => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{}].map(Boolean))' prints
+    // [ false, false, false, false, false, false, false, true, true, true ]
+    #[test]
+    fn truthiness_follows_javascript() {
+        let falsy = [
+            JsValue::Undefined,
+            JsValue::Null,
+            JsValue::Bool(false),
+            JsValue::Number(0.0),
+            JsValue::Number(-0.0),
+            JsValue::Number(f64::NAN),
+            JsValue::String(String::new()),
+        ];
+        assert!(falsy.iter().all(|value| !is_truthy(value)));
+        let truthy = [
+            JsValue::String("0".to_owned()),
+            JsValue::Array(Vec::new()),
+            JsValue::Object(JsObject::new()),
+            JsValue::Number(1.0),
+        ];
+        assert!(truthy.iter().all(is_truthy));
+    }
+
+    // bun -e 'console.log(Object.keys({b:1,"10":2,a:3,"2":4}))' prints [ "2", "10", "b", "a" ]
+    #[test]
+    fn a_record_is_held_in_key_order() {
+        let map = IndexMap::from([
+            ("b".to_owned(), 1),
+            ("10".to_owned(), 2),
+            ("a".to_owned(), 3),
+            ("2".to_owned(), 4),
+        ]);
+        let keys: Vec<String> = in_key_order(map).into_keys().collect();
+        assert_eq!(keys, ["2", "10", "b", "a"]);
+    }
+
+    #[test]
+    fn the_space_class_is_javascripts_whitespace() {
+        let class = Regex::new(&format!("^[{SPACE_CLASS}]$")).ok();
+        assert!(class.is_some());
+        for point in 0..=0x2FFFF_u32 {
+            let Some(character) = char::from_u32(point) else {
+                continue;
+            };
+            let text = character.to_string();
+            let in_class = class.as_ref().is_some_and(|regex| regex.is_match(&text));
+            assert_eq!(in_class, is_whitespace(character), "U+{point:04X}");
+        }
+    }
 
     #[test]
     fn numbers_read_as_javascript_writes_them() {

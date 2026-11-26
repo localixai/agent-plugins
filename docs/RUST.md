@@ -197,6 +197,11 @@ module's doc comment, never a silent difference:
   near it.
 - **A lone surrogate** (`"\ud800"`) reads as U+FFFD: a Rust string holds only whole characters.
   The vectors leave such cases out.
+- **A lookup by a name from input reads own keys only.** Where the TypeScript indexes a table
+  with a name it was given (`VARIANTS[transport][field]` in `format/core/mcp-server`,
+  `ENTRY_COMMANDS[type]` in `format/mcpb-manifest`, a saved setting by its key), a name like
+  `constructor`, `toString` or `__proto__` reached `Object.prototype` and answered a function;
+  the core answers "not there", which is what the tables mean.
 
 ## When the spec moves
 

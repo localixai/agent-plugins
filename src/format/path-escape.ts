@@ -1,13 +1,6 @@
-import { error, type PluginIssue } from './issues.ts';
-import { linkReach } from './link-rule.ts';
-import { BACKSLASH_TAIL, pathEscapes } from './messages.ts';
-import {
-  escapesAsWritten,
-  leavesFolder,
-  refusedBackslash,
-  resolveFrom,
-  type PathPlatform,
-} from './path-text.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
+import type { PathPlatform } from './path-text.ts';
 
 /**
  * A component path that leaves the plugin (plugins/loading.md, "Paths that escape the plugin
@@ -17,7 +10,10 @@ import {
  * outside the plugin "other than links between plugins within one marketplace", and on macOS and
  * Linux a path with a backslash. The plugin "loads without that component". The loader (`locate`)
  * decides every declared path through `escapedPathIssue`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/path_escape.rs`, docs/RUST.md).
  */
+const call = coreModule('format/path-escape');
 
 /** The real paths (`/`-separated, one spelling) a link is judged against. */
 export interface LinkRoots {
@@ -50,34 +46,6 @@ export interface DeclaredPath {
   readonly own?: boolean;
 }
 
-/** Whether the real path a link leads to is outside the plugin, and outside its marketplace's other plugins. */
-function linkLeaves(resolvesTo: string, platform: PathPlatform, roots?: LinkRoots): boolean {
-  if (roots === undefined) return leavesFolder(resolvesTo, platform);
-  const target = resolveFrom(roots.pluginRoot, resolvesTo, platform);
-  return linkReach({ target, ...roots }) === 'outside';
-}
-
-/**
- * A path refused as written; the backslash tail when only its backslash refuses it (the same path
- * with the backslashes read as names stays inside).
- */
-function asWrittenIssue({ component, written, platform }: DeclaredPath): PluginIssue {
-  const onlyBackslash =
-    refusedBackslash(written, platform) &&
-    !escapesAsWritten(written.replaceAll('\\', '_'), platform);
-  return error(
-    component,
-    `${pathEscapes(component, written)}${onlyBackslash ? BACKSLASH_TAIL : ''}`,
-  );
-}
-
 /** The issue that drops the path, or `undefined` when it stays inside the plugin. */
-export function escapedPathIssue(path: DeclaredPath): PluginIssue | undefined {
-  if (escapesAsWritten(path.written, path.platform)) return asWrittenIssue(path);
-  if (path.resolvesTo === undefined || !linkLeaves(path.resolvesTo, path.platform, path.roots))
-    return undefined;
-  const own = path.own === true && path.roots !== undefined;
-  const shown = own ? `${path.roots?.pluginRoot}/${path.written}` : path.written;
-  const inMarketplace = own && path.roots?.marketplaceRoot !== undefined;
-  return error(path.component, pathEscapes(path.component, shown, path.resolvesTo, inMarketplace));
-}
+export const escapedPathIssue = (path: DeclaredPath): PluginIssue | undefined =>
+  call('escapedPathIssue', path);

@@ -1,14 +1,23 @@
+/**
+ * The shapes of one agent file as Claude Code would load it, and where an agent comes from.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/agent_record.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
 import type { HooksSettings } from '../protocol/hook-config.ts';
 import type { AgentDefinition } from '../protocol/official.ts';
 import type { AgentColor, AgentIsolation } from './agent-fields.ts';
 import type { CacheTtl } from './agent-scalars.ts';
 import type { PluginIssue } from './issues.ts';
 
+const call = coreModule('format/agent-record');
+
 /**
  * Where an agent file comes from, in priority order (sub-agents.md, "Choose the subagent scope":
  * managed, `--agents` flag, project, user, plugin; the first that defines a name wins).
  */
-export const AGENT_SOURCES = ['managed', 'flag', 'project', 'user', 'plugin'] as const;
+export const AGENT_SOURCES: readonly ['managed', 'flag', 'project', 'user', 'plugin'] =
+  call('AGENT_SOURCES');
 export type AgentSource = (typeof AGENT_SOURCES)[number];
 
 /** What a host knows about an agent file besides its text. */

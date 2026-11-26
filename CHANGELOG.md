@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- More of `format` runs on the core: agent and skill names, agent records, MCP server, prompt,
+  elicitation and tool-schema checks, `.mcpb` manifests, theme colours and writing, marketplace
+  entry fields and ids, path claims and unknown fields. A table looked up by a name from a file
+  no longer answers `Object.prototype`'s members for names like `constructor` (docs/RUST.md).
 - The package starts running on a Rust core: `crates/agent-plugins` (docs/RUST.md), compiled to
   WebAssembly and loaded by `src/wasm/bridge.ts`. The modules of `format` and `protocol` that
   read and check values are now thin wrappers over it, with the same exports, types and answers;
