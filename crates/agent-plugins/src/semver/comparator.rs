@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use crate::js::trim;
 
 use super::range::{Range, split_blanks};
-use super::re::COMPARATOR;
+use super::re::{COMPARATOR, exec, group};
 use super::version::SemVer;
 
 /// A comparator: `>=1.2.3`, `<2.0.0-0`, `1.2.3` (equal) or `ANY` (the empty text).
@@ -40,15 +40,13 @@ impl Comparator {
     /// `Invalid comparator: <comp>`, or the version's own message.
     pub fn new(comp: &str) -> Result<Self, String> {
         let comp = split_blanks(trim(comp)).join(" ");
-        let found = COMPARATOR
-            .as_ref()
-            .and_then(|pattern| pattern.captures(&comp))
-            .ok_or_else(|| format!("Invalid comparator: {comp}"))?;
-        let mut operator = found.get(1).map_or("", |part| part.as_str()).to_owned();
+        let found =
+            exec(&COMPARATOR, &comp).ok_or_else(|| format!("Invalid comparator: {comp}"))?;
+        let mut operator = group(&found, 1).unwrap_or_default().to_owned();
         if operator == "=" {
             operator.clear();
         }
-        let semver = match found.get(2).map_or("", |part| part.as_str()) {
+        let semver = match group(&found, 2).unwrap_or_default() {
             "" => None,
             version => Some(SemVer::new(version)?),
         };

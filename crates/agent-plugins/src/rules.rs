@@ -3,10 +3,12 @@
 
 pub mod bash;
 pub mod decide;
+pub mod hook_matcher;
 pub mod memo;
 pub mod path;
 pub mod restricts;
 pub mod sources;
 pub mod target;
+pub mod tool_pattern;
 pub mod tools;
 pub mod types;

@@ -21,6 +21,7 @@ pub mod name_conflicts;
 pub mod plugin_content;
 pub mod plugin_footprint;
 pub mod plugin_hints;
+pub mod relevance_match;
 pub mod reload_summary;
 pub mod remote_plugins;
 pub mod seed_registry;

@@ -1,5 +1,7 @@
-import { normalizePermissionMode } from '../../protocol/permission-modes.ts';
 import type { PermissionMode } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('hooks/input/permission-mode');
 
 /**
  * The `permission_mode` a hook receives (hooks.md, "Common input fields"): one of `"default"`,
@@ -7,7 +9,9 @@ import type { PermissionMode } from '../../protocol/official.ts';
  * **Manual** arrives as `"default"`, never as `"manual"`, so scripts that match `"default"` keep
  * working." A host that labels its mode Manual passes it as it is called; a text that names no
  * mode yields `undefined`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/input/permission_mode.rs`,
+ * docs/RUST.md).
  */
-export function hookPermissionMode(mode: string): PermissionMode | undefined {
-  return normalizePermissionMode(mode);
-}
+export const hookPermissionMode = (mode: string): PermissionMode | undefined =>
+  call('hookPermissionMode', mode);

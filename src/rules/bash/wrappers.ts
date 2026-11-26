@@ -115,7 +115,8 @@ function stripStep(
     const strips = RESTRICTS[behavior] || isSafeAssignment(first, safeEnv);
     return strips && words[from + 1] !== undefined ? from + 1 : undefined;
   }
-  // A quoted wrapper name runs the wrapper all the same (src/rules/bash/unquote.ts).
+  // A quoted wrapper name runs the wrapper all the same
+  // (crates/agent-plugins/src/rules/bash/unquote.rs).
   return isWrapper(first.value) ? commandIndex(words, from, WRAPPERS[first.value]) : undefined;
 }
 

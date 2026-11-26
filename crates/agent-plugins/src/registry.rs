@@ -27,12 +27,17 @@
 //! [`resume`], until the step is done. The values the host keeps are numbers here
 //! ([`Port`], [`Callback`], the `Signal` of `crate::ports`), and a result with methods is a
 //! [`Handle`] (`registry/handle.rs`). A host's throw ends the task unless [`catch_host`] catches
-//! it (`registry/catch.rs`). docs/RUST.md, "The boundary", has the protocol.
+//! it (`registry/catch.rs`). A promise crosses as a value both ways: the host's is a
+//! [`HostPromise`], a future the core awaits; a future of the core's in an answer is a
+//! [`CorePromise`], kept as a task the host drives (`registry/promise.rs`).
+//! docs/RUST.md, "The boundary", has the protocol.
 
+mod asked;
 mod catch;
 mod exports;
 mod handle;
 mod probe;
+mod promise;
 mod remote;
 mod steps;
 mod task;
@@ -43,6 +48,7 @@ pub use catch::{Thrown, catch_host};
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
 pub use handle::{Function, Handle, Methods, release};
+pub use promise::{CorePromise, HostPromise};
 pub use remote::{Callback, Port};
 #[doc(hidden)]
 pub use steps::settled;
@@ -110,18 +116,22 @@ pub const MODULES: &[Module] = &[
     crate::convert::types::EXPORTS,
     crate::format::agent_name::EXPORTS,
     crate::format::agent_record::EXPORTS,
+    crate::format::agent_scalars::EXPORTS,
     crate::format::canonical_json::EXPORTS,
     crate::format::code_points::EXPORTS,
     crate::format::config_directory::EXPORTS,
     crate::format::core::command::EXPORTS,
-    crate::format::core::document::EXPORTS,
+    crate::format::core::dual::EXPORTS,
     crate::format::core::extensions::EXPORTS,
+    crate::format::core::hooks::EXPORTS,
     crate::format::core::icon::EXPORTS,
     crate::format::core::manifest::EXPORTS,
+    crate::format::core::mcp::EXPORTS,
     crate::format::core::mcp_server::EXPORTS,
     crate::format::core::name::EXPORTS,
     crate::format::core::placeholders::EXPORTS,
     crate::format::core::remote::EXPORTS,
+    crate::format::core::skill::EXPORTS,
     crate::format::core::subprocess::EXPORTS,
     crate::format::core::versions::EXPORTS,
     crate::format::credential_env::EXPORTS,
@@ -138,17 +148,21 @@ pub const MODULES: &[Module] = &[
     crate::format::layout::EXPORTS,
     crate::format::link_rule::EXPORTS,
     crate::format::listing::EXPORTS,
+    crate::format::marketplace::archive_url::EXPORTS,
     crate::format::marketplace::blocked_hosts::EXPORTS,
     crate::format::marketplace::display_fields::EXPORTS,
     crate::format::marketplace::entry_append::EXPORTS,
+    crate::format::marketplace::entry_checks::EXPORTS,
     crate::format::marketplace::header_names::EXPORTS,
     crate::format::marketplace::ids::EXPORTS,
     crate::format::marketplace::marketplace_name_lists::EXPORTS,
     crate::format::marketplace::marketplace_names::EXPORTS,
+    crate::format::marketplace::marketplace_schema::EXPORTS,
     crate::format::marketplace::plugin_source_fields::EXPORTS,
     crate::format::marketplace::renames::EXPORTS,
     crate::format::marketplace::source_failures::EXPORTS,
-    crate::format::mcp_elicitation_check::EXPORTS,
+    crate::format::marketplace::types::EXPORTS,
+    crate::format::mcp_elicitation_form::EXPORTS,
     crate::format::mcp_knobs::EXPORTS,
     crate::format::mcp_output::EXPORTS,
     crate::format::mcp_prompts::EXPORTS,
@@ -160,6 +174,7 @@ pub const MODULES: &[Module] = &[
     crate::format::mod_files::EXPORTS,
     crate::format::model_id::EXPORTS,
     crate::format::names::EXPORTS,
+    crate::format::output_style::EXPORTS,
     crate::format::path_escape::EXPORTS,
     crate::format::path_text::EXPORTS,
     crate::format::permission_rule_shape::EXPORTS,
@@ -173,6 +188,7 @@ pub const MODULES: &[Module] = &[
     crate::format::theme_tokens::EXPORTS,
     crate::format::theme_write::EXPORTS,
     crate::format::token_estimate::EXPORTS,
+    crate::format::validate::component_frontmatter::EXPORTS,
     crate::format::validate::finding::EXPORTS,
     crate::format::validate::mcp_remote_checks::EXPORTS,
     crate::format::validate::path_claims::EXPORTS,
@@ -186,24 +202,38 @@ pub const MODULES: &[Module] = &[
     crate::foundation::folder_read::EXPORTS,
     crate::foundation::folder_walk::EXPORTS,
     crate::foundation::project_directories::EXPORTS,
+    crate::hooks::core::output::EXPORTS,
+    crate::hooks::core::profile_results::EXPORTS,
     crate::hooks::core::profiles::EXPORTS,
     crate::hooks::env_file::events::EXPORTS,
     crate::hooks::env_file::ports::EXPORTS,
     crate::hooks::env_file::powershell_reader::EXPORTS,
+    crate::hooks::handlers::command::r#async::EXPORTS,
     crate::hooks::handlers::command::shell::EXPORTS,
+    crate::hooks::handlers::remote::failure_run::EXPORTS,
+    crate::hooks::handlers::remote::http_env::EXPORTS,
     crate::hooks::handlers::remote::http_policy::EXPORTS,
     crate::hooks::handlers::remote::mcp_input::EXPORTS,
+    crate::hooks::handlers::remote::ok_false::EXPORTS,
     crate::hooks::handlers::remote::prompt_text::EXPORTS,
-    crate::hooks::input::background_tasks::EXPORTS,
+    crate::hooks::handlers::timeouts::EXPORTS,
+    crate::hooks::input::conditional_fields::EXPORTS,
+    crate::hooks::input::permission_mode::EXPORTS,
+    crate::hooks::interrupt::EXPORTS,
+    crate::hooks::output::background::EXPORTS,
     crate::hooks::output::caps::EXPORTS,
     crate::hooks::output::defer::EXPORTS,
     crate::hooks::output::merge_rules::EXPORTS,
     crate::hooks::output::pre_tool_use_outcome::EXPORTS,
     crate::hooks::output::reminder_tags::EXPORTS,
     crate::hooks::output::terminal_sequence::EXPORTS,
+    crate::hooks::output::text_cap::EXPORTS,
     crate::hooks::output::tool_output::EXPORTS,
     crate::hooks::output::tool_shape::EXPORTS,
     crate::hooks::output::worktree_path::EXPORTS,
+    crate::hooks::register::EXPORTS,
+    crate::hooks::select::event_catalog::EXPORTS,
+    crate::hooks::select::gates::EXPORTS,
     crate::hooks::select::lock_gates::EXPORTS,
     crate::hooks::select::matcher_values::EXPORTS,
     crate::hooks::source_kind::EXPORTS,
@@ -255,6 +285,7 @@ pub const MODULES: &[Module] = &[
     crate::marketplace::plugin_content::EXPORTS,
     crate::marketplace::plugin_footprint::EXPORTS,
     crate::marketplace::plugin_hints::EXPORTS,
+    crate::marketplace::relevance_match::EXPORTS,
     crate::marketplace::reload_summary::EXPORTS,
     crate::marketplace::remote_plugins::EXPORTS,
     crate::marketplace::seed_registry::EXPORTS,
@@ -288,11 +319,13 @@ pub const MODULES: &[Module] = &[
     crate::rules::decide::sed_script::EXPORTS,
     crate::rules::decide::unanswered::EXPORTS,
     crate::rules::decide::write_block_messages::EXPORTS,
+    crate::rules::hook_matcher::EXPORTS,
     crate::rules::path::posix::EXPORTS,
     crate::rules::restricts::EXPORTS,
     crate::rules::sources::EXPORTS,
     crate::rules::target::input::EXPORTS,
     crate::rules::target::mcp::EXPORTS,
+    crate::rules::tool_pattern::EXPORTS,
     crate::rules::tools::inputs::exit_plan_mode::EXPORTS,
     crate::rules::tools::inputs::grep::EXPORTS,
     crate::rules::tools::inputs::web_search::EXPORTS,

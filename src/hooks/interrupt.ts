@@ -1,6 +1,6 @@
-import { isTruthyEnv } from '../format/env-flag.ts';
 import type { Environment } from '../ports/index.ts';
 import type { HookEvent } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { HookOutcome } from './outcome.ts';
 
 /**
@@ -19,9 +19,13 @@ import type { HookOutcome } from './outcome.ts';
  * Judgments (spec/judgments.md): the first rule is read for `PostToolUse` only, since no other
  * event's section says so; the second is read from the request's abort signal (an interrupted
  * session aborts it) together with a hook that was cancelled by it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/interrupt.rs`, docs/RUST.md).
  */
 
-export const INTERRUPT_KEYS = ['esc', 'enter', 'ctrl-enter'] as const;
+const call = coreModule('hooks/interrupt');
+
+export const INTERRUPT_KEYS: readonly ['esc', 'enter', 'ctrl-enter'] = call('INTERRUPT_KEYS');
 export type InterruptKey = (typeof INTERRUPT_KEYS)[number];
 
 /** The key the user pressed while a tool ran, and what the host knows of what they queued. */
@@ -39,56 +43,17 @@ export interface InterruptPlan {
   readonly capMs?: number;
 }
 
-const CTRL_ENTER_BUDGET_MS = 10_000;
-const KEEP: InterruptPlan = { cancel: false };
-const CANCEL: InterruptPlan = { cancel: true };
-
-const backgroundDisabled = (environment: Environment): boolean =>
-  isTruthyEnv(environment.get('CLAUDE_CODE_DISABLE_BACKGROUND_TASKS'));
-
-const PLANS: {
-  readonly [K in InterruptKey]: (
-    interrupt: UserInterrupt,
-    environment: Environment,
-  ) => InterruptPlan;
-} = {
-  esc: () => CANCEL,
-  enter: () => KEEP,
-  'ctrl-enter': (interrupt, environment) =>
-    interrupt.queuedShellCommand === true || backgroundDisabled(environment)
-      ? CANCEL
-      : { cancel: false, capMs: CTRL_ENTER_BUDGET_MS },
-};
-
-/** The events an interrupt during a tool call changes the hooks of. */
-const AFTER_TOOL: ReadonlySet<HookEvent> = new Set<HookEvent>(['PostToolUse']);
-
-export function interruptPlan(
+export const interruptPlan = (
   event: HookEvent,
   interrupt: UserInterrupt | undefined,
   environment: Environment,
-): InterruptPlan {
-  return interrupt === undefined || !AFTER_TOOL.has(event)
-    ? KEEP
-    : PLANS[interrupt.key](interrupt, environment);
-}
-
-/** The events whose prompt check an interrupt stops. */
-const PROMPT_CHECKS: ReadonlySet<HookEvent> = new Set<HookEvent>(['UserPromptSubmit']);
+): InterruptPlan => call('interruptPlan', event, interrupt, environment);
 
 /**
  * An interrupt that cancelled a prompt check: the prompt does not go ahead, and its text returns to
  * the input unless a hook blocked it, in which case the block message is what the user sees.
  */
-export function withInterrupt<E extends HookEvent>(
+export const withInterrupt = <E extends HookEvent>(
   outcome: HookOutcome<E>,
   aborted: boolean,
-): HookOutcome<E> {
-  const cancelled = outcome.runs.some(({ status }) => status === 'cancelled');
-  if (!aborted || !cancelled || !PROMPT_CHECKS.has(outcome.event)) return outcome;
-  return {
-    ...outcome,
-    proceed: false,
-    interrupted: { restoreInput: outcome.block === undefined },
-  };
-}
+): HookOutcome<E> => call('withInterrupt', outcome, aborted);

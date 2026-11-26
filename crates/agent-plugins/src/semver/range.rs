@@ -3,12 +3,11 @@
 //! the core reads it again instead.
 
 use indexmap::IndexMap;
-use regex::Captures;
 
 use crate::js::{is_whitespace, trim};
 
 use super::comparator::Comparator;
-use super::re::{BUILD_STRIP, CARET_TRIM, HYPHEN_RANGE, TILDE_TRIM};
+use super::re::{BUILD_STRIP, CARET_TRIM, HYPHEN_RANGE, TILDE_TRIM, replace, replace_with};
 use super::replace::{hyphen_replace, parse_comparator, replace_gte0};
 use super::trim::trim_comparator_whitespace;
 use super::version::SemVer;
@@ -52,28 +51,6 @@ fn collapse_blanks(text: &str) -> String {
     split_blanks(text).join(" ")
 }
 
-/// `text.replace(pattern, replacement)` for a pattern given as an optional compiled token: every
-/// match when `all` (a `g` pattern), else the first.
-pub(super) fn replace_with(
-    pattern: Option<&regex::Regex>,
-    text: &str,
-    all: bool,
-    replacement: impl Fn(&Captures<'_>) -> String,
-) -> String {
-    let Some(pattern) = pattern else {
-        return text.to_owned();
-    };
-    let limit = if all { 0 } else { 1 };
-    pattern
-        .replacen(text, limit, |found: &Captures<'_>| replacement(found))
-        .into_owned()
-}
-
-/// The text of a capture group, `None` when it took no part (`undefined`).
-pub(super) fn group<'t>(found: &Captures<'t>, index: usize) -> Option<&'t str> {
-    found.get(index).map(|part| part.as_str())
-}
-
 fn is_null_set(comparator: &Comparator) -> bool {
     comparator.value == "<0.0.0-0"
 }
@@ -85,18 +62,14 @@ fn is_any(comparator: &Comparator) -> bool {
 /// `parseRange(range)`: one alternative read into its comparators.
 fn parse_range(range: &str) -> Result<Vec<Comparator>, String> {
     // Strip build metadata so it can't bleed into the version.
-    let range = replace_with(BUILD_STRIP.as_ref(), range, true, |_| String::new());
+    let range = replace(&BUILD_STRIP, range, "");
     // `1.2.3 - 1.2.4` => `>=1.2.3 <=1.2.4`
-    let range = replace_with(HYPHEN_RANGE.as_ref(), &range, false, hyphen_replace);
+    let range = replace_with(&HYPHEN_RANGE, &range, hyphen_replace);
     // `> 1.2.3 < 1.2.5` => `>1.2.3 <1.2.5`
     let range = trim_comparator_whitespace(&range);
     // `~ 1.2.3` => `~1.2.3`, `^ 1.2.3` => `^1.2.3`
-    let range = replace_with(TILDE_TRIM.as_ref(), &range, true, |found| {
-        format!("{}~", group(found, 1).unwrap_or_default())
-    });
-    let range = replace_with(CARET_TRIM.as_ref(), &range, true, |found| {
-        format!("{}^", group(found, 1).unwrap_or_default())
-    });
+    let range = replace(&TILDE_TRIM, &range, "$1~");
+    let range = replace(&CARET_TRIM, &range, "$1^");
     let parsed: Vec<String> = range.split(' ').map(parse_comparator).collect();
     let joined = parsed.join(" ");
     let comparators = split_blanks(&joined)

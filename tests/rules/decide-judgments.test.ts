@@ -230,7 +230,8 @@ describe('the symlink scope', () => {
   });
 });
 
-// Judgment (src/rules/bash/unquote.ts): a quoted or escaped name is the same command to the shell.
+// Judgment (crates/agent-plugins/src/rules/bash/unquote.rs): a quoted or escaped name is the same
+// command to the shell.
 describe('a critical removal whose command name is quoted or escaped is still one', () => {
   test('bypassPermissions asks for "rm", \\rm and a quoted sh -c', () => {
     for (const command of ['"rm" -rf /', '\\rm -rf ~', "'rm' -rf ~", `"sh" -c 'rm -rf /'`]) {

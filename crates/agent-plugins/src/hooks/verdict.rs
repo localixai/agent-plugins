@@ -5,3 +5,4 @@ pub mod model_switch;
 pub mod notices;
 pub mod plain_stdout;
 pub mod stdout_kind;
+pub mod types;

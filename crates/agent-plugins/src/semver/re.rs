@@ -1,13 +1,15 @@
 //! The package's patterns (`internal/re.js`): each token's source built as it builds it, the
 //! "safe" copy made by bounding `\s*`, `\s+`, `\d*`, `\d+` and the letter-digit-dash class as it
-//! bounds them (`makeSafeRegex`), and compiled by `js::reg_exp` so their classes are JavaScript's.
-//! Only the strict tokens the ranges and versions read are here.
+//! bounds them (`makeSafeRegex`), and compiled as JavaScript's `RegExp` (`js::regexp`) with the
+//! package's flags: none, or `g` for a token it creates global. Only the strict tokens the ranges
+//! and versions read are here.
+//!
+//! A compiled token is shared, and `exec` and `replace` write a `RegExp`'s `lastIndex`; so each
+//! use runs on a copy of it (`exec`, `replace`, `replace_with` below), which no other use sees.
 
 use std::sync::LazyLock;
 
-use regex::Regex;
-
-use crate::js::reg_exp::capturing_reg_exp;
+use crate::js::regexp::{RegExp, RegExpMatch};
 
 /// `MAX_LENGTH`: the longest version text.
 pub(super) const MAX_LENGTH: usize = 256;
@@ -65,31 +67,68 @@ fn sources() -> Sources {
 
 static SOURCES: LazyLock<Sources> = LazyLock::new(sources);
 
-/// A token's safe pattern, compiled; `None` only if the crate cannot hold it (a bug the unit
-/// test below would show).
-fn safe(source: &str) -> Option<Regex> {
-    capturing_reg_exp(&make_safe(source)).ok()
+/// A token's safe pattern, compiled with no flags; `None` only if it does not compile (a bug the
+/// unit test below would show).
+fn safe(source: &str) -> Option<RegExp> {
+    RegExp::new(&make_safe(source), "").ok()
+}
+
+/// A global token's safe pattern, compiled with `g`.
+fn safe_global(source: &str) -> Option<RegExp> {
+    RegExp::new(&make_safe(source), "g").ok()
 }
 
 /// A compiled token.
-pub(super) type Token = LazyLock<Option<Regex>>;
+pub(super) type Token = LazyLock<Option<RegExp>>;
+
+/// `text.match(token)` of a token that is not global: its `exec`.
+pub(super) fn exec(token: &Token, text: &str) -> Option<RegExpMatch> {
+    token.as_ref()?.clone().exec(text)
+}
+
+/// `text.replace(token, replacement)`, `$1` and the like read as JavaScript reads them; the text
+/// as it is when the token did not compile.
+pub(super) fn replace(token: &Token, text: &str, replacement: &str) -> String {
+    token.as_ref().map_or_else(
+        || text.to_owned(),
+        |token| token.clone().replace(text, replacement),
+    )
+}
+
+/// `text.replace(token, (match, ...groups) => …)`.
+pub(super) fn replace_with(
+    token: &Token,
+    text: &str,
+    replacement: impl FnMut(&RegExpMatch) -> String,
+) -> String {
+    token.as_ref().map_or_else(
+        || text.to_owned(),
+        |token| token.clone().replace_with(text, replacement),
+    )
+}
+
+/// The text of a capture group of a match, `None` when it took no part (`undefined`).
+pub(super) fn group(found: &RegExpMatch, index: usize) -> Option<&str> {
+    found.captures.get(index).and_then(Option::as_deref)
+}
 
 /// `FULL`: a whole strict version.
 pub(super) static FULL: Token = LazyLock::new(|| safe(&format!("^{}$", SOURCES.full_plain)));
 /// `BUILD`: build metadata, `+` and its identifiers.
 pub(super) static BUILD: Token = LazyLock::new(|| safe(&SOURCES.build));
-/// The unbounded `BUILD` `parseRange` strips every build with (`BUILDSTRIPRE`, not the safe copy).
-pub(super) static BUILD_STRIP: Token = LazyLock::new(|| capturing_reg_exp(&SOURCES.build).ok());
+/// The unbounded `BUILD` `parseRange` strips every build with (`BUILDSTRIPRE`, not the safe copy,
+/// `new RegExp(src[t.BUILD], 'g')`).
+pub(super) static BUILD_STRIP: Token = LazyLock::new(|| RegExp::new(&SOURCES.build, "g").ok());
 /// `XRANGE`: an operator and a partial version.
 pub(super) static XRANGE: Token =
     LazyLock::new(|| safe(&format!("^{}\\s*{}$", SOURCES.gtlt, SOURCES.xrange_plain)));
 /// `TILDETRIM`: the blanks after a `~`, replaced by `$1~`.
-pub(super) static TILDE_TRIM: Token = LazyLock::new(|| safe("(\\s*)(?:~>?)\\s+"));
+pub(super) static TILDE_TRIM: Token = LazyLock::new(|| safe_global("(\\s*)(?:~>?)\\s+"));
 /// `TILDE`: a tilde range.
 pub(super) static TILDE: Token =
     LazyLock::new(|| safe(&format!("^(?:~>?){}$", SOURCES.xrange_plain)));
 /// `CARETTRIM`: the blanks after a `^`, replaced by `$1^`.
-pub(super) static CARET_TRIM: Token = LazyLock::new(|| safe("(\\s*)(?:\\^)\\s+"));
+pub(super) static CARET_TRIM: Token = LazyLock::new(|| safe_global("(\\s*)(?:\\^)\\s+"));
 /// `CARET`: a caret range.
 pub(super) static CARET: Token =
     LazyLock::new(|| safe(&format!("^(?:\\^){}$", SOURCES.xrange_plain)));

@@ -11,7 +11,7 @@
 //! Only what `marketplace/semver.ts` asks is here, with the default options it passes: strict
 //! parsing (no `loose`) and pre-releases matched only by a comparator that names one (no
 //! `includePrerelease`). The patterns are the package's "safe" ones, their `\s*`, `\d+` and the
-//! like bounded as it bounds them (`re.rs`), run by `js::reg_exp` with JavaScript's classes. A
+//! like bounded as it bounds them (`re.rs`), run as JavaScript's `RegExp` (`js::regexp`). A
 //! text is read as JavaScript reads it: its whitespace is `js::is_whitespace`'s and its positions
 //! UTF-16 code units. `tests/differential/semver.rs` holds it to what Bun answered
 //! (`scripts/rust/js-oracle/semver.ts`).

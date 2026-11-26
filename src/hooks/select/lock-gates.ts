@@ -6,7 +6,7 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/hooks/select/lock_gates.rs`, docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { HookSession, RegisteredHandler } from '../contracts.ts';
+import type { RegisteredHandler } from '../contracts.ts';
 
 const call = coreModule('hooks/select/lock-gates');
 
@@ -16,7 +16,3 @@ const call = coreModule('hooks/select/lock-gates');
  */
 export const pluginOnlyAllows = (entry: RegisteredHandler): boolean =>
   call('pluginOnlyAllows', entry);
-
-/** Whether neither managed lock the session has set keeps the handler's source from running. */
-export const passesLocks = (entry: RegisteredHandler, session: HookSession): boolean =>
-  call('passesLocks', entry, session);

@@ -54,10 +54,38 @@ pub struct RegisteredHandler {
     pub plugin_id: Option<String>,
 }
 
+/// `disableAllHooks` as the session carries it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisableAllHooks {
+    /// The `disableAllHooks` left after settings precedence, which turns off every hook but the
+    /// managed ones.
+    #[serde(default)]
+    pub effective: bool,
+    /// `disableAllHooks` set at the managed level, which turns off those too.
+    #[serde(default)]
+    pub managed_locked: bool,
+}
+
 /// What the host knows about the running session that the lock gates read (`HookSession`).
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HookSession {
+    /// Settings-file hooks may run: an interactive session after the trust dialog, a `-p` or SDK
+    /// session always (hooks.md, "Workspace trust").
+    #[serde(default)]
+    pub trusted: bool,
+    /// The trust dialog was accepted for the exact folder (hooks.md, "Hooks in skills and
+    /// agents").
+    #[serde(default)]
+    pub folder_trust_accepted: Option<bool>,
+    /// `disableAllHooks` left after settings precedence, and set at the managed level (hooks.md,
+    /// "Disable or remove hooks").
+    #[serde(default)]
+    pub disable_all_hooks: DisableAllHooks,
+    /// The plugins that are enabled; absent means the registry holds only enabled plugins' hooks.
+    #[serde(default)]
+    pub enabled_plugins: Option<Set<String>>,
     /// `allowManagedHooksOnly` is set in managed settings.
     #[serde(default)]
     pub allow_managed_hooks_only: Option<bool>,

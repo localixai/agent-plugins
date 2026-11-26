@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use crate::js::{MAX_SAFE_INTEGER, compare_code_units, number, trim};
 
-use super::re::{FULL, MAX_LENGTH};
+use super::re::{self, FULL, MAX_LENGTH, exec};
 
 /// One pre-release identifier: a number below `MAX_SAFE_INTEGER`, else its text.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -110,11 +110,8 @@ impl SemVer {
             return Err(format!("version is longer than {MAX_LENGTH} characters"));
         }
         let invalid = || format!("Invalid Version: {version}");
-        let found = FULL
-            .as_ref()
-            .and_then(|full| full.captures(trim(version)))
-            .ok_or_else(invalid)?;
-        let group = |index: usize| found.get(index).map_or("", |part| part.as_str());
+        let found = exec(&FULL, trim(version)).ok_or_else(invalid)?;
+        let group = |index: usize| re::group(&found, index).unwrap_or_default();
         let major = main_number(group(1), "Invalid major version")?;
         let minor = main_number(group(2), "Invalid minor version")?;
         let patch = main_number(group(3), "Invalid patch version")?;

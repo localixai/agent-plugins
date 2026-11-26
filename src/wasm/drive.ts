@@ -11,9 +11,16 @@
  * each need, starting it the moment the core asks, so needs asked together run together, as
  * `Promise.all` in the TypeScript. What a host value throws, the call throws, the same value,
  * unless the core catches it (`registry::catch_host`); the value stays here by its need either way.
+ *
+ * A promise of the core's in an answer (`{"$promise": {"task": t}}`) is driven by the same loop as
+ * `callAsync`, at once, so its first needs start before the answer that holds it is returned, as
+ * the TypeScript's `async` function ran to its first `await` when it was called. Its needs are
+ * answered with the host values of the call that answered it. The task ends when the promise
+ * settles; a loop that can never go on (it waits on a host promise nothing holds) is collected,
+ * and its task cancelled with it.
  */
-import { type HostTable, hostTable } from './hosts.ts';
-import { callText, generation, release, resumeText, startText } from './instance.ts';
+import { type HostTable, type Makers, hostTable } from './hosts.ts';
+import { callText, cancel, generation, release, resumeText, startText } from './instance.ts';
 import { type Given, type Need, type Step, decodeStep, encodeAnswers } from './steps.ts';
 import { type Answer, decodeAnswer, encodeArgs } from './wire.ts';
 
@@ -101,6 +108,8 @@ async function answerAsync(
 const resumed = (task: number, answers: readonly Given[], hosts: HostTable): Step =>
   decodeStep(resumeText(task, encodeAnswers(answers, hosts.aborted(), hosts)), hosts);
 
+const MAKERS: Makers = { handle: handleObject, promise: corePromise };
+
 const handles = new FinalizationRegistry<readonly [number, number]>(([handle, madeIn]) => {
   release(handle, madeIn);
 });
@@ -129,7 +138,7 @@ function handleObject(
 /** `name` called with `args`, answered at once (above); `parent` for a handle's method. */
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- as resultOf's T.
 export function callSync<T>(name: string, args: readonly unknown[], parent?: HostTable): T {
-  const hosts = hostTable(handleObject, parent);
+  const hosts = hostTable(MAKERS, parent);
   const text = encodeArgs(args, hosts);
   // A handle's method may ask for the host values of the call that made it, so it takes the loop.
   if (hosts.empty() && parent === undefined) {
@@ -144,17 +153,12 @@ export function callSync<T>(name: string, args: readonly unknown[], parent?: Hos
   return finished<T>(name, step, thrown);
 }
 
-/** `name` called with `args` as a task the host drives (above); `parent` for a handle's method. */
+/** Runs a task from its `first` step until it is done: each need started as the core asks. */
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- as resultOf's T.
-export async function callAsync<T>(
-  name: string,
-  args: readonly unknown[],
-  parent?: HostTable,
-): Promise<T> {
-  const hosts = hostTable(handleObject, parent);
+async function driven<T>(name: string, hosts: HostTable, first: () => Step): Promise<T> {
   const thrown = new Map<number, unknown>();
   const running = new Map<number, Promise<Given>>();
-  let step = decodeStep(startText(name, encodeArgs(args, hosts)), hosts);
+  let step = first();
   while ('needs' in step) {
     for (const need of step.needs) running.set(need.id, answerAsync(need, hosts, thrown));
     if (running.size === 0) throw new Error(`agent-plugins: ${name} waits on nothing (a bug)`);
@@ -165,4 +169,37 @@ export async function callAsync<T>(
     step = resumed(step.task, [given], hosts);
   }
   return finished<T>(name, step, thrown);
+}
+
+/** `name` called with `args` as a task the host drives (above); `parent` for a handle's method. */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- as resultOf's T.
+export const callAsync = <T>(
+  name: string,
+  args: readonly unknown[],
+  parent?: HostTable,
+): Promise<T> => {
+  const hosts = hostTable(MAKERS, parent);
+  return driven<T>(name, hosts, () => decodeStep(startText(name, encodeArgs(args, hosts)), hosts));
+};
+
+/** The core's tasks whose loop was collected before they settled, by the instance that keeps them. */
+const loops = new FinalizationRegistry<readonly [number, number]>(([task, madeIn]) => {
+  cancel(task, madeIn);
+});
+
+/**
+ * The promise of the core's task `task` (above). `lease` lives as long as the loop can go on: it is
+ * used again once the loop ends, so the loop's suspended frame holds it.
+ */
+async function corePromise(task: number, parent: HostTable): Promise<unknown> {
+  const hosts = hostTable(MAKERS, parent);
+  const lease = {};
+  loops.register(lease, [task, generation()], lease);
+  try {
+    return await driven(`the core's promise ${String(task)}`, hosts, () =>
+      resumed(task, [], hosts),
+    );
+  } finally {
+    loops.unregister(lease);
+  }
 }

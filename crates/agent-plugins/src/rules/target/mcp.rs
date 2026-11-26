@@ -98,6 +98,5 @@ pub fn deny_covers_cowork_tool(rule: &PermissionRule, tool_name: &str) -> bool {
 crate::registry::exports! {
     "rules/target/mcp" {
         "mcpToolRuleMatches" => ok |rule_tool_name: String, tool_name: String, behavior: PermissionBehavior| mcp_tool_rule_matches(&rule_tool_name, &tool_name, behavior);
-        "denyCoversCoworkTool" => ok |rule: PermissionRule, tool_name: String| deny_covers_cowork_tool(&rule, &tool_name);
     }
 }

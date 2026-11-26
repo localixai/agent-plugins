@@ -88,9 +88,10 @@ its ports without an async runtime.
    core catches it (item 6).
 3. What the host keeps crosses as its number, at any depth, both ways (`registry/remote.rs`,
    `src/wasm/wire.ts`): a port (an object with methods) `{"$port": n}`, a function `{"$fn": n}`,
-   an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
-   a resume lists it in `aborted`: the core never waits on an abort, the host's port watches its
-   own signal. A signal the core makes itself crosses as `{"$signal": null, "aborted": bool}`.
+   an `AbortSignal` `{"$signal": n, "aborted": bool}`, a promise `{"$promise": …}` (item 7). The
+   signal's flag in the core is set when a resume lists it in `aborted`: the core never waits on
+   an abort, the host's port watches its own signal. A signal the core makes itself crosses as
+   `{"$signal": null, "aborted": bool}`.
 4. A property is read by the need `.<name>` with no arguments (`Port::member`): a port's own
    (`ScanFolder.dir`, `.files`), or a member of a record that crossed as a port because one of
    its members is a function (a `WorktreeLocation` with its `isSymlink`); a function read that
@@ -128,6 +129,55 @@ its ports without an async runtime.
        }
    }
    ```
+
+7. A promise crosses as a value, at any depth, both ways (`registry/promise.rs`):
+   - **The host's promise** (a `HookOutcome.background` given to `settleDeliveries`) crosses as
+     `{"$promise": n}` and is a `registry::HostPromise<T>` in the core: a future whose first poll
+     asks the need `then` of value `n` with no arguments, which the host answers when the promise
+     settles, with its value, or with a throw for a rejection, so `catch_host` catches it as any
+     need's. Given back, it crosses as `{"$promise": n}` again and is the host's own promise (a
+     `JsValue` that holds the tag gives it back the same way).
+
+     ```rust
+     "settleDeliveries" => async ok |background: Vec<HostPromise<BackgroundDelivery>>|
+         settle_deliveries(background).await;
+     // in the body: match catch_host(promise).await { Ok(delivery) => …, Err(_) => … }
+     ```
+
+     Its wrapper is the plain one, `call.async('settleDeliveries', background)`; a sync
+     `call('f', …)` given a promise refuses it when the core awaits it, as for any need.
+   - **A promise of the core's** (`startInBackground`'s `done`) is a `registry::CorePromise<T>`,
+     made from any `Send` future with `CorePromise::new(async move { … })`; it is a future a Rust
+     host awaits. In an answer it crosses as `{"$promise": {"task": t}}`: the core keeps the
+     future as task `t`, not polled yet, and the host's first `resume(t)` with no answers polls
+     it. The wrapper makes it a JavaScript `Promise` that drives task `t` with the loop of
+     `call.async` (`src/wasm/drive.ts`), its needs answered with the host values of the call that
+     answered it (as a handle's), and that settles with the task's answer: its value, or the very
+     value a host's throw it did not catch was. The task ends when it settles, or when the host
+     cancels it (`registry::cancel`): the wrapper does when the loop is collected, as it can
+     never go on (it waits on a host promise nothing holds). Make it from an `async` block or an
+     `async fn`'s call, which asks nothing until polled: a port method already called has asked in
+     the task that called it, and awaiting it in another task is a fault.
+
+     ```rust
+     pub struct BackgroundRun { pub done: CorePromise<BackgroundResult> } // serde tag "kind"
+     let done = CorePromise::new(async move { settle(&runner, request).await … });
+     "startInBackground" => ok |runner: Port, request: CommandRun, mode: Mode|
+         start_in_background(runner, request, mode);
+     ```
+
+     Its wrapper keeps the TypeScript's kind: `call('startInBackground', runner, request, mode)`
+     for a sync function, `call.async` for an `async` one; the `Promise` comes out of the answer.
+   - **Order.** What JavaScript's microtask order gave the package's tests, and the bridge keeps:
+     the core's promise runs at once to its first wait when the answer that holds it is read, so
+     the host work it starts (`runner.run`) has started before the call returns, as an `async`
+     function runs to its first `await` when called; it settles only after every host promise it
+     awaits has, and never before the call that made it has answered, so the answer that holds it
+     resolves first unless its host work is already done; two core promises are two tasks and two
+     loops, each settling when its own needs do, in no order between them; the host's promises
+     are awaited in one step, so `then` of each is asked together, as `Promise.all` did, and the
+     results keep the order given. The number of microtask turns between a host promise settling
+     and the core's answer is not kept: no test may count them.
 
 `registry::Port` implements every port trait of `crates/agent-plugins/src/ports/`, one file of
 `registry/remote/` each, each method the need of its TypeScript namesake with its arguments, the
@@ -217,7 +267,9 @@ Five checks, each deterministic:
 4. **The built-ins.** Where an answer rests on JavaScript itself (`JSON.parse`'s error text, which
    reaches a plugin's issues; `Number(text)`; a number's text; `trim`; `new URL(text)` and
    `new URL(text, base)`, read by the `url` crate and corrected where JavaScriptCore differs;
-   `normalize`, `toUpperCase` and `toLowerCase`), `crates/agent-plugins/src/js.rs`
+   `normalize`, `toUpperCase` and `toLowerCase`; `new RegExp(source, flags)` with `exec`,
+   `test`, `replace`, `split` and `matchAll`, run by the `regress` crate and respelled where
+   JavaScriptCore reads a pattern otherwise, `js::regexp`), `crates/agent-plugins/src/js.rs`
    is held to the built-ins as the runtime Claude Code runs on (Bun) answers them:
    `bun scripts/rust/js-oracle.ts` runs them on fixed seeds and every one-character edit of them
    and writes `crates/agent-plugins/tests/vectors/js/`. Never write such a rule from memory: add its inputs to the
@@ -251,7 +303,7 @@ TypeScript they follow changed.
 | RS6 | JavaScript's semantics where they reach a result live in `crates/agent-plugins/src/js.rs`: UTF-16 length and order (`code_unit_length`, `compare_code_units`), `trim`'s blanks, a number's text. A regular expression keeps JavaScript's classes: `\d`, `\w` and `\b` are ASCII there (spell them `[0-9]`, `[A-Za-z0-9_]` or use `(?-u:...)`), `\s` is `js::is_whitespace`'s set. |
 | RS7 | Shapes are the package's JSON: an interface is a struct with `#[serde(rename_all = "camelCase")]`, an optional member an `Option` that is skipped when `None`, a union of strings an enum renamed to its strings, a tagged union an enum with `#[serde(tag = "...")]`. A value the package types `unknown`, or reads from JSON or YAML, is a `js::JsValue` (`undefined`, `NaN`, the infinities and `-0` included; `JsValue::Undefined` is a missing argument); a `number` field that may hold one of those four is serialized with `js::value::serialize_number`. Member order is the package's: a `JsObject` keeps order, maps are `IndexMap`. The library depends on no JSON library: `clippy.toml` disallows `serde_json::Value` and `serde_json::from_str`, which only the differential tests use, to read the vectors. |
 | RS9 | A port mirrors its source so a TypeScript diff applies to it at a glance: the same functions in the same order, the same names, tables copied verbatim in the same order, the spec citations of the doc comments kept. Its first line is its port header, stamped by `bun scripts/rust/ports.ts --stamp <file>` when the port matches its source; `ports.ts --check` keeps it honest. |
-| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex`, `url` (the WHATWG URL parser, so no URL parser of our own is kept current) and `unicode-normalization` (`String.prototype.normalize`'s four forms, so no Unicode table of our own is kept current) so far; `serde_json` for the tests only. The npm package's `yaml` is ported by hand instead (`crates/agent-plugins/src/yaml.rs`): no YAML crate words and places its errors as the package does, keeps the comments an edit must keep, or writes what its `stringify` writes. |
+| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex`, `regress` (ECMAScript's own regular expressions, lookaround and backreferences, on UTF-16, for a pattern from input: a hook's matcher, a relevance signal), `url` (the WHATWG URL parser, so no URL parser of our own is kept current) and `unicode-normalization` (`String.prototype.normalize`'s four forms, so no Unicode table of our own is kept current) so far; `serde_json` for the tests only. The npm package's `yaml` is ported by hand instead (`crates/agent-plugins/src/yaml.rs`): no YAML crate words and places its errors as the package does, keeps the comments an edit must keep, or writes what its `stringify` writes. |
 
 ## Where the crate answers differently
 
@@ -289,15 +341,19 @@ module's doc comment, never a silent difference:
   can only fold two names together and refuse more. The oracle's texts leave these characters out.
 - **A YAML alias inside its own anchor** (`x: &a [*a]`) reads as `[[]]`: the package gives an
   array that holds itself, which no value crossing the boundary can be.
-- **A regular expression from input** (a `patternProperties` key of a schema) is run by
-  `js::reg_exp::unicode_reg_exp`, JavaScript's `u`-mode syntax read and written for the `regex`
-  crate, and held to Bun by `bun scripts/rust/js-oracle.ts` (`crates/agent-plugins/tests/vectors/js/reg-exp.jsonl`).
-  What `regex` has no engine for is refused as `Unrun::Unsupported`, never run differently:
-  lookahead and lookbehind, backreferences (`\1`, `\k<name>`), `\p{…}` and `\P{…}`, modifiers
-  (`(?i:…)`), a group name that is not ASCII or that repeats, more than 100 nested groups, a count
-  past 2^32 and a pattern past the crate's size limit. A syntax error is `Unrun::Invalid`. A
-  module that runs such a pattern says what a refused one means (`agents/workflow/structured_output.rs`:
-  it may match).
+- **A regular expression is JavaScriptCore's, not the spec's, where the two differ**
+  (`js::regexp`): with `u` or `v` an escaped character past ASCII (`\é`) is that character, as
+  Bun reads it (the spec and V8 refuse it). Five corners stay the engine's: a `v` pattern holding
+  what JavaScriptCore refuses (`\q`, `\00`, a lone `]`, `{` or `}`, `\c1`, `\1` with no group)
+  compiles; without `u`, `i` relates the letters Unicode 16 added to their case partners (U+019B,
+  U+0264, U+1C89, U+1C8A, U+A7CB–U+A7DC), whose pattern case table in JavaScriptCore is older than
+  its `toUpperCase`; a pattern without `u` whose backreference `i` applies to and which also turns
+  `i` on or off for a group folds by Unicode's case folding (`ſ` meets `s`), not by
+  `Canonicalize`; a lone surrogate in a capture reads as U+FFFD (above); and the reason of a
+  `SyntaxError` is read from the engine's error and the pattern's text, so a pattern the oracle
+  never met may name another reason than JavaScriptCore would. No module compiles with `v`, and
+  none shows the reason. Neither engine bounds backtracking (`/(a+)+$/` on a text of 26 `a`s took
+  JavaScriptCore 0.6 s): the core adds no limit the spec does not state.
 
 ## When the spec moves
 

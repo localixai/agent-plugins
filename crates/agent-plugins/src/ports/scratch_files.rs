@@ -3,10 +3,16 @@
 //! Files the crate hands to the model instead of a text too long to show, such as a hook output
 //! over its cap.
 
-use super::BoxFuture;
+use super::{BoxFuture, Signal};
 
 /// Where the host keeps such files.
 pub trait ScratchFiles: Send + Sync {
-    /// Writes `content` under a name built from `name` and answers its host path.
-    fn write<'a>(&'a self, name: &'a str, content: &'a str) -> BoxFuture<'a, String>;
+    /// Writes `content` under a name built from `name` and answers its host path; `signal` ends
+    /// the write.
+    fn write<'a>(
+        &'a self,
+        name: &'a str,
+        content: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, String>;
 }

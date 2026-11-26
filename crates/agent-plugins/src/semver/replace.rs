@@ -4,12 +4,12 @@
 //! A number the package adds one to (`+M + 1`) is a JavaScript number, written as JavaScript
 //! writes it (`js::number_to_string`).
 
-use regex::Captures;
-
 use crate::js::{number, number_to_string, trim};
 
-use super::range::{group, replace_with, split_blanks};
-use super::re::{BUILD, CARET, GTE0, STAR, TILDE, XRANGE};
+use crate::js::regexp::RegExpMatch;
+
+use super::range::split_blanks;
+use super::re::{BUILD, CARET, GTE0, STAR, TILDE, XRANGE, group, replace, replace_with};
 
 /// `+text + 1`, as JavaScript writes it.
 fn plus_one(text: &str) -> String {
@@ -29,7 +29,7 @@ fn invalid_x_range_order(major: Option<&str>, minor: Option<&str>, patch: Option
 
 /// `parseComparator(comp)`: the build cut, then carets, tildes, x-ranges and stars replaced.
 pub(super) fn parse_comparator(comp: &str) -> String {
-    let comp = replace_with(BUILD.as_ref(), comp, false, |_| String::new());
+    let comp = replace(&BUILD, comp, "");
     let comp = replace_carets(&comp);
     let comp = replace_tildes(&comp);
     let comp = replace_x_ranges(&comp);
@@ -43,7 +43,7 @@ fn each_part(comp: &str, one: fn(&str) -> String) -> String {
 }
 
 /// The groups `M`, `m`, `p` and `pr` of a tilde, caret or x-range match, from `first`.
-fn parts<'t>(found: &Captures<'t>, first: usize) -> [Option<&'t str>; 4] {
+fn parts(found: &RegExpMatch, first: usize) -> [Option<&str>; 4] {
     [first, first + 1, first + 2, first + 3].map(|index| group(found, index))
 }
 
@@ -54,7 +54,7 @@ fn replace_tildes(comp: &str) -> String {
 }
 
 fn replace_tilde(comp: &str) -> String {
-    replace_with(TILDE.as_ref(), comp, false, |found| {
+    replace_with(&TILDE, comp, |found| {
         let [major, minor, patch, pre] = parts(found, 1);
         let (major_text, minor_text) = (major.unwrap_or_default(), minor.unwrap_or_default());
         let patch_text = patch.unwrap_or_default();
@@ -88,7 +88,7 @@ fn replace_carets(comp: &str) -> String {
 }
 
 fn replace_caret(comp: &str) -> String {
-    replace_with(CARET.as_ref(), comp, false, |found| {
+    replace_with(&CARET, comp, |found| {
         let [major, minor, patch, pre] = parts(found, 1);
         let (major_text, minor_text) = (major.unwrap_or_default(), minor.unwrap_or_default());
         let patch_text = patch.unwrap_or_default();
@@ -125,7 +125,7 @@ fn replace_x_ranges(comp: &str) -> String {
 
 fn replace_x_range(comp: &str) -> String {
     let comp = trim(comp);
-    replace_with(XRANGE.as_ref(), comp, false, |found| {
+    replace_with(&XRANGE, comp, |found| {
         let whole = group(found, 0).unwrap_or_default();
         let gtlt = group(found, 1).unwrap_or_default();
         let [major, minor, patch, _] = parts(found, 2);
@@ -196,16 +196,16 @@ fn x_range(whole: &str, gtlt: &str, [major, minor, patch]: [Option<&str>; 3]) ->
 
 /// `*` is ANDed with everything else, and `''` means any version: the first `*` is removed.
 fn replace_stars(comp: &str) -> String {
-    replace_with(STAR.as_ref(), trim(comp), false, |_| String::new())
+    replace(&STAR, trim(comp), "")
 }
 
 /// `>=0.0.0` is `*`.
 pub(super) fn replace_gte0(comp: &str) -> String {
-    replace_with(GTE0.as_ref(), trim(comp), false, |_| String::new())
+    replace(&GTE0, trim(comp), "")
 }
 
 /// `hyphenReplace`: `1.2 - 3.4.5` is `>=1.2.0 <=3.4.5`, `1.2.3 - 3.4` is `>=1.2.3 <3.5.0-0`.
-pub(super) fn hyphen_replace(found: &Captures<'_>) -> String {
+pub(super) fn hyphen_replace(found: &RegExpMatch) -> String {
     let from = group(found, 1).unwrap_or_default();
     let [from_major, from_minor, from_patch, _] = parts(found, 2);
     let to = group(found, 7).unwrap_or_default();

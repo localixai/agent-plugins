@@ -7,23 +7,22 @@
 //! failure"; `MAX_STRUCTURED_OUTPUT_RETRIES` changes the attempt count (env-vars.md). Pure decisions: the
 //! kit validates no output and starts no agent.
 //!
-//! A pattern of `patternProperties` is run by `js::reg_exp`, which refuses some patterns
-//! JavaScript runs (lookaround, backreferences, `\p{…}`): such a pattern is one that may match, as
-//! one that does not compile is, so a key it would not have matched is not ruled out here.
+//! A pattern of `patternProperties` is run as `new RegExp(pattern, 'u')` (`js::regexp`); one that
+//! does not compile is `undefined`, as the TypeScript's `catch` gives.
 
 use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::format::env_number::positive_whole_env;
 use crate::format::issues::{PluginIssue, error};
-use crate::js::reg_exp::unicode_reg_exp;
+use crate::js::regexp::RegExp;
 use crate::js::{JsObject, JsValue, number_to_string, property_order};
 
-/// A pattern of `patternProperties` that matches `key`; one that is not a pattern matches nothing we can prove.
+/// `new RegExp(pattern, 'u').test(key)`, or `None` where the pattern does not compile.
 fn pattern_matches(pattern: &str, key: &str) -> Option<bool> {
-    unicode_reg_exp(pattern)
+    RegExp::new(pattern, "u")
         .ok()
-        .map(|regex| regex.is_match(key))
+        .map(|mut regexp| regexp.test(key))
 }
 
 /// `isRecord(value)`: an object that is no array and not `null`.
