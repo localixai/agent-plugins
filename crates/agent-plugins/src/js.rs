@@ -7,14 +7,18 @@
 
 pub mod json_parse;
 pub mod json_stringify;
+mod radix;
 mod slice;
 mod string_to_number;
+mod uri;
 pub mod url;
 pub mod value;
 
 pub use json_stringify::{json_stringify, json_stringify_indented};
+pub use radix::{to_exponential, to_radix_string};
 pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;
+pub use uri::decode_uri_component;
 pub use value::{JsObject, JsValue};
 
 use std::cmp::Ordering;
@@ -179,19 +183,20 @@ pub fn parse_int_hex(text: &str) -> f64 {
     if run.is_empty() {
         return f64::NAN;
     }
-    let number = hex_value(&run);
+    let number = radix_value(&run, 16.0);
     if negative { -number } else { number }
 }
 
-/// The value of hexadecimal digits as the runtime's `parseInt` sums them (JavaScriptCore): digit
-/// by digit, most significant first, while it stays below 2^53; past that the digits are summed
-/// again from the least significant one, each times a running power of 16 that is itself a double,
-/// so a long run is not the correctly rounded number (`parseIntOverflow`). Zeros after the power
-/// has overflowed add nothing; any other digit then makes the value infinite.
-fn hex_value(digits: &[u32]) -> f64 {
+/// The value of digits in a power-of-two radix as the runtime's `parseInt` sums them
+/// (JavaScriptCore): digit by digit, most significant first, while it stays below 2^53; past that
+/// the digits are summed again from the least significant one, each times a running power of the
+/// radix that is itself a double, so a long run is not the correctly rounded number
+/// (`parseIntOverflow`). Zeros after the power has overflowed add nothing; any other digit then
+/// makes the value infinite.
+fn radix_value(digits: &[u32], radix: f64) -> f64 {
     let mut number = 0.0_f64;
     for digit in digits {
-        number = number * 16.0 + f64::from(*digit);
+        number = number * radix + f64::from(*digit);
     }
     if number < 9_007_199_254_740_992.0 {
         return number;
@@ -206,9 +211,23 @@ fn hex_value(digits: &[u32]) -> f64 {
         } else {
             sum += f64::from(*digit) * multiplier;
         }
-        multiplier *= 16.0;
+        multiplier *= radix;
     }
     sum
+}
+
+/// JavaScript's `Number.parseInt(digits, 8)` of a run of octal digits (as YAML's `0o17` holds
+/// after its prefix), NaN for none.
+#[must_use]
+pub fn parse_int_octal(digits: &str) -> f64 {
+    let run: Vec<u32> = digits
+        .chars()
+        .map_while(|character| character.to_digit(8))
+        .collect();
+    if run.is_empty() {
+        return f64::NAN;
+    }
+    radix_value(&run, 8.0)
 }
 
 /// A text without the blanks before it, as JavaScript's `String.prototype.trimStart` cuts them.
@@ -221,7 +240,7 @@ pub fn trim_start(text: &str) -> &str {
 /// decimal point after the first digit counted as JavaScript's algorithm counts it. Of the
 /// shortest, the closest to the number, the even one of two as close (Number::toString, ECMA-262
 /// §6.1.6.1.20): Rust's shortest digits settle the count, its exact rounding then the digits.
-fn shortest_digits(value: f64) -> (String, i64) {
+pub(crate) fn shortest_digits(value: f64) -> (String, i64) {
     let shortest = format!("{value:e}");
     let count = shortest
         .split('e')

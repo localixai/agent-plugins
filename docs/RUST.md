@@ -193,7 +193,7 @@ TypeScript they follow changed.
 | RS6 | JavaScript's semantics where they reach a result live in `crates/agent-plugins/src/js.rs`: UTF-16 length and order (`code_unit_length`, `compare_code_units`), `trim`'s blanks, a number's text. A regular expression keeps JavaScript's classes: `\d`, `\w` and `\b` are ASCII there (spell them `[0-9]`, `[A-Za-z0-9_]` or use `(?-u:...)`), `\s` is `js::is_whitespace`'s set. |
 | RS7 | Shapes are the package's JSON: an interface is a struct with `#[serde(rename_all = "camelCase")]`, an optional member an `Option` that is skipped when `None`, a union of strings an enum renamed to its strings, a tagged union an enum with `#[serde(tag = "...")]`. A value the package types `unknown`, or reads from JSON or YAML, is a `js::JsValue` (`undefined`, `NaN`, the infinities and `-0` included; `JsValue::Undefined` is a missing argument); a `number` field that may hold one of those four is serialized with `js::value::serialize_number`. Member order is the package's: a `JsObject` keeps order, maps are `IndexMap`. The library depends on no JSON library: `clippy.toml` disallows `serde_json::Value` and `serde_json::from_str`, which only the differential tests use, to read the vectors. |
 | RS9 | A port mirrors its source so a TypeScript diff applies to it at a glance: the same functions in the same order, the same names, tables copied verbatim in the same order, the spec citations of the doc comments kept. Its first line is its port header, stamped by `bun scripts/rust/ports.ts --stamp <file>` when the port matches its source; `ports.ts --check` keeps it honest. |
-| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex` and `url` (the WHATWG URL parser, so no URL parser of our own is kept current) so far; `serde_json` for the tests only. |
+| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex` and `url` (the WHATWG URL parser, so no URL parser of our own is kept current) so far; `serde_json` for the tests only. The npm package's `yaml` is ported by hand instead (`crates/agent-plugins/src/yaml.rs`): no YAML crate words and places its errors as the package does, keeps the comments an edit must keep, or writes what its `stringify` writes. |
 
 ## Where the crate answers differently
 
@@ -211,6 +211,18 @@ module's doc comment, never a silent difference:
   `ENTRY_COMMANDS[type]` in `format/mcpb-manifest`, a saved setting by its key), a name like
   `constructor`, `toString` or `__proto__` reached `Object.prototype` and answered a function;
   the core answers "not there", which is what the tables mean.
+- **YAML nested past 128 collections is refused** with the package's own error for its stack
+  running out (`Maximum call stack size exceeded.`), read or written, where Bun's stack lets the
+  package go past 5,000 levels. A level costs the core about 1.4 KiB of WebAssembly's 1 MiB stack
+  and about 8 KiB in a debug build (`crates/agent-plugins/src/yaml.rs`, `MAX_DEPTH`). No
+  frontmatter comes near it.
+- **YAML beyond the core schema**: the frontmatter reads the YAML 1.2 core schema, and so does the
+  core, always. The package also knows `!!binary`, `!!set`, `!!omap`, `!!pairs` and
+  `!!timestamp` (a `Uint8Array`, a `Set`, a `Map`, a `Date`), and reads a `%YAML 1.1` document
+  (`%YAML 1.1` then `--- {x: yes}`) with YAML 1.1's schema (`yes` is `true`); the core reads such
+  a value as its untagged self (`"aGk="`, `{"a": null}`, `"2001-12-14"`) and `yes` as text.
+- **A YAML alias inside its own anchor** (`x: &a [*a]`) reads as `[[]]`: the package gives an
+  array that holds itself, which no value crossing the boundary can be.
 
 ## When the spec moves
 
