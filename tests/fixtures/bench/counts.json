@@ -548,7 +548,7 @@
       "8": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 757,
+          "cpu.RegExp.exec": 13,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -559,7 +559,7 @@
       "16": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 1523,
+          "cpu.RegExp.exec": 21,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -570,7 +570,7 @@
       "32": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 3055,
+          "cpu.RegExp.exec": 37,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
