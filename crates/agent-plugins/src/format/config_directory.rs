@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
 use crate::ports::BoxFuture;
+use crate::ports::locations::Locations;
 use crate::registry::Callback;
 
 /// The variable, as the host's `Environment` port reads it.
@@ -34,6 +35,15 @@ impl<F: Fn(&str, &str) -> String + Send + Sync> Join for F {
 impl Join for Callback {
     fn join<'a>(&'a self, base: &'a str, relative_path: &'a str) -> BoxFuture<'a, String> {
         Box::pin(self.call(vec![JsValue::from(base), JsValue::from(relative_path)]))
+    }
+}
+
+/// `Locations.joinPath` as a [`Join`], for a port that hands its host's `joinPath` on.
+pub struct JoinPath<'a>(pub &'a dyn Locations);
+
+impl Join for JoinPath<'_> {
+    fn join<'a>(&'a self, base: &'a str, relative_path: &'a str) -> BoxFuture<'a, String> {
+        self.0.join_path(base, relative_path)
     }
 }
 

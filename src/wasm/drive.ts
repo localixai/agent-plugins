@@ -5,10 +5,12 @@
  * table (`hosts.ts`).
  *
  * `callSync` answers at once, for a function the TypeScript declares synchronous: with no host
- * value among the arguments it is one call of the core; with a callback, each need is answered
- * as it comes, and a callback that returns a promise is a bug of the wrapper. `callAsync` awaits
+ * value among the arguments it is one call of the core; with a callback, or for a handle's method
+ * (which may use the ports of the call that made the handle), each need is answered as it comes,
+ * and a callback that returns a promise is a bug of the wrapper. `callAsync` awaits
  * each need, starting it the moment the core asks, so needs asked together run together, as
- * `Promise.all` in the TypeScript. What a host value throws, the call throws, the same value.
+ * `Promise.all` in the TypeScript. What a host value throws, the call throws, the same value,
+ * unless the core catches it (`registry::catch_host`); the value stays here by its need either way.
  */
 import { type HostTable, hostTable } from './hosts.ts';
 import { callText, generation, release, resumeText, startText } from './instance.ts';
@@ -43,8 +45,11 @@ function finished<T>(name: string, step: Done, thrown: ReadonlyMap<number, unkno
   return resultOf<T>(name, step.done);
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+/** A throw as the core reads it (`registry::Thrown`): its message, and an `Error`'s `name`. */
+const thrownAs = (id: number, error: unknown): Given =>
+  error instanceof Error
+    ? { id, throws: error.message, name: error.name }
+    : { id, throws: String(error) };
 
 const isThenable = (value: unknown): boolean =>
   typeof value === 'object' && value !== null && typeof Reflect.get(value, 'then') === 'function';
@@ -76,7 +81,7 @@ function answerSync(need: Need, hosts: HostTable, thrown: Map<number, unknown>):
     return { id: need.id, result };
   } catch (error) {
     thrown.set(need.id, error);
-    return { id: need.id, throws: messageOf(error) };
+    return thrownAs(need.id, error);
   }
 }
 
@@ -89,7 +94,7 @@ async function answerAsync(
     return { id: need.id, result: await invoke(need, hosts) };
   } catch (error) {
     thrown.set(need.id, error);
-    return { id: need.id, throws: messageOf(error) };
+    return thrownAs(need.id, error);
   }
 }
 
@@ -126,7 +131,10 @@ function handleObject(
 export function callSync<T>(name: string, args: readonly unknown[], parent?: HostTable): T {
   const hosts = hostTable(handleObject, parent);
   const text = encodeArgs(args, hosts);
-  if (hosts.empty()) return resultOf<T>(name, decodeAnswer(callText(name, text), hosts));
+  // A handle's method may ask for the host values of the call that made it, so it takes the loop.
+  if (hosts.empty() && parent === undefined) {
+    return resultOf<T>(name, decodeAnswer(callText(name, text), hosts));
+  }
   const thrown = new Map<number, unknown>();
   let step = decodeStep(startText(name, text), hosts);
   while ('needs' in step) {

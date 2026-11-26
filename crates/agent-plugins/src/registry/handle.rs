@@ -140,9 +140,14 @@ pub(crate) fn held() -> usize {
 ///     Counter {
 ///         "add" => ok |this, by: f64| this.add(by);
 ///         "settle" => async ok |this, path: String| this.settle(&path).await;
+///         "home" => sync async ok |this| this.locations.home_dir().await;
 ///     }
 /// }
 /// ```
+///
+/// `sync async` marks a method the TypeScript answers at once that still asks the host (a
+/// `Locations.homeDir` that delegates to the host's own): the host lists it as sync and answers
+/// each of its needs as it comes, as a sync wrapper does (`src/wasm/drive.ts`).
 macro_rules! methods {
     ($type:ty { $($entries:tt)* }) => {
         $crate::registry::methods!(@munch $type [] [] [] $($entries)*);
@@ -171,6 +176,12 @@ macro_rules! methods {
                 }
             }
         }
+    };
+    (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
+        $name:literal => sync async $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;
+        $($rest:tt)*) => {
+        $crate::registry::methods!(@munch $type [$($sync)* $name] [$($async)*]
+            [$($done)* ($name $this [async $kind ($($param: $ptype),*) $body])] $($rest)*);
     };
     (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
         $name:literal => async $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;

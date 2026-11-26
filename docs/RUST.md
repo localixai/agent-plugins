@@ -78,11 +78,14 @@ its ports without an async runtime.
    port's (`files.readText(path, signal)` is `readText` with `[path, signal]`); a callback's
    method is `call`.
 2. The host does each need and gives its answer to `registry::resume(t, {"answers": [{"id",
-   "result"} | {"id", "throws"}], "aborted": [n]})`, which runs the task on to its next step.
+   "result"} | {"id", "throws", "name"?}], "aborted": [n]})`, which runs the task on to its next
+   step (`throws` is `cause instanceof Error ? cause.message : String(cause)`, `name` an
+   `Error`'s `name`).
    Every need asked in one poll comes in one step, so a `join` in the core is concurrent work on
    the host, as `Promise.all` was. A host that throws ends the task with `{"rethrow": id}`: the
    call throws the very value the host threw, as an `await` in the TypeScript did (a port's own
-   failure is a `PortFailure` in its result, `src/ports/failure.ts`, never a throw).
+   failure is a `PortFailure` in its result, `src/ports/failure.ts`, never a throw), unless the
+   core catches it (item 6).
 3. What the host keeps crosses as its number, at any depth, both ways (`registry/remote.rs`,
    `src/wasm/wire.ts`): a port (an object with methods) `{"$port": n}`, a function `{"$fn": n}`,
    an `AbortSignal` `{"$signal": n, "aborted": bool}`. The signal's flag in the core is set when
@@ -93,9 +96,38 @@ its ports without an async runtime.
    its members is a function (a `WorktreeLocation` with its `isSymlink`); a function read that
    way is a `Callback`, an absent member `undefined`. A parameter that may be either takes both
    shapes, `#[serde(untagged)] enum { Host(Port), Data(T) }` (`hooks/output/worktree_path.rs`).
+   An object the TypeScript types as an interface of its own module rather than a port of
+   `crate::ports` (a policy, a catalog, a token counter) is called by `Port::method(name, args)`,
+   its method with `this` the object, and its module implements its trait for `Port` with that
+   (`agents/preload_skills.rs`).
 5. A function of the core's that the host calls later (a timer's `fire`) crosses as `{"$call":
    h}`, a `registry::Function`: a handle (below) whose one sync method is `call`, which the host
    makes a function.
+6. A `try { await port.method(…) } catch (cause) { … }` is `registry::catch_host(future).await`,
+   `Ok` with the future's output or `Err(registry::Thrown { message, name, need })` with the
+   host's throw (`registry/catch.rs`). The scope that catches is the one awaiting the need when
+   its answer comes, as the `try` awaiting a promise in JavaScript, wherever the call was made;
+   the innermost catches, and on a throw the scope drops its future, so a need it was still
+   waiting on is never asked (asked in the same poll) or its late answer is dropped. A catch that
+   throws again (`if (signal?.aborted === true) throw cause`) writes `return
+   cause.rethrow().await;` (a future that never completes, so it is any type): the scope around
+   it catches it, or the task ends with `{"rethrow": need}` and the call throws the very value.
+   The host keeps what it threw by need until the call ends. A Rust host's ports never throw, so
+   for it `catch_host` answers `Ok`. `foundation/folder_read.rs` is the pattern:
+
+   ```rust
+   let read = catch_host(async { folder.files().await.read_text(path, signal).await }).await;
+   match read {
+       Ok(text) => TextRead { text, issue: None },
+       Err(cause) => {
+           if signal.is_some_and(Signal::is_aborted) {
+               return cause.rethrow().await;
+           }
+           let reason = cause.message;
+           // … the warning
+       }
+   }
+   ```
 
 `registry::Port` implements every port trait of `crates/agent-plugins/src/ports/`, one file of
 `registry/remote/` each, each method the need of its TypeScript namesake with its arguments, the
@@ -118,7 +150,8 @@ parameters `registry::Port`, `registry::Callback`, `ports::Signal` or data, and 
 Its wrapper is `call.async('readJson', files, path, signal)`, which returns a promise; a
 function the TypeScript declares synchronous keeps `call('f', …)`, and a callback among its
 arguments is answered as the core asks (a callback that returns a promise there is refused).
-`registry::call` answers such an export with a fault. A Rust host passes its own port values and
+`registry::call` answers such an export when it asks the host nothing (a token counter left to
+the kit's own), and with a fault when it would wait. A Rust host passes its own port values and
 closures, each answering with a ready future, and takes the answer with `ports::now(future)`.
 
 ### Handles: a result with methods
@@ -135,6 +168,11 @@ crate::registry::methods! {
     }
 }
 ```
+
+A method the TypeScript declares synchronous whose body asks the host (a `Locations` that
+delegates to the host's, `loading/resolve/without_plugin.rs`) is `"homeDir" => sync async ok
+|this| …;`: listed as sync, so the wrapper's object answers at once, and run as an async body
+whose needs the host answers as they come, with the ports of the call that made the handle.
 
 It crosses as `{"$handle": h, "sync": ["add"], "async": ["addLater"]}`; the core keeps the object
 under `h`. The host calls a method by the name `<h>#<method>` through `start` and `resume` (a sync
@@ -212,7 +250,7 @@ TypeScript they follow changed.
 | RS6 | JavaScript's semantics where they reach a result live in `crates/agent-plugins/src/js.rs`: UTF-16 length and order (`code_unit_length`, `compare_code_units`), `trim`'s blanks, a number's text. A regular expression keeps JavaScript's classes: `\d`, `\w` and `\b` are ASCII there (spell them `[0-9]`, `[A-Za-z0-9_]` or use `(?-u:...)`), `\s` is `js::is_whitespace`'s set. |
 | RS7 | Shapes are the package's JSON: an interface is a struct with `#[serde(rename_all = "camelCase")]`, an optional member an `Option` that is skipped when `None`, a union of strings an enum renamed to its strings, a tagged union an enum with `#[serde(tag = "...")]`. A value the package types `unknown`, or reads from JSON or YAML, is a `js::JsValue` (`undefined`, `NaN`, the infinities and `-0` included; `JsValue::Undefined` is a missing argument); a `number` field that may hold one of those four is serialized with `js::value::serialize_number`. Member order is the package's: a `JsObject` keeps order, maps are `IndexMap`. The library depends on no JSON library: `clippy.toml` disallows `serde_json::Value` and `serde_json::from_str`, which only the differential tests use, to read the vectors. |
 | RS9 | A port mirrors its source so a TypeScript diff applies to it at a glance: the same functions in the same order, the same names, tables copied verbatim in the same order, the spec citations of the doc comments kept. Its first line is its port header, stamped by `bun scripts/rust/ports.ts --stamp <file>` when the port matches its source; `ports.ts --check` keeps it honest. |
-| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex` and `url` (the WHATWG URL parser, so no URL parser of our own is kept current) so far; `serde_json` for the tests only. The npm package's `yaml` is ported by hand instead (`crates/agent-plugins/src/yaml.rs`): no YAML crate words and places its errors as the package does, keeps the comments an edit must keep, or writes what its `stringify` writes. |
+| RS8 | A dependency earns its place, with its reason in a comment beside it in `Cargo.toml`: `serde`, `indexmap`, `regex`, `url` (the WHATWG URL parser, so no URL parser of our own is kept current) and `unicode-normalization` (`String.prototype.normalize`'s four forms, so no Unicode table of our own is kept current) so far; `serde_json` for the tests only. The npm package's `yaml` is ported by hand instead (`crates/agent-plugins/src/yaml.rs`): no YAML crate words and places its errors as the package does, keeps the comments an edit must keep, or writes what its `stringify` writes. |
 
 ## Where the crate answers differently
 
@@ -242,6 +280,15 @@ module's doc comment, never a silent difference:
   a value as its untagged self (`"aGk="`, `{"a": null}`, `"2001-12-14"`) and `yes` as text.
 - **A YAML alias inside its own anchor** (`x: &a [*a]`) reads as `[[]]`: the package gives an
   array that holds itself, which no value crossing the boundary can be.
+- **A regular expression from input** (a `patternProperties` key of a schema) is run by
+  `js::reg_exp::unicode_reg_exp`, JavaScript's `u`-mode syntax read and written for the `regex`
+  crate, and held to Bun by `bun scripts/rust/js-oracle.ts` (`crates/agent-plugins/tests/vectors/js/reg-exp.jsonl`).
+  What `regex` has no engine for is refused as `Unrun::Unsupported`, never run differently:
+  lookahead and lookbehind, backreferences (`\1`, `\k<name>`), `\p{…}` and `\P{…}`, modifiers
+  (`(?i:…)`), a group name that is not ASCII or that repeats, more than 100 nested groups, a count
+  past 2^32 and a pattern past the crate's size limit. A syntax error is `Unrun::Invalid`. A
+  module that runs such a pattern says what a refused one means (`agents/workflow/structured_output.rs`:
+  it may match).
 
 ## When the spec moves
 

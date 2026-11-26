@@ -22,6 +22,9 @@ regex = "1"
 # `new URL(text)`, the WHATWG URL Standard's parser (hosts, IDNA, IPv4 and IPv6, percent-encoding)
 # that a plugin's addresses are read by; held to Bun's answers by `tests/differential/js.rs`.
 url = "2"
+# `String.prototype.normalize` (NFC, NFD, NFKC, NFKD), which an archive's names are folded by;
+# held to Bun's answers by `tests/differential/js.rs`.
+unicode-normalization = "0.1"
 
 [lints]
 workspace = true

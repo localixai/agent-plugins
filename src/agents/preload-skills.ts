@@ -1,10 +1,12 @@
 /**
  * The skills a subagent preloads into its context at startup (sub-agents.md, "Preload skills into
  * subagents"). The kit plans; loading skill content and building the system prompt are the host's.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/preload_skills.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
 
-/** sub-agents.md, "Preload skills into subagents": "up to the first 32 distinct names". */
-const PRELOAD_LIMIT = 32;
+const call = coreModule('agents/preload-skills');
 
 /** What the host knows about its skills; narrow so the skills package need not be imported. */
 export interface SkillCatalog {
@@ -30,18 +32,7 @@ export interface PreloadPlan {
  * is read once and not reported (judgment). Which skills the subagent may invoke through the Skill
  * tool is the `tools` field's, not this one's.
  */
-export function planPreloadedSkills(
+export const planPreloadedSkills = (
   names: readonly string[] | undefined,
   catalog: SkillCatalog,
-): PreloadPlan {
-  const distinct = [...new Set(names ?? [])];
-  const load: string[] = [];
-  const skipped: { name: string; reason: SkillSkipReason }[] = [];
-  distinct.forEach((name, index) => {
-    if (index >= PRELOAD_LIMIT) skipped.push({ name, reason: 'beyond-limit' });
-    else if (!catalog.has(name)) skipped.push({ name, reason: 'missing' });
-    else if (!catalog.isModelInvocable(name)) skipped.push({ name, reason: 'not-model-invocable' });
-    else load.push(name);
-  });
-  return { load, skipped };
-}
+): PreloadPlan => call('planPreloadedSkills', names, catalog);

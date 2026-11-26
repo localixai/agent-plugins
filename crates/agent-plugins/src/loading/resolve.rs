@@ -2,5 +2,10 @@
 
 pub mod data_id;
 pub mod field_map;
+pub mod headers_helper_origins;
 pub mod lsp_startup;
 pub mod powershell_no_program;
+pub mod shell_guard_hook;
+pub mod shell_guard_monitor;
+pub mod shell_prefix;
+pub mod without_plugin;

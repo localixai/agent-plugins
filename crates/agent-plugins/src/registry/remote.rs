@@ -8,7 +8,7 @@
 //!   its answer read as the Rust type. A property of a port (`ScanFolder.dir`) is read by the
 //!   need `.dir`, with no arguments, answered with its value ([`Port::member`]). A port's own
 //!   failure (`T | PortFailure` in the TypeScript) is an `Err`; what the host throws ends the
-//!   task (`{"rethrow": id}`).
+//!   task (`{"rethrow": id}`), unless a `registry::catch_host` scope awaits it.
 //! - A callback, `{"$fn": n}`, is a [`Callback`]: calling it is the need `call`.
 //! - An `AbortSignal`, `{"$signal": n, "aborted": bool}`, is a [`Signal`] whose flag the host
 //!   sets when it resumes a task (`"aborted": [n]`); passed to a port, it crosses back as
@@ -188,6 +188,18 @@ impl Port {
         name: &str,
     ) -> impl Future<Output = R> + Send + use<R> {
         answered(self.id, &format!(".{name}"), vec![])
+    }
+
+    /// `name(...args)` of the host's object called as its method (`this` is the object), the
+    /// answer read as `R`: for an object the TypeScript types as an interface of its own module
+    /// rather than a port of `crate::ports` (a policy, a catalog, a token counter), whose module
+    /// implements its trait for `Port` with this.
+    pub fn method<R: DeserializeOwned + Send + 'static>(
+        self,
+        name: &str,
+        args: Vec<JsValue>,
+    ) -> impl Future<Output = R> + Send + use<R> {
+        answered(self.id, name, args)
     }
 
     /// `method(...args)` of the host's port, its answer read as `R`.

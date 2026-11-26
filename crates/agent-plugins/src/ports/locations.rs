@@ -3,7 +3,7 @@
 //! The host's own paths: the home and project folders, where a plugin is and keeps its data, and
 //! how two path parts join on its system.
 
-use super::BoxFuture;
+use super::{BoxFuture, Signal};
 
 /// Where things are on the host. The methods the TypeScript answers at once return futures too,
 /// so a host across the boundary answers each as a need (`crate::registry`); a Rust host returns
@@ -16,9 +16,17 @@ pub trait Locations: Send + Sync {
     /// The folder a plugin is loaded from.
     fn plugin_root<'a>(&'a self, plugin_id: &'a str) -> BoxFuture<'a, String>;
     /// The plugin's data folder (`${CLAUDE_PLUGIN_DATA}`), created when first asked for.
-    fn plugin_data<'a>(&'a self, plugin_id: &'a str) -> BoxFuture<'a, String>;
+    fn plugin_data<'a>(
+        &'a self,
+        plugin_id: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, String>;
     /// `relative_path` joined to `base` as the host's system joins paths.
     fn join_path<'a>(&'a self, base: &'a str, relative_path: &'a str) -> BoxFuture<'a, String>;
     /// The first of `candidates` that is an existing directory.
-    fn existing_directory<'a>(&'a self, candidates: &'a [String]) -> BoxFuture<'a, Option<String>>;
+    fn existing_directory<'a>(
+        &'a self,
+        candidates: &'a [String],
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<String>>;
 }
