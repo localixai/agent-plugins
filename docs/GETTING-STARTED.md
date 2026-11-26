@@ -60,8 +60,7 @@ package's own condition, which every subpath maps to its `src/**/*.ts` entry:
 
 Bun and Node ignore the condition. Without it, TypeScript reads the built `dist/**/*.d.ts`, so a
 linked checkout needs `bun run build` first. A host that installs from the registry reads the
-declarations and needs no condition; with it, it would also compile the source, which needs
-`@types/semver`.
+declarations and needs no condition.
 
 ## 2. Implement the ports
 

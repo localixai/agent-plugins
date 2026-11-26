@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- `semver` and `yaml` are no longer dependencies: the core reads versions and frontmatter itself.
 - A hook matcher tested against a value that is not text (an input that fails its schema) answers
   as before the move to the core: no list names it, and a pattern tests `String(value)`. A tool
   pattern's RegExp is compiled once per pattern again.
