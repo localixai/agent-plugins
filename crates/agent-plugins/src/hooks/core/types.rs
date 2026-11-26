@@ -107,7 +107,8 @@ pub enum CoreResult {
     },
 }
 
-/// One core handler's run: its result, or why it failed (core §7.3.2 item 5).
+/// One core handler's run: its result, or why it failed (core §7.3.2 item 5). The members are in
+/// the order `runCoreHandler` writes them.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CoreRun {
@@ -117,18 +118,18 @@ pub struct CoreRun {
     pub plugin_id: String,
     /// The command and its arguments as they ran, for the notice and the debug line.
     pub label: String,
+    /// How long it was given.
+    pub timeout_ms: f64,
+    /// Its exit code.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<f64>,
+    /// Whether it timed out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timed_out: Option<bool>,
     /// Absent with a failure, and when the handler expressed no opinion.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub result: Option<CoreResult>,
     /// Why it failed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure: Option<String>,
-    /// Whether it timed out.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub timed_out: Option<bool>,
-    /// Its exit code.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<f64>,
-    /// How long it was given.
-    pub timeout_ms: f64,
 }

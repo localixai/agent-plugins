@@ -6,7 +6,6 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/remote/http_policy.rs`, docs/RUST.md).
  */
-import type { PluginIssue } from '../../../format/issues.ts';
 import { coreModule } from '../../../wasm/bridge.ts';
 
 export interface HttpHookPolicy {
@@ -28,13 +27,3 @@ const call = coreModule('hooks/handlers/remote/http-policy');
 /** Whether `url` may run under the merged allowlist; no list allows every URL. */
 export const urlAllowed = (url: string, allowedUrls: readonly string[] | undefined): boolean =>
   call('urlAllowed', url, allowedUrls);
-
-/** The variables a hook may interpolate: its own list, cut to the settings list when one is set. */
-export const permittedEnvVars = (
-  own: readonly string[] | undefined,
-  policy: HttpHookPolicy | undefined,
-): readonly string[] | undefined => call('permittedEnvVars', own, policy);
-
-/** The issue of an `http` hook whose URL the allowlist blocks; the hook does not run. */
-export const blockedUrlIssue = (path: string, url: string): PluginIssue =>
-  call('blockedUrlIssue', path, url);

@@ -53,7 +53,5 @@ pub fn shell_has_env_file(shell: Option<ShellKind>) -> bool {
 crate::registry::exports! {
     "hooks/env-file/events" {
         "envFileKindOf" => ok |event: String| env_file_kind_of(&event);
-        "envFileClearedBy" => ok |event: String| env_file_cleared_by(&event);
-        "shellHasEnvFile" => ok |shell: Option<ShellKind>| shell_has_env_file(shell);
     }
 }

@@ -1,7 +1,7 @@
 import type { CoreHookEvent } from '../../format/core/hooks.ts';
 import type { CoreProcess } from '../../format/core/subprocess.ts';
 import type { CommandRunner } from '../../ports/index.ts';
-import { readCoreRun } from './output.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { CoreRun } from './types.ts';
 
 /**
@@ -11,17 +11,11 @@ import type { CoreRun } from './types.ts';
  * input as one JSON object on stdin, stderr kept apart from stdout so it cannot make the output
  * invalid. The time limit is a Claude Code `command` hook's default on the same event (J18.5): 30
  * seconds on `UserPromptSubmit`, 600 seconds on the other four.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/core/run.rs`, docs/RUST.md).
  */
 
-const SECONDS = 1000;
-
-const CORE_TIMEOUT_MS: { readonly [E in CoreHookEvent]: number } = {
-  SessionStart: 600 * SECONDS,
-  UserPromptSubmit: 30 * SECONDS,
-  PreToolUse: 600 * SECONDS,
-  PostToolUse: 600 * SECONDS,
-  Stop: 600 * SECONDS,
-};
+const call = coreModule('hooks/core/run');
 
 export interface CoreInvocation {
   readonly handlerId: string;
@@ -34,33 +28,8 @@ export interface CoreInvocation {
 }
 
 /** Runs the handler once and reads what it came to; the port's own failure is a failed run too. */
-export async function runCoreHandler(
+export const runCoreHandler = (
   runner: CommandRunner,
   invocation: CoreInvocation,
   signal: AbortSignal,
-): Promise<CoreRun> {
-  const { event } = invocation;
-  const launch = invocation.process;
-  const timeoutMs = CORE_TIMEOUT_MS[event];
-  const base = {
-    handlerId: invocation.handlerId,
-    pluginId: invocation.pluginId,
-    label: invocation.label,
-    timeoutMs,
-  };
-  const run = await runner.run({
-    spec: { form: 'exec', command: launch.command, args: launch.args },
-    cwd: launch.cwd,
-    env: launch.env,
-    stdin: JSON.stringify(invocation.input),
-    timeoutMs,
-    signal,
-  });
-  const reading = readCoreRun(event, run, timeoutMs);
-  return {
-    ...base,
-    ...(run.exitCode === null ? {} : { exitCode: run.exitCode }),
-    ...(run.timedOut ? { timedOut: true } : {}),
-    ...reading,
-  };
-}
+): Promise<CoreRun> => call.async('runCoreHandler', runner, invocation, signal);

@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/remote/http-env.ts`, switched.
+//! Ported from `src/hooks/handlers/remote/http-env.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Environment variables in the headers of an `http` hook (hooks.md, "HTTP hook fields"):
 //! `headers` values "support environment variable interpolation using `$VAR_NAME` or `${VAR_NAME}`
@@ -9,7 +9,6 @@ use indexmap::IndexMap;
 
 use crate::js::in_key_order;
 use crate::ports::environment::Environment;
-use crate::registry::Port;
 
 /// The name a reference at the start of `text` holds, and the length of the reference: `${NAME}`
 /// or `$NAME`; a `$` that starts neither is plain text
@@ -76,11 +75,4 @@ pub async fn interpolate_headers(
         );
     }
     in_key_order(interpolated)
-}
-
-crate::registry::exports! {
-    "hooks/handlers/remote/http-env" {
-        "interpolateHeaders" => async ok |headers: Option<IndexMap<String, String>>, allowed_env_vars: Option<Vec<String>>, environment: Port|
-            interpolate_headers(headers.as_ref(), allowed_env_vars.as_deref(), &environment).await;
-    }
 }

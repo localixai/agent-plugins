@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/remote/mcp-input.ts`, switched.
+//! Ported from `src/hooks/handlers/remote/mcp-input.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The arguments of an `mcp_tool` hook (hooks.md, "MCP tool hook fields"): `input` holds "arguments
 //! passed to the tool. String values support `${path}` substitution from the hook's JSON input,
@@ -145,10 +145,4 @@ pub fn substitute_input(
 
 fn parse(json: &str) -> JsValue {
     json_parse(json).unwrap_or(JsValue::Undefined)
-}
-
-crate::registry::exports! {
-    "hooks/handlers/remote/mcp-input" {
-        "substituteInput" => ok |input: Option<JsObject>, hook_input_json: String, issue_path: String| substitute_input(input.as_ref(), &hook_input_json, &issue_path);
-    }
 }

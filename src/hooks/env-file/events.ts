@@ -8,7 +8,6 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/hooks/env-file/events.rs`, docs/RUST.md).
  */
-import type { ShellKind } from '../../ports/index.ts';
 import type { HookEvent } from '../../protocol/official.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 import type { EnvFileKind } from './ports.ts';
@@ -18,10 +17,3 @@ const call = coreModule('hooks/env-file/events');
 /** The file the hooks of this event append to, or none for an event that has no `CLAUDE_ENV_FILE`. */
 export const envFileKindOf = (event: HookEvent): EnvFileKind | undefined =>
   call('envFileKindOf', event);
-
-/** What clears at the start of an event: the `CwdChanged` event clears the file of its own kind. */
-export const envFileClearedBy = (event: HookEvent): EnvFileKind | undefined =>
-  call('envFileClearedBy', event);
-
-export const shellHasEnvFile = (shell: ShellKind | undefined): boolean =>
-  call('shellHasEnvFile', shell);

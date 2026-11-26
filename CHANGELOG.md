@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Hook runs, the env file, the command handler's working-directory fallback, the HTTP and MCP-tool
+  handlers, run facts, model switches and background verdicts run on the core, and so do
+  cross-marketplace refusals, dependency enable, prune and tags, install plans and errors, removal,
+  renames and version troubleshooting. An HTTP hook's request reaches the host's `HttpClient` with
+  `as: "text"` and `redirect: "follow"` stated; timeouts reach the ports as whole milliseconds.
 - `semver` and `yaml` are no longer dependencies: the core reads versions and frontmatter itself.
 - A hook matcher tested against a value that is not text (an input that fails its schema) answers
   as before the move to the core: no list names it, and a pattern tests `String(value)`. A tool

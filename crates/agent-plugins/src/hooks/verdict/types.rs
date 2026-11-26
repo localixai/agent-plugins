@@ -48,3 +48,47 @@ pub struct BackgroundDelivery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub issues: Option<Vec<PluginIssue>>,
 }
+
+/// How a run ended, for the host's debug line (`RunFacts.ending`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RunEnding {
+    /// It ran to its end.
+    Finished,
+    /// It reached its limit.
+    TimedOut,
+    /// The session killed it.
+    Cancelled,
+    /// It went to the background.
+    Background,
+    /// It did not start.
+    FailedToStart,
+    /// It did not run.
+    Skipped,
+}
+
+/// The facts of a finished run the host writes its debug line from (Agent Plugins Extended §7.4.12
+/// item 2, Judgment J7.67): the line's text, timestamp and level are the host's.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunFacts {
+    /// The value the matcher was tested against (`Write`, `startup`); absent on an event without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matched_value: Option<String>,
+    /// The handler as the docs name it: a command and its arguments, a URL, `server:tool`, or the type.
+    pub handler: String,
+    /// The plugin the hook came from, when it came from one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plugin: Option<String>,
+    /// How the run ended.
+    pub ending: RunEnding,
+    /// The exit code of a command hook whose process ran to the end.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<f64>,
+    /// `timed-out`: the limit it reached, in milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_ms: Option<f64>,
+    /// From the start of the run to its end, by the engine's `clock`; absent without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<f64>,
+}

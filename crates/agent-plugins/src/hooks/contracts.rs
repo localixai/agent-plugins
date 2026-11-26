@@ -3,9 +3,10 @@
 //! modules read; a field no ported module reads is left out (a struct reads what it names and
 //! ignores the rest).
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use crate::registry::Set;
+use crate::ports::BoxFuture;
+use crate::registry::{Port, Set};
 
 /// Where a registered handler was declared (hooks.md, "Hook locations").
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -67,10 +68,53 @@ pub struct DisableAllHooks {
     pub managed_locked: bool,
 }
 
-/// What the host knows about the running session that the lock gates read (`HookSession`).
+/// The agent a session's hook input names (`HookSession.agent`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+pub struct HookAgent {
+    /// `agent_id`.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// `agent_type`.
+    #[serde(default, rename = "type")]
+    pub kind: Option<String>,
+}
+
+/// The effort level a session carries (`BaseHookInput['effort']`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HookEffort {
+    /// The level.
+    pub level: String,
+}
+
+/// What the host knows about the running session that the stages read (`HookSession`).
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HookSession {
+    /// The session's id.
+    #[serde(default)]
+    pub session_id: String,
+    /// The transcript's path.
+    #[serde(default)]
+    pub transcript_path: String,
+    /// The working directory.
+    #[serde(default)]
+    pub cwd: String,
+    /// The mode as the host names it, including the label **Manual** (hooks.md, "Common input
+    /// fields"): the input carries it as `"default"`, and a text that names no mode is not sent.
+    #[serde(default)]
+    pub permission_mode: Option<String>,
+    /// The effort level.
+    #[serde(default)]
+    pub effort: Option<HookEffort>,
+    /// The id of the prompt.
+    #[serde(default)]
+    pub prompt_id: Option<String>,
+    /// The session's scratchpad.
+    #[serde(default)]
+    pub scratchpad_dir: Option<String>,
+    /// The agent the session runs as.
+    #[serde(default)]
+    pub agent: Option<HookAgent>,
     /// Settings-file hooks may run: an interactive session after the trust dialog, a `-p` or SDK
     /// session always (hooks.md, "Workspace trust").
     #[serde(default)]
@@ -95,4 +139,17 @@ pub struct HookSession {
     /// `strictPluginOnlyCustomization` locks the `hooks` surface.
     #[serde(default)]
     pub plugin_only_hooks: Option<bool>,
+}
+
+/// The canonical name of a model (hooks.md, "PreModelSwitch"); the host knows its models.
+pub trait ModelCatalog: Send + Sync {
+    /// `None` when the id has no canonical name, as a custom id only a gateway knows.
+    fn canonical_model<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Option<String>>;
+}
+
+/// The host's catalog, asked by its TypeScript method name.
+impl ModelCatalog for Port {
+    fn canonical_model<'a>(&'a self, id: &'a str) -> BoxFuture<'a, Option<String>> {
+        Box::pin(self.method::<Option<String>>("canonicalModel", vec![id.into()]))
+    }
 }

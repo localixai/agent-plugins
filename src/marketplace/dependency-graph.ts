@@ -89,9 +89,6 @@ export interface GraphFacts {
   readonly localCopies?: readonly LocalCopy[];
 }
 
-export const recordsOf = (id: string, facts: GraphFacts): readonly InstalledRecord[] =>
-  call('recordsOf', id, facts);
-
 export const recordAt = (
   id: string,
   scope: InstallScope,

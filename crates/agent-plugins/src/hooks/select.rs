@@ -4,3 +4,4 @@ pub mod event_catalog;
 pub mod gates;
 pub mod lock_gates;
 pub mod matcher_values;
+pub mod model_switch;

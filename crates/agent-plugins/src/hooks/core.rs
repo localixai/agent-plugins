@@ -3,4 +3,5 @@
 pub mod output;
 pub mod profile_results;
 pub mod profiles;
+pub mod run;
 pub mod types;
