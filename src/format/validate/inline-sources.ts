@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { Finding } from './finding.ts';
-import { PATH_SHAPES, pathShapeFindings, type PathKey } from './plugin-paths.ts';
+import { pathShapeFindings, type PathKey } from './plugin-paths.ts';
 import { zodFindings } from './zod-findings.ts';
 import { lspSourcesSchema } from '../lsp-schema.ts';
 import { monitorSourcesSchema } from '../monitor-schema.ts';
@@ -25,5 +25,5 @@ export function sourceFindings(key: PathKey, path: string, value: unknown): Find
   const schema = INLINE_SCHEMAS[key];
   const parsed = schema?.safeParse(value);
   if (parsed !== undefined && !parsed.success) return zodFindings(parsed, path);
-  return pathShapeFindings(path, PATH_SHAPES[key], value);
+  return pathShapeFindings(path, key, value);
 }

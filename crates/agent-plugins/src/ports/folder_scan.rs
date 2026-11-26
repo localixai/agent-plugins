@@ -11,14 +11,16 @@ use serde::{Deserialize, Serialize};
 use super::BoxFuture;
 use super::files::PluginFiles;
 
-/// One opened scope folder.
+/// One opened scope folder. What the TypeScript answers at once (its `dir` and `files`
+/// properties, `hostPath`) is a future too, so a host across the boundary answers each as a need
+/// (`crate::registry`); a Rust host returns ready ones.
 pub trait ScanFolder: Send + Sync {
     /// The folder as the scan named it.
-    fn dir(&self) -> &str;
+    fn dir(&self) -> BoxFuture<'_, String>;
     /// Its files, read relative to it.
-    fn files(&self) -> Arc<dyn PluginFiles>;
+    fn files(&self) -> BoxFuture<'_, Arc<dyn PluginFiles>>;
     /// A path inside it as a host path.
-    fn host_path(&self, relative_path: &str) -> String;
+    fn host_path<'a>(&'a self, relative_path: &'a str) -> BoxFuture<'a, String>;
     /// A path inside it with its links resolved, or `None` when it does not exist.
     fn canonical_path<'a>(&'a self, relative_path: &'a str) -> BoxFuture<'a, Option<String>>;
 }
@@ -34,10 +36,11 @@ pub struct RepositoryChain {
     pub main_checkout: Option<String>,
 }
 
-/// The host's view of the scope folders.
+/// The host's view of the scope folders; `managed_directory`, which the TypeScript answers at
+/// once, is a future too (as [`ScanFolder`]'s).
 pub trait FolderScan: Send + Sync {
     /// The managed settings folder, when the host has one.
-    fn managed_directory(&self) -> Option<String>;
+    fn managed_directory(&self) -> BoxFuture<'_, Option<String>>;
     /// Opens a folder, or `None` when it does not exist.
     fn open<'a>(&'a self, dir: &'a str) -> BoxFuture<'a, Option<Arc<dyn ScanFolder>>>;
     /// The repository chain of `cwd`.

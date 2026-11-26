@@ -18,7 +18,8 @@ pub enum McpAvailability {
 }
 
 /// One tool call.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct McpToolCall {
     /// The server's name.
     pub server: String,
@@ -27,6 +28,7 @@ pub struct McpToolCall {
     /// The tool's input.
     pub input: JsObject,
     /// After how long the host gives up.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<u64>,
     /// Its cancellation.
     pub signal: Signal,

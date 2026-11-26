@@ -41,7 +41,8 @@ pub enum Redirect {
 }
 
 /// One request.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HttpRequest {
     /// Its method.
     pub method: HttpMethod,
@@ -50,13 +51,17 @@ pub struct HttpRequest {
     /// Its headers.
     pub headers: IndexMap<String, String>,
     /// Its body.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
     /// How the response body comes back.
+    #[serde(rename = "as")]
     pub body_as: BodyAs,
     /// After how long the host gives up and answers a `timeout` failure.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<u64>,
     /// At most this many bytes of body are read, counted in bytes either way; the rest is cut
     /// and the response says `truncated`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_bytes: Option<u64>,
     /// Whether redirects are followed.
     pub redirect: Redirect,

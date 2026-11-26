@@ -49,12 +49,18 @@ const messageOf = (error: unknown): string =>
 const isThenable = (value: unknown): boolean =>
   typeof value === 'object' && value !== null && typeof Reflect.get(value, 'then') === 'function';
 
-/** Does a need: calls the callback, or the port's method, with its arguments. */
+/**
+ * Does a need: calls the callback, or the port's method, with its arguments. A need `.<name>`
+ * reads the member instead, `undefined` when it is absent: a port's property (`ScanFolder.dir`),
+ * or a member of a record that crossed as a port because it holds a function.
+ */
 function invoke(need: Need, hosts: HostTable): unknown {
   const target = hosts.find(need.port);
   if (typeof target === 'function') return Reflect.apply(target, undefined, need.args);
-  const method: unknown =
-    typeof target === 'object' && target !== null ? Reflect.get(target, need.method) : undefined;
+  const isObject = typeof target === 'object' && target !== null;
+  if (need.method.startsWith('.'))
+    return isObject ? Reflect.get(target, need.method.slice(1)) : undefined;
+  const method: unknown = isObject ? Reflect.get(target, need.method) : undefined;
   if (typeof method !== 'function') {
     throw new TypeError(`agent-plugins: host value ${need.port} has no method ${need.method}`);
   }

@@ -1,7 +1,8 @@
 /**
- * Writes `src/hooks/output/tool-shapes/`: the output shape of every built-in tool, read from the
- * official `sdk-tools.d.ts` of the Agent SDK the spec targets (E2; Agent Plugins Extended J7.138: a
- * `PostToolUse` hook's `updatedToolOutput` is checked against the tool's output type). Each member of
+ * Writes the Rust core's `hooks/output/tool_shapes.rs` and `tool_shapes/`: the output shape of every
+ * built-in tool, read from the official `sdk-tools.d.ts` of the Agent SDK the spec targets (E2;
+ * Agent Plugins Extended J7.138: a `PostToolUse` hook's `updatedToolOutput` is checked against the
+ * tool's output type), as JSON tables the core reads (`tool_shape.rs`). Each member of
  * `ToolOutputSchemas` is one tool; the MCP output (`McpOutput`) is not, as MCP tool output passes
  * unchecked. `tests/hooks/output/tool-shapes.test.ts` fails when the tables are stale.
  *
@@ -19,7 +20,16 @@ export const SDK_TOOLS = join(
   'claude-agent-sdk',
   'sdk-tools.d.ts',
 );
-export const SHAPES_DIR = join(import.meta.dir, '..', 'src', 'hooks', 'output', 'tool-shapes');
+/** Where the tables go: the core's `hooks/output/`, the index `tool_shapes.rs` beside its folder. */
+export const SHAPES_DIR = join(
+  import.meta.dir,
+  '..',
+  'crates',
+  'agent-plugins',
+  'src',
+  'hooks',
+  'output',
+);
 
 /** The output types whose tool's name is not the type's name without `Output`. */
 const TOOL_OF: Readonly<Record<string, string | null>> = {
@@ -134,14 +144,29 @@ export function readToolShapes(source: string): ShapeTable {
   return table;
 }
 
-/** How many lines a shape takes once formatted, to keep each table file under S1's 300. */
-function weight(tool: string, shape: Shape): number {
-  const text = `const x = { ${JSON.stringify(tool)}: ${JSON.stringify(shape)} };\n`;
-  const formatted = Bun.spawnSync(['bunx', 'oxfmt', '--stdin-filepath', 'x.ts'], {
-    stdin: Buffer.from(text),
-  });
-  return formatted.stdout.toString().split('\n').length - 3;
+const WIDTH = 100;
+
+/**
+ * `value` as JSON, on one line when it fits in `WIDTH` from column `from`, else one member per
+ * line, indented by `indent`.
+ */
+function printJson(value: unknown, indent = 0, from = indent): string {
+  const flat = JSON.stringify(value);
+  if (from + flat.length <= WIDTH || typeof value !== 'object' || value === null) return flat;
+  const inner = ' '.repeat(indent + 2);
+  const items = Array.isArray(value)
+    ? value.map((item) => `${inner}${printJson(item, indent + 2)}`)
+    : Object.entries(value).map(([key, item]) => {
+        const head = `${inner}${JSON.stringify(key)}: `;
+        return `${head}${printJson(item, indent + 2, head.length)}`;
+      });
+  const [open, close] = Array.isArray(value) ? ['[', ']'] : ['{', '}'];
+  return `${open}\n${items.join(',\n')}\n${' '.repeat(indent)}${close}`;
 }
+
+/** How many lines a tool's shape takes in a table, to keep each table file under 300. */
+const weight = (tool: string, shape: Shape): number =>
+  printJson({ [tool]: shape }).split('\n').length - 2;
 const BUDGET = 270;
 
 type Piece = readonly [tool: string, shape: Shape];
@@ -177,31 +202,35 @@ export function groupsOf(table: ShapeTable): readonly (readonly Piece[])[] {
 }
 
 const HEADER =
-  '// Written by `bun scripts/tool-output-shapes.ts` from the Agent SDK `sdk-tools.d.ts`; do not edit.\n';
+  '//! Written by `bun scripts/tool-output-shapes.ts` from the Agent SDK `sdk-tools.d.ts`; do not edit.\n';
 
-function fileText(index: number, pieces: readonly Piece[]): string {
-  const body = Object.fromEntries(pieces);
-  return `${HEADER}import type { ShapeTable } from '../tool-shape.ts';\n\nexport const SHAPES_${index}: ShapeTable = ${JSON.stringify(body)};\n`;
+function tableText(index: number, pieces: readonly Piece[]): string {
+  const json = printJson(Object.fromEntries(pieces));
+  if (json.includes('"##')) throw new Error('a table holds the raw string\'s end, "##');
+  return `${HEADER}//!\n//! Table ${index} of the built-in tools' output shapes, as JSON (\`tool_shape::read_table\`).\n\n/// The tools of this table by name, each with its output shape.\npub(super) const SHAPES: &str = r##"${json}"##;\n`;
 }
 
 function indexText(count: number): string {
-  const names = Array.from({ length: count }, (_, index) => `SHAPES_${index}`);
-  const imports = names.map((name, index) => `import { ${name} } from './shapes-${index}.ts';`);
-  return `${HEADER}import { joinTables, type ShapeTable } from '../tool-shape.ts';\n${imports.join('\n')}\n\n/** The output shape of every built-in tool the SDK types, by tool name. */\nexport const TOOL_SHAPES: ShapeTable = joinTables([${names.join(', ')}]);\n`;
+  const indexes = Array.from({ length: count }, (_, index) => index);
+  const modules = indexes.map((index) => `mod shapes_${index};`).join('\n');
+  const tables = indexes.map((index) => `    shapes_${index}::SHAPES,`).join('\n');
+  return `${HEADER}//!\n//! The output shape of every built-in tool the SDK types, by tool name: the tables of \`tool_shapes/\`\n//! joined, a tool split over several holding every alternative.\n\n${modules}\n\nuse std::sync::LazyLock;\n\nuse super::tool_shape::{ShapeTable, join_tables, read_table};\n\n/// The tables' JSON texts, in order.\nconst TABLES: [&str; ${count}] = [\n${tables}\n];\n\n/// The output shape of every built-in tool the SDK types, by tool name.\npub static TOOL_SHAPES: LazyLock<ShapeTable> =\n    LazyLock::new(|| join_tables(&TABLES.map(read_table)));\n`;
+}
+
+/** Every file the tables are, by its path under \`SHAPES_DIR\`, as the script writes it. */
+export function shapeFiles(table: ShapeTable): ReadonlyMap<string, string> {
+  const groups = groupsOf(table);
+  return new Map([
+    ['tool_shapes.rs', indexText(groups.length)],
+    ...groups.map(
+      (pieces, index) => [`tool_shapes/shapes_${index}.rs`, tableText(index, pieces)] as const,
+    ),
+  ]);
 }
 
 if (import.meta.main) {
   const table = readToolShapes(await Bun.file(SDK_TOOLS).text());
-  const groups = groupsOf(table);
-  const written: string[] = [];
-  for (const [index, pieces] of groups.entries()) {
-    const path = join(SHAPES_DIR, `shapes-${index}.ts`);
-    await Bun.write(path, fileText(index, pieces));
-    written.push(path);
-  }
-  const index = join(SHAPES_DIR, 'index.ts');
-  await Bun.write(index, indexText(groups.length));
-  const format = Bun.spawnSync(['bunx', 'oxfmt', '--write', index, ...written]);
-  if (format.exitCode !== 0) throw new Error(format.stderr.toString());
-  console.log(`${Object.keys(table).length} tools in ${groups.length} tables: ${SHAPES_DIR}`);
+  const files = shapeFiles(table);
+  for (const [path, text] of files) await Bun.write(join(SHAPES_DIR, path), text);
+  console.log(`${Object.keys(table).length} tools in ${files.size - 1} tables: ${SHAPES_DIR}`);
 }

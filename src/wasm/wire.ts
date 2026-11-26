@@ -15,7 +15,9 @@
  * - a port (an object with methods): `{"$port": n}`; a function: `{"$fn": n}`;
  * - an `AbortSignal`: `{"$signal": n, "aborted": bool}` (`n` is `null` for a signal the core
  *   made, which arrives as a new one);
- * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`.
+ * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`,
+ *   and a function of the core's (a timer's `fire`): `{"$call": h}`, a function that calls the
+ *   handle's one method, `call`.
  */
 
 const UNDEFINED = { $undefined: true } as const;
@@ -147,6 +149,16 @@ const handle: Reader = (tag, _read, hosts) => {
     : undefined;
 };
 
+/** A function of the core's, as a function that calls its handle's method `call`. */
+const coreFunction: Reader = (tag, _read, hosts) => {
+  if (hosts === undefined || typeof tag.$call !== 'number') return undefined;
+  const object = hosts.handle(tag.$call, ['call'], []);
+  const call: unknown = Reflect.get(object, 'call');
+  return typeof call === 'function'
+    ? { value: (...args: readonly unknown[]): unknown => Reflect.apply(call, object, args) }
+    : undefined;
+};
+
 const READERS: Readonly<Record<string, Reader | undefined>> = {
   $undefined: (tag) => (tag.$undefined === true ? { value: undefined } : undefined),
   $number: (tag) =>
@@ -170,6 +182,7 @@ const READERS: Readonly<Record<string, Reader | undefined>> = {
   $fn: kept,
   $signal: signal,
   $handle: handle,
+  $call: coreFunction,
 };
 
 /** How many members a tag has with its key, when more than one. */

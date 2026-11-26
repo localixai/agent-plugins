@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Breaking** (`/layout`): a `ManifestKey` is the key alone (`{ key }`); its `read` member is
+  gone, as `declaredKey` reads the manifest in the core. The `/layout` entry now loads the core.
 - Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
   verdict notices and model switches, output caps and deferral, tool output shapes, matcher
   values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the
@@ -21,6 +23,12 @@
   kept by the wrapper and crosses as a number, and the wrapper answers what the core asks of it
   in a plain loop (docs/RUST.md, "Effects"). `readJson`, `readJsonWithoutBom`, `listSorted`,
   `configDirectoryOf` and `globalConfigFileOf` now run there; the host's ports see the same calls.
+
+- The core reaches every port: each one a host passes crosses whole, a record that holds a
+  function crosses as one and its members are read when needed, and a timer's callback is a
+  function of the core's. The `WorktreeCreate` path, the hook merge's shared rules and the
+  `PostToolUse` output check now run there; the built-in tools' output shapes are generated as the
+  core's own tables (`bun scripts/tool-output-shapes.ts`) and the TypeScript copies are gone.
 
 ## [0.2.0] - 2026-11-23
 

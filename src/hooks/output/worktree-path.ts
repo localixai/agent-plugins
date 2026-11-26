@@ -7,63 +7,18 @@
  * refuses an absolute path that contains `.` or `..` segments, and any path that passes through a
  * symlink below the repository root", and "the error names the rejected component". Whether the
  * resulting path is a directory the session can enter is the host's: it is the one that can look.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/output/worktree_path.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
 
-const ESC = '\u001b';
-const BEL = '\u0007';
-
-/** The index after the CSI sequence whose parameters start at `from`: up to one final byte, `@` to `~`. */
-function csiEnd(text: string, from: number): number {
-  let cursor = from;
-  while (cursor < text.length) {
-    const code = text.codePointAt(cursor) ?? 0;
-    cursor += 1;
-    if (code >= 0x40 && code <= 0x7e) break;
-  }
-  return cursor;
-}
-
-/** The index after the OSC string that starts at `from`: up to BEL, or the terminator `ESC \`. */
-function oscEnd(text: string, from: number): number {
-  let cursor = from;
-  while (cursor < text.length) {
-    if (text[cursor] === BEL) return cursor + 1;
-    if (text[cursor] === ESC && text[cursor + 1] === '\\') return cursor + 2;
-    cursor += 1;
-  }
-  return cursor;
-}
-
-/** The index after the escape sequence that starts at `at` (an `ESC`), as a terminal reads it. */
-function escapeEnd(text: string, at: number): number {
-  const kind = text[at + 1];
-  if (kind === '[') return csiEnd(text, at + 2);
-  if (kind === ']') return oscEnd(text, at + 2);
-  return Math.min(at + 2, text.length);
-}
+const call = coreModule('hooks/output/worktree-path');
 
 /** `text` without its ANSI escape sequences (CSI, OSC and two-character escapes). */
-export function stripAnsi(text: string): string {
-  let kept = '';
-  let cursor = 0;
-  while (cursor < text.length) {
-    if (text[cursor] === ESC) {
-      cursor = escapeEnd(text, cursor);
-    } else {
-      kept += text[cursor] ?? '';
-      cursor += 1;
-    }
-  }
-  return kept;
-}
+export const stripAnsi = (text: string): string => call('stripAnsi', text);
 
 /** The last non-empty line of `stdout` after the ANSI escapes are stripped, or `undefined`. */
-export function lastPathLine(stdout: string): string | undefined {
-  return stripAnsi(stdout)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .findLast((line) => line !== '');
-}
+export const lastPathLine = (stdout: string): string | undefined => call('lastPathLine', stdout);
 
 /** The path, or why creation fails. */
 export type WorktreePath = { readonly path: string } | { readonly failure: string };
@@ -89,57 +44,19 @@ export interface WorktreeAnswer {
   readonly effects: { readonly worktreePath?: string };
 }
 
-const WINDOWS_DRIVE = /^[A-Za-z]:[\\/]/;
-export const isAbsolute = (path: string): boolean =>
-  path.startsWith('/') || WINDOWS_DRIVE.test(path);
-const segmentsOf = (path: string): string[] => path.split(/[\\/]/).filter((part) => part !== '');
-const joinWith = (separator: string, root: string, parts: readonly string[]): string =>
-  `${root}${parts.join(separator)}`;
-
-/** The leading root of an absolute path (`/` or `C:\`), kept as written. */
-const rootOf = (path: string): string => (path.startsWith('/') ? '/' : path.slice(0, 3));
-const separatorOf = (path: string): string =>
-  path.includes('\\') && !path.includes('/') ? '\\' : '/';
+export const isAbsolute = (path: string): boolean => call('isAbsolute', path);
 
 /** `relative` resolved against `base`, the `.` and `..` segments collapsed (`..` stops at the root). */
-export function resolveRelative(base: string, relative: string): string {
-  const parts = segmentsOf(isAbsolute(base) ? base.slice(rootOf(base).length) : base);
-  for (const segment of segmentsOf(relative)) {
-    if (segment === '..') parts.pop();
-    else if (segment !== '.') parts.push(segment);
-  }
-  return joinWith(separatorOf(base), isAbsolute(base) ? rootOf(base) : '', parts);
-}
-
-/** The first component of `path` below `root` that is a symbolic link. */
-async function firstSymlinkBelow(
-  path: string,
-  location: Required<Pick<WorktreeLocation, 'repositoryRoot' | 'isSymlink'>>,
-): Promise<string | undefined> {
-  const { repositoryRoot, isSymlink } = location;
-  const rootParts = segmentsOf(repositoryRoot);
-  const parts = segmentsOf(path);
-  const inside = rootParts.every((part, index) => parts[index] === part);
-  if (!inside) return undefined;
-  const separator = separatorOf(path);
-  const root = rootOf(path);
-  for (let length = rootParts.length + 1; length <= parts.length; length += 1) {
-    const prefix = joinWith(separator, root, parts.slice(0, length));
-    if (await isSymlink(prefix)) return parts[length - 1];
-  }
-  return undefined;
-}
+export const resolveRelative = (base: string, relative: string): string =>
+  call('resolveRelative', base, relative);
 
 /**
  * The candidate text of the hooks' answers. The merge has already picked the last answer in handler
  * order, an HTTP hook's `worktreePath` and a command hook's last line alike (Judgment J7.143), into
  * `effects.worktreePath`; an answer built without the merge falls back to the last command line.
  */
-export function worktreeCandidate(answer: WorktreeAnswer): string | undefined {
-  const merged = answer.effects.worktreePath;
-  if (merged !== undefined && merged.trim() !== '') return merged.trim();
-  return answer.stdout.map(lastPathLine).findLast((line) => line !== undefined);
-}
+export const worktreeCandidate = (answer: WorktreeAnswer): string | undefined =>
+  call('worktreeCandidate', answer);
 
 /**
  * The worktree path a `WorktreeCreate` outcome asks the session to use, or why creation fails.
@@ -147,33 +64,7 @@ export function worktreeCandidate(answer: WorktreeAnswer): string | undefined {
  * Judgment (spec/judgments.md): the docs name the refusals and say the error names the rejected
  * component, not the words.
  */
-export async function resolveWorktreePath(
+export const resolveWorktreePath = (
   answer: WorktreeAnswer,
   location: WorktreeLocation,
-): Promise<WorktreePath> {
-  if (!answer.proceed)
-    return { failure: 'The WorktreeCreate hook failed, so no worktree was created.' };
-  const given = worktreeCandidate(answer);
-  if (given === undefined) {
-    return { failure: 'The WorktreeCreate hook returned no worktree path.' };
-  }
-  if (isAbsolute(given)) {
-    const dotted = segmentsOf(given).find((segment) => segment === '.' || segment === '..');
-    if (dotted !== undefined) {
-      return {
-        failure: `The worktree path "${given}" contains a "${dotted}" segment; return a normalized path.`,
-      };
-    }
-  }
-  const path = isAbsolute(given) ? given : resolveRelative(location.ranIn, given);
-  const { repositoryRoot, isSymlink } = location;
-  if (repositoryRoot !== undefined && isSymlink !== undefined) {
-    const link = await firstSymlinkBelow(path, { repositoryRoot, isSymlink });
-    if (link !== undefined) {
-      return {
-        failure: `The worktree path "${path}" passes through the symlink "${link}" below the repository root.`,
-      };
-    }
-  }
-  return { path };
-}
+): Promise<WorktreePath> => call.async('resolveWorktreePath', answer, location);

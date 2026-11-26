@@ -22,15 +22,19 @@ pub enum ModelPreference {
 }
 
 /// One question to a model.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelRequest {
     /// The prompt.
     pub prompt: String,
     /// The model named for it.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     /// The kind of model to use when none is named.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model_preference: Option<ModelPreference>,
     /// After how long the host gives up.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<u64>,
     /// Its cancellation.
     pub signal: Signal,

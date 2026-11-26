@@ -86,6 +86,36 @@ test('two needs asked together run together and may answer in any order', async 
   expect(await both).toEqual(['1', '2']);
 });
 
+describe('a port with both kinds of method', () => {
+  test('is answered at once where it returns a value, awaited where it returns a promise', async () => {
+    const asked: string[] = [];
+    const locations = {
+      homeDir: (): string => {
+        asked.push('homeDir');
+        return '/home/u';
+      },
+      pluginData: (plugin: string): Promise<string> => {
+        asked.push(`pluginData ${plugin}`);
+        return Promise.resolve(`/home/u/.claude/plugins/data/${plugin}`);
+      },
+    };
+    expect(await probe.async('located', locations, 'lint')).toEqual([
+      '/home/u',
+      '/home/u/.claude/plugins/data/lint',
+    ]);
+    expect(asked).toEqual(['homeDir', 'pluginData lint']);
+  });
+
+  test('hands over a port of its own, whose property is read as a need', async () => {
+    const folder = { dir: '/p/.claude', hostPath: (path: string): string => `/p/.claude/${path}` };
+    const scan = {
+      open: (dir: string) => Promise.resolve(dir === '/p/.claude' ? folder : undefined),
+    };
+    expect(await probe.async('opened', scan, '/p/.claude')).toBe('/p/.claude');
+    expect(await probe.async('opened', scan, '/q')).toBeUndefined();
+  });
+});
+
 describe('a callback', () => {
   test('is called as the core asks, in a call that answers at once', () => {
     expect(configDirectoryOf('/home/u', undefined, join)).toBe('/home/u/.claude');
