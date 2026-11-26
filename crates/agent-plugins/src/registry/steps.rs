@@ -54,13 +54,15 @@ pub fn start_json(name: &str, args: &str) -> String {
 }
 
 /// One answer as the host writes it: `{"id": n, "result": value}` or `{"id": n, "throws":
-/// message}`.
+/// message, "name"?: name}` (`name` an `Error`'s, `registry::Thrown`).
 #[derive(Deserialize)]
 struct Given {
     id: u32,
     #[serde(default)]
     result: JsValue,
     throws: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
 }
 
 /// What the host gives `resume`: `{"answers": [...], "aborted": [n...]}`, `aborted` optional.
@@ -84,9 +86,13 @@ pub fn resume_json(number: u32, answers: &str) -> String {
             let replies = answers
                 .into_iter()
                 .map(|given| {
-                    let reply = given
-                        .throws
-                        .map_or(Reply::Result(given.result), Reply::Throws);
+                    let reply = match given.throws {
+                        Some(message) => Reply::Throws {
+                            message,
+                            name: given.name,
+                        },
+                        None => Reply::Result(given.result),
+                    };
                     (given.id, reply)
                 })
                 .collect();

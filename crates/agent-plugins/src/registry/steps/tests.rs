@@ -90,7 +90,17 @@ fn a_host_throw_ends_the_task_as_a_rethrow() {
     let before = task::waiting();
     let (number, _) = waits(start("format/listing#listSorted", &[port(0.0), ".".into()]));
     assert_eq!(task::waiting(), before + 1);
-    let step = resume(number, vec![(0, Reply::Throws("EACCES".into()))], &[]);
+    let step = resume(
+        number,
+        vec![(
+            0,
+            Reply::Throws {
+                message: "EACCES".into(),
+                name: None,
+            },
+        )],
+        &[],
+    );
     assert_eq!(step, Step::Rethrow { need: 0 });
     assert_eq!(task::waiting(), before);
     let again = resume(number, vec![], &[]);
