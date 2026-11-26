@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Marketplaces and updates run more of their work on the core: install hosts, modes and failures,
+  git transports and submodules, download header policy, name and folder conflicts, a plugin's
+  content and footprint, reload summaries, remote and seeded plugins, telemetry names, and which
+  plugins an update targets or skips.
 - Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
   output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
   times slower. The core reads and writes the JSON of a call in one pass over its text.
