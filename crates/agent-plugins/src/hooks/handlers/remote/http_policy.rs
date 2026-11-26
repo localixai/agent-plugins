@@ -105,7 +105,5 @@ pub fn blocked_url_issue(path: &str, url: &str) -> PluginIssue {
 crate::registry::exports! {
     "hooks/handlers/remote/http-policy" {
         "urlAllowed" => ok |url: String, allowed_urls: Option<Vec<String>>| url_allowed(&url, allowed_urls.as_deref());
-        "permittedEnvVars" => ok |own: Option<Vec<String>>, policy: Option<HttpHookPolicy>| permitted_env_vars(own, policy.as_ref());
-        "blockedUrlIssue" => ok |path: String, url: String| blocked_url_issue(&path, &url);
     }
 }

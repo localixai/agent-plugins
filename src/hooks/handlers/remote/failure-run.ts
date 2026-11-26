@@ -18,10 +18,6 @@ const call = coreModule('hooks/handlers/remote/failure-run');
 export const failureRun = (failure: PortFailure, other: (message: string) => RawRun): RawRun =>
   call('failureRun', failure, other);
 
-/** The path of a handler's field in an issue: `hooks.PostToolUse.url`. */
-export const remotePath = (entry: RegisteredHandler, field: string): string =>
-  call('remotePath', entry, field);
-
 /**
  * A hook whose port the host did not give does not run: "a missing port is a `PluginIssue` for the
  * component that needed it" (docs/ARCHITECTURE.md, "Ports").

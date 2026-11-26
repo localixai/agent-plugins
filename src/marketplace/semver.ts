@@ -14,9 +14,6 @@ const call = coreModule('marketplace/semver');
 /** Whether `range` is a valid node-semver range. */
 export const isValidRange = (range: string): boolean => call('isValidRange', range);
 
-/** A strict version (`2.1.0`, `2.0.0-beta.1`), as a git tag carries it: no `v`, `=` or blanks. */
-export const strictVersion = (text: string): string | undefined => call('strictVersion', text);
-
 /** The version `text` names, spelled one way (`v2.1.100` is `2.1.100`), or `undefined` when it is no version. */
 export const normalizedVersion = (text: string): string | undefined =>
   call('normalizedVersion', text);
@@ -24,14 +21,6 @@ export const normalizedVersion = (text: string): string | undefined =>
 /** Whether `version` satisfies `range`; a version that is not semver satisfies nothing. */
 export const satisfiesRange = (version: string, range: string): boolean =>
   call('satisfiesRange', version, range);
-
-/** The highest of `versions` inside `range`, or `undefined`. */
-export const highestSatisfying = (versions: readonly string[], range: string): string | undefined =>
-  call('highestSatisfying', versions, range);
-
-/** The highest of `versions` by semver order, or `undefined` when there are none. */
-export const highestVersion = (versions: readonly string[]): string | undefined =>
-  call('highestVersion', versions);
 
 /**
  * Whether some version satisfies all of `ranges` (each valid), or `undefined` when there are too

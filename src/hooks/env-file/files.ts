@@ -1,8 +1,13 @@
 import type { ShellKind } from '../../ports/index.ts';
 import type { HookEvent } from '../../protocol/official.ts';
-import { envFileClearedBy, envFileKindOf, shellHasEnvFile } from './events.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { EnvFileStore } from './ports.ts';
-import { readPowershellVariables, type PowershellVariables } from './powershell-reader.ts';
+import type { PowershellVariables } from './powershell-reader.ts';
+
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/env-file/files.rs`, docs/RUST.md).
+ */
+const call = coreModule('hooks/env-file/files');
 
 /**
  * What a command hook asks for its `CLAUDE_ENV_FILE`: the path for this event and this hook's shell,
@@ -50,33 +55,5 @@ export interface EnvFilesOptions {
   readonly launchScript?: string | undefined;
 }
 
-export function createEnvFiles(store: EnvFileStore, options: EnvFilesOptions): EnvFiles {
-  const { sessionId } = options;
-  const scripts = async (signal: AbortSignal): Promise<readonly string[]> => [
-    ...(options.launchScript === undefined ? [] : [options.launchScript]),
-    await store.path(sessionId, 'session', signal),
-    await store.path(sessionId, 'cwd', signal),
-  ];
-  return {
-    async pathFor(event, shell, signal) {
-      const kind = envFileKindOf(event);
-      return kind === undefined || !shellHasEnvFile(shell)
-        ? undefined
-        : store.path(sessionId, kind, signal);
-    },
-    async beforeEvent(event, signal) {
-      const kind = envFileClearedBy(event);
-      if (kind !== undefined) await store.clear(sessionId, kind, signal);
-    },
-    scripts,
-    async powershellVariables({ windows, sandboxed }, signal) {
-      if (sandboxed) return { variables: {}, issues: [] };
-      const texts = await Promise.all(
-        (await scripts(signal)).map((path) => store.read(path, signal)),
-      );
-      return readPowershellVariables(texts.filter((text) => text !== undefined).join('\n'), {
-        windows,
-      });
-    },
-  };
-}
+export const createEnvFiles = (store: EnvFileStore, options: EnvFilesOptions): EnvFiles =>
+  call('createEnvFiles', store, options);

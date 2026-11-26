@@ -47,3 +47,20 @@ pub struct NormalizedDependency {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub range: Option<String>,
 }
+
+/// Where a plugin name stands in a marketplace with a `renames` map (`RenameStatus`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "lowercase")]
+pub enum RenameStatus {
+    /// It is listed.
+    Current,
+    /// It loads under another name.
+    Renamed {
+        /// The new name.
+        to: String,
+    },
+    /// It is gone.
+    Removed,
+    /// Claude Code has no answer.
+    Unknown,
+}

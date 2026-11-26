@@ -24,16 +24,24 @@ pub enum FailureRun {
     Other(JsValue),
 }
 
+/// The shared run a failure is, when it is one: a `timeout` is `timed-out` and an `aborted`
+/// request is `cancelled`; any other failure is the type's own, which its handler names.
+#[must_use]
+pub fn ended_run(failure: &PortFailure) -> Option<EndedRun> {
+    match failure.failure.as_str() {
+        "timeout" => Some(EndedRun { kind: "timed-out" }),
+        "aborted" => Some(EndedRun { kind: "cancelled" }),
+        _ => None,
+    }
+}
+
 /// What a port's `PortFailure` is to a hook run. "Timeout: the hook is canceled, as described under
 /// Timeouts", so a `timeout` is the shared `timed-out` run; an `aborted` request is a session abort,
 /// the shared `cancelled` run. Any other failure is the type's own non-blocking failure, which the
 /// caller names.
 pub async fn failure_run(failure: &PortFailure, other: Callback) -> FailureRun {
-    if failure.failure == "timeout" {
-        return FailureRun::Ended(EndedRun { kind: "timed-out" });
-    }
-    if failure.failure == "aborted" {
-        return FailureRun::Ended(EndedRun { kind: "cancelled" });
+    if let Some(ended) = ended_run(failure) {
+        return FailureRun::Ended(ended);
     }
     FailureRun::Other(
         other
@@ -93,7 +101,6 @@ pub fn without_port(entry: &EntryEvent, handler_type: &str, port: &str) -> Handl
 crate::registry::exports! {
     "hooks/handlers/remote/failure-run" {
         "failureRun" => async ok |failure: PortFailure, other: Callback| failure_run(&failure, other).await;
-        "remotePath" => ok |entry: EntryEvent, field: String| remote_path(&entry, &field);
         "withoutPort" => ok |entry: EntryEvent, handler_type: String, port: String| without_port(&entry, &handler_type, &port);
     }
 }

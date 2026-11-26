@@ -24,6 +24,19 @@ pub enum InstallScope {
     Managed,
 }
 
+impl InstallScope {
+    /// The scope's name as the settings and the commands write it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::User => "user",
+            Self::Project => "project",
+            Self::Local => "local",
+            Self::Managed => "managed",
+        }
+    }
+}
+
 /// Every scope, in the package's order.
 pub const INSTALL_SCOPES: [InstallScope; 4] = [
     InstallScope::User,

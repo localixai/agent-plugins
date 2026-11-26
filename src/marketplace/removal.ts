@@ -1,5 +1,6 @@
 import type { Marketplace } from '../format/marketplace/types.ts';
-import { isWritableScope, type InstallScope } from './install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { InstallScope } from './install-scopes.ts';
 
 /**
  * `forceRemoveDeletedPlugins` (plugins/host-marketplace.md, "Uninstall removed plugins from users'
@@ -8,7 +9,11 @@ import { isWritableScope, type InstallScope } from './install-scopes.ts';
  * listed nor renamed as removed", uninstalls it from the user, project and local scopes (what only
  * managed settings installed stays in place) and lists it as `Removed from marketplace`. The kit
  * decides what is removed; the host does the uninstalling.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/removal.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/removal');
 
 /** A plugin the user has installed, and the scopes it is installed or enabled in. */
 export interface InstalledPlugin {
@@ -18,7 +23,7 @@ export interface InstalledPlugin {
 }
 
 /** The status `/plugin` shows under its **Flagged** heading. */
-export const REMOVED_STATUS = 'Removed from marketplace';
+export const REMOVED_STATUS: 'Removed from marketplace' = call('REMOVED_STATUS');
 
 export interface RemovedPlugin {
   /** `name@marketplace`. */
@@ -36,20 +41,7 @@ export interface RemovedPlugin {
  * installed only by managed settings is still reported (it is treated as removed and flagged) with
  * nothing to uninstall.
  */
-export function removedPlugins(
+export const removedPlugins = (
   installed: readonly InstalledPlugin[],
   marketplace: Marketplace,
-): readonly RemovedPlugin[] {
-  if (!marketplace.forceRemoveDeletedPlugins) return [];
-  const listed = new Set(marketplace.plugins.map((entry) => entry.name));
-  const renamed = (name: string): boolean =>
-    Object.hasOwn(marketplace.renames, name) && marketplace.renames[name] !== null;
-  return installed
-    .filter((one) => one.marketplace === marketplace.name)
-    .filter((one) => !listed.has(one.name) && !renamed(one.name))
-    .map((one) => ({
-      id: `${one.name}@${one.marketplace}`,
-      status: REMOVED_STATUS,
-      uninstallFrom: one.scopes.filter(isWritableScope),
-    }));
-}
+): readonly RemovedPlugin[] => call('removedPlugins', installed, marketplace);

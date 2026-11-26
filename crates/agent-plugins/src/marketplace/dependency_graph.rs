@@ -6,9 +6,8 @@
 //! modules) reads `installed_plugins.json`, the `enabledPlugins` of each scope and the marketplace
 //! catalog, and passes what it found. Every function of the graph is pure over these facts.
 //!
-//! A catalog plugin's `source` (`format/marketplace/types.ts`'s `PluginSource`) and a declared
-//! dependency's `declaredIn` (`cross-marketplace.ts`'s `DeclaredIn`) belong to modules not ported
-//! yet, and nothing here reads them, so they cross as the values they are (`JsValue`).
+//! A catalog plugin's `source` (`format/marketplace/types.ts`'s `PluginSource`) belongs to a module
+//! not ported yet, and nothing here reads it, so it crosses as the value it is (`JsValue`).
 
 use std::collections::HashSet;
 
@@ -16,6 +15,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
+use crate::marketplace::cross_marketplace::DeclaredIn;
 use crate::marketplace::dependencies::{
     DependencyIssue, InstalledDependency, check_installed_dependency, dependency_id,
 };
@@ -32,7 +32,7 @@ pub struct DeclaredDependency {
     /// The dependency.
     pub dep: NormalizedDependency,
     /// `entry` or `plugin.json`.
-    pub declared_in: JsValue,
+    pub declared_in: DeclaredIn,
     /// The item names a marketplace itself (`namesMarketplace(item)`); absent means it does not,
     /// which a `--plugin-dir` copy meets on every Claude Code version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -81,7 +81,7 @@ pub struct EnabledPlugins {
 
 impl EnabledPlugins {
     /// `enabled[scope]?.[id]`.
-    fn value(&self, scope: InstallScope, id: &str) -> Option<bool> {
+    pub fn value(&self, scope: InstallScope, id: &str) -> Option<bool> {
         let written = match scope {
             InstallScope::User => &self.user,
             InstallScope::Project => &self.project,
@@ -439,7 +439,6 @@ pub fn disable_decision(id: &str, facts: &GraphFacts) -> DisableDecision {
 
 crate::registry::exports! {
     "marketplace/dependency-graph" {
-        "recordsOf" => ok |id: String, facts: GraphFacts| records_of(&id, &facts).into_iter().cloned().collect::<Vec<_>>();
         "recordAt" => ok |id: String, scope: InstallScope, facts: GraphFacts| record_at(&id, scope, &facts).cloned();
         "winningScope" => ok |id: String, facts: GraphFacts| winning_scope(&id, &facts);
         "effectiveEnabled" => ok |id: String, facts: GraphFacts| effective_enabled(&id, &facts);
