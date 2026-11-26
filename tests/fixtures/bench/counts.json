@@ -464,34 +464,34 @@
       "4": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 18,
+          "cpu.RegExp.exec": 9,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 18
+          "cpu.RegExp.exec": 9
         }
       },
       "8": {
         "first": {
           "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 26,
+          "cpu.RegExp.exec": 13,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 26
+          "cpu.RegExp.exec": 13
         }
       },
       "16": {
         "first": {
           "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 42,
+          "cpu.RegExp.exec": 21,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 42
+          "cpu.RegExp.exec": 21
         }
       }
     }
@@ -503,37 +503,31 @@
         "first": {
           "cpu.JSON.parse": 4,
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 102,
+          "cpu.RegExp.exec": 96,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 6
-        }
+        "second": {}
       },
       "8": {
         "first": {
           "cpu.JSON.parse": 8,
           "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 202,
+          "cpu.RegExp.exec": 192,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 10
-        }
+        "second": {}
       },
       "16": {
         "first": {
           "cpu.JSON.parse": 16,
           "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 402,
+          "cpu.RegExp.exec": 384,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 18
-        }
+        "second": {}
       }
     }
   },
@@ -544,37 +538,31 @@
         "first": {
           "cpu.JSON.parse": 8,
           "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 221,
+          "cpu.RegExp.exec": 212,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 9
-        }
+        "second": {}
       },
       "8": {
         "first": {
           "cpu.JSON.parse": 16,
           "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 441,
+          "cpu.RegExp.exec": 424,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 17
-        }
+        "second": {}
       },
       "16": {
         "first": {
           "cpu.JSON.parse": 32,
           "cpu.RegExp": 32,
-          "cpu.RegExp.exec": 881,
+          "cpu.RegExp.exec": 848,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
-        "second": {
-          "cpu.RegExp.exec": 33
-        }
+        "second": {}
       }
     }
   },
@@ -584,34 +572,34 @@
       "8": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 775,
+          "cpu.RegExp.exec": 757,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 31
+          "cpu.RegExp.exec": 13
         }
       },
       "16": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 1559,
+          "cpu.RegExp.exec": 1523,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 57
+          "cpu.RegExp.exec": 21
         }
       },
       "32": {
         "first": {
           "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 3127,
+          "cpu.RegExp.exec": 3055,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 109
+          "cpu.RegExp.exec": 37
         }
       }
     }
