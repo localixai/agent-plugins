@@ -11,7 +11,7 @@ license.workspace = true
 repository.workspace = true
 # Taken by git tag (`rust-v<version>`) for now, as flowdown's crate is; crates.io comes later.
 publish = false
-include = ["/src/**/*.rs", "/README.md", "/CHANGELOG.md"]
+include = ["/src/**/*.rs", "/src/**/*.json", "/README.md", "/CHANGELOG.md"]
 
 [dependencies]
 # What a JavaScript object keeps and Rust's maps do not: the order its members were written in.
@@ -28,6 +28,12 @@ url = "2"
 # `String.prototype.normalize` (NFC, NFD, NFKC, NFKD), which an archive's names are folded by;
 # held to Bun's answers by `tests/differential/js.rs`.
 unicode-normalization = "0.1"
+# A value checked against a JSON Schema (an MCP tool's input schema against the draft 2020-12
+# meta-schema): the lab's validator, drafts 4 to 2020-12 and the official suite, so no hand table of
+# keywords is kept current; taken at a commit of its main, as llx takes it. It reads
+# `serde_json::Value`, which `js::json_value` alone builds (clippy.toml).
+flowschema = { git = "https://github.com/localixai/flowschema", rev = "90cc34d4e3c841eb364d401c80f505db2a7337ef" }
+serde_json = "1"
 
 [lints]
 workspace = true

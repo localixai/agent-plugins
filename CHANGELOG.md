@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- An MCP tool's input schema is checked against the official JSON Schema draft 2020-12
+  meta-schema by `flowschema` instead of a table of keywords: an `$anchor` or `$dynamicAnchor`
+  that is no anchor name, an `$id` with a fragment and a `$recursiveAnchor` or `$recursiveRef`
+  that is not text now exclude the tool too, a `format` stays an annotation, and each reason is
+  worded by flowschema from the tool's `inputSchema` (`inputSchema.properties.a.minLength must be
+  >= 0 (is -1)`), each once.
 - `semver` and `yaml` are no longer dependencies: the core reads versions and frontmatter itself.
 - More of loading, conversion, agents, marketplace installs, updates and skills run on the core:
   trust checks (workspace, repository, local settings, headers helpers), manifest gates, the
