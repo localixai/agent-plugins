@@ -1,4 +1,4 @@
-//! Port of `src/agents/workflow/saved.ts` at sha256:f38e5ef4023c.
+//! Port of `src/agents/workflow/saved.ts`, switched.
 //!
 //! Where a saved workflow is written and which one `/<name>` runs (workflows.md, "Save the workflow
 //! for reuse"). Pure over the facts the host reads from the disk; the host does the write and the
@@ -13,7 +13,7 @@ use crate::format::config_directory::{Join, config_directory_of};
 use crate::format::issues::{PluginIssue, error};
 use crate::format::listing::by_code_unit;
 use crate::js::{JsValue, json_stringify};
-use crate::registry::{Callback, Set};
+use crate::registry::{Callback, Port, Set};
 
 /// The places a workflow is saved.
 pub const SAVE_SCOPES: [SaveScope; 2] = [SaveScope::Project, SaveScope::Personal];
@@ -48,6 +48,29 @@ pub struct SaveRequest<J> {
     pub config_dir: Option<String>,
     /// Joins a base and a relative path.
     pub join: J,
+}
+
+impl SaveRequest<Callback> {
+    /// The request as the host's record holds it: it crosses as a port, as `join` is a function
+    /// (docs/RUST.md, "Effects"), so each member is read, all of them asked together.
+    async fn read(record: Port) -> Self {
+        let scope = record.member("scope");
+        let name = record.member("name");
+        let directories = record.member("directories");
+        let with_workflows = record.member("withWorkflows");
+        let home = record.member("home");
+        let config_dir = record.member("configDir");
+        let join = record.member("join");
+        Self {
+            scope: scope.await,
+            name: name.await,
+            directories: directories.await,
+            with_workflows: with_workflows.await,
+            home: home.await,
+            config_dir: config_dir.await,
+            join: join.await,
+        }
+    }
 }
 
 /// Where the file goes.
@@ -250,7 +273,7 @@ pub fn resolve_saved_workflows(found: &[SavedWorkflow]) -> SavedResolution {
 crate::registry::exports! {
     "agents/workflow/saved" {
         "SAVE_SCOPES" => ok || SAVE_SCOPES;
-        "planWorkflowSave" => async ok |request: SaveRequest<Callback>| plan_workflow_save(&request).await;
+        "planWorkflowSave" => async ok |request: Port| plan_workflow_save(&SaveRequest::read(request).await).await;
         "refuseLinks" => ok |plan: SavePlan, linked: Set<String>| refuse_links(&plan, &linked.members);
         "resolveSavedWorkflows" => ok |found: Vec<SavedWorkflow>| resolve_saved_workflows(&found);
     }

@@ -190,6 +190,18 @@ impl Port {
         answered(self.id, &format!(".{name}"), vec![])
     }
 
+    /// `name(...args)` of the host's object called as its method (`this` is the object), the
+    /// answer read as `R`: for an object the TypeScript types as an interface of its own module
+    /// rather than a port of `crate::ports` (a policy, a catalog, a token counter), whose module
+    /// implements its trait for `Port` with this.
+    pub fn method<R: DeserializeOwned + Send + 'static>(
+        self,
+        name: &str,
+        args: Vec<JsValue>,
+    ) -> impl Future<Output = R> + Send + use<R> {
+        answered(self.id, name, args)
+    }
+
     /// `method(...args)` of the host's port, its answer read as `R`.
     fn ask<R: DeserializeOwned + Send + 'static>(
         self,

@@ -2,11 +2,12 @@
 //! `scripts/rust/js-oracle.ts` recorded them in the runtime Claude Code runs on.
 
 use agent_plugins::js::normalize::{NormalForm, normalize};
+use agent_plugins::js::reg_exp::{Unrun, unicode_reg_exp};
 use agent_plugins::js::url::{INVALID_URL_MESSAGE, parse, parse_with_base};
 use agent_plugins::js::{JsValue, json_parse::json_parse, number, number_to_string, trim};
 use serde_json::{Value, json};
 
-use crate::support::{check, check_fallible};
+use crate::support::{cases_if_any, check, check_fallible};
 
 /// A number as the oracle records one: a JSON number, or `{"$number": …}` for the four JSON
 /// has no text for.
@@ -113,4 +114,43 @@ fn case_mapping_answers_as_javascript_core() {
     check("js/case", "toLowerCase", |(text,): (String,)| {
         text.to_lowercase()
     });
+}
+
+/// Every source JavaScript refuses is refused, every one it runs answers each text as it did,
+/// and the ones the `regex` crate cannot run (`Unrun::Unsupported`) are counted, never matched.
+#[test]
+fn unicode_reg_exp_answers_as_javascript_core() {
+    let cases = cases_if_any("js/reg-exp", "RegExp");
+    assert!(!cases.is_empty(), "no recorded patterns");
+    let (mut wrong, mut unsupported) = (Vec::new(), 0);
+    for case in &cases {
+        let source = case.args[0].as_str().unwrap_or_default();
+        let texts: Vec<&str> = case.args[1]
+            .as_array()
+            .map(|texts| texts.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        let recorded = case.outcomes[0].get("result");
+        let ours = unicode_reg_exp(source);
+        match (ours, recorded) {
+            (Err(Unrun::Invalid), None) | (Err(Unrun::Unsupported), None) => {}
+            (Err(Unrun::Unsupported), Some(_)) => unsupported += 1,
+            (Ok(regex), Some(want)) => {
+                let got: Vec<bool> = texts.iter().map(|text| regex.is_match(text)).collect();
+                if &json!(got) != want {
+                    wrong.push(format!("{source:?} answers {got:?}, JavaScript {want}"));
+                }
+            }
+            (ours, want) => wrong.push(format!("{source:?}: {ours:?}, JavaScript {want:?}")),
+        }
+    }
+    eprintln!(
+        "js/reg-exp: {unsupported} of {} not run by the regex crate",
+        cases.len()
+    );
+    assert!(
+        wrong.is_empty(),
+        "{} differ:\n{}",
+        wrong.len(),
+        wrong.join("\n")
+    );
 }

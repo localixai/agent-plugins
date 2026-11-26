@@ -23,13 +23,6 @@ export const pathNotFound = (component: string, path: string): string =>
 export const missingPath = (component: string, path: string): PluginIssue =>
   call('missingPath', component, path);
 
-/** The error for a `skills` entry that is not a directory ("Path-only fields": "`skills` entries must be directories"). */
-export const skillsEntryNotDirectory = (path: string): string =>
-  call('skillsEntryNotDirectory', path);
-
-/** The error for an `agents` entry that is not a file ("Path-only fields": "`agents` entries must be `.md` files"). */
-export const agentsEntryNotFile = (path: string): string => call('agentsEntryNotFile', path);
-
 /** The warning for a default folder a replacing manifest key leaves unscanned. */
 export const defaultFolderIgnored = (folder: string, key: string): string =>
   call('defaultFolderIgnored', folder, key);

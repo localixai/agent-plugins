@@ -1,9 +1,9 @@
 //! [`Port`] as the host's locations (`src/ports/locations.ts`).
 
-use super::Port;
+use super::{Port, arg};
 use crate::js::JsValue;
-use crate::ports::BoxFuture;
 use crate::ports::locations::Locations;
+use crate::ports::{BoxFuture, Signal};
 
 impl Locations for Port {
     fn home_dir(&self) -> BoxFuture<'_, String> {
@@ -18,8 +18,12 @@ impl Locations for Port {
         self.ask("pluginRoot", vec![JsValue::from(plugin_id)])
     }
 
-    fn plugin_data<'a>(&'a self, plugin_id: &'a str) -> BoxFuture<'a, String> {
-        self.ask("pluginData", vec![JsValue::from(plugin_id)])
+    fn plugin_data<'a>(
+        &'a self,
+        plugin_id: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, String> {
+        self.at("pluginData", plugin_id, signal)
     }
 
     fn join_path<'a>(&'a self, base: &'a str, relative_path: &'a str) -> BoxFuture<'a, String> {
@@ -29,12 +33,19 @@ impl Locations for Port {
         )
     }
 
-    fn existing_directory<'a>(&'a self, candidates: &'a [String]) -> BoxFuture<'a, Option<String>> {
+    fn existing_directory<'a>(
+        &'a self,
+        candidates: &'a [String],
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<String>> {
         let candidates = candidates
             .iter()
             .map(|one| JsValue::from(one.as_str()))
             .collect();
-        self.ask("existingDirectory", vec![JsValue::Array(candidates)])
+        self.ask(
+            "existingDirectory",
+            vec![JsValue::Array(candidates), arg(signal)],
+        )
     }
 }
 
@@ -55,13 +66,16 @@ mod tests {
         assert_eq!(asked, need("joinPath", vec!["/a".into(), "b".into()]));
         let candidates = vec!["/x".to_owned(), "/y".to_owned()];
         let (asked, read) = exchange(
-            async move { port().existing_directory(&candidates).await },
+            async move { port().existing_directory(&candidates, None).await },
             JsValue::Undefined,
         );
         let list = JsValue::Array(vec!["/x".into(), "/y".into()]);
         assert_eq!(
             (asked, read.as_str()),
-            (need("existingDirectory", vec![list]), "None")
+            (
+                need("existingDirectory", vec![list, JsValue::Undefined]),
+                "None"
+            )
         );
     }
 }

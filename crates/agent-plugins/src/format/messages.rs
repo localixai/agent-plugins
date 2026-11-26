@@ -81,8 +81,6 @@ crate::registry::exports! {
     "format/messages" {
         "pathNotFound" => ok |component: String, path: String| path_not_found(&component, &path);
         "missingPath" => ok |component: String, path: String| missing_path(&component, &path);
-        "skillsEntryNotDirectory" => ok |path: String| skills_entry_not_directory(&path);
-        "agentsEntryNotFile" => ok |path: String| agents_entry_not_file(&path);
         "defaultFolderIgnored" => ok |folder: String, key: String| default_folder_ignored(&folder, &key);
     }
 }

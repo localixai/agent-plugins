@@ -5,8 +5,9 @@
  * table (`hosts.ts`).
  *
  * `callSync` answers at once, for a function the TypeScript declares synchronous: with no host
- * value among the arguments it is one call of the core; with a callback, each need is answered
- * as it comes, and a callback that returns a promise is a bug of the wrapper. `callAsync` awaits
+ * value among the arguments it is one call of the core; with a callback, or for a handle's method
+ * (which may use the ports of the call that made the handle), each need is answered as it comes,
+ * and a callback that returns a promise is a bug of the wrapper. `callAsync` awaits
  * each need, starting it the moment the core asks, so needs asked together run together, as
  * `Promise.all` in the TypeScript. What a host value throws, the call throws, the same value,
  * unless the core catches it (`registry::catch_host`); the value stays here by its need either way.
@@ -130,7 +131,10 @@ function handleObject(
 export function callSync<T>(name: string, args: readonly unknown[], parent?: HostTable): T {
   const hosts = hostTable(handleObject, parent);
   const text = encodeArgs(args, hosts);
-  if (hosts.empty()) return resultOf<T>(name, decodeAnswer(callText(name, text), hosts));
+  // A handle's method may ask for the host values of the call that made it, so it takes the loop.
+  if (hosts.empty() && parent === undefined) {
+    return resultOf<T>(name, decodeAnswer(callText(name, text), hosts));
+  }
   const thrown = new Map<number, unknown>();
   let step = decodeStep(startText(name, text), hosts);
   while ('needs' in step) {

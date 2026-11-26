@@ -96,6 +96,10 @@ its ports without an async runtime.
    its members is a function (a `WorktreeLocation` with its `isSymlink`); a function read that
    way is a `Callback`, an absent member `undefined`. A parameter that may be either takes both
    shapes, `#[serde(untagged)] enum { Host(Port), Data(T) }` (`hooks/output/worktree_path.rs`).
+   An object the TypeScript types as an interface of its own module rather than a port of
+   `crate::ports` (a policy, a catalog, a token counter) is called by `Port::method(name, args)`,
+   its method with `this` the object, and its module implements its trait for `Port` with that
+   (`agents/preload_skills.rs`).
 5. A function of the core's that the host calls later (a timer's `fire`) crosses as `{"$call":
    h}`, a `registry::Function`: a handle (below) whose one sync method is `call`, which the host
    makes a function.
@@ -146,7 +150,8 @@ parameters `registry::Port`, `registry::Callback`, `ports::Signal` or data, and 
 Its wrapper is `call.async('readJson', files, path, signal)`, which returns a promise; a
 function the TypeScript declares synchronous keeps `call('f', …)`, and a callback among its
 arguments is answered as the core asks (a callback that returns a promise there is refused).
-`registry::call` answers such an export with a fault. A Rust host passes its own port values and
+`registry::call` answers such an export when it asks the host nothing (a token counter left to
+the kit's own), and with a fault when it would wait. A Rust host passes its own port values and
 closures, each answering with a ready future, and takes the answer with `ports::now(future)`.
 
 ### Handles: a result with methods
@@ -163,6 +168,11 @@ crate::registry::methods! {
     }
 }
 ```
+
+A method the TypeScript declares synchronous whose body asks the host (a `Locations` that
+delegates to the host's, `loading/resolve/without_plugin.rs`) is `"homeDir" => sync async ok
+|this| …;`: listed as sync, so the wrapper's object answers at once, and run as an async body
+whose needs the host answers as they come, with the ports of the call that made the handle.
 
 It crosses as `{"$handle": h, "sync": ["add"], "async": ["addLater"]}`; the core keeps the object
 under `h`. The host calls a method by the name `<h>#<method>` through `start` and `resume` (a sync
@@ -279,6 +289,15 @@ module's doc comment, never a silent difference:
   can only fold two names together and refuse more. The oracle's texts leave these characters out.
 - **A YAML alias inside its own anchor** (`x: &a [*a]`) reads as `[[]]`: the package gives an
   array that holds itself, which no value crossing the boundary can be.
+- **A regular expression from input** (a `patternProperties` key of a schema) is run by
+  `js::reg_exp::unicode_reg_exp`, JavaScript's `u`-mode syntax read and written for the `regex`
+  crate, and held to Bun by `bun scripts/rust/js-oracle.ts` (`crates/agent-plugins/tests/vectors/js/reg-exp.jsonl`).
+  What `regex` has no engine for is refused as `Unrun::Unsupported`, never run differently:
+  lookahead and lookbehind, backreferences (`\1`, `\k<name>`), `\p{…}` and `\P{…}`, modifiers
+  (`(?i:…)`), a group name that is not ASCII or that repeats, more than 100 nested groups, a count
+  past 2^32 and a pattern past the crate's size limit. A syntax error is `Unrun::Invalid`. A
+  module that runs such a pattern says what a refused one means (`agents/workflow/structured_output.rs`:
+  it may match).
 
 ## When the spec moves
 

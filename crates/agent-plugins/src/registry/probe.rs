@@ -56,7 +56,7 @@ async fn both(files: Port, first: String, second: String) -> Vec<Option<String>>
 /// host, `pluginData` with a promise.
 async fn located(locations: Port, plugin: String) -> Vec<String> {
     let home = locations.home_dir().await;
-    let data = locations.plugin_data(&plugin).await;
+    let data = locations.plugin_data(&plugin, None).await;
     vec![home, data]
 }
 

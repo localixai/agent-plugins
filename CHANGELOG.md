@@ -23,6 +23,12 @@
 - Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
   output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
   times slower. The core reads and writes the JSON of a call in one pass over its text.
+- Agents, loading and skills run more of their work on the core: a subagent's MCP scope, memory,
+  preloaded skills and structured output, a saved workflow, plugin `bin/` directories, the
+  `commands` debug line and declared path shapes, the `headersHelper` origins, shell guards and
+  shell prefix, locations without a plugin, a skill's content lifecycle, mentions and folded
+  names. A `patternProperties` pattern the core cannot run (lookaround, backreferences, `\p{…}`)
+  is one that may match when a schema's contradictions are checked (docs/RUST.md).
 - Permission rules run more of their work on the core: Bash and PowerShell dialects, safe
   environment variables and text patterns, approval memory, hook permission updates and
   rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the

@@ -135,6 +135,25 @@ fn an_export_that_waits_is_no_sync_call() {
 }
 
 #[test]
+fn an_async_export_that_asks_nothing_answers_a_sync_call() {
+    let ledger =
+        r#"{"loaded":[{"command":"a","content":"a body","order":1}],"grants":[],"disallowed":[]}"#;
+    let text = call(
+        "skills/lifecycle#reattachAfterCompaction",
+        &format!("[{ledger}]"),
+    );
+    assert_eq!(
+        text,
+        r#"{"result":[{"command":"a","content":"a body","order":1}]}"#
+    );
+    let waits = call(
+        "skills/lifecycle#reattachAfterCompaction",
+        &format!(r#"[{ledger},{{"tokens":{{"$port":0}}}}]"#),
+    );
+    assert!(waits.contains("it waits on the host"), "{waits}");
+}
+
+#[test]
 fn one_round_as_json_text() {
     let signal = r#"{"$signal":4,"aborted":false}"#;
     let step = start_json(

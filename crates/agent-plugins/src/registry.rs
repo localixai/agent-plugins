@@ -44,6 +44,8 @@ pub(crate) use exports::exports;
 pub(crate) use handle::methods;
 pub use handle::{Function, Handle, Methods, release};
 pub use remote::{Callback, Port};
+#[doc(hidden)]
+pub use steps::settled;
 pub use steps::{resume, resume_json, start, start_json};
 pub use task::{Need, Reply, Started, Step, cancel};
 pub use wire::{Answer, Bytes, Map, RegExp, Rest, Set};
@@ -74,8 +76,11 @@ pub const MODULES: &[Module] = &[
     crate::agents::catalog::invoke::EXPORTS,
     crate::agents::catalog::types::EXPORTS,
     crate::agents::handback_denial::EXPORTS,
+    crate::agents::mcp_scope::EXPORTS,
+    crate::agents::memory::EXPORTS,
     crate::agents::model_value::EXPORTS,
     crate::agents::permission_baseline::EXPORTS,
+    crate::agents::preload_skills::EXPORTS,
     crate::agents::prompt_surface::EXPORTS,
     crate::agents::teammate::EXPORTS,
     crate::agents::tool_filters::EXPORTS,
@@ -84,6 +89,7 @@ pub const MODULES: &[Module] = &[
     crate::agents::workflow::relaunch::EXPORTS,
     crate::agents::workflow::replay::EXPORTS,
     crate::agents::workflow::saved::EXPORTS,
+    crate::agents::workflow::structured_output::EXPORTS,
     crate::agents::workflow::usage_limit::EXPORTS,
     crate::cli::background_session::EXPORTS,
     crate::cli::clean_configuration::EXPORTS,
@@ -206,16 +212,24 @@ pub const MODULES: &[Module] = &[
     crate::hooks::verdict::plain_stdout::EXPORTS,
     crate::hooks::verdict::stdout_kind::EXPORTS,
     crate::loading::background_trust::EXPORTS,
+    crate::loading::bin::EXPORTS,
     crate::loading::channels::EXPORTS,
+    crate::loading::command_debug::EXPORTS,
     crate::loading::core::entry_fields::EXPORTS,
+    crate::loading::declared_shape::EXPORTS,
     crate::loading::merge_hooks::EXPORTS,
     crate::loading::plugin_debug::EXPORTS,
     crate::loading::plugin_folder::EXPORTS,
     crate::loading::plugin_scaffold::EXPORTS,
     crate::loading::resolve::data_id::EXPORTS,
     crate::loading::resolve::field_map::EXPORTS,
+    crate::loading::resolve::headers_helper_origins::EXPORTS,
     crate::loading::resolve::lsp_startup::EXPORTS,
     crate::loading::resolve::powershell_no_program::EXPORTS,
+    crate::loading::resolve::shell_guard_hook::EXPORTS,
+    crate::loading::resolve::shell_guard_monitor::EXPORTS,
+    crate::loading::resolve::shell_prefix::EXPORTS,
+    crate::loading::resolve::without_plugin::EXPORTS,
     crate::loading::trust_gates::EXPORTS,
     crate::loading::validate::links::EXPORTS,
     crate::loading::validate::paths::EXPORTS,
@@ -290,6 +304,9 @@ pub const MODULES: &[Module] = &[
     crate::skills::folder_line::EXPORTS,
     crate::skills::fork::EXPORTS,
     crate::skills::hook_limits::EXPORTS,
+    crate::skills::lifecycle::EXPORTS,
+    crate::skills::mention::EXPORTS,
+    crate::skills::scan::names::EXPORTS,
     crate::skills::shell_refusal::EXPORTS,
     crate::skills::shell_scan::EXPORTS,
     crate::skills::skill_rule::EXPORTS,

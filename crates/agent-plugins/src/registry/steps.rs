@@ -32,6 +32,23 @@ pub fn start(name: &str, args: &[JsValue]) -> Step {
     )
 }
 
+/// The answer of an export that waits on the host, called through `call` (`exports!`): a sync
+/// wrapper calls it so when no host value is among its arguments (`src/wasm/drive.ts`), and it
+/// answers as soon as it asks the host nothing; one that would wait is a fault, as the host must
+/// start it.
+#[doc(hidden)]
+#[must_use]
+pub fn settled(started: task::Started) -> Answer {
+    match task::start(started) {
+        Step::Done(answer) => answer,
+        Step::Needs { task, .. } => {
+            task::cancel(task);
+            Answer::Fault("it waits on the host: a host starts it (registry::start)".to_owned())
+        }
+        Step::Rethrow { .. } => Answer::Fault("it waits on the host".to_owned()),
+    }
+}
+
 /// Gives task `number` the host's answers to its needs, by need, and the numbers of the host's
 /// signals that aborted since, and runs it until it is done or waits again.
 #[must_use]
