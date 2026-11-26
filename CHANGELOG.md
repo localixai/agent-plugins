@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
+  in the order the manifest declares them (run together, the order followed how long each path
+  took to resolve).
 - Hook runs, the env file, the command handler's working-directory fallback, the HTTP and MCP-tool
   handlers, run facts, model switches and background verdicts run on the core, and so do
   cross-marketplace refusals, dependency enable, prune and tags, install plans and errors, removal,

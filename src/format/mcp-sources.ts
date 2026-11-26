@@ -185,15 +185,14 @@ export async function collectMcpServers(
       ? []
       : [manifestValue];
   const once = withoutRepeatedFiles(declared, context.platform);
-  const loaded = await Promise.all([
-    loadJsonFile(ROOT_FILE, context, true),
-    ...once
-      .filter((value) => fileOf(value, context.platform) !== ROOT_FILE)
-      .map((value: unknown) => {
-        const source = classifyMcpSource(value);
-        return source ? source.load(context) : Promise.resolve(unknownSource(value));
-      }),
-  ]);
+  // One source at a time, so the host sees its files read and its bundles opened in the order
+  // they are declared: run together, each one's turn would depend on how many steps its path
+  // takes to resolve.
+  const loaded: McpConfigRead[] = [await loadJsonFile(ROOT_FILE, context, true)];
+  for (const value of once.filter((one) => fileOf(one, context.platform) !== ROOT_FILE)) {
+    const source = classifyMcpSource(value);
+    loaded.push(source ? await source.load(context) : unknownSource(value));
+  }
   return {
     servers: Object.fromEntries(loaded.flatMap(({ servers }) => Object.entries(servers))),
     bundles: bundlesOf(loaded),

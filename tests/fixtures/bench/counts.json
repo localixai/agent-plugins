@@ -439,35 +439,32 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 9,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 9
+          "cpu.RegExp.exec": 5
         }
       },
       "8": {
         "first": {
-          "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 13,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 13
+          "cpu.RegExp.exec": 5
         }
       },
       "16": {
         "first": {
-          "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 21,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 21
+          "cpu.RegExp.exec": 5
         }
       }
     }
@@ -547,35 +544,32 @@
     "counts": {
       "8": {
         "first": {
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 13,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 13
+          "cpu.RegExp.exec": 5
         }
       },
       "16": {
         "first": {
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 21,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 21
+          "cpu.RegExp.exec": 5
         }
       },
       "32": {
         "first": {
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 37,
+          "cpu.RegExp.exec": 5,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
         "second": {
-          "cpu.RegExp.exec": 37
+          "cpu.RegExp.exec": 5
         }
       }
     }
