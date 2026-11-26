@@ -1,10 +1,13 @@
 //! Layer 2: pure readers and validators of plugin files and the small shared owners they use
 //! (`src/format/` in the npm package).
 
+pub mod agent_name;
+pub mod agent_record;
 pub mod canonical_json;
 pub mod code_points;
 pub mod config_directory;
 pub mod core;
+pub mod credential_env;
 pub mod defined;
 pub mod env_flag;
 pub mod env_number;
@@ -16,17 +19,28 @@ pub mod issues;
 pub mod link_rule;
 pub mod listing;
 pub mod marketplace;
+pub mod mcp_elicitation_check;
+pub mod mcp_prompts;
+pub mod mcp_reserved;
 pub mod mcp_schema_check;
 pub mod mcp_tool;
+pub mod mcp_tool_schema;
+pub mod mcpb_manifest;
 pub mod messages;
+pub mod mod_files;
 pub mod model_id;
 pub mod names;
+pub mod path_escape;
 pub mod path_text;
 pub mod permission_rule_shape;
 pub mod read_json;
 pub mod remote_mcp_credentials;
+pub mod settings_files;
+pub mod skill_name;
 pub mod theme;
+pub mod theme_color;
 pub mod theme_tokens;
+pub mod theme_write;
 pub mod token_estimate;
 pub mod utf8;
 pub mod validate;

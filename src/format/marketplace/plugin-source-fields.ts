@@ -1,11 +1,15 @@
-import { error, type PluginIssue } from '../issues.ts';
-import type { ReadMode } from './types.ts';
-
 /**
  * The field checks every object plugin source shares (plugins/marketplace-reference.md, "Plugin
  * sources" and "Invalid input on a source"): a known type "with a required field missing or of the
  * wrong type" is `Invalid input` on the entry's `source`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/marketplace/plugin_source_fields.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../issues.ts';
+import type { ReadMode } from './types.ts';
+
+const call = coreModule('format/marketplace/plugin-source-fields');
 
 /** Where a source is being read: the path its issues name, and what bare names and `\` depend on. */
 export interface SourceSite {
@@ -16,22 +20,11 @@ export interface SourceSite {
   readonly mode?: ReadMode;
 }
 
-export const invalidInput = (site: SourceSite): PluginIssue[] => [
-  error(site.path, 'Invalid input'),
-];
-
-/** A full 40-character lowercase commit SHA ("Plugin sources": `sha`). */
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
-const SHA_LENGTH = 40;
-/** The archive's digest: 64 hex characters, uppercase or lowercase ("archive plugin source"). */
-const ARCHIVE_DIGEST = /^[0-9A-Fa-f]{64}$/;
+export const invalidInput = (site: SourceSite): PluginIssue[] => call('invalidInput', site);
 
 export type RawSource = Readonly<Record<string, unknown>>;
 
-export const isText = (value: unknown): value is string =>
-  typeof value === 'string' && value !== '';
-
-const isString = (value: unknown): value is string => typeof value === 'string';
+export const isText = (value: unknown): value is string => call('isText', value);
 
 /** An optional field: `value` is `undefined` when the key is absent. A present value of the wrong type is no value at all. */
 export interface Optional {
@@ -50,62 +43,23 @@ export interface Checked<T> {
 
 /** `issues` when there are any, else the source. */
 export const refined = <S>(source: S, issues: readonly PluginIssue[]): S | readonly PluginIssue[] =>
-  issues.length > 0 ? issues : source;
+  call('refined', source, issues);
 
 export const fieldError = (site: SourceSite, key: string, message: string): PluginIssue =>
-  error(`${site.path}.${key}`, message);
+  call('fieldError', site, key, message);
 
 /** A required text field: the text, or `undefined` when the key is missing, empty or not a string. */
-export function required(raw: RawSource, key: string): string | undefined {
-  const value = raw[key];
-  return isText(value) ? value : undefined;
-}
-
-function optional(
-  raw: RawSource,
-  key: string,
-  accepts: (value: unknown) => value is string,
-): Optional | undefined {
-  const value = raw[key];
-  if (value === undefined) return { value: undefined };
-  return accepts(value) ? { value } : undefined;
-}
+export const required = (raw: RawSource, key: string): string | undefined =>
+  call('required', raw, key);
 
 export const optionalText = (raw: RawSource, key: string): Optional | undefined =>
-  optional(raw, key, isText);
+  call('optionalText', raw, key);
 
 /** `sha256`: a string, else `undefined`; one that is not 64 hex characters is an issue on the field. */
-export function optionalDigest(
+export const optionalDigest = (
   raw: RawSource,
   site: SourceSite,
-): Checked<string | undefined> | undefined {
-  const digest = optional(raw, 'sha256', isString);
-  if (digest === undefined) return undefined;
-  const broken = digest.value !== undefined && !ARCHIVE_DIGEST.test(digest.value);
-  return {
-    value: digest.value,
-    issues: broken ? [fieldError(site, 'sha256', 'Must be a 64-character hex SHA-256 digest')] : [],
-  };
-}
-
-/** A `sha` of the wrong length is also reported as too short or too long, before the SHA message. */
-function shaIssues(sha: string, site: SourceSite): PluginIssue[] {
-  if (COMMIT_SHA.test(sha)) return [];
-  const length =
-    sha.length === SHA_LENGTH
-      ? []
-      : [
-          fieldError(
-            site,
-            'sha',
-            `Too ${sha.length < SHA_LENGTH ? 'small' : 'big'}: expected string to have exactly ${SHA_LENGTH} characters`,
-          ),
-        ];
-  return [
-    ...length,
-    fieldError(site, 'sha', 'Must be a full 40-character lowercase git commit SHA'),
-  ];
-}
+): Checked<string | undefined> | undefined => call('optionalDigest', raw, site);
 
 export interface GitPin {
   readonly ref: string | undefined;
@@ -113,12 +67,5 @@ export interface GitPin {
 }
 
 /** The `ref` and `sha` the git sources share, or `undefined` when either is present and of the wrong type. */
-export function readGitPin(raw: RawSource, site: SourceSite): Checked<GitPin> | undefined {
-  const ref = optionalText(raw, 'ref');
-  const sha = optional(raw, 'sha', isString);
-  if (ref === undefined || sha === undefined) return undefined;
-  return {
-    value: { ref: ref.value, sha: sha.value },
-    issues: sha.value === undefined ? [] : shaIssues(sha.value, site),
-  };
-}
+export const readGitPin = (raw: RawSource, site: SourceSite): Checked<GitPin> | undefined =>
+  call('readGitPin', raw, site);

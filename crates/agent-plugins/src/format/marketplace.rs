@@ -2,7 +2,12 @@
 //! (`src/format/marketplace/` in the npm package).
 
 pub mod blocked_hosts;
+pub mod display_fields;
+pub mod entry_append;
 pub mod header_names;
+pub mod ids;
 pub mod marketplace_name_lists;
+pub mod marketplace_names;
+pub mod plugin_source_fields;
 pub mod renames;
 pub mod source_failures;
