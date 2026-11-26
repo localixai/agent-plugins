@@ -8,7 +8,6 @@ use serde::Deserialize;
 use super::task::{self, Need, Reply, Step};
 use super::{Answer, MODULES, decoded, handle, remote};
 use crate::js::JsValue;
-use crate::js::json_parse::json_parse;
 use crate::js::value::write_json_string;
 
 /// Starts `name` (`<module>#<export>`, or `<handle>#<method>` for a method of a
@@ -75,7 +74,7 @@ struct Resumed {
 /// [`resume`] with the answers' JSON text (`Resumed`); the step's JSON text.
 #[must_use]
 pub fn resume_json(number: u32, answers: &str) -> String {
-    let resumed = json_parse(answers)
+    let resumed = super::wire_json::read(answers)
         .map_err(|problem| format!("the answers are not JSON: {problem}"))
         .and_then(|raw| {
             Resumed::deserialize(raw).map_err(|error| format!("the answers do not decode: {error}"))

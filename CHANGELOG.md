@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
+  output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
+  times slower. The core reads and writes the JSON of a call in one pass over its text.
 - Permission rules run more of their work on the core: Bash and PowerShell dialects, safe
   environment variables and text patterns, approval memory, hook permission updates and
   rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the

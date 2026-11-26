@@ -58,21 +58,31 @@ fn write_value(value: &JsValue, out: &mut String) {
 /// A string quoted as `JSON.stringify` quotes it: `"` and `\` escaped, the control characters
 /// below U+0020 as `\b`, `\t`, `\n`, `\f`, `\r` or `\u00xx`, every other character as itself.
 pub(crate) fn write_json_string(text: &str, out: &mut String) {
+    out.reserve(text.len() + 2);
     out.push('"');
-    for character in text.chars() {
-        match character {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\u{8}' => out.push_str("\\b"),
-            '\t' => out.push_str("\\t"),
-            '\n' => out.push_str("\\n"),
-            '\u{C}' => out.push_str("\\f"),
-            '\r' => out.push_str("\\r"),
-            control if control < ' ' => {
-                let _ = write!(out, "\\u{:04x}", u32::from(control));
-            }
-            other => out.push(other),
+    // Every run of characters that need no escape is copied whole: a call can carry a string of
+    // many megabytes, and only `"`, `\` and the controls below U+0020 (all ASCII) change.
+    let mut start = 0;
+    for (at, byte) in text.bytes().enumerate() {
+        let escape = match byte {
+            b'"' => "\\\"",
+            b'\\' => "\\\\",
+            0x08 => "\\b",
+            b'\t' => "\\t",
+            b'\n' => "\\n",
+            0x0C => "\\f",
+            b'\r' => "\\r",
+            control if control < 0x20 => "",
+            _ => continue,
+        };
+        out.push_str(text.get(start..at).unwrap_or_default());
+        if escape.is_empty() {
+            let _ = write!(out, "\\u{byte:04x}");
+        } else {
+            out.push_str(escape);
         }
+        start = at + 1;
     }
+    out.push_str(text.get(start..).unwrap_or_default());
     out.push('"');
 }

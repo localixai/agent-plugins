@@ -35,6 +35,7 @@ mod remote;
 mod steps;
 mod task;
 mod wire;
+mod wire_json;
 
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
@@ -49,7 +50,6 @@ pub use wire::{apply, fallible, nullable, ok, ready, run, sign, take_args};
 use serde::Deserialize as _;
 
 use crate::js::JsValue;
-use crate::js::json_parse::json_parse;
 
 /// One module's exports, as `exports!` declares them.
 #[derive(Debug, Clone, Copy)]
@@ -124,7 +124,6 @@ pub const MODULES: &[Module] = &[
     crate::format::theme_tokens::EXPORTS,
     crate::format::theme_write::EXPORTS,
     crate::format::token_estimate::EXPORTS,
-    crate::format::utf8::EXPORTS,
     crate::format::validate::finding::EXPORTS,
     crate::format::validate::mcp_remote_checks::EXPORTS,
     crate::format::validate::path_claims::EXPORTS,
@@ -215,8 +214,8 @@ pub fn answer(name: &str, args: &[JsValue]) -> Answer {
 
 /// The arguments' JSON text as values, each wire tag read back as the value it stands for.
 pub(crate) fn decoded(args: &str) -> Result<Vec<JsValue>, String> {
-    let raw =
-        json_parse(args).map_err(|problem| format!("the arguments are not JSON: {problem}"))?;
+    let raw = wire_json::read(args)
+        .map_err(|problem| format!("the arguments are not JSON: {problem}"))?;
     match JsValue::deserialize(raw) {
         Ok(JsValue::Array(list)) => Ok(list),
         Ok(_) => Err("the arguments are not a JSON array".to_owned()),

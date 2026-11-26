@@ -34,9 +34,13 @@ module is in one of five states:
 A function stays in the host's language when crossing the boundary would cost more than its work
 or cannot be done: the boundary copies every argument as JSON, so a guard over a host value
 (`protocol/is-record.ts`: one `typeof`) would copy the whole value at every node of a walk, and a
-value with a cycle cannot be copied at all. The rule: a function that only looks at the outside
-of a host value, or holds host objects by identity, stays TypeScript; one that computes an answer
-from data crosses. The ports (`src/ports/`) are the host's types and stay TypeScript too.
+value with a cycle cannot be copied at all; and a pass over host text of any size that the host's
+runtime does natively (`format/utf8.ts`: `TextEncoder` over a command's output, up to 64 MiB)
+would copy the text there and back for a few operations a byte. The rule: a function that only
+looks at the outside of a host value, holds host objects by identity, or makes one native pass
+over host data of unbounded size, stays TypeScript; one that computes an answer from data
+crosses. Once its callers are in the core, such a module is core-only: the text arrives through a
+port once and stays there. The ports (`src/ports/`) are the host's types and stay TypeScript too.
 
 ## The boundary
 
