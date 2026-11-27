@@ -1,17 +1,16 @@
-import { SCOPE_RULES, type ScanScope } from './locations.ts';
-import { SKILL_FILE } from './read.ts';
+/**
+ * Where a skill or command file of a scope lives.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/skills/scan/file_location.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { ScanScope } from './locations.ts';
+
+const call = coreModule('skills/scan/file-location');
 
 /** A skill folder (`SKILL.md`) or an older command file (skills.md, "Command files"). */
 export type ScopeFileKind = 'skill' | 'command';
-
-/** The path below a scope's container of a file of each kind named `name`. */
-const BELOW: { readonly [K in ScopeFileKind]: (name: string) => string } = {
-  skill: (name) => `${name}/${SKILL_FILE}`,
-  // `.claude/commands/<path>.md`: each folder before the file is a part of the name before a `:`.
-  command: (name) => `${name.split(':').join('/')}.md`,
-};
-
-const CONTAINER = { skill: 'skills', command: 'commands' } as const;
 
 /**
  * Where a skill or command file named `name` of `scope` lives, below `scopeFolder`: the scope's
@@ -20,14 +19,9 @@ const CONTAINER = { skill: 'skills', command: 'commands' } as const;
  * `commands/<name>.md`. `undefined` when the scope reads no file of that kind: the managed, nested
  * and synced scopes read no commands (a synced skill's folder is claude.ai's: `skills/synced/`).
  */
-export function scopeFilePath(
+export const scopeFilePath = (
   scope: ScanScope,
   kind: ScopeFileKind,
   scopeFolder: string,
   name: string,
-): string | undefined {
-  const container = SCOPE_RULES[scope][CONTAINER[kind]];
-  return container === undefined
-    ? undefined
-    : `${scopeFolder}/${container.folder}/${BELOW[kind](name)}`;
-}
+): string | undefined => call('scopeFilePath', scope, kind, scopeFolder, name);

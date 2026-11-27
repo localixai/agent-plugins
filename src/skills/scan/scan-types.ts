@@ -1,14 +1,15 @@
 import type { PluginIssue } from '../../format/issues.ts';
 import type { BodyReader, InvocableHead } from '../../format/skill-types.ts';
-import type { ScopePlace } from '../../foundation/scope-folders.ts';
-import type { ScanFolder } from '../../ports/folder-scan.ts';
-import type { ScanContext, ScanScope, ScopeRule } from './locations.ts';
+import type { ScanScope } from './locations.ts';
 
 /**
  * What a scan of the scope folders returns. An entry holds the skill or command without its body
  * (`InvocableHead`) and the `BodyReader` that gets the body when the skill runs: a catalog of
  * hundreds of skills keeps their names, descriptions and settings, not megabytes of Markdown
  * (spec/judgments.md, "metadata-first catalog").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/skills/scan/scan_types.rs`,
+ * docs/RUST.md).
  */
 
 export interface ScannedEntry {
@@ -42,23 +43,4 @@ export interface ScanOutcome {
   readonly issues: readonly PluginIssue[];
   /** The skills folders the session watches for changes (those that exist). */
   readonly watch: readonly string[];
-}
-
-export const EMPTY: ScanOutcome = { entries: [], plugins: [], issues: [], watch: [] };
-
-export const merge = (parts: readonly ScanOutcome[]): ScanOutcome => ({
-  entries: parts.flatMap((part) => part.entries),
-  plugins: parts.flatMap((part) => part.plugins),
-  issues: parts.flatMap((part) => part.issues),
-  watch: parts.flatMap((part) => part.watch),
-});
-
-/** One base directory of one scope, opened. */
-export interface Where {
-  readonly context: ScanContext;
-  readonly rule: ScopeRule;
-  readonly scope: ScanScope;
-  readonly folder: ScanFolder;
-  /** Where the base sits in the scope and which scope folder below it is read. */
-  readonly place: ScopePlace;
 }

@@ -35,23 +35,10 @@ export interface ScopeContext<R extends ScopeRequest = ScopeRequest> {
   readonly signal?: AbortSignal;
   /**
    * Folders beside `.claude` that the host also reads skills, commands and agents from, below every
-   * base of every scope that reads its `.claude` folder (`.agents`, `.localix`). See `scopeFoldersOf`.
+   * base of every scope that reads its `.claude` folder (`.agents`, `.localix`).
    */
   readonly extraScopeFolders?: readonly string[];
 }
-
-/** The documented folder below every scope base. */
-export const CLAUDE_FOLDER: '.claude' = call('CLAUDE_FOLDER');
-
-/**
- * The folders read below each base of a scope, in precedence order: `.claude`, then the host's extra
- * folders as given, a repeat dropped. Judgment (spec/judgments.md): the docs name `.claude` only; an
- * extra folder of a scope ranks after the `.claude` folder of every base of that scope, so a documented
- * file never yields its name to one of an extra folder of its own scope, and the scopes keep their
- * documented order.
- */
-export const scopeFoldersOf = (context: ScopeContext): readonly string[] =>
-  call('scopeFoldersOf', context);
 
 /** Where the base directories of a scope are; the user scope's are `SCOPE_PLACES.user`. */
 export type ScopeBase = 'managed' | 'project' | 'repository' | 'added';
@@ -73,29 +60,15 @@ export interface ScopePlace {
   readonly documented: boolean;
 }
 
-/** The places of a scope for the scope folders asked (`scopeFoldersOf`), in precedence order. */
+/** The places of a scope for the scope folders asked, in precedence order. */
 export type ScopePlaces<C extends ScopeContext = ScopeContext> = (
   context: C,
   roots: readonly string[],
 ) => Promise<readonly ScopePlace[]>;
 
-/**
- * Each root below each base: every base's `.claude` first, then each extra folder of every base. The
- * function it returns calls the core with `bases`, as a function of the core's that waits on the host
- * cannot cross the boundary.
- */
-export const placesBelow =
-  <C extends ScopeContext>(bases: (context: C) => Promise<readonly string[]>): ScopePlaces<C> =>
-  (context, roots) =>
-    call.async('placesBelow', bases, context, roots);
-
 /** The places of each kind of scope base, and of the user scope. */
 export const SCOPE_PLACES: { readonly [B in ScopeBase | 'user']: ScopePlaces } =
   call('SCOPE_PLACES');
-
-/** The path of a container below a place's root: `.claude/skills`, or `skills` in the configuration directory. */
-export const placePath = (place: Pick<ScopePlace, 'root'>, container: string): string =>
-  call('placePath', place, container);
 
 /** One file of a scope folder, with its text. */
 export interface ScopeFile {

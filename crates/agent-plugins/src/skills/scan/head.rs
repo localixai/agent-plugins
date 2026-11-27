@@ -1,6 +1,4 @@
-//! The core's counterpart of `src/skills/scan/head.ts` at sha256:87210c378788, which stays TypeScript: it
-//! only looks at the outside of a host value (whether it has a `dir`) and drops its `body`, which
-//! crossing the boundary would copy there and back (docs/RUST.md, "What stays TypeScript").
+//! Ported from `src/skills/scan/head.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The skill or command without its body, field by field.
 

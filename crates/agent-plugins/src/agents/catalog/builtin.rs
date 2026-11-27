@@ -166,7 +166,6 @@ pub fn builtin_agents(policy: BuiltinPolicy) -> Vec<CatalogAgent> {
 crate::registry::exports! {
     "agents/catalog/builtin" {
         "BUILTIN_AGENT_NAMES" => ok || BUILTIN_AGENT_NAMES;
-        "FALLBACK_AGENT" => ok || FALLBACK_AGENT;
         "builtinAgents" => ok |policy: BuiltinPolicy| builtin_agents(policy);
     }
 }

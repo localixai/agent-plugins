@@ -10,15 +10,8 @@
  * threw and `name` an `Error`'s name (the core may catch it, `registry::catch_host`), `aborted`
  * the host's signals that aborted since the last step.
  */
-import {
-  type Answer,
-  type HostValues,
-  answerOf,
-  decode,
-  encode,
-  parse,
-  stringify,
-} from './wire.ts';
+import type { HostValues } from './core-values.ts';
+import { type Answer, answerOf, decode, encode, parse, stringify } from './wire.ts';
 
 /** One thing the core asks of the host: `method` of the value it keeps as `port`. */
 export interface Need {

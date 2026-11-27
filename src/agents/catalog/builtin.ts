@@ -19,10 +19,6 @@ export const BUILTIN_AGENT_NAMES: readonly [
   'statusline-setup',
   'claude-code-guide',
 ] = call('BUILTIN_AGENT_NAMES');
-export type BuiltinAgentName = (typeof BUILTIN_AGENT_NAMES)[number];
-
-/** The subagent a call without `subagent_type` runs: "a `general-purpose` subagent to fall back on". */
-export const FALLBACK_AGENT: BuiltinAgentName = call('FALLBACK_AGENT');
 
 /** What switches the built-ins off. */
 export interface BuiltinPolicy {

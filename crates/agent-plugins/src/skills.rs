@@ -1,6 +1,7 @@
 //! Layer 3 (skills): what a skill is and how it is invoked (`src/skills/` in the npm package).
 
 pub mod arguments;
+pub mod command_entries;
 pub mod execution;
 pub mod expand;
 pub mod expand_policy;

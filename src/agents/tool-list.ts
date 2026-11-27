@@ -21,11 +21,6 @@ export interface ToolEntry {
   readonly spawn?: readonly string[] | 'any';
 }
 
-export const AGENT_TOOL: 'Agent' = call('AGENT_TOOL');
-
-/** Whether a tool name is the Agent tool: `Task` (its name before 2.1.63) "still work[s] as an alias". */
-export const isAgentToolName = (name: string): boolean => call('isAgentToolName', name);
-
 /** Reads one entry of the field, as `readAgent` keeps it (a comma inside parentheses is not a split). */
 export const parseToolEntry = (entry: string): ToolEntry => call('parseToolEntry', entry);
 

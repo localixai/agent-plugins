@@ -152,14 +152,14 @@ function builtinPolicyOf(
   };
 }
 
+/**
+ * The plugins' agents, and each plugin by its id: an agent crosses the core as data, so its owner is
+ * found by the `pluginId` of its source, never by the object's identity.
+ */
 function pluginAgents(state: HostState) {
-  const owners = new Map<CatalogAgent, ActivePlugin>();
+  const owners = new Map(state.active.map((plugin) => [plugin.id, plugin]));
   const agents = state.active.flatMap((plugin) =>
-    plugin.catalog.agents.map((record) => {
-      const agent = catalogAgentOf(record, plugin.id);
-      owners.set(agent, plugin);
-      return agent;
-    }),
+    plugin.catalog.agents.map((record) => catalogAgentOf(record, plugin.id)),
   );
   return { owners, agents };
 }
@@ -236,6 +236,7 @@ export function createAgentPart(
       const policy = createHookPolicy(state.view, context);
       return readSubagentStatusLine(state.view, policy, sessionPluginDefaults(state));
     },
-    pluginOf: (agent) => pluginsOf().owners.get(agent),
+    pluginOf: ({ source }) =>
+      'pluginId' in source ? pluginsOf().owners.get(source.pluginId) : undefined,
   };
 }
