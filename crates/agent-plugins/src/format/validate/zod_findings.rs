@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/zod-findings.ts` at sha256:81e08b904a35.
+//! Ported from `src/format/validate/zod-findings.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The findings of a failed zod parse, each at its dotted path. `zodFindings` takes a
 //! `safeParse` result, which holds a `ZodError` and so never crosses the boundary: it is a Rust
@@ -33,12 +33,6 @@ pub fn zod_findings(parsed: &Result<JsValue, ZodError>, base: &str, suffix: &str
                 )
             })
             .collect(),
-    }
-}
-
-crate::registry::exports! {
-    "format/validate/zod-findings" {
-        "dotted" => ok |base: String, segments: Vec<JsValue>| dotted(&base, &segments);
     }
 }
 

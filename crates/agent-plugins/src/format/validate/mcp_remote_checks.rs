@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/mcp-remote-checks.ts`, switched.
+//! Ported from `src/format/validate/mcp-remote-checks.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The checks of `claude plugin validate` on a remote server's `url` and `headers` (plugins/
 //! manifest-reference.md, "Validate the manifest"; spec §8 item 3): an error for a `url` that is not
@@ -118,10 +118,4 @@ pub fn remote_findings(path: &str, server: &JsObject) -> Vec<Finding> {
     let mut findings = url_findings(path, server.get("url"));
     findings.extend(header_findings(path, server.get("headers")));
     findings
-}
-
-crate::registry::exports! {
-    "format/validate/mcp-remote-checks" {
-        "remoteFindings" => ok |path: String, server: JsObject| remote_findings(&path, &server);
-    }
 }
