@@ -1,5 +1,3 @@
-import type { PluginIssue } from '../../format/issues.ts';
-import type { ShellKind } from '../../ports/index.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
 /**
@@ -25,14 +23,3 @@ export const onlyQuotedStrings = (command: string): boolean => call('onlyQuotedS
 
 /** What the hook's error says: the docs' sentence first, then the fixes. */
 export const NO_PROGRAM: string = call('NO_PROGRAM');
-
-/**
- * The hook does not start: it runs in PowerShell (`shell`) because the host defaults to it
- * (`named` is the handler's own `shell` field, absent) and the command is only quoted strings.
- */
-export const noProgramIssue = (
-  shell: ShellKind,
-  named: ShellKind | undefined,
-  path: string,
-  command: string,
-): PluginIssue | undefined => call('noProgramIssue', shell, named, path, command);

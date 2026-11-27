@@ -1,15 +1,17 @@
+/**
+ * A command hook ready for the host's `CommandRunner` (plugins/manifest-reference.md, "Where each
+ * variable resolves"; hooks.md, "Exec form and shell form").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/hook_command.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginIssue } from '../../format/issues.ts';
 import type { CommandSpec, ShellKind } from '../../ports/index.ts';
 import type { HookHandlerOf } from '../../protocol/hook-config.ts';
-import { warning } from '../../format/issues.ts';
-import { exportedEnvironment } from './exported-environment.ts';
-import { noProgramIssue } from './powershell-no-program.ts';
-import type { FieldPolicy, SubstitutionScope } from './scope.ts';
-import { rejectUserConfigInShell } from './shell-guard.ts';
-import { HOOK_GUARD } from './shell-guard-hook.ts';
-import { hookNeedsQuotes, unquotedSpacePath } from './hook-space-path.ts';
-import { substituter, type Substituter } from './substituter.ts';
-import { surfacePolicy, type SubstitutionSurface } from './surfaces.ts';
+import type { SubstitutionScope } from './scope.ts';
+
+const call = coreModule('loading/resolve/hook-command');
 
 /** A `command` hook handler, as the official type has it. */
 export type HookCommandHandler = HookHandlerOf<'command'>;
@@ -66,175 +68,6 @@ export interface HookCommandResolution {
   readonly issues: readonly PluginIssue[];
 }
 
-interface Plan {
-  readonly spec?: CommandSpec;
-  readonly notStarted?: string;
-  readonly notice?: string;
-  readonly issues: PluginIssue[];
-}
-
-/**
- * What each shell does to the exported path variables on a Windows host: a Git Bash hook gets them
- * with forward slashes, as its command text has them; PowerShell keeps the native paths (spec
- * §3.2.4, J3.6; plugins/troubleshooting.md: a Git Bash hook "receives `${CLAUDE_PLUGIN_ROOT}`" with
- * forward slashes). Option values are never touched.
- */
-const PATH_VARIABLES = ['CLAUDE_PLUGIN_ROOT', 'CLAUDE_PLUGIN_DATA', 'CLAUDE_PROJECT_DIR'] as const;
-const forwardSlashes = (environment: Record<string, string>): Record<string, string> => {
-  const paths = PATH_VARIABLES.flatMap((name) => {
-    const value = environment[name];
-    return value === undefined ? [] : [[name, value.replaceAll('\\', '/')] as const];
-  });
-  return { ...environment, ...Object.fromEntries(paths) };
-};
-const SHELL_ENVIRONMENT: {
-  readonly [S in ShellKind]: (environment: Record<string, string>) => Record<string, string>;
-} = {
-  bash: forwardSlashes,
-  powershell: (environment) => environment,
-};
-
-/** The surface of each shell: PowerShell rewrites the placeholders, bash gets forward slashes. */
-const SHELL_SURFACES: { readonly [S in ShellKind]: SubstitutionSurface } = {
-  bash: 'hook-shell',
-  powershell: 'hook-powershell',
-};
-
-/**
- * The policy of one surface for this hook: the scope's `shellPaths` sets a bash command's path
- * rendering (`surfacePolicy`; PowerShell's is always a reference), and a hook of no plugin keeps
- * `${user_config.*}` as written.
- */
-function policyOf(surface: SubstitutionSurface, run: Run): FieldPolicy {
-  const policy = surfacePolicy(surface, run.scope);
-  return run.options.ofPlugin === false ? { ...policy, userConfig: 'refuse' } : policy;
-}
-
-/**
- * hooks.md, "Reference scripts by path in PowerShell hooks": the bare `$CLAUDE_PROJECT_DIR` form
- * "parses as an undefined local variable" and "Claude Code doesn't rewrite that form; it logs a
- * warning". `$env:NAME` and `${env:NAME}` do not match: the `$` is followed by `env`, not the name.
- * Judgment: the same holds for the other two exported path variables; each name is reported once.
- */
-const BARE_VARIABLE = /\$(CLAUDE_(?:PROJECT_DIR|PLUGIN_ROOT|PLUGIN_DATA))\b/g;
-
-function bareVariableWarnings(command: string, path: string): PluginIssue[] {
-  const names = new Set([...command.matchAll(BARE_VARIABLE)].map(([, name]) => name));
-  return [...names].map((name) =>
-    warning(
-      path,
-      `$${name} is an undefined variable in PowerShell and resolves to $null. Write \${${name}} or $env:${name}.`,
-    ),
-  );
-}
-
-/** Per shell, what else a shell-form command is checked for. */
-const SHELL_CHECKS: {
-  readonly [S in ShellKind]: (command: string, path: string) => PluginIssue[];
-} = {
-  bash: () => [],
-  powershell: bareVariableWarnings,
-};
-
-const SEPARATOR = /[\\/]/;
-
-/**
- * hooks.md, "Exec form": "If `command` is a bare name with no path separator and contains
- * whitespace alongside `args`, Claude Code logs a warning because the spawn will fail"; an
- * absolute path with spaces is "a single valid executable" and does not warn.
- */
-const bareNameWarning = (command: string, path: string): PluginIssue[] =>
-  !SEPARATOR.test(command) && /\s/.test(command)
-    ? [
-        warning(
-          path,
-          `"${command}" is a bare name with whitespace and "args" is set, so no executable of that name will start. Move the extra tokens into "args".`,
-        ),
-      ]
-    : [];
-
-/** One hook being resolved: its scope, the one substituter, the options and the issue path. */
-interface Run {
-  readonly scope: SubstitutionScope;
-  readonly substitution: Substituter;
-  readonly options: HookCommandOptions;
-  readonly base: string;
-}
-
-async function execForm(
-  handler: HookCommandHandler,
-  args: readonly string[],
-  run: Run,
-): Promise<Plan> {
-  const { substitution, base } = run;
-  const policy = policyOf('hook-exec', run);
-  const [command, each] = await Promise.all([
-    substitution.run(handler.command, policy, `${base}.command`),
-    Promise.all(args.map((arg, index) => substitution.run(arg, policy, `${base}.args[${index}]`))),
-  ]);
-  return {
-    spec: { form: 'exec', command: command.text, args: each.map(({ text }) => text) },
-    issues: [
-      ...command.issues,
-      ...each.flatMap(({ issues }) => issues),
-      ...bareNameWarning(command.text, `${base}.command`),
-    ],
-  };
-}
-
-/** The errors.md refusal of a plugin's shell-form `${user_config.*}`, read from the template. */
-const refusalOf = (
-  handler: HookCommandHandler,
-  scope: SubstitutionScope,
-  options: HookCommandOptions,
-  path: string,
-): PluginIssue | undefined =>
-  options.ofPlugin === false
-    ? undefined
-    : rejectUserConfigInShell(
-        HOOK_GUARD,
-        handler.command,
-        { plugin: scope.pluginId, command: handler.command },
-        path,
-      );
-
-async function shellForm(handler: HookCommandHandler, run: Run): Promise<Plan> {
-  const { scope, substitution, options, base } = run;
-  const path = `${base}.command`;
-  const refused = refusalOf(handler, scope, options, path);
-  if (refused) return { issues: [refused] };
-  const shell = handler.shell ?? options.defaultShell ?? 'bash';
-  const none = noProgramIssue(shell, handler.shell, path, handler.command);
-  if (none) return { notStarted: none.message, issues: [none] };
-  const script =
-    handler.asyncRewake === true
-      ? await unquotedSpacePath(handler.command, substitution)
-      : undefined;
-  if (script !== undefined) {
-    const notice = hookNeedsQuotes(options.event, script);
-    return { notice, issues: [warning(path, notice)] };
-  }
-  const policy = policyOf(SHELL_SURFACES[shell], run);
-  const command = await substitution.run(handler.command, policy, path);
-  return {
-    spec: { form: 'shell', command: command.text, shell },
-    issues: [...command.issues, ...SHELL_CHECKS[shell](handler.command, path)],
-  };
-}
-
-/**
- * What the process gets: a plugin's hook the three path variables and its options; a hook of no
- * plugin only `CLAUDE_PROJECT_DIR`, since it has no plugin folder, data folder or options.
- */
-const environmentOf = async ({
-  scope,
-  substitution,
-  options,
-}: Run): Promise<Record<string, string>> =>
-  options.ofPlugin === false
-    ? { CLAUDE_PROJECT_DIR: await substitution.variable('CLAUDE_PROJECT_DIR') }
-    : exportedEnvironment('hook-command', scope, substitution);
-
 /**
  * Resolves one command hook. With `args` it is exec form: `command` and each element are
  * substituted as plain strings, `${user_config.*}` included, and `shell` is ignored. Without `args`
@@ -243,21 +76,8 @@ const environmentOf = async ({
  * `CLAUDE_PLUGIN_OPTION_<KEY>` variable in `environment`, or exec form. A command PowerShell would
  * only print does not start (`notStarted`).
  */
-export async function resolveHookCommand(
+export const resolveHookCommand = (
   handler: HookCommandHandler,
   scope: SubstitutionScope,
   options: HookCommandOptions = {},
-): Promise<HookCommandResolution> {
-  // One substituter for the command and the environment: the data folder is asked for once.
-  const substitution = substituter(scope);
-  const run: Run = { scope, substitution, options, base: options.path ?? 'hook' };
-  const { spec, ...rest } =
-    handler.args === undefined
-      ? await shellForm(handler, run)
-      : await execForm(handler, handler.args, run);
-  if (spec === undefined) return { resolved: undefined, ...rest };
-  const exported = await environmentOf(run);
-  const shell = 'shell' in spec && scope.windows ? spec.shell : undefined;
-  const environment = shell === undefined ? exported : SHELL_ENVIRONMENT[shell](exported);
-  return { resolved: { spec, environment }, issues: rest.issues };
-}
+): Promise<HookCommandResolution> => call.async('resolveHookCommand', handler, scope, options);

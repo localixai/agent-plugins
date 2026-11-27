@@ -1,7 +1,14 @@
+/**
+ * The Markdown body of a skill, command or agent, substituted.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/content.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { SubstitutionScope } from './scope.ts';
-import { prepareSubstituter } from './prepared.ts';
 import type { Substituted } from './substitute.ts';
-import { SURFACE_POLICY, substituteSurface } from './surfaces.ts';
+
+const call = coreModule('loading/resolve/content');
 
 /**
  * Substitutes `${...}` in the Markdown body of a skill, command or agent (plugins/manifest-reference.md,
@@ -20,16 +27,14 @@ export const substituteContent = (
   body: string,
   scope: SubstitutionScope,
   path = 'content',
-): Promise<Substituted> => substituteSurface('markdown-content', body, scope, path);
+): Promise<Substituted> => call.async('substituteContent', body, scope, path);
 
 /**
  * `substituteContent` for a host that reads a body synchronously (a lazily loaded skill): the
  * variables are asked for once, by `prepareSubstituter`, and each call after is synchronous, with
  * the same rules.
  */
-export async function prepareContentSubstitution(
+export const prepareContentSubstitution = (
   scope: SubstitutionScope,
-): Promise<(body: string, path?: string) => Substituted> {
-  const prepared = await prepareSubstituter(scope);
-  return (body, path = 'content') => prepared.run(body, SURFACE_POLICY['markdown-content'], path);
-}
+): Promise<(body: string, path?: string) => Substituted> =>
+  call.async('prepareContentSubstitution', scope);

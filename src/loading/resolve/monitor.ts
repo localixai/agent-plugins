@@ -1,11 +1,16 @@
+/**
+ * A monitor resolved for this host (plugins/manifest-reference.md, "Where each variable resolves";
+ * plugins/components.md, "Monitors").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/monitor.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginIssue } from '../../format/issues.ts';
 import type { Monitor, MonitorTrigger } from '../../format/monitors.ts';
 import type { SubstitutionScope } from './scope.ts';
-import { shellExports } from './shell-exports.ts';
-import { rejectUserConfigInShell } from './shell-guard.ts';
-import { MONITOR_GUARD } from './shell-guard-monitor.ts';
-import { surfacePolicy } from './surfaces.ts';
-import { substituter } from './substituter.ts';
+
+const call = coreModule('loading/resolve/monitor');
 
 /**
  * A monitor resolved for this host (plugins/manifest-reference.md, "Where each variable resolves";
@@ -48,30 +53,7 @@ export interface MonitorResolution {
  * environment, "but never `${user_config.*}`": a command that references it is an error and the
  * monitor does not start. The check reads the template, so it fires with nothing configured.
  */
-export async function resolveMonitor(
+export const resolveMonitor = (
   monitor: Monitor,
   scope: SubstitutionScope,
-): Promise<MonitorResolution> {
-  const path = `monitors.${monitor.name}.command`;
-  const refused = rejectUserConfigInShell(
-    MONITOR_GUARD,
-    monitor.command,
-    { monitor: monitor.name, plugin: scope.pluginId },
-    path,
-  );
-  if (refused) return { resolved: undefined, issues: [refused] };
-  const run = substituter(scope);
-  const done = await run.run(monitor.command, surfacePolicy('monitor-command', scope), path);
-  const environment = await shellExports('monitor-command', done.referenced, scope, run.variable);
-  return {
-    resolved: {
-      name: monitor.name,
-      pluginId: scope.pluginId,
-      command: done.text,
-      description: monitor.description,
-      when: monitor.when,
-      environment,
-    },
-    issues: [...done.issues],
-  };
-}
+): Promise<MonitorResolution> => call.async('resolveMonitor', monitor, scope);
