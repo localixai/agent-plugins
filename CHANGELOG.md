@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Plugin default settings (`readPluginSettings`) and the reply of a `prompt` or `agent` hook
+  (`parseVerdict`, `responseInstruction`) run on the core, their zod schemas checked by the core's
+  own zod (docs/RUST.md).
 - More of `format` runs on the core: agent and skill names, agent records, MCP server, prompt,
   elicitation and tool-schema checks, `.mcpb` manifests, theme colours and writing, marketplace
   entry fields and ids, path claims and unknown fields. A table looked up by a name from a file

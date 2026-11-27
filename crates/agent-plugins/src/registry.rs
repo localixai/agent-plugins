@@ -115,6 +115,7 @@ pub const MODULES: &[Module] = &[
     crate::format::path_escape::EXPORTS,
     crate::format::path_text::EXPORTS,
     crate::format::permission_rule_shape::EXPORTS,
+    crate::format::plugin_settings::EXPORTS,
     crate::format::read_json::EXPORTS,
     crate::format::remote_mcp_credentials::EXPORTS,
     crate::format::settings_files::EXPORTS,
@@ -134,6 +135,7 @@ pub const MODULES: &[Module] = &[
     crate::format::validate::unknown_fields::EXPORTS,
     crate::format::versions::EXPORTS,
     crate::format::wildcard::EXPORTS,
+    crate::hooks::handlers::remote::prompt_response::EXPORTS,
     probe::EXPORTS,
 ];
 

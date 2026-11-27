@@ -7,6 +7,10 @@ use serde_json::{Value, json};
 
 use crate::support::{check, check_fallible};
 
+mod zod;
+mod zod_schemas;
+mod zod_schemas_refined;
+
 /// A number as the oracle records one: a JSON number, or `{"$number": …}` for the four JSON
 /// has no text for.
 fn recorded(value: f64) -> Value {

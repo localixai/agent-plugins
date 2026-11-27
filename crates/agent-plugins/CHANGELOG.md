@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `zod` is zod 4 as the package uses it (the builders, methods and checks of `zod.rs`'s
+  inventory), its output and issues held to zod itself
+  (`crates/agent-plugins/tests/vectors/js/zod.jsonl`, 6,007 cases recorded by
+  `scripts/rust/js-oracle.ts`). `format::plugin_settings` and
+  `hooks::handlers::remote::prompt_response` are its first users, both switched.
 - The crate: the ports, the JavaScript semantics the package relies on, and the first `format`
   modules, held to the vectors recorded from the npm package.
 - `js::json_parse` is JavaScriptCore's `JSON.parse`, its error messages included, and `js::number`

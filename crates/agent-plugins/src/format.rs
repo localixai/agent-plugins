@@ -33,6 +33,7 @@ pub mod names;
 pub mod path_escape;
 pub mod path_text;
 pub mod permission_rule_shape;
+pub mod plugin_settings;
 pub mod read_json;
 pub mod remote_mcp_credentials;
 pub mod settings_files;
