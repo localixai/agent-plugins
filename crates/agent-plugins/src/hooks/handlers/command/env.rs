@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/command/env.ts`, switched.
+//! Ported from `src/hooks/handlers/command/env.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The environment of a command hook (hooks.md, "Common input fields", "Exec form and shell form"
 //! and "Persist environment variables"; env-vars.md; plugins/components.md, "Environment, quoting,
@@ -157,12 +157,4 @@ pub async fn process_environment(
         environment.insert(name.clone(), value.clone());
     }
     in_key_order(environment)
-}
-
-crate::registry::exports! {
-    "hooks/handlers/command/env" {
-        "processEnvironment" => async ok
-            |entry: JsValue, exported: IndexMap<String, String>, context: EnvContext|
-            process_environment(&entry, &exported, &context.read().await).await;
-    }
 }

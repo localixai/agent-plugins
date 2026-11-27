@@ -97,6 +97,5 @@ crate::registry::exports! {
     "hooks/source-kind" {
         "SOURCE_POLICY" => ok source_policy;
         "isPluginSource" => ok |source: HookSource| is_plugin_source(&source);
-        "pluginLabel" => ok |entry: LabelledEntry| plugin_label(&entry);
     }
 }

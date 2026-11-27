@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- A command hook's run is the core's from end to end: the plan, the shell prefix, the missing
+  plugin directory, the working directory, the environment and the background modes. So are the
+  validator's `.mcp.json` checks and `plugin.json` field rules, and the status line, file
+  suggestion and subagent status line commands with their repair.
 - The `plugin` commands' plans run on the core: `enable`, `disable` and the target they resolve,
   `update` and which install it locates, `prune`, `marketplace add` and `marketplace remove`, the
   scope flags, the configuration dialog and the `userConfig` input, and `--add-dir`. So do the

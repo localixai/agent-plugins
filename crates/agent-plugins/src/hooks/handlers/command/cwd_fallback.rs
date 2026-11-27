@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/command/cwd-fallback.ts`, switched.
+//! Ported from `src/hooks/handlers/command/cwd-fallback.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! hooks.md, "Hook handler fields": "Handlers run in the current directory with Claude Code's
 //! environment. If the current directory no longer exists, for example a worktree or temp directory
@@ -68,11 +68,5 @@ pub async fn working_directory(context: RunContext) -> WorkingDirectory {
             cwd,
             issues: Vec::new(),
         },
-    }
-}
-
-crate::registry::exports! {
-    "hooks/handlers/command/cwd-fallback" {
-        "workingDirectory" => async ok |context: RunContext| working_directory(context).await;
     }
 }

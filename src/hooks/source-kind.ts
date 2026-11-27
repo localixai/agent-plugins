@@ -38,13 +38,3 @@ export const SOURCE_POLICY: { readonly [K in HookSourceKind]: SourcePolicy } =
   call('SOURCE_POLICY');
 
 export const isPluginSource = (source: HookSource): boolean => call('isPluginSource', source);
-
-/**
- * The name a plugin hook's notices give its plugin: the manifest name, else the plugin id. One
- * rule for the block error ("This hook comes from the <plugin> plugin.") and the missing
- * directory notice.
- */
-export const pluginLabel = (entry: {
-  readonly pluginId?: string | undefined;
-  readonly source: HookSource;
-}): string | undefined => call('pluginLabel', entry);

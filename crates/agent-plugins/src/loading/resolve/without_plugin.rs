@@ -18,7 +18,7 @@ const PLUGIN_ROOT: &str = "${CLAUDE_PLUGIN_ROOT}";
 const PLUGIN_DATA: &str = "${CLAUDE_PLUGIN_DATA}";
 
 /// The host's `Locations` with no plugin: the two plugin folders stay their variables.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WithoutPlugin<L>(L);
 
 /// `locations` for a handler of no plugin.

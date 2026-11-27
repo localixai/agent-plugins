@@ -67,9 +67,7 @@ export type CommandEntry = z.infer<typeof commandEntrySchema>;
  * A dependency string has at most one `@`: `"a@b@c"` fails the manifest as `Invalid input`
  * (spec J16.17, oracle 2.1.325). Shared with the validator's schema.
  */
-export const dependencyText = z
-  .string()
-  .refine((text) => text.indexOf('@') === text.lastIndexOf('@'));
+const dependencyText = z.string().refine((text) => text.indexOf('@') === text.lastIndexOf('@'));
 
 const dependency = z.union([
   dependencyText.min(1),

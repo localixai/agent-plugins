@@ -1,4 +1,4 @@
-//! Port of `src/format/manifest-schema.ts` at sha256:df63c9df630b.
+//! Port of `src/format/manifest-schema.ts` at sha256:189466265394.
 //!
 //! The top-level keys of `.claude-plugin/plugin.json` and their documented types
 //! (plugins/manifest-reference.md, "Fields"). Strict where the docs say so ("Unrecognized fields"):

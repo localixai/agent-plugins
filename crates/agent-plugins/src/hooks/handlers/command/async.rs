@@ -1,4 +1,6 @@
-//! Port of `src/hooks/handlers/command/async.ts`, switched.
+//! The core's counterpart of `src/hooks/handlers/command/async.ts` at sha256:d260ef9621dd, which stays
+//! TypeScript: types only now (a runner's `HeldOpenResult`), since every caller of its runs is in
+//! the core.
 //!
 //! Background command hooks (hooks.md, "Run hooks in the background" and "Command hook fields").
 //! `async: true` "runs in the background without blocking"; `asyncRewake: true` "runs in the
@@ -11,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::hooks::handlers::context::{BackgroundResult, BackgroundRun, ExitedRun, ForegroundRun};
 use crate::js;
 use crate::ports::command_runner::{CommandResult, CommandRun, CommandRunner};
-use crate::registry::{CorePromise, Port};
+use crate::registry::CorePromise;
 
 /// How a command hook runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,6 +46,18 @@ pub struct Modes {
     pub r#async: Mode,
     /// `rewake`.
     pub rewake: Mode,
+}
+
+impl Modes {
+    /// `MODES[mode]`.
+    #[must_use]
+    pub const fn of(&self, mode: RunMode) -> Mode {
+        match mode {
+            RunMode::Foreground => self.foreground,
+            RunMode::Async => self.r#async,
+            RunMode::Rewake => self.rewake,
+        }
+    }
 }
 
 /// The modes.
@@ -163,16 +177,6 @@ pub fn start_in_background<R: CommandRunner + 'static>(
         BackgroundResult { run, wake }
     });
     BackgroundRun { done }
-}
-
-crate::registry::exports! {
-    "hooks/handlers/command/async" {
-        "MODES" => ok || MODES;
-        "modeOf" => ok |handler: ModeFields| mode_of(&handler);
-        "settle" => async ok |runner: Port, request: CommandRun| settle(&runner, request).await;
-        "startInBackground" => ok |runner: Port, request: CommandRun, mode: Mode|
-            start_in_background(runner, request, mode);
-    }
 }
 
 #[cfg(test)]
