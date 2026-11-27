@@ -257,6 +257,22 @@ pub struct PreparedCall {
     pub allowed_domains: Option<Vec<String>>,
 }
 
+impl PreparedCall {
+    /// `{ toolName, input }`: a call with nothing resolved for it.
+    #[must_use]
+    pub fn of(tool_name: &str, input: crate::js::JsValue) -> Self {
+        Self {
+            call: ToolCall {
+                tool_name: tool_name.to_owned(),
+                input,
+            },
+            resolved_paths: None,
+            skill_names: None,
+            allowed_domains: None,
+        }
+    }
+}
+
 /// Everything a rule needs beside the call itself (`MatchContext`).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -4,4 +4,8 @@
 pub mod builtin;
 pub mod invoke;
 mod mention_scan;
+pub mod resolve;
+pub mod scan;
+pub mod scopes;
+pub mod spawn;
 pub mod types;

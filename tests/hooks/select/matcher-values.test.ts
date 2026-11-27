@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { MATCHER_VALUES } from '../../../src/hooks/select/matcher-values.ts';
 import type { HookEvent } from '../../../src/protocol/official.ts';
-import { factSchemaOf } from '../../../src/hooks/input/facts.ts';
+import { parseFacts } from '../../../src/hooks/input/facts.ts';
 import { requirementKeys } from '../../support/requirements.ts';
 import { spec } from '../../support/spec.ts';
 import { entry, FACTS, select } from '../../support/hooks-select.ts';
@@ -47,13 +47,22 @@ const carrying = (event: ValuedEvent, value: string): unknown => ({
   [FIELD[event]]: value,
 });
 
-const accepts = (event: ValuedEvent, value: string): boolean =>
-  factSchemaOf(event).safeParse(carrying(event, value)).success;
+/** The facts the event's schema reads from `input`, or `undefined` where it refuses them. */
+const parsed = (event: ValuedEvent, input: unknown) => {
+  try {
+    return parseFacts(event, input);
+  } catch {
+    return undefined;
+  }
+};
 
-const runs = (event: ValuedEvent, matcher: string, facts: unknown): boolean => {
-  const parsed = factSchemaOf(event).safeParse(facts);
+const accepts = (event: ValuedEvent, value: string): boolean =>
+  parsed(event, carrying(event, value)) !== undefined;
+
+const runs = (event: ValuedEvent, matcher: string, input: unknown): boolean => {
+  const facts = parsed(event, input);
   return (
-    parsed.success && select([entry(event, { matcher })], event, parsed.data).selected.length === 1
+    facts !== undefined && select([entry(event, { matcher })], event, facts).selected.length === 1
   );
 };
 

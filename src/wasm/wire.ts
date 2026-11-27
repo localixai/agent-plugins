@@ -19,11 +19,13 @@
  * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`,
  *   or `{"$own": h, …}` for one the host may give back, which then crosses as `{"$handle": h}`;
  *   a function of the core's (a timer's `fire`): `{"$call": h}`, a function that calls the
- *   handle's one method, `call`, and a promise of the core's: `{"$promise": {"task": t}}`, a
- *   promise that drives task `t` (`drive.ts`).
+ *   handle's one method, `call`, or `{"$asyncCall": h}` for one whose `call` returns a promise
+ *   (a skill's `readBody`), which given back crosses as `{"$handle": h}`; and a promise of the
+ *   core's: `{"$promise": {"task": t}}`, a promise that drives task `t` (`drive.ts`).
  */
 
 import { fromBase64, toBase64 } from './base64.ts';
+import { CORE_READERS, isHostMethod, ownOf, type HostValues, type Reader } from './core-values.ts';
 
 const UNDEFINED = { $undefined: true } as const;
 
@@ -46,28 +48,12 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
- * The values of one call the host keeps by identity (`drive.ts`): what crosses as a number, and the
- * object a handle becomes.
+ * Whether `value` is a port: an object with a method, its own or its class's. A function of the
+ * core's own (`$asyncCall`, a scanned skill's `readBody`) is no method: it crosses as its handle, so
+ * the record that holds it is data.
  */
-export interface HostValues {
-  /** The number `value` crosses as. */
-  keep(value: object): number;
-  /** The value kept under `number`. */
-  find(number: number): unknown;
-  /** The object the host calls the core's handle `handle` through. */
-  handle(handle: number, sync: readonly string[], async: readonly string[]): object;
-  /** The promise that drives the core's task `task`, kept for a promise of the core's. */
-  promise(task: number): Promise<unknown>;
-  /**
-   * Reads `other`'s values too: a core object given back holds the host values of the call that
-   * made it (an output stage's scratch port), which the core may ask for in this call.
-   */
-  adopt(other: HostValues): void;
-}
-
-/** Whether `value` is a port: an object with a method, its own or its class's. */
 function hasMethods(value: object): boolean {
-  if (Object.values(value).some((member) => typeof member === 'function')) return true;
+  if (Object.values(value).some(isHostMethod)) return true;
   const prototype: unknown = Object.getPrototypeOf(value);
   return prototype !== null && prototype !== Object.prototype;
 }
@@ -79,16 +65,6 @@ function hostTagged(value: unknown, hosts: HostValues): unknown {
   if (value instanceof AbortSignal) return { $signal: hosts.keep(value), aborted: value.aborted };
   return isRecord(value) && hasMethods(value) ? { $port: hosts.keep(value) } : undefined;
 }
-
-/**
- * The objects the core's `$own` handles became, by identity: given back to the core, each crosses
- * as its handle, `{"$handle": h}`, and is the core's own object again (`registry::Own`). Another
- * handle given back stays a port, as the core reads it.
- */
-const OWN = new WeakMap<object, { readonly number: number; readonly hosts: HostValues }>();
-
-const ownOf = (value: unknown) =>
-  typeof value === 'object' && value !== null ? OWN.get(value) : undefined;
 
 /** A number JSON has no text for, as its tag; `undefined` for one it has. */
 const numberTag = (value: number): unknown => {
@@ -131,18 +107,6 @@ export function encode(value: unknown, hosts?: HostValues): unknown {
 export const encodeArgs = (args: readonly unknown[], hosts?: HostValues): string =>
   stringify(encode(args, hosts));
 
-type Tagged = Readonly<Record<string, unknown>>;
-
-/** How each tag is read back, by its key; `read` decodes what a collection holds. */
-type Reader = (
-  tag: Tagged,
-  read: (value: unknown) => unknown,
-  hosts: HostValues | undefined,
-) => { readonly value: unknown } | undefined;
-
-const names = (value: unknown): readonly string[] | undefined =>
-  Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : undefined;
-
 /** A host value the core names by its number. */
 const kept: Reader = (tag, _read, hosts) => {
   const number = tag.$port ?? tag.$fn ?? tag.$signal ?? tag.$promise;
@@ -168,34 +132,6 @@ const promise: Reader = (tag, read, hosts) => {
     : undefined;
 };
 
-/** A result with methods, as the object the host calls them through. */
-const handle: Reader = (tag, _read, hosts) => {
-  const [sync, async] = [names(tag.sync), names(tag.async)];
-  return hosts !== undefined && typeof tag.$handle === 'number' && sync && async
-    ? { value: hosts.handle(tag.$handle, sync, async) }
-    : undefined;
-};
-
-/** A result with methods the host may give back: the object, remembered as the core's own. */
-const own: Reader = (tag, _read, hosts) => {
-  const number = tag.$own;
-  const [sync, async] = [names(tag.sync), names(tag.async)];
-  if (hosts === undefined || typeof number !== 'number' || !sync || !async) return undefined;
-  const object = hosts.handle(number, sync, async);
-  OWN.set(object, { number, hosts });
-  return { value: object };
-};
-
-/** A function of the core's, as a function that calls its handle's method `call`. */
-const coreFunction: Reader = (tag, _read, hosts) => {
-  if (hosts === undefined || typeof tag.$call !== 'number') return undefined;
-  const object = hosts.handle(tag.$call, ['call'], []);
-  const call: unknown = Reflect.get(object, 'call');
-  return typeof call === 'function'
-    ? { value: (...args: readonly unknown[]): unknown => Reflect.apply(call, object, args) }
-    : undefined;
-};
-
 const READERS: Readonly<Record<string, Reader | undefined>> = {
   $undefined: (tag) => (tag.$undefined === true ? { value: undefined } : undefined),
   $number: (tag) =>
@@ -218,9 +154,7 @@ const READERS: Readonly<Record<string, Reader | undefined>> = {
   $port: kept,
   $fn: kept,
   $signal: signal,
-  $handle: handle,
-  $own: own,
-  $call: coreFunction,
+  ...CORE_READERS,
   $promise: promise,
 };
 

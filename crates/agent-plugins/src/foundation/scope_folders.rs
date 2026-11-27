@@ -28,10 +28,9 @@ pub use files::{
 
 use super::project_directories::project_directories;
 use crate::format::config_directory::config_folder_of;
-use crate::js::JsValue;
 use crate::ports::folder_scan::FolderScan;
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::{Callback, Handle, Port};
+use crate::registry::{Handle, Port};
 
 /// What a scan of the scope folders is asked for.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -74,22 +73,23 @@ pub struct ScopeContext<R = ScopeRequest> {
 }
 
 /// A `ScopeContext` as it crosses: data whose `folders` is the host's port, or, when it holds a
-/// function of its own (a scan's `allows`), a port whose members are read.
+/// function of its own (a scan's `allows`), a port whose members are read; `R` is the scan's
+/// request.
 #[derive(Deserialize)]
 #[serde(untagged)]
-pub enum HostContext {
+pub enum HostContext<R = ScopeRequest> {
     /// A context that holds a function: its members are read one by one.
     Host(Port),
     /// A context of data and the host's `folders`.
-    Data(ContextData),
+    Data(ContextData<R>),
 }
 
 /// The members of a `ScopeContext` that crossed as data.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ContextData {
+pub struct ContextData<R = ScopeRequest> {
     folders: Port,
-    request: ScopeRequest,
+    request: R,
     #[serde(default)]
     signal: Option<Signal>,
     #[serde(default)]
@@ -97,7 +97,9 @@ pub struct ContextData {
 }
 
 /// The host's `ScopeContext`, its members read when it crossed as a port.
-pub async fn scope_context_of(context: HostContext) -> ScopeContext {
+pub async fn scope_context_of<R: serde::de::DeserializeOwned + Send + 'static>(
+    context: HostContext<R>,
+) -> ScopeContext<R> {
     let data = match context {
         HostContext::Data(data) => data,
         HostContext::Host(port) => ContextData {
@@ -113,14 +115,6 @@ pub async fn scope_context_of(context: HostContext) -> ScopeContext {
         request: data.request,
         signal: data.signal,
         extra_scope_folders: data.extra_scope_folders,
-    }
-}
-
-/// The host's `extraScopeFolders`, the one member `scopeFoldersOf` reads.
-async fn extra_scope_folders_of(context: HostContext) -> Option<Vec<String>> {
-    match context {
-        HostContext::Data(data) => data.extra_scope_folders,
-        HostContext::Host(port) => port.member("extraScopeFolders").await,
     }
 }
 
@@ -351,27 +345,10 @@ crate::registry::methods! {
     }
 }
 
-/// The host's `bases` called with its own context, as it crossed, for `placesBelow`.
-async fn host_bases(bases: Callback, context: JsValue) -> Vec<String> {
-    bases.call(vec![context]).await
-}
-
-/// The part of a `ScopePlace` `placePath` reads.
-#[derive(Deserialize)]
-struct PlaceRoot {
-    root: String,
-}
-
 crate::registry::exports! {
     "foundation/scope-folders" {
-        "CLAUDE_FOLDER" => ok || CLAUDE_FOLDER;
-        "scopeFoldersOf" => async ok |context: HostContext|
-            scope_folders_with(extra_scope_folders_of(context).await.as_deref());
         "SCOPE_BASES" => ok || Handle::new(ScopeBases);
-        "placesBelow" => async ok |bases: Callback, context: JsValue, roots: Vec<String>|
-            places_below(host_bases(bases, context), &roots).await;
         "SCOPE_PLACES" => ok || Handle::new(ScopePlaces);
-        "placePath" => ok |place: PlaceRoot, container: String| place_path(&place.root, &container);
         "readScopeFiles" => async ok |base: Port, container: String, options: ScopeFilesOptions|
             read_scope_files(&base, &container, &options).await;
         "watchedFolder" => async ok |base: Port, container: String, options: WatchOptions|

@@ -3,7 +3,7 @@ import { HOOK_EVENTS } from '../protocol/hook-events.ts';
 import type { HookCallbackMatcher, HookEvent, HookInput } from '../protocol/official.ts';
 import type { PluginSession } from './session.ts';
 import { toSdkHookOutput } from './sdk-output.ts';
-import { factSchemaOf } from '../hooks/input/facts.ts';
+import { parseFacts } from '../hooks/input/facts.ts';
 
 /**
  * The plugins' hooks of a session as the `hooks` option of a Claude Agent SDK query
@@ -46,7 +46,7 @@ function matcherOf(
     _toolUseId,
     { signal },
   ) => {
-    const facts = factSchemaOf(event).parse(input);
+    const facts = parseFacts(event, input);
     return toSdkHookOutput(await session.dispatch(event, facts, { signal }));
   };
   return timeout === undefined ? { hooks: [callback] } : { hooks: [callback], timeout };

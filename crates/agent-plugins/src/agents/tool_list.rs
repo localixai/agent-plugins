@@ -115,8 +115,6 @@ pub fn tool_entry_matches(
 
 crate::registry::exports! {
     "agents/tool-list" {
-        "AGENT_TOOL" => ok || AGENT_TOOL;
-        "isAgentToolName" => ok |name: String| is_agent_tool_name(&name);
         "parseToolEntry" => ok |entry: String| parse_tool_entry(&entry);
         "toolEntryMatches" => ok |entry: ToolEntry, tool_name: String, behavior: PermissionBehavior|
             tool_entry_matches(&entry, &tool_name, behavior);

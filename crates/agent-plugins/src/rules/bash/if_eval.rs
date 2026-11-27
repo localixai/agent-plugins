@@ -15,7 +15,7 @@ use crate::rules::specifier_formats::rule_format_of;
 use crate::rules::tool_pattern::tool_name_matches;
 use crate::rules::tools::rule_formats::RuleFormatId;
 use crate::rules::types::{
-    MatchContext, PermissionBehavior, PermissionRule, PreparedCall, RuleSource, ToolCall,
+    MatchContext, PermissionBehavior, PermissionRule, PreparedCall, RuleSource,
 };
 
 /// Whether a hook's `if` lets its handler run, with what the kit found wrong in the rule.
@@ -128,11 +128,11 @@ pub fn evaluate_if(
         .find(|(name, _)| *name == tool_name)
         .map_or(&[], |(_, names)| *names);
     let calls: Vec<PreparedCall> = if names.is_empty() {
-        vec![prepared(tool_name, tool_input)]
+        vec![PreparedCall::of(tool_name, tool_input.clone())]
     } else {
         names
             .iter()
-            .map(|name| prepared(name, tool_input))
+            .map(|name| PreparedCall::of(name, tool_input.clone()))
             .collect()
     };
     // hooks.md, "Common fields": a single-directory path pattern is not widened to every depth.
@@ -148,19 +148,6 @@ pub fn evaluate_if(
         }
     }
     Ok(IfResult { runs, issues })
-}
-
-/// `{ toolName: name, input: toolInput }`.
-fn prepared(tool_name: &str, input: &JsValue) -> PreparedCall {
-    PreparedCall {
-        call: ToolCall {
-            tool_name: tool_name.to_owned(),
-            input: input.clone(),
-        },
-        resolved_paths: None,
-        skill_names: None,
-        allowed_domains: None,
-    }
 }
 
 crate::registry::exports! {

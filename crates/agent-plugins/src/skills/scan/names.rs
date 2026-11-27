@@ -88,9 +88,6 @@ pub fn is_strictly_below(parent: &str, path: &str) -> bool {
 
 crate::registry::exports! {
     "skills/scan/names" {
-        "segmentsOf" => ok |path: String| segments_of(&path);
-        "foldName" => ok |name: String| fold_name(&name);
-        "relativeBelow" => ok |cwd: String, base: String| relative_below(&cwd, &base);
         "isStrictlyBelow" => ok |parent: String, path: String| is_strictly_below(&parent, &path);
     }
 }

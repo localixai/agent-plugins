@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/facts-misc.ts` at sha256:16246c6775d7.
+//! Ported from `src/hooks/input/facts-misc.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Facts of the remaining events (hooks.md, "Notification input", "Elicitation", "ConfigChange
 //! input", "CwdChanged input", "WorktreeCreate input", "InstructionsLoaded input", "FileChanged

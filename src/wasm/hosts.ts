@@ -4,7 +4,7 @@
  * reads the table of the call that made the handle as its parent, and a core promise's loop the
  * table of the call that answered it: a port the core keeps in a handle or a promise is still found. The tables are dropped with the calls and handles that hold them.
  */
-import type { HostValues } from './wire.ts';
+import type { HostValues } from './core-values.ts';
 
 /** A call's host values, and the signals among them that aborted since it last asked. */
 export interface HostTable extends HostValues {

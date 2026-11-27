@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/auto-dropped.ts`, switched.
+//! Ported from `src/rules/decide/auto-dropped.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! permission-modes.md, "How the classifier evaluates actions": "On entering auto mode, broad allow
 //! rules that grant arbitrary code execution are dropped": a blanket `Bash(*)` or `PowerShell(*)`,
@@ -65,12 +65,6 @@ pub fn is_dropped_in_auto(rule: &PermissionRule, classify_all_shell: bool) -> bo
         && text_pattern_of(rule).is_some_and(|pattern| {
             pattern == "*" || wildcarded_interpreter(pattern) || regex_test(&PACKAGE_RUN, pattern)
         })
-}
-
-crate::registry::exports! {
-    "rules/decide/auto-dropped" {
-        "isDroppedInAuto" => ok |rule: PermissionRule, classify_all_shell: Option<bool>| is_dropped_in_auto(&rule, classify_all_shell.unwrap_or(false));
-    }
 }
 
 #[cfg(test)]

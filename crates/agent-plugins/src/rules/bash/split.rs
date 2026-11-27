@@ -120,7 +120,6 @@ pub fn split_command(command: &str, dialect: Option<&ShellDialect>) -> SplitComm
 
 crate::registry::exports! {
     "rules/bash/split" {
-        "scanCommand" => ok |command: String, dialect: Option<ShellDialect>| scan_command(&command, dialect.as_ref());
         "splitCommand" => ok |command: String, dialect: Option<ShellDialect>| split_command(&command, dialect.as_ref());
     }
 }

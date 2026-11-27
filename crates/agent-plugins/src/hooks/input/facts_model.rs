@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/facts-model.ts` at sha256:1afc367d516b.
+//! Ported from `src/hooks/input/facts-model.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Facts of the model-switch events (hooks.md, "PreModelSwitch input"). `PostModelSwitch` has the
 //! same fields, and its `source` also names the switches Claude Code makes on its own.

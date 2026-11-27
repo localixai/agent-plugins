@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/facts-agents.ts` at sha256:18de53538dab.
+//! Ported from `src/hooks/input/facts-agents.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Facts of the agent, task and stop events (hooks.md, "Stop input", "StopFailure input",
 //! "SubagentStart input", "SubagentStop input", "TaskCreated input", "TaskCompleted input",

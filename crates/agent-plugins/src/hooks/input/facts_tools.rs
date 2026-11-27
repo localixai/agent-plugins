@@ -1,9 +1,9 @@
-//! Port of `src/hooks/input/facts-tools.ts` at sha256:00ac01d53f42.
+//! Ported from `src/hooks/input/facts-tools.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Facts of the tool events (hooks.md, "PreToolUse input", "PermissionRequest input", "PostToolUse
 //! input", "PostToolUseFailure input", "PostToolBatch input", "PermissionDenied input"): each schema
-//! is bound to the official input with `satisfies z.ZodType<EventFactsOf<E>>`, so the SDK stays the
-//! source of truth for what a field is called and typed.
+//! follows the official input of its event, so the SDK stays the source of truth for what a field
+//! is called and typed.
 
 use std::sync::LazyLock;
 

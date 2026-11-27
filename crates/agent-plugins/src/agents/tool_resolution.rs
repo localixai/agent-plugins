@@ -71,7 +71,7 @@ pub struct ToolRefusal {
 }
 
 /// `any` or `none`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SpawnWord {
     /// Any type.
@@ -81,7 +81,7 @@ pub enum SpawnWord {
 }
 
 /// What the `Agent` tool may spawn: a list of types, any type, or none (without the tool).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SpawnTypes {
     /// `any` or `none`.

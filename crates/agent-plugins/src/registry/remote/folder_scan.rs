@@ -62,10 +62,11 @@ impl FolderScan for Port {
         &'a self,
         start: &'a str,
         touched: &'a str,
+        signal: Option<&'a Signal>,
     ) -> BoxFuture<'a, Vec<String>> {
         self.ask(
             "directoriesBelow",
-            vec![JsValue::from(start), JsValue::from(touched)],
+            vec![JsValue::from(start), JsValue::from(touched), arg(signal)],
         )
     }
 }

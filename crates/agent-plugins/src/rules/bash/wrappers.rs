@@ -311,8 +311,6 @@ fn safe_env_of(safe_env: Option<Set<String>>) -> HashSet<String> {
 
 crate::registry::exports! {
     "rules/bash/wrappers" {
-        "strippedWords" => ok |command: ShellCommand, behavior: PermissionBehavior, safe_env: Option<Set<String>>| stripped_words(&command, behavior, &safe_env_of(safe_env));
         "stripWrappers" => ok |subcommand: String, behavior: PermissionBehavior, safe_env: Option<Set<String>>| strip_wrappers(&subcommand, behavior, &safe_env_of(safe_env));
-        "readOnlyWords" => ok |words: Vec<ShellWord>| read_only_words(&words);
     }
 }

@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/powershell-removal.ts`, switched.
+//! Ported from `src/rules/decide/powershell-removal.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! permission-modes.md, "Remove-Item in PowerShell": the two cases Claude Code "denies ... in
 //! every mode, without asking you" (`bypassPermissions` included: "The Remove-Item in PowerShell
@@ -154,10 +154,4 @@ pub fn powershell_removal_denied(command: &str, paths: &PathContext, cmd_check_o
         .commands
         .iter()
         .any(|each| denied_command(each, paths, cmd_check_off))
-}
-
-crate::registry::exports! {
-    "rules/decide/powershell-removal" {
-        "powershellRemovalDenied" => ok |command: String, paths: PathContext, cmd_check_off: bool| powershell_removal_denied(&command, &paths, cmd_check_off);
-    }
 }

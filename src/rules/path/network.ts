@@ -1,6 +1,5 @@
 import type { PathContext, PreparedCall } from '../types.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Platform } from './posix.ts';
 
 /**
  * Network paths (permissions.md, "Network paths"): "A network path is one that can reach another
@@ -12,7 +11,7 @@ import type { Platform } from './posix.ts';
  */
 const call = coreModule('rules/path/network');
 
-export const isNetworkPath = (path: string, platform: Platform): boolean =>
+export const isNetworkPath = (path: string, platform: PathContext['platform']): boolean =>
   call('isNetworkPath', path, platform);
 
 /**
