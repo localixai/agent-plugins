@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/critical-removal.ts`, switched.
+//! Ported from `src/rules/decide/critical-removal.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! permission-modes.md, "Critical paths": an `rm` or `rmdir` whose target Claude Code "recognizes
 //! as a critical path": the filesystem root, a top-level directory, the home directory, the
@@ -407,13 +407,4 @@ pub fn removes_critical_path(command: &str, paths: &PathContext, depth: u32, bou
         scope.moved = scope.moved || changes_directory(sub);
     }
     false
-}
-
-crate::registry::exports! {
-    "rules/decide/critical-removal" {
-        "isSystemDirectory" => ok |directory: String, paths: PathContext| is_system_directory(&directory, &paths);
-        "isCriticalDirectory" => ok |directory: String, paths: PathContext| is_critical_directory(&directory, &paths);
-        "cannotRuleOutRemoval" => ok |command: String| cannot_rule_out_removal(&command);
-        "removesCriticalPath" => ok |command: String, paths: PathContext, depth: Option<u32>, bound: Option<bool>| removes_critical_path(&command, &paths, depth.unwrap_or(0), bound.unwrap_or(false));
-    }
 }

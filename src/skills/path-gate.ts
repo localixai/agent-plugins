@@ -8,14 +8,14 @@
  */
 import type { MemoryRule } from '../format/memory-rule.ts';
 import type { InvocableFrontmatter } from '../format/skill-types.ts';
-import type { Platform } from '../rules/path/posix.ts';
+import type { PathContext } from '../rules/types.ts';
 import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('skills/path-gate');
 
 export interface PathGateOptions {
   /** The host's path flavour; Windows paths are matched in POSIX form (default `posix`). */
-  readonly platform?: Platform;
+  readonly platform?: PathContext['platform'];
 }
 
 /**

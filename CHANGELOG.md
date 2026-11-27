@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- The permission decision runs on the core in one call: the rules stage, the permission modes,
+  file targets, redirects, shell commands, PowerShell edits and the hook and mod outcomes. A hook's
+  input is parsed by the core (`parseFacts`); no TypeScript module builds a hook input schema.
 - **Breaking** (`/settings`): `ValueSpec` is data: `merge.combine`, `admin.pinnedWhen` and `read`
   are gone, with no replacement on the type; a key's merge, its admin tier and how its value is read
   are answered by the core, through `createPolicyView`.

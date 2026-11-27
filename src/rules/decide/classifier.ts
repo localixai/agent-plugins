@@ -1,7 +1,7 @@
 import type { PermissionBehavior, PermissionMode } from '../../protocol/official.ts';
 import type { Decision, PreparedCall } from '../types.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PromptFacts } from './unanswered.ts';
+import type { DecideContext } from './context.ts';
 
 const call = coreModule('rules/decide/classifier');
 
@@ -34,7 +34,7 @@ export interface ClassificationRequest {
    * The session's prompt facts (`DecideContext.cannotPrompt`, `denyInsteadOfPrompting`): a review
    * that ends in a prompt is denied where nobody may answer it.
    */
-  readonly prompts?: PromptFacts;
+  readonly prompts?: Pick<DecideContext, 'cannotPrompt' | 'denyInsteadOfPrompting'>;
 }
 
 /**

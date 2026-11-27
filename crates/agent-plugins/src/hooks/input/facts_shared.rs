@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/facts-shared.ts` at sha256:97efd4af0842.
+//! Ported from `src/hooks/input/facts-shared.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Building blocks the per-event facts schemas share.
 

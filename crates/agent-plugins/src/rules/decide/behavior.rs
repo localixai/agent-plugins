@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/behavior.ts`, switched.
+//! Ported from `src/rules/decide/behavior.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Whether a rule allows.
 
@@ -9,10 +9,4 @@ use crate::rules::types::PermissionRule;
 #[must_use]
 pub const fn is_allow_rule(rule: &PermissionRule) -> bool {
     !restricts(rule.behavior)
-}
-
-crate::registry::exports! {
-    "rules/decide/behavior" {
-        "isAllowRule" => ok |rule: PermissionRule| is_allow_rule(&rule);
-    }
 }

@@ -1,4 +1,4 @@
-//! Port of `src/rules/path/tools.ts`, switched.
+//! Ported from `src/rules/path/tools.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The path tools and the field each carries its path in: `file_path` for Read, Edit and Write, `path`
 //! for Grep and Glob, `notebook_path` for NotebookEdit (permissions.md, "Match by input parameter";
@@ -225,11 +225,5 @@ pub fn coverage() -> Map<&'static str, Coverage> {
                 },
             ),
         ],
-    }
-}
-
-crate::registry::exports! {
-    "rules/path/tools" {
-        "requestedPath" => ok |call: ToolCall, paths: PathContext| requested_path(&call, &paths);
     }
 }
