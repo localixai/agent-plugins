@@ -1,4 +1,4 @@
-//! Port of `src/skills/shell-refusal.ts`, switched.
+//! Ported from `src/skills/shell-refusal.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The commands the shell tools refuse to run (errors.md, "No shell command in a skill or command
 //! was run"). Judgment (spec/judgments.md): a file with CRLF line endings is not refused for its
@@ -56,10 +56,4 @@ pub fn refusal_of(command: &str, name: &str, shell: ShellKind) -> Option<String>
         "No shell command in {name} was run, because the {} tool does not accept one of them: command contains control characters that would be hidden in the approval dialog. Unprintable characters are shown as \u{FFFD} below: remove them from the skill or command file, or from the arguments or options substituted into it.\n{marked}",
         tool_label(shell)
     ))
-}
-
-crate::registry::exports! {
-    "skills/shell-refusal" {
-        "refusalOf" => ok |command: String, name: String, shell: ShellKind| refusal_of(&command, &name, shell);
-    }
 }

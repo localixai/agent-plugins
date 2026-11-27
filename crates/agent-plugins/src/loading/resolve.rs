@@ -5,6 +5,7 @@ pub mod data_id;
 pub mod field_map;
 pub mod headers_helper;
 pub mod headers_helper_origins;
+pub mod headers_helper_run;
 pub mod headers_helper_trust;
 pub mod lsp_startup;
 pub mod monitor_trigger;

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- A skill's injected commands run on the core (permission answer, refusal, the run, the output
+  window, the move to the background), and so do stacked skills in one message, the
+  `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,
+  subagent tool resolution, and `--permission-mode` and `--tools`.
 - `permissions.denyInsteadOfPrompting` denies again a call that would prompt when the session's
   context also holds functions (`requiresPermission`), a hook's `defaultShell` applies again when
   its run context does, and so does `bypassAvailable` for `permissionUpdatesInEffect`: such a

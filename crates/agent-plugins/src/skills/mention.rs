@@ -14,12 +14,13 @@
 //! The options' `interactive` and `names` are read once per call, where the TypeScript reads them at
 //! each word (judgment: the same answer for any options object that is not a getter).
 
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::js::{JsValue, Pattern, SPACE_CLASS, is_truthy, regex_test, trim, trim_start};
+use crate::ports::BoxFuture;
 use crate::registry::{Callback, Port, Set};
 
 /// A mention of a skill in a message.
@@ -80,11 +81,20 @@ pub enum MentionOptions {
     Data(MentionData),
 }
 
+/// `stackable` as a module of the core gives it (`skills/stack`): whether a command may be stacked.
+pub type CoreStackable = Arc<dyn Fn(String) -> BoxFuture<'static, bool> + Send + Sync>;
+
+/// `stackable`: the host's function, a method of its options, or the core's own.
+enum Stackable {
+    Host(Port),
+    Core(CoreStackable),
+}
+
 /// The options as one call reads them.
 struct Read {
     interactive: Option<JsValue>,
     names: Option<Vec<JsValue>>,
-    stackable: Option<Port>,
+    stackable: Option<Stackable>,
 }
 
 impl Read {
@@ -107,7 +117,7 @@ impl Read {
                 Self {
                     interactive: interactive.await,
                     names: names.await.map(|names| names.members),
-                    stackable: stackable.await.map(|_| port),
+                    stackable: stackable.await.map(|_| Stackable::Host(port)),
                 }
             }
         }
@@ -141,8 +151,10 @@ fn name_of(word: &str, options: &Read) -> Option<String> {
 
 /// `options.stackable?.(command) ?? true`, read for its truthiness.
 async fn is_stackable(options: &Read, command: &str) -> bool {
-    let Some(port) = options.stackable else {
-        return true;
+    let port = match &options.stackable {
+        None => return true,
+        Some(Stackable::Core(stackable)) => return stackable(command.to_owned()).await,
+        Some(Stackable::Host(port)) => *port,
     };
     let answer = port
         .method::<JsValue>("stackable", vec![command.into()])
@@ -206,7 +218,25 @@ pub async fn read_skill_mentions(
     message: &str,
     options: Option<MentionOptions>,
 ) -> Vec<SkillMention> {
-    let options = Read::of(options).await;
+    mentions_of(message, Read::of(options).await).await
+}
+
+/// `readSkillMentions` as a module of the core calls it, with its own `stackable` (`skills/stack`).
+pub async fn read_skill_mentions_with(
+    message: &str,
+    interactive: Option<JsValue>,
+    names: Option<Vec<JsValue>>,
+    stackable: CoreStackable,
+) -> Vec<SkillMention> {
+    let options = Read {
+        interactive,
+        names,
+        stackable: Some(Stackable::Core(stackable)),
+    };
+    mentions_of(message, options).await
+}
+
+async fn mentions_of(message: &str, options: Read) -> Vec<SkillMention> {
     let mut mentions = read_leading(message, &options).await;
     let mut seen: Vec<String> = mentions
         .iter()

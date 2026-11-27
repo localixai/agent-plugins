@@ -34,9 +34,6 @@ export interface HelperServer {
   readonly paths?: Readonly<Record<string, string>>;
 }
 
-/** mcp.md: "gives up on it after 10 seconds". */
-export const HEADERS_HELPER_TIMEOUT_MS: number = call('HEADERS_HELPER_TIMEOUT_MS');
-
 export interface HelperRun {
   readonly run: true;
   readonly loaded: true;
