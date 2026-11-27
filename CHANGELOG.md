@@ -5,6 +5,10 @@
 - **Breaking** (`/settings`): `ValueSpec` is data: `merge.combine`, `admin.pinnedWhen` and `read`
   are gone, with no replacement on the type; a key's merge, its admin tier and how its value is read
   are answered by the core, through `createPolicyView`.
+- Bytes cross into the core and back through the runtime's own base64 where it has one (Bun,
+  newer Node), and in 32 KiB chunks where it does not: a 21 MiB marketplace archive took 1.7 s to
+  encode one byte at a time and takes 15 ms; the 1 GiB total-size check runs in about 2 s instead
+  of 4.5 s.
 - `plugin.json` is read and validated on the core (`readManifest`, `validateManifest`) with its
   schemas, and so are `claude plugin validate`'s plugin and marketplace folders, a command file and
   a `commands` entry (`readCommand`, `readCommandEntry`), a host's bundled skill, the entry and

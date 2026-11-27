@@ -34,6 +34,16 @@ test('a tag is read back as its value, at every depth', () => {
   });
 });
 
+test('bytes cross as padded base64 both ways, whatever their length', () => {
+  // 0–3 cover every padding; 65,537 is more than two of the encoder's 32 KiB chunks.
+  for (const length of [0, 1, 2, 3, 65_537]) {
+    const bytes = Uint8Array.from({ length }, (_, at) => (at * 31) & 0xff);
+    const base64 = Buffer.from(bytes).toString('base64');
+    expect(encodeArgs([bytes])).toBe(`[{"$bytes":"${base64}"}]`);
+    expect(decodeAnswer(`{"result":{"$bytes":"${base64}"}}`)).toStrictEqual({ result: bytes });
+  }
+});
+
 test('the core reads the numbers as JavaScript holds them', () => {
   expect(readInteger('maxTurns', Number.NaN).problem?.reason).toBe('is not a whole number');
   expect(readInteger('maxTurns', Infinity).problem?.reason).toBe('is not a whole number');
