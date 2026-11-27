@@ -1,4 +1,4 @@
-//! Port of `src/skills/shell-variables.ts`, switched.
+//! Ported from `src/skills/shell-variables.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The text the shell receives for a skill's `!` command (skills.md, "Available string
 //! substitutions"; "How injected commands run"). The permission check reads the same command as
@@ -13,7 +13,6 @@ use crate::loading::resolve::shell_exports::{ExportScope, shell_exports};
 use crate::loading::resolve::surfaces::{ShellPathsScope, SubstitutionSurface, surface_policy};
 use crate::ports::environment::Environment;
 use crate::ports::locations::Locations;
-use crate::registry::Port;
 
 /// What the shell receives for one `!` command.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -51,12 +50,5 @@ pub async fn substitute_shell_command<L: Locations + Clone, E: Environment>(
     ShellCommandText {
         text: done.text,
         environment,
-    }
-}
-
-crate::registry::exports! {
-    "skills/shell-variables" {
-        "substituteShellCommand" => async ok |text: String, vars: SkillVariables<Port, Port>, shell: SkillShell|
-            substitute_shell_command(&text, &vars, shell).await;
     }
 }

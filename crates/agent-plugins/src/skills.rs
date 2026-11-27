@@ -2,7 +2,9 @@
 
 pub mod arguments;
 pub mod execution;
+pub mod expand;
 pub mod expand_policy;
+pub mod expand_shell;
 pub mod file_references;
 pub mod folder_line;
 pub mod fork;

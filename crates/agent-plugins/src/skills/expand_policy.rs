@@ -1,4 +1,4 @@
-//! Port of `src/skills/expand-policy.ts`, switched.
+//! Ported from `src/skills/expand-policy.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The managed settings that take a skill's `allowed-tools` or `hooks` away (skills.md, "When
 //! managed settings lock hooks to plugins" and "When only managed permission rules apply"). The host
@@ -157,11 +157,4 @@ pub fn grant_applies(
     skill.hooks.as_ref().is_none_or(JsValue::is_undefined)
         || skill.context.as_deref() == Some("fork")
         || hooks_register(skill, policy, source)
-}
-
-crate::registry::exports! {
-    "skills/expand-policy" {
-        "hooksRegister" => ok |skill: Source, policy: Option<ExpandPolicy>, source: Option<SkillPluginSource>| hooks_register(&skill, policy, source.unwrap_or_default());
-        "grantApplies" => ok |skill: Source, policy: Option<ExpandPolicy>, source: Option<SkillPluginSource>| grant_applies(&skill, policy, source.unwrap_or_default());
-    }
 }
