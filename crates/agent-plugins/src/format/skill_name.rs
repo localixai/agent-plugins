@@ -401,10 +401,7 @@ pub fn resolve_skill_name(layout: &SkillLayout, declared: Option<&str>) -> Skill
 
 crate::registry::exports! {
     "format/skill-name" {
-        "refusedCharacters" => ok |text: String| refused_characters(&text);
-        "reservedNamespace" => ok |text: String| reserved_namespace(&text);
         "selfNamedCommand" => ok |name: String, plugin: String| self_named_command(&name, &plugin);
-        "pluginPrefix" => ok |origin: SkillOrigin| plugin_prefix(&origin);
         "resolveSkillName" => ok |layout: SkillLayout, declared: Option<String>| resolve_skill_name(&layout, declared.as_deref());
     }
 }

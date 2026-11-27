@@ -1,6 +1,6 @@
 import { coreModule } from '../wasm/bridge.ts';
 import type { PluginIssue } from './issues.ts';
-import type { SkillLayout, SkillOrigin } from './skill-types.ts';
+import type { SkillLayout } from './skill-types.ts';
 
 /**
  * How a skill gets its command name (skills.md, "How a skill gets its command name" and
@@ -26,13 +26,6 @@ export interface SkillName {
   readonly issues: readonly PluginIssue[];
 }
 
-/** The refused characters of `text` as code points (never the raw text: it may be invisible). */
-export const refusedCharacters = (text: string): string[] => call('refusedCharacters', text);
-
-/** skills.md, "Names reserved for synced skills": `anthropic-skills` and `anthropic-skills:<name>`. */
-export const reservedNamespace = (text: string): string | undefined =>
-  call('reservedNamespace', text);
-
 /**
  * The command name of a skill named by itself (the plugin root, or a manifest path to its folder),
  * oracle 2.1.319 (spec/judgments.md): the plugin's own `<plugin>:` prefix is dropped, then each
@@ -41,8 +34,6 @@ export const reservedNamespace = (text: string): string | undefined =>
  */
 export const selfNamedCommand = (name: string, plugin: string): string =>
   call('selfNamedCommand', name, plugin);
-
-export const pluginPrefix = (origin: SkillOrigin): string => call('pluginPrefix', origin);
 
 /**
  * Resolve the name and the command of a skill from where it sits and its frontmatter `name`

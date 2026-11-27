@@ -2,7 +2,6 @@ import type { Settings } from '../../protocol/official.ts';
 import type { HookPolicy } from '../hooks/policy.ts';
 import type { PolicyScope } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
-import type { Repair } from '../repair/support.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginDefaults, PluginWithDefaults } from './plugin-defaults.ts';
 
@@ -18,9 +17,6 @@ export const COMMAND_LINE_KEYS: readonly ['statusLine', 'fileSuggestion', 'subag
   call('COMMAND_LINE_KEYS');
 type CommandKey = (typeof COMMAND_LINE_KEYS)[number];
 type CommandValue = NonNullable<Settings['statusLine']>;
-
-/** Invalid optional fields are dropped individually; the required command must be readable. */
-export const commandLine: Repair = (value, at) => call('commandLine', value, at);
 
 interface CommandRead {
   readonly runs: { readonly value: CommandValue; readonly scope: PolicyScope } | undefined;

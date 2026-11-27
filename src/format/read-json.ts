@@ -14,24 +14,12 @@ export type JsonRead =
   | { readonly value: unknown }
   | { readonly problem: string; readonly missing?: true };
 
-/** The value of a JSON text, or the parser's reason it is not JSON; never a throw. */
-export const parseJson = (text: string): JsonRead => call('parseJson', text);
-
-/** The message a file that is no JSON gives (plugins/troubleshooting.md; plugins/create-marketplace.md): `Invalid JSON syntax: <reason>`. */
-export const invalidJsonSyntax = (problem: string): string => call('invalidJsonSyntax', problem);
-
 /** Reads and parses one file of the plugin; a missing file or invalid JSON is a `problem`, never a throw. */
 export const readJson = (
   files: PluginFiles,
   path: string,
   signal?: AbortSignal,
 ): Promise<JsonRead> => call.async('readJson', files, path, signal);
-
-/** What Claude Code's JSON parser says of a file that opens with a UTF-8 byte order mark. */
-export const BOM_PARSE_ERROR: string = call('BOM_PARSE_ERROR');
-
-/** Whether the bytes open with a UTF-8 byte order mark. */
-export const opensWithBom = (bytes: Uint8Array): boolean => call('opensWithBom', bytes);
 
 /**
  * Like `readJson`, but read as bytes so a byte order mark `readText` may drop is seen: a file that

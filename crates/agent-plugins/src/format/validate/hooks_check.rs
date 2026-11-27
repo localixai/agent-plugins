@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/hooks-check.ts`, switched.
+//! Ported from `src/format/validate/hooks-check.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The hook configuration checks of `claude plugin validate` (oracle 2.1.319), for the `hooks`
 //! object of `hooks/hooks.json` and the inline one of `plugin.json`. An entry that cannot load is
@@ -125,11 +126,4 @@ pub fn hooks_map_findings(map: &JsObject, site: Option<&HooksSite>) -> Vec<Findi
     map.iter()
         .flat_map(|(event, groups)| event_findings(site, event, groups))
         .collect()
-}
-
-crate::registry::exports! {
-    "format/validate/hooks-check" {
-        "GUARDED_TAIL" => ok || GUARDED_TAIL;
-        "hooksMapFindings" => ok |map: JsObject, site: Option<HooksSite>| hooks_map_findings(&map, site.as_ref());
-    }
 }

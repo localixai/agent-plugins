@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/plugin-paths.ts`, switched.
+//! Ported from `src/format/validate/plugin-paths.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The shape rules of the manifest keys that name component paths (oracle 2.1.319): every path
 //! starts with `./`; a key that names one kind of file also fixes its extension. A value of the
@@ -356,10 +357,4 @@ pub fn path_shape_findings(path: &str, shape: &PathShape, value: &JsValue) -> Ve
         })
         .collect();
     collapse(path, shape, found)
-}
-
-crate::registry::exports! {
-    "format/validate/plugin-paths" {
-        "isPathKey" => ok |key: String| is_path_key(&key);
-    }
 }

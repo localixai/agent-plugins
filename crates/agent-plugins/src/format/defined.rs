@@ -1,4 +1,4 @@
-//! Port of `src/format/defined.ts`, switched.
+//! Ported from `src/format/defined.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! An object without its `undefined` values, so it can be spread over another without erasing
 //! what the other holds. `null` is a value, and stays.
@@ -12,12 +12,6 @@ pub fn defined(value: JsObject) -> JsObject {
         .into_iter()
         .filter(|(_, item)| !item.is_undefined())
         .collect()
-}
-
-crate::registry::exports! {
-    "format/defined" {
-        "defined" => ok |value: JsObject| defined(value);
-    }
 }
 
 #[cfg(test)]

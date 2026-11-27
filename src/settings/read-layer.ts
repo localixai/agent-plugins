@@ -2,7 +2,7 @@ import { warning, type PluginIssue } from '../format/issues.ts';
 import type { Settings } from '../protocol/official.ts';
 import { MARKETPLACE_KEY_ALIASES, POLICY_KEYS, type PolicyKey } from '../protocol/settings-keys.ts';
 import { brokenSource, SCOPE_LABEL } from './broken-file.ts';
-import { GENERAL_CHECKS } from './general/checks.ts';
+import { generalCheck } from './general/checks.ts';
 import { GENERAL_KEYS, type SettingsKey } from './general/keys.ts';
 import { GLOBAL_CONFIG_KEYS } from './general/global-config.ts';
 import { KEY_SPECS, SPECS, admits, scopeCarries } from './key-spec.ts';
@@ -60,7 +60,9 @@ const isSettingsKey = (name: string): name is SettingsKey => KEY_NAMES.has(name)
 
 /** The validator of every key: a policy key's names its repair, a general key's is its check. */
 const validatorOf = (key: SettingsKey): Repair =>
-  isPolicyKey(key) ? REPAIRS[KEY_SPECS[key].repair] : GENERAL_CHECKS[key];
+  isPolicyKey(key)
+    ? REPAIRS[KEY_SPECS[key].repair]
+    : (value, at): Repaired => generalCheck(key, value, at);
 
 /**
  * The rows of a field inside a general key's block. A field of a policy key's block

@@ -1,13 +1,10 @@
-//! Port of `src/format/monitor-schema.ts` at sha256:f0e2662d3456.
+//! Ported from `src/format/monitor-schema.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A monitor entry and the monitors source as Claude Code's schema check reads them, one rule set
 //! for the loader and the validator (plugins/manifest-reference.md, "monitors": "Each entry is a
 //! strict object"; spec §9.2.1–§9.2.2). The messages are the oracle's (2.1.325): zod's wording for a
 //! missing or empty field, and for `when` and the names the texts the spec quotes. A missing field
 //! aborts the entry, so inside the source union it is a bare `Invalid input` at the key.
-//!
-//! The TypeScript exports only `monitorSourcesSchema`, a schema, which never crosses the boundary,
-//! so the module has no `exports!`; the rest is `pub` for `format/monitors.rs`.
 
 use std::sync::LazyLock;
 

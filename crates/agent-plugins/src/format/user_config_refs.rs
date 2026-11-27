@@ -10,11 +10,13 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::manifest_schema::USER_CONFIG_KEY as USER_CONFIG_KEY_SOURCE;
 use super::mcp_env::braced_references;
 use crate::js::{Pattern, regex_test};
 use crate::ports::BoxFuture;
 use crate::registry::Callback;
+
+/// The source of `USER_CONFIG_KEY`, for a schema's `.regex`.
+pub const USER_CONFIG_KEY_SOURCE: &str = r"^[A-Za-z_][A-Za-z0-9_]*$";
 
 /// `userConfig` keys: letters, digits and underscores, not starting with a digit.
 pub static USER_CONFIG_KEY: Pattern = LazyLock::new(|| Regex::new(USER_CONFIG_KEY_SOURCE).ok());

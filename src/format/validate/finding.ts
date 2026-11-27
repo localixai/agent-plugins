@@ -26,18 +26,3 @@ const call = coreModule('format/validate/finding');
 
 export const errorIn = (file: string, path: string, message: string): ValidationIssue =>
   call('errorIn', file, path, message);
-
-export const warningIn = (file: string, path: string, message: string): ValidationIssue =>
-  call('warningIn', file, path, message);
-
-export const errorAt = (path: string, message: string): Finding => call('errorAt', path, message);
-
-export const warningAt = (path: string, message: string): Finding =>
-  call('warningAt', path, message);
-
-/** Attaches the findings of one file to it. */
-export const inFile = (
-  file: string,
-  findings: readonly Finding[],
-  prefix = '',
-): ValidationIssue[] => call('inFile', file, findings, prefix);

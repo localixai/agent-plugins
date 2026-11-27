@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/plugin-name.ts`, switched.
+//! Ported from `src/format/validate/plugin-name.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The checks of `claude plugin validate` on a manifest's `name` (oracle 2.1.319): an empty name, a
 //! space, a control or bidirectional-formatting character are errors and the only report; any
@@ -67,11 +68,5 @@ pub fn name_findings(name: &str, options: NameOptions, reported: bool) -> NameFi
     NameFindings {
         blocking: Vec::new(),
         advice,
-    }
-}
-
-crate::registry::exports! {
-    "format/validate/plugin-name" {
-        "nameFindings" => ok |name: String, options: NameOptions, reported: bool| name_findings(&name, options, reported);
     }
 }

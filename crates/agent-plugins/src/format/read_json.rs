@@ -109,12 +109,8 @@ pub fn read_json_without_bom<'a>(
 
 crate::registry::exports! {
     "format/read-json" {
-        "parseJson" => ok |text: String| parse_json(&text);
-        "invalidJsonSyntax" => ok |problem: String| invalid_json_syntax(&problem);
         "readJson" => async ok |files: Port, path: String, signal: Option<Signal>|
             read_json(&files, &path, signal.as_ref()).await;
-        "BOM_PARSE_ERROR" => ok || BOM_PARSE_ERROR;
-        "opensWithBom" => ok |bytes: crate::registry::Bytes| opens_with_bom(&bytes.0);
         "readJsonWithoutBom" => async ok |files: Port, path: String, signal: Option<Signal>|
             read_json_without_bom(&files, &path, signal.as_ref()).await;
     }

@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/received.ts`, switched.
+//! Ported from `src/format/validate/received.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! How the validator names the kind of a JSON value in its messages. Zod's wording ("expected
 //! string, received number") uses the bare name; the hooks messages use an article ("received a
@@ -32,12 +32,6 @@ pub fn with_article(value: &JsValue) -> String {
         format!("an {kind}")
     } else {
         format!("a {kind}")
-    }
-}
-
-crate::registry::exports! {
-    "format/validate/received" {
-        "kindOf" => ok |value: JsValue| kind_of(&value).to_owned();
     }
 }
 

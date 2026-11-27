@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/inline-sources.ts`, switched.
+//! Ported from `src/format/validate/inline-sources.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The keys whose inline form is a strict object the validator reads entry by entry (spec §9.1.3,
 //! §9.2.2; oracle 2.1.325): the `lspServers` map and the monitors array, at the top level and under
@@ -40,11 +41,4 @@ pub fn source_findings(key: PathKey, path: &str, value: &JsValue) -> Vec<Finding
         return zod_findings(parsed, path, "");
     }
     path_shape_findings(path, PATH_SHAPES.of(key), value)
-}
-
-crate::registry::exports! {
-    "format/validate/inline-sources" {
-        "sourceFindings" => ok |key: PathKey, path: String, value: JsValue|
-            source_findings(key, &path, &value);
-    }
 }

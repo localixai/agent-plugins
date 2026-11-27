@@ -87,19 +87,13 @@
     "size": "P plugins",
     "counts": {
       "4": {
-        "create": {
-          "cpu.RegExp.exec": 4
-        }
+        "create": {}
       },
       "8": {
-        "create": {
-          "cpu.RegExp.exec": 8
-        }
+        "create": {}
       },
       "16": {
-        "create": {
-          "cpu.RegExp.exec": 16
-        }
+        "create": {}
       }
     }
   },
@@ -259,9 +253,7 @@
     "size": "P plugins, one replaced",
     "counts": {
       "4": {
-        "update": {
-          "cpu.RegExp.exec": 1
-        },
+        "update": {},
         "skills": {
           "locations.joinPath": 22,
           "locations.pluginRoot": 4
@@ -272,9 +264,7 @@
         }
       },
       "8": {
-        "update": {
-          "cpu.RegExp.exec": 1
-        },
+        "update": {},
         "skills": {
           "locations.joinPath": 42,
           "locations.pluginRoot": 8
@@ -285,9 +275,7 @@
         }
       },
       "16": {
-        "update": {
-          "cpu.RegExp.exec": 1
-        },
+        "update": {},
         "skills": {
           "locations.joinPath": 82,
           "locations.pluginRoot": 16
@@ -536,7 +524,7 @@
     "counts": {
       "4": {
         "reload": {
-          "cpu.RegExp.exec": 1047,
+          "cpu.RegExp.exec": 1043,
           "environment.get": 1,
           "environment.snapshot": 1,
           "files.bytes": 336,
@@ -571,7 +559,7 @@
       },
       "8": {
         "reload": {
-          "cpu.RegExp.exec": 1963,
+          "cpu.RegExp.exec": 1955,
           "environment.get": 1,
           "environment.snapshot": 1,
           "files.bytes": 672,
@@ -606,7 +594,7 @@
       },
       "16": {
         "reload": {
-          "cpu.RegExp.exec": 3795,
+          "cpu.RegExp.exec": 3779,
           "environment.get": 1,
           "environment.snapshot": 1,
           "files.bytes": 1344,

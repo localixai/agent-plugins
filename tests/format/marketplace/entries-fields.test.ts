@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ENTRY_KEYS } from '../../../src/format/marketplace/entry-schema.ts';
-import { MANIFEST_SCHEMAS } from '../../../src/format/manifest-schema.ts';
+import { readManifest } from '../../../src/format/manifest.ts';
 import { loaded, rawEntry, readOne, slotAt } from '../../support/marketplace-entries.ts';
 import { errorsOf } from '../../support/marketplace-fixtures.ts';
 import { spec } from '../../support/spec.ts';
@@ -82,7 +82,23 @@ spec('marketplace.entry.metadata', () => {
   });
 });
 
+/** The top-level keys of plugin.json (manifest-reference.md § Fields). */
+const MANIFEST_KEYS = `$schema name displayName version description author homepage repository
+  license keywords metadata icon documentationUrl supportUrl privacyPolicyUrl termsOfServiceUrl
+  defaultEnabled dependencies settings userConfig types channels skills commands agents hooks
+  mcpServers lspServers outputStyles workflows experimental themes monitors`.split(/\s+/);
+
+const unknownTo = (key: string): boolean =>
+  readManifest({ name: 'p', [key]: null }).issues.some(
+    (issue) => issue.message === `Unknown field "${key}"`,
+  );
+
 describe('fields an entry accepts beside its own', () => {
+  test('the manifest reads each plugin.json field as its own', () => {
+    for (const key of MANIFEST_KEYS) expect(unknownTo(key)).toBe(false);
+    expect(unknownTo('category')).toBe(true);
+  });
+
   test('every plugin.json field but the directory listing fields is a known key', () => {
     const listing = [
       'icon',
@@ -91,7 +107,7 @@ describe('fields an entry accepts beside its own', () => {
       'privacyPolicyUrl',
       'termsOfServiceUrl',
     ];
-    for (const key of Object.keys(MANIFEST_SCHEMAS)) {
+    for (const key of MANIFEST_KEYS) {
       expect(ENTRY_KEYS.includes(key) || listing.includes(key)).toBe(true);
       expect(ENTRY_KEYS.includes(key)).toBe(!listing.includes(key));
     }

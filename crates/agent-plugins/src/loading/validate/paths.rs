@@ -1,4 +1,4 @@
-//! Port of `src/loading/validate/paths.ts`, switched.
+//! Ported from `src/loading/validate/paths.ts`; only the core uses it now, so it has no wrapper.
 
 use crate::format::listing::list_sorted;
 use crate::ports::Signal;
@@ -39,11 +39,4 @@ pub async fn entries_of(
     signal: Option<&Signal>,
 ) -> Vec<DirectoryEntry> {
     list_sorted(files, dir, signal).await.unwrap_or_default()
-}
-
-crate::registry::exports! {
-    "loading/validate/paths" {
-        "pluginPath" => ok |path: String| plugin_path(&path);
-        "childOf" => ok |dir: String, name: String| child_of(&dir, &name);
-    }
 }

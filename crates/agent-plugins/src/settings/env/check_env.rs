@@ -1,4 +1,4 @@
-//! Port of `src/settings/env/check-env.ts`, switched.
+//! Ported from `src/settings/env/check-env.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a file may hold under `env` (settings-reference.md, `env`: "object mapping variable names to
 //! string values"; "Variables Claude Code ignores in `env`"): the variables Claude Code drops from the
@@ -73,10 +73,4 @@ pub fn env(value: &JsValue, at: &RepairAt) -> Repaired {
         }
     }
     kept(JsValue::Object(entries), issues)
-}
-
-crate::registry::exports! {
-    "settings/env/check-env" {
-        "env" => ok |value: JsValue, at: RepairAt| env(&value, &at);
-    }
 }

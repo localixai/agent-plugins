@@ -1,4 +1,5 @@
-//! Port of `src/format/user-config-options.ts` at sha256:eb6b4a0f8f55.
+//! Ported from `src/format/user-config-options.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The `options` rules of a `userConfig` option (plugins/manifest-reference.md, "Limit a field to
 //! fixed options": "`options` applies to a `string` field that isn't `multiple` or `sensitive`",
@@ -187,10 +188,4 @@ pub fn options_problems(option: &OptionsHolder) -> Vec<Problem> {
         problems.push(fallback);
     }
     problems
-}
-
-crate::registry::exports! {
-    "format/user-config-options" {
-        "optionsProblems" => ok |option: OptionsHolder| options_problems(&option);
-    }
 }

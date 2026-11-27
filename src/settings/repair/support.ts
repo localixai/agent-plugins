@@ -44,13 +44,6 @@ export const note = (at: RepairAt, field: string, message: string): PluginIssue 
  */
 export const dropped = (at: RepairAt, reason: string): Repaired => call('dropped', at, reason);
 
-/** `"<key>" must be <expected>; the key is ignored`. */
-export const mustBe = (at: RepairAt, expected: string): Repaired => call('mustBe', at, expected);
-
-/** `"<key>" was present but invalid; <effect>`: the report of a value that fails closed (managed-settings.md). */
-export const presentButInvalid = (at: RepairAt, effect: string, field = ''): PluginIssue =>
-  call('presentButInvalid', at, effect, field);
-
 /** Splits a list into the entries `valid` accepts and a warning for each other one. */
 export const stripInvalid = <T>(
   list: readonly unknown[],

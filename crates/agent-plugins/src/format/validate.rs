@@ -10,6 +10,7 @@ pub mod mcp_check;
 pub mod mcp_remote_checks;
 pub mod path_claims;
 pub mod plugin_fields;
+pub mod plugin_manifest;
 pub mod plugin_name;
 pub mod plugin_paths;
 pub mod received;

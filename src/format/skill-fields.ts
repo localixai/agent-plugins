@@ -75,22 +75,3 @@ export const firstContentLine = (body: string): string | undefined =>
  * shows it applies this.
  */
 export const escapeAngleBrackets = (text: string): string => call('escapeAngleBrackets', text);
-
-export interface InvocableRead {
-  readonly frontmatter: InvocableFrontmatter;
-  /** The `name` as declared, not yet resolved to a command name. */
-  readonly declaredName?: string;
-  readonly problems: readonly FieldProblem[];
-}
-
-/**
- * The frontmatter a skill and a command share, with the documented defaults: `disable-model-
- * invocation` false, `user-invocable` true, `background` true, `shell` bash, and the first
- * non-empty body line for a missing `description`. `fields` is kept whole as `frontmatter`; the keys
- * in `untaken` are not read (a command file does not take `name` and `paths`).
- */
-export const readInvocable = (
-  fields: Readonly<Record<string, unknown>>,
-  body: string,
-  untaken: readonly string[] = [],
-): InvocableRead => call('readInvocable', fields, body, untaken);

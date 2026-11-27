@@ -1,4 +1,4 @@
-//! Port of `src/format/manifest-schema.ts` at sha256:c552919fec48.
+//! Ported from `src/format/manifest-schema.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The top-level keys of `.claude-plugin/plugin.json` and their documented types
 //! (plugins/manifest-reference.md, "Fields"). Strict where the docs say so ("Unrecognized fields"):
@@ -12,13 +12,9 @@ use serde::Deserialize;
 use crate::format::lsp_schema::LSP_SOURCES_SCHEMA;
 use crate::format::monitor_schema::MONITOR_SOURCES_SCHEMA;
 use crate::format::user_config_options::{OPTION_VALUE, OptionsHolder, options_problems};
+use crate::format::user_config_refs::USER_CONFIG_KEY_SOURCE as USER_CONFIG_KEY;
 use crate::js::{JsValue, url};
 use crate::zod::{self, Schema, Shape, fields, issue};
-
-/// `USER_CONFIG_KEY` of `src/format/user-config-refs.ts` (`userConfig` keys: letters, digits and
-/// underscores, not starting with a digit), as the source of its literal; held here until that
-/// module is ported.
-pub const USER_CONFIG_KEY: &str = r"^[A-Za-z_][A-Za-z0-9_]*$";
 
 static PATH: LazyLock<Schema> = LazyLock::new(zod::string);
 static PATH_OR_PATHS: LazyLock<Schema> =
@@ -207,11 +203,4 @@ pub static MANIFEST_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 #[must_use]
 pub fn is_manifest_key(key: &str) -> bool {
     MANIFEST_SCHEMAS.contains_key(key)
-}
-
-crate::registry::exports! {
-    "format/manifest-schema" {
-        "COMMAND_ENTRY_ONE_OF" => ok || COMMAND_ENTRY_ONE_OF;
-        "isManifestKey" => ok |key: String| is_manifest_key(&key);
-    }
 }
