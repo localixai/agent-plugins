@@ -1,8 +1,3 @@
-import { error, type PluginIssue } from '../format/issues.ts';
-import { tooLarge, tooManyEntries, type CopyLimits } from './command-directory.ts';
-import { linkReach, relativeFrom, type LinkReach } from '../format/link-rule.ts';
-import { isWithin, withoutTrailingSlashes } from '../format/path-text.ts';
-
 /**
  * What copying a plugin tree into the cache does with each entry (plugins/host-marketplace.md,
  * "Share files within a marketplace with symlinks"; plugins/marketplace-reference.md, "Output that
@@ -20,7 +15,13 @@ import { isWithin, withoutTrailingSlashes } from '../format/path-text.ts';
  * contains, one being copied (the marketplace root, the plugin's own parent, a sibling that links
  * back) would copy the same tree again without end, so it is skipped as a `cycle` (spec/
  * judgments.md). A link whose target does not exist is skipped (judgment).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/copy_plan.rs`, docs/RUST.md).
  */
+import type { PluginIssue } from '../format/issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('marketplace/copy-plan');
 
 export interface TreeEntry {
   /** Where the entry lands, relative to the plugin root and `/`-separated. */
@@ -60,6 +61,12 @@ export interface Dereference {
 
 export type SkipReason = 'outside-marketplace' | 'dangling' | 'cycle';
 
+/** The size limits of a tree copied whole: at most `maxBytes` of files and `maxEntries` entries. */
+export interface CopyLimits {
+  readonly maxBytes: number;
+  readonly maxEntries: number;
+}
+
 export interface TreePlan {
   /** Files and directories copied as they are. */
   readonly copy: readonly string[];
@@ -70,91 +77,20 @@ export interface TreePlan {
   readonly refusals: readonly PluginIssue[];
 }
 
-type Link = TreeEntry;
-type Decision =
-  | { readonly relink: string }
-  | { readonly dereference: Dereference }
-  | { readonly skip: SkipReason };
-
-const directoryOf = (path: string): string => path.split('/').slice(0, -1).join('/');
-
-const withinPlugin = (link: Link, target: { path: string }, roots: TreeRoots): Decision => {
-  const rel = target.path.slice(withoutTrailingSlashes(roots.pluginRoot).length).replace(/^\//, '');
-  return { relink: relativeFrom(directoryOf(link.path), rel) };
-};
-
-/** A directory that is, or contains, one being copied: copying it would copy that one again. */
-const closesCycle = (target: { path: string; isDirectory: boolean }, roots: TreeRoots): boolean =>
-  target.isDirectory &&
-  [roots.pluginRoot, ...(roots.copying ?? [])].some((open) => isWithin(target.path, open));
-
-/** What each reach does with a link: the rule of the docs' three bullets, one entry per reach. */
-const BY_REACH: {
-  readonly [R in LinkReach]: (
-    link: Link,
-    target: { path: string; isDirectory: boolean },
-    roots: TreeRoots,
-  ) => Decision;
-} = {
-  'within-plugin': withinPlugin,
-  'within-marketplace': (link, target, roots) =>
-    closesCycle(target, roots)
-      ? { skip: 'cycle' }
-      : { dereference: { path: link.path, from: target.path, isDirectory: target.isDirectory } },
-  outside: () => ({ skip: 'outside-marketplace' }),
-};
-
-function decideLink(link: Link, roots: TreeRoots): Decision {
-  if (link.target === undefined) return { skip: 'dangling' };
-  const reach = linkReach({ target: link.target.path, ...roots });
-  return BY_REACH[reach](link, link.target, roots);
-}
-
-/** The refusal when what is copied is "larger than 256 MiB or has more than 20,000 entries". */
-function limitRefusals(entries: readonly TreeEntry[], limits: CopyLimits): readonly PluginIssue[] {
-  if (entries.length > limits.maxEntries) return [tooManyEntries(limits.maxEntries)];
-  const bytes = entries.reduce((total, one) => total + one.bytes, 0);
-  return bytes > limits.maxBytes ? [tooLarge(limits.maxBytes)] : [];
-}
-
 /** A plan of copying `entries`; `limits` apply to a tree that is copied whole (a `command` source in copy mode). */
-export function planTreeCopy(
+export const planTreeCopy = (
   entries: readonly TreeEntry[],
   roots: TreeRoots,
   limits?: CopyLimits,
-): TreePlan {
-  const copy: string[] = [];
-  const relinks: Relink[] = [];
-  const dereferences: Dereference[] = [];
-  const skipped: { path: string; reason: SkipReason }[] = [];
-  for (const entry of entries) {
-    if (!entry.isSymlink) {
-      copy.push(entry.path);
-      continue;
-    }
-    const decision = decideLink(entry, roots);
-    if ('relink' in decision) relinks.push({ path: entry.path, target: decision.relink });
-    else if ('dereference' in decision) dereferences.push(decision.dereference);
-    else skipped.push({ path: entry.path, reason: decision.skip });
-  }
-  const refusals = limits === undefined ? [] : limitRefusals(entries, limits);
-  return { copy, relinks, dereferences, skipped, refusals };
-}
+): TreePlan => call('planTreeCopy', entries, roots, limits);
 
 /**
  * The refusal for a plugin directory of a fetched marketplace that is, or passes through, a link
  * that resolves outside the marketplace ("an entry of a fetched marketplace that resolves or opens
  * outside its tree", plugins/troubleshooting.md): the listing line `claude plugin list` shows.
  */
-export function pluginRootIssue(input: {
+export const pluginRootIssue = (input: {
   readonly entryPath: string;
   readonly pluginRoot: string;
   readonly marketplaceRoot: string;
-}): PluginIssue | undefined {
-  return isWithin(input.marketplaceRoot, input.pluginRoot)
-    ? undefined
-    : error(
-        'source',
-        `Plugin source path refused: ${input.entryPath} does not stay inside its marketplace directory. Check that the marketplace entry has a plain relative path.`,
-      );
-}
+}): PluginIssue | undefined => call('pluginRootIssue', input);

@@ -29,10 +29,6 @@ export type SpecifierKind =
 
 export const classifySpecifier = (value: string): SpecifierKind => call('classifySpecifier', value);
 
-/** True when `registry` is the user's own default registry itself. */
-export const isDefaultRegistry = (registry: string, defaultRegistry: string | undefined): boolean =>
-  call('isDefaultRegistry', registry, defaultRegistry);
-
 /**
  * The refusal of a download link: it "must use `https`, unless it points at the installing user's
  * own default npm registry". Any other scheme (`ftp:`, `file:`) and a link with none is refused too.
@@ -41,12 +37,6 @@ export const downloadLinkRefusal = (
   link: string,
   defaultRegistry: string | undefined,
 ): string | undefined => call('downloadLinkRefusal', link, defaultRegistry);
-
-/** Why an npm source's `package` value is refused before anything is fetched. */
-export const packageValueRefusal = (
-  value: string,
-  defaultRegistry: string | undefined,
-): string | undefined => call('packageValueRefusal', value, defaultRegistry);
 
 /** Why a `package.json` dependency specifier gets no install; `undefined` for a registry package. */
 export const dependencyRefusal = (specifier: string): string | undefined =>
@@ -81,10 +71,6 @@ export interface PackageJson {
   /** Bun `patchedDependencies`, present as written. */
   readonly patchedDependencies?: unknown;
 }
-
-/** The string entries of a dependency object; anything else lists nothing. */
-export const readDependencyMap = (value: unknown): DependencyMap =>
-  call('readDependencyMap', value);
 
 /** A `package.json` that is there but is not a JSON object. */
 export type ReadPackageJson = PackageJson | 'unreadable';

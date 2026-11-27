@@ -116,9 +116,6 @@ pub fn contains_session(
 
 crate::registry::exports! {
     "marketplace/command-output" {
-        "readPrintedPath" => ok |stdout: String, platform: Platform| read_printed_path(&stdout, platform);
         "samePath" => ok |a: String, b: String, platform: Platform| same_path(&a, &b, platform);
-        "containsSession" => ok |printed: String, session_directory: Option<String>, platform: Platform|
-            contains_session(&printed, session_directory.as_deref(), platform);
     }
 }

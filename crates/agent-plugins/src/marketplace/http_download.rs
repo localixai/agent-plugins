@@ -1,16 +1,10 @@
-//! Port of `src/marketplace/http-download.ts` at sha256:29d9e6aa147d.
+//! Ported from `src/marketplace/http-download.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! One download through `HttpClient` with its redirects followed by hand, so each hop is judged
 //! (plugins/host-marketplace.md, "Stay within the download limits for hosted files"): at most
 //! `maxRedirects` hops, each target passed to `refuseHop`, and a request sent to another origin
 //! carries none of the configured headers, nor does any request after it. The one loop of the
 //! `archive` zip and the `url` marketplace file; what a body must be is the caller's.
-//!
-//! Not switched: the `archive` zip's body (up to 256 MiB, `fetch-plan.ts`) would cross into the
-//! core and back again while `archive-source.ts`, which reads it, is TypeScript (docs/RUST.md,
-//! "What stays TypeScript"); it switches with that module, and the bytes then cross once.
-
-use serde::Serialize;
 
 use super::types::HeaderMap;
 use crate::format::issues::{PluginIssue, error};
@@ -19,7 +13,6 @@ use crate::ports::http_client::{
     BodyAs, HttpClient, HttpMethod, HttpRequest, HttpResponse, Redirect,
 };
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::{Bytes, Callback, Port};
 
 /// The reason a redirect from `from` to `target` is refused, or `None` to follow it: a function of
 /// the caller's, so its answer may wait. A Rust caller passes a closure, answered at once.
@@ -31,12 +24,6 @@ pub trait RefuseHop: Send + Sync {
 impl<F: Fn(&str, &str) -> Option<String> + Send + Sync> RefuseHop for F {
     fn refuse<'a>(&'a self, target: &'a str, from: &'a str) -> BoxFuture<'a, Option<String>> {
         Box::pin(std::future::ready(self(target, from)))
-    }
-}
-
-impl RefuseHop for Callback {
-    fn refuse<'a>(&'a self, target: &'a str, from: &'a str) -> BoxFuture<'a, Option<String>> {
-        Box::pin(self.call::<Option<String>>(vec![target.into(), from.into()]))
     }
 }
 
@@ -154,66 +141,6 @@ pub async fn download_following<R: RefuseHop>(
         }
         url = follow_redirect(&response, &url, followed, download).await?;
         followed += 1;
-    }
-}
-
-/// An `HttpResponse` as it crosses back: its bytes `{"$bytes": base64}`, absent when none came.
-#[derive(Serialize)]
-#[serde(untagged)]
-enum Downloaded {
-    Response {
-        status: u16,
-        headers: HeaderMap,
-        body: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        bytes: Option<Bytes>,
-        truncated: bool,
-    },
-    Issue(PluginIssue),
-}
-
-impl From<Result<HttpResponse, PluginIssue>> for Downloaded {
-    fn from(result: Result<HttpResponse, PluginIssue>) -> Self {
-        match result {
-            Ok(response) => Self::Response {
-                status: response.status,
-                headers: response.headers,
-                body: response.body,
-                bytes: response.bytes.map(Bytes),
-                truncated: response.truncated,
-            },
-            Err(issue) => Self::Issue(issue),
-        }
-    }
-}
-
-/// `Download` as it crosses: a record holding a function, so a port whose members are read
-/// (docs/RUST.md, "Effects").
-async fn download_of(record: Port) -> Download<Callback> {
-    let url = record.member("url");
-    let headers = record.member("headers");
-    let body_as = record.member("as");
-    let timeout_ms = record.member("timeoutMs");
-    let max_bytes = record.member("maxBytes");
-    let max_redirects = record.member("maxRedirects");
-    let refuse_hop = record.member("refuseHop");
-    let path = record.member("path");
-    Download {
-        url: url.await,
-        headers: headers.await,
-        body_as: body_as.await,
-        timeout_ms: timeout_ms.await,
-        max_bytes: max_bytes.await,
-        max_redirects: max_redirects.await,
-        refuse_hop: refuse_hop.await,
-        path: path.await,
-    }
-}
-
-crate::registry::exports! {
-    "marketplace/http-download" {
-        "downloadFollowing" => async ok |download: Port, http: Port, signal: Signal|
-            Downloaded::from(download_following(&download_of(download).await, &http, &signal).await);
     }
 }
 

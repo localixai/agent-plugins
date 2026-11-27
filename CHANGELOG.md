@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- Reading a hook's run, merging every hook's output on an event, assembling the outcome, the core
+  occurrence and combining its results, the classifier note, the session's directories and the
+  repeats of `SessionStart` run on the core.
+- A `command` source's run, release channels, the store layout, update detection, the install
+  commands, the tree copy plan, the lockfile read, the dependency install plan, the source checks
+  made before a fetch, the `--bare`, `--safe-mode`, `--restricted` and `--disable-slash-commands`
+  contributions, the install-record messages, the dependency plan's types, the marketplace fetch
+  plan and the `archive` fetch run on the core.
 - The SDK hook answer, `watchPaths` resolution and the `FileChanged` watch list, the runnable
   handlers a host lists, the Stop block cap, block routing and the original prompt of a blocked
   prompt, the effects a block leaves, `systemMessage` routing, the MCP client skip, the observer's
@@ -1171,7 +1179,7 @@ once, in Changed or Removed.
     catalog.
   - `MarketplaceMetadata.extra` keeps unknown `metadata` keys.
   - The archive download and the marketplace file download now share one redirect loop
-    (`src/marketplace/http-download.ts`).
+    (`crates/agent-plugins/src/marketplace/http_download.rs`).
   - The `headersHelper` runner doc now says the configuration directory must exist first (oracle
     2.1.322).
 - `usableVersion`, `winningScope`, `effectiveEnabled`, `isEnabled` and `UpdateVerdict`

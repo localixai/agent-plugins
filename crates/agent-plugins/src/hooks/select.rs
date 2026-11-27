@@ -8,4 +8,5 @@ pub mod matcher_targets;
 pub mod matcher_values;
 pub mod mcp_client;
 pub mod model_switch;
+pub mod once;
 pub mod watch_list;

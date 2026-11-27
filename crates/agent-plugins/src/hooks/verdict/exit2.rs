@@ -79,7 +79,7 @@ const fn blocks(effect: &'static str, stderr: StderrChannel) -> Exit2Rule {
     row(true, effect, stderr)
 }
 
-const fn ignored(stderr: StderrChannel) -> Exit2Rule {
+pub(crate) const fn ignored(stderr: StderrChannel) -> Exit2Rule {
     row(false, "none", stderr)
 }
 

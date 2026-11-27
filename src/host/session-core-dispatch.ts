@@ -27,7 +27,7 @@ export interface CoreDispatch<E extends HookEvent> {
   readonly signal: AbortSignal;
 }
 
-/** The decisions under which no `updatedInput` applies (§7.5.11; `merge-gates.ts`). */
+/** The decisions under which no `updatedInput` applies (§7.5.11; the core's `hooks/output/merge_gates.rs`). */
 const KEEPS_INPUT: ReadonlySet<string | undefined> = new Set([undefined, 'allow', 'ask']);
 
 /** The input the call would run with after Claude Code's handlers (J18.1). */

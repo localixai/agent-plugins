@@ -163,9 +163,10 @@ export {
   type InstallPlan,
   type InstallRequest,
   type InstallStep,
+  type LeftOut,
+  type LeftOutReason,
   type StepAction,
 } from './dependency-install-plan.ts';
-export type { LeftOut, LeftOutReason } from './dependency-install-walk.ts';
 export { catalogDependencies } from './dependency-catalog.ts';
 export {
   enablePlan,
