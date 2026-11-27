@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Planning a plugin fetch, the dated-copy sweep, the `enabledPlugins` notes, the Node.js package
+  install plan, its checks and its failure note, reading and writing `installed_plugins.json` and
+  its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and
+  `--plugin-url` plugins, the orphaned-version cleanup and the uninstall's record selection run on
+  the core.
 - A skill's injected commands run on the core (permission answer, refusal, the run, the output
   window, the move to the background), and so do stacked skills in one message, the
   `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,

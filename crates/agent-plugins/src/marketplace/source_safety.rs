@@ -185,7 +185,7 @@ pub struct NpmSafety {
 }
 
 /// What an npm source names: a tarball link, or a package name and the version npm fetches.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum NpmSpec {
     /// A tarball link.
@@ -383,14 +383,5 @@ crate::registry::exports! {
     "marketplace/source-safety" {
         "readGitAddress" => ok |text: String, shorthand: bool, path: String| read_git_address(&text, shorthand, &path);
         "isGitHubRepository" => ok |owner: String, repo: String| is_github_repository(&owner, &repo);
-        "githubRepoIssues" => ok |repo: String, path: String| github_repo_issues(&repo, &path);
-        "repositoryPathIssues" => ok |inside: String, path: String| repository_path_issues(&inside, &path);
-        "refIssues" => ok |reference: Option<String>, path: String| ref_issues(reference.as_deref(), &path);
-        "npmSpecOf" => ok |pkg: String, version: Option<String>| npm_spec_of(&pkg, version.as_deref());
-        "npmPackageIssues" => ok |source: NpmPackageSource, safety: NpmSafety, path: String|
-            npm_package_issues(&source, &safety, &path);
-        "npmRegistryIssues" => ok |registry: String, safety: NpmSafety, path: String|
-            npm_registry_issues(&registry, &safety, &path);
-        "archiveUrlIssues" => ok |url: String, path: String| archive_url_issues(&url, &path);
     }
 }

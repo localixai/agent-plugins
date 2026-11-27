@@ -92,6 +92,27 @@ pub fn is_safe_integer(value: f64) -> bool {
     value.is_finite() && value.fract() == 0.0 && value.abs() <= MAX_SAFE_INTEGER
 }
 
+/// `Number.isInteger`: a finite number with no fraction (`-0` and `1e300` are integers).
+#[must_use]
+pub fn is_integer(value: f64) -> bool {
+    value.is_finite() && value.fract() == 0.0
+}
+
+/// `text.padStart(width, fill)`: `fill` repeated in front, cut to fit, until the text is `width`
+/// UTF-16 code units long; a longer text or an empty `fill` gives the text as it is.
+#[must_use]
+pub fn pad_start(text: &str, width: usize, fill: &str) -> String {
+    let length = code_unit_length(text);
+    let fill_length = code_unit_length(fill);
+    if length >= width || fill_length == 0 {
+        return text.to_owned();
+    }
+    let missing = width - length;
+    let mut padding: String = fill.repeat(missing.div_ceil(fill_length));
+    padding = slice_code_units(&padding, 0, Some(missing));
+    padding + text
+}
+
 /// A number's text as JavaScript writes it (`String(n)`, `JSON.stringify(n)` for a finite one):
 /// the shortest digits that read back as the same number, plain from 1e-6 up to 1e21 and in
 /// exponent form outside it.
@@ -421,6 +442,28 @@ pub fn is_truthy(value: &JsValue) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // bun -e 'console.log([1, -0, 1e300, 1.5, NaN, Infinity].map(Number.isInteger))' prints
+    // [ true, true, true, false, false, false ]
+    // bun -e 'console.log(["7".padStart(2, "0"), "2026".padStart(4, "0"), "-1".padStart(4, "0"),
+    // "x".padStart(4, "ab"), "x".padStart(3, "")])' prints [ "07", "2026", "00-1", "abax", "x" ]
+    #[test]
+    fn pad_start_follows_javascript() {
+        let padded = [
+            pad_start("7", 2, "0"),
+            pad_start("2026", 4, "0"),
+            pad_start("-1", 4, "0"),
+            pad_start("x", 4, "ab"),
+            pad_start("x", 3, ""),
+        ];
+        assert_eq!(padded, ["07", "2026", "00-1", "abax", "x"]);
+    }
+
+    #[test]
+    fn integers_follow_javascript() {
+        let answers = [1.0, -0.0, 1e300, 1.5, f64::NAN, f64::INFINITY].map(is_integer);
+        assert_eq!(answers, [true, true, true, false, false, false]);
+    }
 
     // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{}].map(Boolean))' prints
     // [ false, false, false, false, false, false, false, true, true, true ]

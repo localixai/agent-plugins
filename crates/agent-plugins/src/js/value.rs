@@ -16,7 +16,7 @@ mod de;
 mod ser;
 mod text;
 
-pub use ser::{serialize_number, to_js_value};
+pub use ser::{serialize_number, serialize_or_undefined, to_js_value};
 pub(crate) use text::write_json_string;
 
 use indexmap::IndexMap;

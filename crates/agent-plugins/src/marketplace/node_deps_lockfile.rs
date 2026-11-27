@@ -36,6 +36,18 @@ pub enum LockfileName {
     PackageLock,
 }
 
+impl LockfileName {
+    /// The file's name at the plugin root.
+    #[must_use]
+    pub const fn file_name(self) -> &'static str {
+        match self {
+            Self::BunLock => "bun.lock",
+            Self::NpmShrinkwrap => "npm-shrinkwrap.json",
+            Self::PackageLock => "package-lock.json",
+        }
+    }
+}
+
 /// A package the lockfile pins to something other than a registry version.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LockedOrigin {

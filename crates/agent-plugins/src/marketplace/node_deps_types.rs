@@ -10,7 +10,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::install_mode::InstallMode;
-use super::node_deps_lockfile::LockfileName;
+use super::node_deps_lockfile::{LockfileFacts, LockfileName};
+use super::node_deps_spec::PackageJson;
 use crate::format::issues::PluginIssue;
 use crate::ports::command_runner::CommandSpec;
 
@@ -22,6 +23,17 @@ pub enum PackageManager {
     Bun,
     /// `npm`.
     Npm,
+}
+
+impl PackageManager {
+    /// The manager's name, which is also its command.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Bun => "bun",
+            Self::Npm => "npm",
+        }
+    }
 }
 
 /// Where the plugin's files lie, as far as the install goes (`InstallMode`, `InstallOrigin`).
@@ -84,6 +96,69 @@ pub const UNSUPPORTED_LOCKFILES: [UnsupportedLockfile; 3] = [
 /// "Claude Code stops an install that runs longer and treats it as failed."
 pub const INSTALL_TIMEOUT_MS: f64 = 60_000.0;
 
+/// The supported lockfiles found at the plugin root, read.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+pub struct Lockfiles {
+    /// `bun.lock`.
+    #[serde(default, rename = "bun.lock")]
+    pub bun_lock: Option<LockfileFacts>,
+    /// `npm-shrinkwrap.json`.
+    #[serde(default, rename = "npm-shrinkwrap.json")]
+    pub npm_shrinkwrap: Option<LockfileFacts>,
+    /// `package-lock.json`.
+    #[serde(default, rename = "package-lock.json")]
+    pub package_lock: Option<LockfileFacts>,
+}
+
+impl Lockfiles {
+    /// `lockfiles[name]`.
+    #[must_use]
+    pub const fn get(&self, name: LockfileName) -> Option<&LockfileFacts> {
+        match name {
+            LockfileName::BunLock => self.bun_lock.as_ref(),
+            LockfileName::NpmShrinkwrap => self.npm_shrinkwrap.as_ref(),
+            LockfileName::PackageLock => self.package_lock.as_ref(),
+        }
+    }
+}
+
+/// The root `package.json` as given: a string (`'unreadable'`) when it is there but is not a
+/// JSON object.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ReadPackageJson {
+    /// `'unreadable'`.
+    Unreadable(String),
+    /// What the install reads of it.
+    Json(Box<PackageJson>),
+}
+
+/// What the plan reads (`NodeDepsInput`). Its `join`, a function of the host's, is read apart
+/// from the record by the export that needs it, so this holds the data alone.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeDepsInput {
+    /// Where the plugin's files lie.
+    pub origin: DepsOrigin,
+    /// The plugin's root directory: the version directory of a copy, or the source directory in
+    /// place.
+    pub plugin_root: String,
+    /// A folder of its own for the package manager, outside the plugin.
+    pub install_dir: String,
+    /// The root `package.json`: `None` when the plugin has none.
+    #[serde(default)]
+    pub package_json: Option<ReadPackageJson>,
+    /// The supported lockfiles found at the plugin root, read.
+    pub lockfiles: Lockfiles,
+    /// The lockfiles Claude Code does not install from, found at the plugin root.
+    pub other_lockfiles: Vec<UnsupportedLockfile>,
+    /// The package managers the user's PATH has.
+    pub available: Vec<PackageManager>,
+    /// The installing user's own default npm registry, if configured.
+    #[serde(default)]
+    pub default_registry: Option<String>,
+}
+
 /// Why the install is skipped, with the names each reason is about.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(
@@ -115,8 +190,8 @@ pub enum SkipWhy {
     LockfileFormat {
         /// The lockfile.
         lockfile: LockfileName,
-        /// Its `lockfileVersion`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// Its `lockfileVersion`; the key is written as `undefined` when there is none.
+        #[serde(default, serialize_with = "crate::js::value::serialize_or_undefined")]
         version: Option<f64>,
     },
     /// The package manager is not on PATH.
@@ -320,24 +395,10 @@ pub const fn skip_for(reason: BareReason) -> NodeDepsSkip {
     }
 }
 
-/// Whether the plan is a skip.
-#[must_use]
-pub const fn is_skip(plan: &NodeDepsPlan) -> bool {
-    matches!(plan, NodeDepsPlan::Skip(_))
-}
-
-/// A plan as `isSkip` reads it: its `action` alone.
-#[derive(Deserialize)]
-struct ActionOf {
-    action: String,
-}
-
 crate::registry::exports! {
     "marketplace/node-deps-types" {
         "DEPS_ORIGIN_OF_MODE" => ok deps_origin_table;
         "UNSUPPORTED_LOCKFILES" => ok || UNSUPPORTED_LOCKFILES;
         "INSTALL_TIMEOUT_MS" => ok || INSTALL_TIMEOUT_MS;
-        "skipFor" => ok |reason: BareReason| skip_for(reason);
-        "isSkip" => ok |plan: ActionOf| plan.action == "skip";
     }
 }

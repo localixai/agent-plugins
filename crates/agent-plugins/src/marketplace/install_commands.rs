@@ -5,13 +5,13 @@
 //! runs, and the Agent SDK"): pure plans of what the command opens, adds, asks and prints; the host
 //! runs them. The kit adds nothing to settings and prints nothing itself.
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use super::install_errors::{InstallSurface, PLUGIN_ACTIVE, RELOAD_TO_APPLY};
 use super::install_hosts::OFFICIAL_MARKETPLACE_ADD;
 use super::install_scopes::{ChosenScope, ScopedCommand, default_scope};
 use crate::format::issues::{PluginIssue, error};
-use crate::js::{JsValue, is_whitespace};
+use crate::js::is_whitespace;
 
 /// An install command as typed.
 #[derive(Clone, Debug, Deserialize)]
@@ -40,18 +40,6 @@ pub enum DeclaredIn {
     User,
 }
 
-/// The key is always there: `undefined` where the TypeScript writes `marketplaceDeclaredIn:
-/// undefined` or `scope: undefined`.
-fn or_undefined<T: Serialize, S: Serializer>(
-    value: &Option<T>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    match value {
-        Some(value) => value.serialize(serializer),
-        None => JsValue::Undefined.serialize(serializer),
-    }
-}
-
 /// What the command does.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,10 +55,10 @@ pub struct InstallCommandPlan {
     /// "Claude Code shows the source it resolved and asks you to confirm before adding it."
     pub confirms_marketplace: bool,
     /// A marketplace the shell adds "is declared in your user settings even when you pass `--scope project`".
-    #[serde(serialize_with = "or_undefined")]
+    #[serde(serialize_with = "crate::js::value::serialize_or_undefined")]
     pub marketplace_declared_in: Option<DeclaredIn>,
     /// The scope of the install; `undefined` in a session, where the panel asks.
-    #[serde(serialize_with = "or_undefined")]
+    #[serde(serialize_with = "crate::js::value::serialize_or_undefined")]
     pub scope: Option<ChosenScope>,
     /// A marketplace is added.
     pub adds_marketplace: bool,
