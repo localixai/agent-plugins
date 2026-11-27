@@ -1,4 +1,4 @@
-//! Port of `src/settings/permissions/read.ts`, switched.
+//! Ported from `src/settings/permissions/read.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Reading the `permissions` block of one settings source. Claude Code "repairs the `permissions`
 //! ... blocks per field instead of dropping them whole" (managed-settings.md, "Keys that fail
@@ -263,15 +263,6 @@ pub fn permissions_block(value: &JsValue, at: &RepairAt) -> Repaired {
 #[must_use]
 pub fn disable_value(value: &JsValue, at: &RepairAt) -> Repaired {
     lock_value(value, at, &at.key)
-}
-
-crate::registry::exports! {
-    "settings/permissions/read" {
-        "flagValue" => ok |raw: JsValue, at: RepairAt, label: String, restrictive: bool|
-            flag_value(&raw, &at, &label, restrictive);
-        "permissionsBlock" => ok |value: JsValue, at: RepairAt| permissions_block(&value, &at);
-        "disableValue" => ok |value: JsValue, at: RepairAt| disable_value(&value, &at);
-    }
 }
 
 #[cfg(test)]

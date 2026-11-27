@@ -35,6 +35,5 @@ pub fn start_notices(facts: &NoticeFacts) -> Vec<&'static str> {
 crate::registry::exports! {
     "settings/permissions/start-notices" {
         "HIPAA_AUTO_NOTICE" => ok || HIPAA_AUTO_NOTICE;
-        "startNotices" => ok |facts: NoticeFacts| start_notices(&facts);
     }
 }

@@ -2,6 +2,7 @@
 
 pub mod closed;
 pub mod hooks;
+pub mod kinds;
 pub mod lists;
 pub mod network;
 pub mod support;

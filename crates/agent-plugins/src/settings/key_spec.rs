@@ -25,11 +25,11 @@ use crate::settings::value_spec::{AdminTier, ValueSpec, spec};
 pub struct KeySpec {
     /// The value row.
     pub spec: ValueSpec,
-    /// The repair of `src/settings/repair/kinds.ts` the key's invalid value gets.
+    /// The repair of `settings::repair::kinds` the key's invalid value gets.
     pub repair: RepairKind,
 }
 
-/// `RepairKind` of `src/settings/repair/kinds.ts`: what to do with a value that does not have the
+/// `RepairKind` of `settings::repair::kinds`: what to do with a value that does not have the
 /// type its key documents. Declared here, its first use in the core.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -358,7 +358,6 @@ fn spec_rows() -> IndexMap<&'static str, SpecRow> {
 
 crate::registry::exports! {
     "settings/key-spec" {
-        "scopeCarries" => ok |scope: PolicyScope, key: String| scope_carries(scope, &key);
         "admits" => ok |key: String, scope: PolicyScope, value: JsValue| admits(&key, scope, &value);
         "KEY_SPECS" => ok || key_spec_rows().into_iter().collect::<IndexMap<_, _>>();
         "SPECS" => ok || spec_rows().into_iter().collect::<IndexMap<_, _>>();

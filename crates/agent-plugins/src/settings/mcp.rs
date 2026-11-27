@@ -1,9 +1,12 @@
 //! Layer 4: the MCP policy, how provided servers match, connect and read
 //! (`src/settings/mcp/` in the npm package).
 
+pub mod allow_deny;
+pub mod approvals;
 pub mod candidates;
 pub mod command_match;
 pub mod entries;
+pub mod entry_env;
 pub mod lists;
 pub mod load_settings;
 pub mod managed;

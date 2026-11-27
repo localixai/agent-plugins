@@ -2,4 +2,5 @@
 //! (`src/settings/workflows/` in the npm package).
 
 pub mod enablement;
+pub mod keyword;
 pub mod size;

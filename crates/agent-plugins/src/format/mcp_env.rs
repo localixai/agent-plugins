@@ -65,14 +65,6 @@ impl ReadsAsEmpty for Callback {
 pub static BRACED_REFERENCE: LazyLock<Option<Regex>> =
     LazyLock::new(|| Regex::new(r"\$\{([^{}]*)\}").ok());
 
-/// `BRACED_REFERENCE` as the wrapper's `RegExp`.
-fn braced_reference_regexp() -> crate::registry::RegExp {
-    crate::registry::RegExp {
-        source: r"\$\{([^{}]*)\}".to_owned(),
-        flags: "g".to_owned(),
-    }
-}
-
 /// Each `${...}` of `text`: its byte range and what is between the braces.
 #[must_use]
 pub fn braced_references(text: &str) -> Vec<(std::ops::Range<usize>, &str)> {
@@ -228,11 +220,6 @@ pub use server::{
 
 crate::registry::exports! {
     "format/mcp-env" {
-        "BRACED_REFERENCE" => ok braced_reference_regexp;
-        "isVariableName" => ok |text: String| is_variable_name(&text);
-        "splitDefault" => ok |inner: String| split_default(&inner);
-        "resolveEnvReference" => async ok |reference: EnvReference, lookup: Callback, reads_as_empty: Option<Callback>|
-            resolve_env_reference(&reference, &lookup, reads_as_empty.as_ref().map(|f| f as &dyn ReadsAsEmpty)).await;
         "expandEnvText" => async ok |text: String, lookup: Callback, reads_as_empty: Option<Callback>|
             expand_env_text(&text, &lookup, reads_as_empty.as_ref().map(|f| f as &dyn ReadsAsEmpty)).await;
         "expandMcpServer" => async ok |name: String, server: JsValue, lookup: Callback, options: Option<McpExpansionOptions>|

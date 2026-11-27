@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/values.ts`, switched.
+//! Ported from `src/settings/repair/values.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The repairs of the plain values: a Boolean, a lock, a text, an object, and the maps of plugins,
 //! marketplaces and skills.
@@ -238,21 +238,6 @@ pub fn workflow_size(value: &JsValue, at: &RepairAt) -> Repaired {
                 WORKFLOW_SIZES.join(", ")
             ),
         )
-    }
-}
-
-crate::registry::exports! {
-    "settings/repair/values" {
-        "boolean" => ok |value: JsValue, at: RepairAt| boolean(&value, &at);
-        "lockBoolean" => ok |value: JsValue, at: RepairAt| lock_boolean(&value, &at);
-        "hooksSwitch" => ok |value: JsValue, at: RepairAt| hooks_switch(&value, &at);
-        "string" => ok |value: JsValue, at: RepairAt| string(&value, &at);
-        "record" => ok |value: JsValue, at: RepairAt| record(&value, &at);
-        "pluginOnly" => ok |value: JsValue, at: RepairAt| plugin_only(&value, &at);
-        "enabledPlugins" => ok |value: JsValue, at: RepairAt| enabled_plugins(&value, &at);
-        "marketplaceMap" => ok |value: JsValue, at: RepairAt| marketplace_map(&value, &at);
-        "skillOverrides" => ok |value: JsValue, at: RepairAt| skill_overrides(&value, &at);
-        "workflowSize" => ok |value: JsValue, at: RepairAt| workflow_size(&value, &at);
     }
 }
 

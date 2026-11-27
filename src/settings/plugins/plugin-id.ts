@@ -23,11 +23,6 @@ export const isPluginId = (text: string): text is PluginId => call('isPluginId',
 
 export type IdForms = readonly [current: PluginId, previous: PluginId];
 
-export const agentsMdIdForms: IdForms = call('agentsMdIdForms');
-
 export const guardIdForms: IdForms = call('guardIdForms');
-
-export const spellingsOf = (registry: readonly IdForms[], id: string): readonly string[] =>
-  call('spellingsOf', registry, id);
 
 export const isGuardPluginId = (id: string): boolean => call('isGuardPluginId', id);

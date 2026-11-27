@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/hooks.ts`, switched.
+//! Ported from `src/settings/repair/hooks.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `hooks` of a settings file, read with the hooks reader so a settings file and a plugin's
 //! `hooks.json` agree on what loads.
@@ -118,10 +118,4 @@ pub fn hooks(value: &JsValue, at: &RepairAt) -> Repaired {
         value_of(read_hooks_settings(&surviving, HooksReadOptions::default()).hooks),
         issues,
     )
-}
-
-crate::registry::exports! {
-    "settings/repair/hooks" {
-        "hooks" => ok |value: JsValue, at: RepairAt| hooks(&value, &at);
-    }
 }

@@ -20,35 +20,6 @@ const call = coreModule('format/mcp-env');
 /** The environment as a function: a name to its value, `undefined` when it is unset. */
 export type EnvLookup = (name: string) => string | undefined;
 
-/** Every `${...}` in a text; the group is what is between the braces. */
-export const BRACED_REFERENCE: RegExp = call('BRACED_REFERENCE');
-
-export const isVariableName = (text: string): boolean => call('isVariableName', text);
-
-/** `NAME` or `NAME:-default`. */
-export const splitDefault = (inner: string): { name: string; fallback: string | undefined } =>
-  call('splitDefault', inner);
-
-export interface EnvReferenceResolution {
-  readonly text: string;
-  /** True when the variable is unset with no default: `text` is the `${VAR}` as written. */
-  readonly missing: boolean;
-  /** True when a covered credential variable the environment has set read as empty. */
-  readonly credentialRead: boolean;
-}
-
-/**
- * What one reference becomes. An empty string counts as set (mcp.md, "Variables set to an empty
- * string"): the default is for an unset variable only. A name `readsAsEmpty` covers is empty whether
- * or not it is set and its default is ignored, with no warning (mcp.md, "Credential variables that
- * read as empty").
- */
-export const resolveEnvReference = (
-  reference: { readonly name: string; readonly fallback: string | undefined },
-  lookup: EnvLookup,
-  readsAsEmpty?: (name: string) => boolean,
-): EnvReferenceResolution => call('resolveEnvReference', reference, lookup, readsAsEmpty);
-
 export interface EnvExpansion {
   readonly text: string;
   /** Variables left as written because they are unset and have no default, once each. */

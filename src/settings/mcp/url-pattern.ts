@@ -19,14 +19,3 @@ const call = coreModule('settings/mcp/url-pattern');
 
 export const urlPatternMatches = (pattern: string, url: string): boolean =>
   call('urlPatternMatches', pattern, url);
-
-/**
- * Whether a `${VAR}` reference of an entry written as `template` sits in the scheme, host or path: the
- * "expansion that would change a URL entry's scheme, host, or path scope" that makes an allowlist
- * entry ignored (managed-mcp.md, "Environment variables in `serverCommand` and `serverUrl` entries").
- * A reference in the port or anywhere else leaves the scope as written. Judgment (spec/judgments.md):
- * the docs name the three parts without saying how an expansion "would change" one, so a reference
- * in any of them counts, and an entry that does not parse around its references (`${BASE}/*`) counts.
- */
-export const referenceInUrlScope = (template: string): boolean =>
-  call('referenceInUrlScope', template);

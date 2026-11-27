@@ -72,9 +72,7 @@ crate::registry::exports! {
     "settings/plugins/plugin-id" {
         "parsePluginId" => ok |text: String| parse_plugin_id(&text);
         "isPluginId" => ok |text: String| is_plugin_id(&text);
-        "agentsMdIdForms" => ok || AGENTS_MD_ID_FORMS;
         "guardIdForms" => ok || GUARD_ID_FORMS;
-        "spellingsOf" => ok |registry: Vec<[String; 2]>, id: String| spellings_of(&registry, &id);
         "isGuardPluginId" => ok |id: String| is_guard_plugin_id(&id);
     }
 }

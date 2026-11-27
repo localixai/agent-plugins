@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/closed.ts`, switched.
+//! Ported from `src/settings/repair/closed.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The repairs of the keys that have their own fallback (managed-settings.md, "Keys that fail
 //! closed", the table): in the policy tier an unreadable value reads as the fallback the table
@@ -134,15 +134,4 @@ pub fn gateway_networks(value: &JsValue, at: &RepairAt) -> Repaired {
 #[must_use]
 pub const fn as_written(value: JsValue) -> Repaired {
     kept(value, Vec::new())
-}
-
-crate::registry::exports! {
-    "settings/repair/closed" {
-        "providerAllowlist" => ok |value: JsValue, at: RepairAt| provider_allowlist(&value, &at);
-        "matchMode" => ok |value: JsValue, at: RepairAt| match_mode(&value, &at);
-        "modelDenylist" => ok |value: JsValue, at: RepairAt| model_denylist(&value, &at);
-        "orgUuid" => ok |value: JsValue, at: RepairAt| org_uuid(&value, &at);
-        "gatewayNetworks" => ok |value: JsValue, at: RepairAt| gateway_networks(&value, &at);
-        "asWritten" => ok |value: JsValue| as_written(value);
-    }
 }

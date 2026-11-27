@@ -1,4 +1,4 @@
-//! Port of `src/settings/general/closed-fields.ts`, switched.
+//! Ported from `src/settings/general/closed-fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `worktree` and `attribution` blocks of a managed source, repaired per field instead of
 //! dropped whole (managed-settings.md, "Keys that fail closed": "Claude Code repairs the
@@ -138,13 +138,6 @@ pub fn worktree(value: &JsValue, at: &RepairAt) -> Repaired {
 #[must_use]
 pub fn attribution(value: &JsValue, at: &RepairAt) -> Repaired {
     block_check(value, at, attribution_field, true)
-}
-
-crate::registry::exports! {
-    "settings/general/closed-fields" {
-        "worktree" => ok |value: JsValue, at: RepairAt| worktree(&value, &at);
-        "attribution" => ok |value: JsValue, at: RepairAt| attribution(&value, &at);
-    }
 }
 
 #[cfg(test)]

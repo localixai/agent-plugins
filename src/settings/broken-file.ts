@@ -5,9 +5,6 @@ import type { PolicyScope } from './layers.ts';
 
 const call = coreModule('settings/broken-file');
 
-/** How a report names a source (settings.md, "Settings files and who they affect"). */
-export const SCOPE_LABEL: { readonly [S in PolicyScope]: string } = call('SCOPE_LABEL');
-
 /**
  * Whether a broken source stops Claude Code (errors.md, "Managed settings document could not be
  * parsed": it "exits with code 1 at startup instead of running without the policy the document

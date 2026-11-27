@@ -1,4 +1,4 @@
-//! Port of `src/settings/general/global-config.ts`, switched.
+//! Ported from `src/settings/general/global-config.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The keys whose Scope is `Global config` in the settings index (settings-reference.md,
 //! "Settings index"): they "apply only from `~/.claude.json`", so a settings file, `--settings`
@@ -21,9 +21,3 @@ pub const GLOBAL_CONFIG_KEYS: [&str; 12] = [
     "prStatusFooterEnabled",
     "teammateDefaultModel",
 ];
-
-crate::registry::exports! {
-    "settings/general/global-config" {
-        "GLOBAL_CONFIG_KEYS" => ok || GLOBAL_CONFIG_KEYS;
-    }
-}

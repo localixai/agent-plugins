@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/support.ts`, switched.
+//! Ported from `src/settings/repair/support.ts`; only the core uses it now, so it has no wrapper.
 
 use serde::{Deserialize, Serialize};
 
@@ -203,17 +203,4 @@ pub fn strip_invalid_now(
         entries: Vec::new(),
         issues: Vec::new(),
     })
-}
-
-crate::registry::exports! {
-    "settings/repair/support" {
-        "where" => ok |at: RepairAt, field: Option<String>| where_(&at, field.as_deref().unwrap_or(""));
-        "kept" => ok |value: JsValue, issues: Option<Vec<PluginIssue>>| kept(value, issues.unwrap_or_default());
-        "note" => ok |at: RepairAt, field: String, message: String| note(&at, &field, &message);
-        "dropped" => ok |at: RepairAt, reason: String| dropped(&at, &reason);
-        "mustBe" => ok |at: RepairAt, expected: String| must_be(&at, &expected);
-        "presentButInvalid" => ok |at: RepairAt, effect: String, field: Option<String>| present_but_invalid(&at, &effect, field.as_deref().unwrap_or(""));
-        "stripInvalid" => async ok |list: Vec<JsValue>, at: RepairAt, read: Callback, reason: String|
-            strip_invalid(&list, &at, &read, &reason).await;
-    }
 }
