@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The saved workflows' scan, the theme and workflow readers of a plugin folder, the
+  `strictPluginOnlyCustomization` locks, the permission rule lists, the `command` source's
+  re-runs, the settings files' locations and who makes them, the global git excludes file, the
+  managed exceptions to precedence and "Yes, and don't ask again"'s saved rule file run on the
+  core.
 - `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
   `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
   preparation and the specifier matchers run on the core.

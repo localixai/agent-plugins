@@ -91,12 +91,9 @@ async fn read_place(folders: &dyn FolderScan, place: &Place, signal: Option<&Sig
         .iter()
         .map(|file| (file.host_path.clone(), read_workflow_meta(&file.text)))
         .collect();
-    let loaded: Vec<(&String, &WorkflowMeta)> = metas
+    let (reserved, kept): (Vec<(&String, &WorkflowMeta)>, Vec<_>) = metas
         .iter()
         .filter_map(|(path, read)| read.meta.as_ref().map(|meta| (path, meta)))
-        .collect();
-    let (reserved, kept): (Vec<_>, Vec<_>) = loaded
-        .into_iter()
         .partition(|(_, meta)| reserved_namespace(&meta.name).is_some());
     let found = kept
         .into_iter()

@@ -12,6 +12,7 @@ pub mod general;
 pub mod hooks;
 pub mod host_switches;
 pub mod layers;
+pub mod locations;
 pub mod managed;
 pub mod marketplaces;
 pub mod mcp;

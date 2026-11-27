@@ -80,6 +80,5 @@ pub fn default_folder_ignored(folder: &str, key: &str) -> String {
 crate::registry::exports! {
     "format/messages" {
         "pathNotFound" => ok |component: String, path: String| path_not_found(&component, &path);
-        "missingPath" => ok |component: String, path: String| missing_path(&component, &path);
     }
 }
