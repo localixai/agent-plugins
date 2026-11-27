@@ -64,6 +64,13 @@
   are a skill's `paths` gate and a memory rule's, a skill's `${CLAUDE_*}` variables and argument
   substitution, the binding of a `!` command's arguments and the text its shell receives, and the
   resolution of a plugin's MCP server (`resolveMcpServer`).
+- The skills folders' scan runs on the core from end to end (`scanFolders`, `scanNested`,
+  `scanSkillContainer`, `resolveFolderSkills`, `scopeFilePath`), and so do the agents catalog's
+  scan, resolution and spawn checks (`scanAgents`, `resolveAgents`, `resolveSubagentType`,
+  `spawnableAgents`, `spawnRefusal`, `spawnDepthLimit`, `nestingAt`, `namedSubagent`) and the
+  manifest's `commands` map (`loadCommandEntries`, `commandEntryGrants`). A scanned entry's
+  `readBody` is the core's own reader: it crosses back as the same function, so a body is read in
+  one call through the folder the scan opened.
 - A skill or command is expanded on the core (`expandSkill`): its placeholders cut, arguments and
   `${CLAUDE_*}` substituted, its `!` commands planned and run or left as written, its grants,
   hooks and file references.

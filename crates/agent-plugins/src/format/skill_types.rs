@@ -3,10 +3,16 @@
 //! The model of a skill and of a command (skills.md, "Configure skills"; plugins/components.md,
 //! "Skills" and "Commands"). A command file is "the older format" and "supports the same
 //! frontmatter" as a skill (skills.md, "Choose where skills load"), so both carry one
-//! `InvocableFrontmatter`. The core holds the two constants; the types stay in the TypeScript.
+//! `InvocableFrontmatter`. The core holds the two constants and the `BodyReader`; the types stay in
+//! the TypeScript.
+
+use std::sync::Arc;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+
+use crate::ports::{BoxFuture, Signal};
+use crate::registry::{Callback, Function, Own};
 
 /// The shells `shell` accepts (skills.md, frontmatter reference: "`bash` (default) or `powershell`").
 pub const SKILL_SHELLS: &[&str] = &["bash", "powershell"];
@@ -116,6 +122,109 @@ pub fn origin_traits() -> IndexMap<&'static str, OriginTraits> {
             },
         ),
     ])
+}
+
+/// Reads the body of a skill or command the catalog holds without it (`BodyReader`). The read
+/// happens when it is called, through the host's file port, and nothing is memoized: a body edited
+/// since the scan is what the call returns (skills.md, "Edit a skill during a session"). It is
+/// `None` when the file is gone or no longer loads as a skill, and it rejects with the port's own
+/// error when the host's port refuses the read.
+///
+/// The TypeScript's function is one of two here: the host's own (a `HostSkill`'s, a test's), a
+/// [`Callback`]; or the core's (a scan's, a session's), which crosses as an async function of the
+/// core's and, given back, is the core's own object again.
+#[derive(Clone)]
+pub enum BodyReader {
+    /// The host's function.
+    Host(Callback),
+    /// The core's reader, one object however often it crosses.
+    Core(Arc<CoreBody>),
+}
+
+/// A reader of the core's: what calling a core [`BodyReader`] does.
+pub trait ReadBody: Send + Sync + 'static {
+    /// The body as it is now.
+    fn read_body<'a>(&'a self, signal: Option<&'a Signal>) -> BoxFuture<'a, Option<String>>;
+}
+
+/// A body known already (a session's own entry): the reader answers it.
+#[derive(Debug)]
+pub struct KnownBody(pub String);
+
+impl ReadBody for KnownBody {
+    fn read_body<'a>(&'a self, _signal: Option<&'a Signal>) -> BoxFuture<'a, Option<String>> {
+        Box::pin(std::future::ready(Some(self.0.clone())))
+    }
+}
+
+impl BodyReader {
+    /// A reader of the core's.
+    pub fn core(reader: impl ReadBody) -> Self {
+        Self::Core(Arc::new(CoreBody(Box::new(reader))))
+    }
+
+    /// The body as the reader gives it now.
+    pub async fn read(&self, signal: Option<&Signal>) -> Option<String> {
+        match self {
+            Self::Host(callback) => {
+                let args = signal
+                    .and_then(|signal| crate::js::value::to_js_value(signal).ok())
+                    .map_or_else(Vec::new, |signal| vec![signal]);
+                callback.call(args).await
+            }
+            Self::Core(reader) => reader.0.read_body(signal).await,
+        }
+    }
+}
+
+impl std::fmt::Debug for CoreBody {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("CoreBody")
+    }
+}
+
+impl std::fmt::Debug for BodyReader {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Host(callback) => formatter.debug_tuple("Host").field(callback).finish(),
+            Self::Core(_) => formatter.write_str("Core"),
+        }
+    }
+}
+
+/// A core reader as the host holds it: a function whose async `call` reads.
+pub struct CoreBody(Box<dyn ReadBody>);
+
+crate::registry::methods! {
+    CoreBody {
+        "call" => async ok |this, signal: Option<Signal>| this.0.read_body(signal.as_ref()).await;
+    }
+}
+
+impl Serialize for BodyReader {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Host(callback) => callback.serialize(serializer),
+            Self::Core(reader) => Function::new_async(Arc::clone(reader)).serialize(serializer),
+        }
+    }
+}
+
+/// A reader as it crosses back: the core's own, or the host's function.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Crossed {
+    Core(Own<CoreBody>),
+    Host(Callback),
+}
+
+impl<'de> Deserialize<'de> for BodyReader {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(match Crossed::deserialize(deserializer)? {
+            Crossed::Core(own) => Self::Core(own.0),
+            Crossed::Host(callback) => Self::Host(callback),
+        })
+    }
 }
 
 crate::registry::exports! {

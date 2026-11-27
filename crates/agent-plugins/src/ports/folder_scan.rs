@@ -59,5 +59,6 @@ pub trait FolderScan: Send + Sync {
         &'a self,
         start: &'a str,
         touched: &'a str,
+        signal: Option<&'a Signal>,
     ) -> BoxFuture<'a, Vec<String>>;
 }

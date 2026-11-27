@@ -68,6 +68,14 @@ impl std::fmt::Debug for Handle {
 struct Handles {
     next: u32,
     held: BTreeMap<u32, Arc<dyn Methods>>,
+    /// The number each async function's object is held under, by the object's address: the same
+    /// object crosses as the same number, so the host gives back its own function.
+    shared: BTreeMap<usize, u32>,
+}
+
+/// The address of a held object, for `Handles::shared`.
+fn address(object: &Arc<dyn Methods>) -> usize {
+    Arc::as_ptr(object).cast::<()>() as usize
 }
 
 thread_local! {
@@ -76,6 +84,23 @@ thread_local! {
 
 fn with_handles<R>(body: impl FnOnce(&mut Handles) -> R) -> R {
     HANDLES.with(|handles| body(&mut handles.lock().unwrap_or_else(PoisonError::into_inner)))
+}
+
+/// The number `object` is already held under as an async function, or a new one.
+fn keep_shared(object: &Arc<dyn Methods>) -> u32 {
+    let held = with_handles(|handles| {
+        let number = *handles.shared.get(&address(object))?;
+        let same = handles
+            .held
+            .get(&number)
+            .is_some_and(|it| Arc::ptr_eq(it, object));
+        same.then_some(number)
+    });
+    held.unwrap_or_else(|| {
+        let number = keep(object);
+        with_handles(|handles| handles.shared.insert(address(object), number));
+        number
+    })
 }
 
 /// Keeps `object` under a new number, which it answers.
@@ -91,13 +116,23 @@ fn keep(object: &Arc<dyn Methods>) -> u32 {
 /// A function of the core's that the host calls later, such as a timer's `fire`: an object whose
 /// one sync method is `call`, crossing as `{"$call": h}`, which the host makes a function that
 /// calls `<h>#call` (`src/wasm/wire.ts`). It is held as a handle is, until the host releases it.
+/// One whose `call` is async (a skill's `readBody`) crosses as `{"$asyncCall": h}`: the host's
+/// function returns a promise, and given back it crosses as `{"$handle": h}`, the core's own
+/// object again (an [`Own`]), as an `$own` handle does.
 #[derive(Clone)]
-pub struct Function(Arc<dyn Methods>);
+pub struct Function(Arc<dyn Methods>, bool);
 
 impl Function {
     /// The object as a function; its sync method `call` is what calling it does.
     pub fn new(object: impl Methods) -> Self {
-        Self(Arc::new(object))
+        Self(Arc::new(object), false)
+    }
+
+    /// The object as a function that returns a promise; its async method `call` is what calling
+    /// it does. The same object crosses as the same number while the host holds it, and the host
+    /// answers its same function (`src/wasm/wire.ts`), bound to the call that first made it.
+    pub fn new_async<T: Methods>(object: Arc<T>) -> Self {
+        Self(object, true)
     }
 }
 
@@ -108,10 +143,14 @@ impl std::fmt::Debug for Function {
 }
 
 impl Serialize for Function {
-    /// Keeps the object under a new number, which it writes as `{"$call": h}`.
+    /// Keeps the object under a new number, which it writes as `{"$call": h}` (`{"$asyncCall": h}`).
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(Some(1))?;
-        map.serialize_entry("$call", &keep(&self.0))?;
+        if self.1 {
+            map.serialize_entry("$asyncCall", &keep_shared(&self.0))?;
+        } else {
+            map.serialize_entry("$call", &keep(&self.0))?;
+        }
         map.end()
     }
 }
@@ -138,7 +177,16 @@ pub(crate) fn start(handle: u32, method: &str, args: &[JsValue]) -> Option<Start
 /// Forgets the object held under `handle` (a call of one of its methods already started keeps
 /// it until it ends); whether there was one.
 pub fn release(handle: u32) -> bool {
-    with_handles(|handles| handles.held.remove(&handle).is_some())
+    with_handles(|handles| {
+        let Some(object) = handles.held.remove(&handle) else {
+            return false;
+        };
+        let key = address(&object);
+        if handles.shared.get(&key) == Some(&handle) {
+            handles.shared.remove(&key);
+        }
+        true
+    })
 }
 
 /// A handle of the core's the host gave back, `{"$handle": h}`: the object held under `h`, of type
