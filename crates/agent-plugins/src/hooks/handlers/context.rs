@@ -85,6 +85,9 @@ pub struct RunPortsRead {
     /// Time: an `mcp_tool` hook subtracts what it waited from its `timeout`.
     #[serde(default)]
     pub clock: Option<Port>,
+    /// `prompt` and `agent` hooks; absent, a hook of either type does not run.
+    #[serde(default)]
+    pub models: Option<Port>,
 }
 
 /// The members of a `RunContext` the ported handlers read.

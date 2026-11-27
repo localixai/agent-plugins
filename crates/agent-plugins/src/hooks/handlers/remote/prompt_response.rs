@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/remote/prompt-response.ts`, switched.
+//! Ported from `src/hooks/handlers/remote/prompt-response.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The answer of a `prompt` or `agent` hook (hooks.md, "Response schema"):
 //! `{ "ok": true | false, "reason": "...", "impossible": true | false }`. `reason` is "required when
@@ -130,13 +130,6 @@ pub fn response_instruction(options: VerdictOptions) -> String {
         );
     }
     lines.join(" ")
-}
-
-crate::registry::exports! {
-    "hooks/handlers/remote/prompt-response" {
-        "parseVerdict" => ok |text: String, options: VerdictOptions| parse_verdict(&text, options);
-        "responseInstruction" => ok |options: VerdictOptions| response_instruction(options);
-    }
 }
 
 #[cfg(test)]

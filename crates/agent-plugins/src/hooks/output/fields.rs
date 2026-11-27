@@ -1,6 +1,4 @@
-//! The core's counterpart of `src/hooks/output/fields.ts` at sha256:56c9c804cdbd, which stays TypeScript:
-//! guards over a host value, which crossing the boundary would copy whole (docs/RUST.md, "What
-//! stays TypeScript").
+//! Ported from `src/hooks/output/fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Reading a validated `hookSpecificOutput` without a cast: the schema already checked every field,
 //! so these only look a field up and narrow it.

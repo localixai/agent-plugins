@@ -1,10 +1,3 @@
-import { pluginNameOf } from '../format/marketplace/ids.ts';
-import type { MarketplaceSource } from '../format/marketplace/types.ts';
-import { notCached, PLUGINS_CHANGED } from './install-errors.ts';
-import type { ErrorsTabEntry } from './install-messages.ts';
-import type { InstallRecord } from './installed-plugins.ts';
-import { sameMarketplaceSource, type KnownMarketplaces } from './known-marketplaces.ts';
-
 /**
  * How far a plugin got (plugins/loading.md, "Check which stage a plugin reached"; plugins/
  * overview.md, "Make an installed plugin available in your session"): an `enabledPlugins` entry is
@@ -12,7 +5,17 @@ import { sameMarketplaceSource, type KnownMarketplaces } from './known-marketpla
  * holds its files), and **loaded** in the running session, which "changes to settings or to disk
  * don't reach ... until you run `/reload-plugins` or start a new session". Pure over facts the host
  * reads: the settings, the records, which install paths exist, and the set the session loaded.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/stage_report.rs`,
+ * docs/RUST.md).
  */
+import type { MarketplaceSource } from '../format/marketplace/types.ts';
+import type { ErrorsTabEntry } from './install-messages.ts';
+import type { InstallRecord } from './installed-plugins.ts';
+import type { KnownMarketplaces } from './known-marketplaces.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('marketplace/stage-report');
 
 export interface StageFacts {
   /** `<name>@<marketplace>`. */
@@ -52,50 +55,7 @@ export interface StageReport {
   readonly problem?: ErrorsTabEntry;
 }
 
-type Reached = Pick<StageReport, 'declared' | 'recorded' | 'cached' | 'loaded' | 'reload'>;
-
-/** The furthest stage first: a plugin is at the first stage whose test it passes. */
-const STAGES: readonly (readonly [Stage, (reached: Reached) => boolean])[] = [
-  ['loaded', (report) => report.loaded],
-  ['fetched', (report) => report.cached],
-  ['declared', (report) => report.declared],
-];
-
-const nameOf = pluginNameOf;
-
-const LAYERS: readonly (readonly [Layer, (reached: Reached) => boolean])[] = [
-  ['settings', (report) => !report.declared],
-  ['disk', (report) => !report.cached],
-  ['session', (report) => !report.loaded],
-];
-
-/** `Plugin "<name>" not cached at <path>`: an enabled plugin whose record points at a directory that is gone. */
-function missingCache(facts: StageFacts, reached: Reached): ErrorsTabEntry | undefined {
-  const first = facts.records[0];
-  const lost = facts.enabled && reached.recorded && !reached.cached;
-  return lost && first !== undefined ? notCached(nameOf(facts.id), first.installPath) : undefined;
-}
-
-export function stageReport(facts: StageFacts): StageReport {
-  const inPlace = facts.inPlace === true;
-  const cached = inPlace || facts.records.some((one) => facts.existing.has(one.installPath));
-  const base: Reached = {
-    declared: facts.enabled,
-    recorded: inPlace || facts.records.length > 0,
-    cached,
-    loaded: facts.loaded,
-    reload: (facts.enabled && cached) !== facts.loaded,
-  };
-  const missing = LAYERS.filter(([, absent]) => absent(base)).map(([layer]) => layer);
-  const problem = missingCache(facts, base);
-  return {
-    ...base,
-    stage: STAGES.find(([, reached]) => reached(base))?.[0] ?? 'none',
-    missing,
-    available: missing.length === 0,
-    ...(problem === undefined ? {} : { problem }),
-  };
-}
+export const stageReport = (facts: StageFacts): StageReport => call('stageReport', facts);
 
 // ---- after the session starts ----
 
@@ -124,31 +84,17 @@ export type StartupAction =
  * new source with `Plugins changed. Run /reload-plugins to activate.` Sources match as in
  * `sameMarketplaceSource`. A known marketplace that settings do not declare is not touched.
  */
-export function planMarketplaceStartup(
+export const planMarketplaceStartup = (
   declared: Readonly<Record<string, MarketplaceSource>>,
   known: KnownMarketplaces,
-): readonly StartupAction[] {
-  return Object.entries(declared).flatMap(([marketplace, source]): StartupAction[] => {
-    const existing = Object.hasOwn(known, marketplace) ? known[marketplace] : undefined;
-    if (existing === undefined) {
-      return [{ marketplace, action: 'clone', source, next: 'reload-and-download-enabled' }];
-    }
-    return sameMarketplaceSource(existing.source, source)
-      ? []
-      : [{ marketplace, action: 'refetch', source, next: 'notify', notice: PLUGINS_CHANGED }];
-  });
-}
+): readonly StartupAction[] => call('planMarketplaceStartup', declared, known);
 
 /**
  * The `/plugin` Errors tab entries after the start: an enabled plugin that neither the clone nor
  * the re-fetch brought in (`fetchedAfterStart`) and that has no usable cache directory shows
  * `Plugin "<name>" not cached at <path>`.
  */
-export function unresolvedAfterStart(
+export const unresolvedAfterStart = (
   plugins: readonly StageFacts[],
   fetchedAfterStart: ReadonlySet<string>,
-): readonly ErrorsTabEntry[] {
-  return plugins
-    .filter((one) => !fetchedAfterStart.has(one.id))
-    .flatMap((one) => stageReport(one).problem ?? []);
-}
+): readonly ErrorsTabEntry[] => call('unresolvedAfterStart', plugins, fetchedAfterStart);
