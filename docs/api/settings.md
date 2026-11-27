@@ -422,7 +422,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `RunningMode` | type | What `PermissionsPolicy.runningMode` returns: the mode a running session changes to, and its notice |
 | `runPolicyHelper` | function | Runs the helper with no arguments and `CLAUDE_CODE_VERSION` set, within `timeoutMs` counted from the file check (the check and the run share one budget) |
 | `runSubagentStatusLine` | function | Runs the selected `subagentStatusLine` once through the `CommandRunner` (`bash`, from `input.cwd`, the host's env, the input on stdin) and reads its rows; a run that does not exit 0 rewrites none |
-| `ScopeRule` | type | One of `SCOPE_RULES` |
+| `ScopeRule` | type | The files a key may come from, one of ten scope rules |
 | `ScopeTrust` | type | Whether the user trusts the folder a file of this scope belongs to (the host asks the dialog's record) |
 | `SDK_SETTING_SOURCES` | constant | The settings files an Agent SDK app chooses among with `settingSources` |
 | `SdkSettingSource` | type | One of `SDK_SETTING_SOURCES` |

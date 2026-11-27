@@ -21,4 +21,5 @@ pub mod sandbox_credentials;
 pub mod sandbox_fields;
 pub mod session_overrides;
 pub mod subagent_status_line;
+pub mod view;
 pub mod worktree_block;

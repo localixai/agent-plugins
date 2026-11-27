@@ -54,13 +54,3 @@ export interface KeyHolder<K extends SettingsKey> {
   readonly position: number;
   readonly value: NonNullable<ValueOf<K>>;
 }
-
-/**
- * Every layer of `ordered` (highest precedence first, as `orderedLayers` gives them) that sets `key`
- * to a value its scope admits. A layer that does not carry the key (the key's scope line, or the
- * `--add-dir` rule) is skipped even when the layer was built by hand rather than read.
- */
-export const holdersOf = <K extends SettingsKey>(
-  ordered: readonly PolicyLayer[],
-  key: K,
-): readonly KeyHolder<K>[] => call('holdersOf', ordered, key);

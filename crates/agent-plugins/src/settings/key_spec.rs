@@ -1,8 +1,8 @@
-//! The core's counterpart of `src/settings/key-spec.ts` at sha256:91699acc0564, which stays
-//! TypeScript: its rows hold functions (`merge.combine`, `admin.pinnedWhen`) that the package's
-//! `createPolicyView` (`src/settings/view.ts`) calls, so they cannot cross the boundary as data.
-//! The same rows, each function a Rust one, so the core asks a key's row, `admits` and
-//! `scopeCarries` without the TypeScript table.
+//! Port of `src/settings/key-spec.ts`, switched.
+//!
+//! One row per policy key. A row's functions (`merge.combine`, `admin.pinnedWhen`) are Rust ones
+//! the core's view calls (`settings/view.rs`); the package holds the rows as data (`KEY_SPECS`,
+//! `SPECS`, below).
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -11,11 +11,13 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
-use crate::settings::general::exceptions::{FALSE_FROM_ANY_SCOPE, TRUE_FROM_ANY_SCOPE};
+use crate::settings::general::exceptions::{
+    FALSE_FROM_ANY_SCOPE, ManagedException, TRUE_FROM_ANY_SCOPE,
+};
 use crate::settings::general::global_config::GLOBAL_CONFIG_KEYS;
 use crate::settings::general::rows::GENERAL_SPECS;
 use crate::settings::layers::PolicyScope;
-use crate::settings::merge::MERGES;
+use crate::settings::merge::{MERGES, MergeKind};
 use crate::settings::value_spec::{AdminTier, ValueSpec, spec};
 
 /// A policy key's row: its value row, and how an invalid value is repaired.
@@ -292,3 +294,73 @@ pub static SPECS: LazyLock<IndexMap<&'static str, &'static ValueSpec>> = LazyLoc
     let general = GENERAL_SPECS.iter().map(|(key, row)| (*key, row));
     policy.chain(general).collect()
 });
+
+/// A row as the package holds it: its data, without the functions the core calls (`combine`,
+/// `pinnedWhen`, `read`), which stay in the core.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SpecRow {
+    scopes: ScopeRule,
+    merge: MergeRow,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    repair: Option<RepairKind>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    exception: Option<&'static ManagedException>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    admin: Option<AdminRow>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<&'static [&'static str]>,
+}
+
+#[derive(Serialize)]
+struct MergeRow {
+    kind: MergeKind,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AdminRow {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    blocks_parent: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    owns: Option<bool>,
+}
+
+fn row_of(spec: &'static ValueSpec, repair: Option<RepairKind>) -> SpecRow {
+    SpecRow {
+        scopes: spec.scopes,
+        merge: MergeRow {
+            kind: spec.merge.kind,
+        },
+        repair,
+        exception: spec.exception.map(|rule| &**rule),
+        admin: spec.admin.as_ref().map(|admin| AdminRow {
+            blocks_parent: admin.blocks_parent,
+            owns: admin.owns,
+        }),
+        path: spec.path,
+    }
+}
+
+fn key_spec_rows() -> IndexMap<&'static str, SpecRow> {
+    KEY_SPECS
+        .iter()
+        .map(|(key, row)| (*key, row_of(&row.spec, Some(row.repair))))
+        .collect()
+}
+
+fn spec_rows() -> IndexMap<&'static str, SpecRow> {
+    let general = GENERAL_SPECS
+        .iter()
+        .map(|(key, row)| (*key, row_of(row, None)));
+    key_spec_rows().into_iter().chain(general).collect()
+}
+
+crate::registry::exports! {
+    "settings/key-spec" {
+        "scopeCarries" => ok |scope: PolicyScope, key: String| scope_carries(scope, &key);
+        "admits" => ok |key: String, scope: PolicyScope, value: JsValue| admits(&key, scope, &value);
+        "KEY_SPECS" => ok || key_spec_rows().into_iter().collect::<IndexMap<_, _>>();
+        "SPECS" => ok || spec_rows().into_iter().collect::<IndexMap<_, _>>();
+    }
+}

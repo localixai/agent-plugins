@@ -135,12 +135,7 @@ pub fn strictest_of(ladder: Vec<JsValue>, values: &[JsValue]) -> JsValue {
 
 crate::registry::exports! {
     "settings/general/exceptions" {
-        "TRUE_FROM_ANY_SCOPE" => ok || TRUE_FROM_ANY_SCOPE.clone();
-        "TRUE_FROM_USER_OR_FLAG" => ok || TRUE_FROM_USER_OR_FLAG.clone();
-        "FALSE_FROM_ANY_SCOPE" => ok || FALSE_FROM_ANY_SCOPE.clone();
         "LOWEST_CAP" => ok || LOWEST_CAP.clone();
-        "honorException" => ok |rule: ManagedException, winning: JsValue, honored: Vec<JsValue>|
-            honor_exception(&rule, winning, &honored);
         "strictestOf" => ok |ladder: Vec<JsValue>, values: Vec<JsValue>| strictest_of(ladder, &values);
     }
 }

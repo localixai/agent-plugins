@@ -86,6 +86,5 @@ pub async fn sync_decision_of(view: &dyn PolicyView, key: SyncKey) -> SyncDecisi
 crate::registry::exports! {
     "settings/plugins/sync-plugins" {
         "syncDecision" => async ok |view: Port| sync_decision(&view).await;
-        "syncDecisionOf" => async ok |view: Port, key: SyncKey| sync_decision_of(&view, key).await;
     }
 }

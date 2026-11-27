@@ -1,6 +1,10 @@
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/load_settings.rs`, docs/RUST.md). */
 import type { PolicyEnv } from '../context.ts';
 import type { PolicyLayer } from '../layers.ts';
-import { createPolicyView, type PolicyView } from '../view.ts';
+import type { PolicyView } from '../view.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/mcp/load-settings');
 
 /** The switches that decide what loads next to, or instead of, the MCP servers a user configured. */
 export interface McpLoadSettings {
@@ -32,14 +36,5 @@ export interface McpLoadFacts {
  * `allowClaudeInChromeWithManagedMcp` is "read ... only from those device sources". A `true` from
  * any holder applies (the rows' ladder) (spec/judgments.md for the combination of admin sources).
  */
-export function readMcpLoadSettings(view: PolicyView, facts: McpLoadFacts): McpLoadSettings {
-  const device = createPolicyView(facts.deviceManaged);
-  return {
-    allowAllClaudeAiMcps: view.get('allowAllClaudeAiMcps') === true,
-    allowClaudeInChromeWithManagedMcp: device.get('allowClaudeInChromeWithManagedMcp') === true,
-    disableClaudeAiConnectors:
-      view.get('disableClaudeAiConnectors') === true ||
-      facts.env.ENABLE_CLAUDEAI_MCP_SERVERS === 'false',
-    pluginOnlyMcp: facts.pluginOnlyMcp,
-  };
-}
+export const readMcpLoadSettings = (view: PolicyView, facts: McpLoadFacts): McpLoadSettings =>
+  call('readMcpLoadSettings', view, facts);

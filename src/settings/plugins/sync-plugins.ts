@@ -4,7 +4,6 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/settings/plugins/sync_plugins.rs`, docs/RUST.md).
  */
-import type { PolicyKey } from '../../protocol/settings-keys.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyView } from '../view.ts';
 
@@ -20,9 +19,6 @@ export interface SyncDecision {
   readonly moveToTrash: boolean;
 }
 
-/** The two keys that stop the claude.ai sync; they read the same way (settings.md, "Exceptions"). */
-export type SyncKey = Extract<PolicyKey, 'syncClaudeAiPlugins' | 'syncClaudeAiSkills'>;
-
 /**
  * Whether Claude Code syncs and loads the plugins of the claude.ai account. Only `false` counts: `true`
  * is the same as unset. A `false` the key's scope line admits (user, local, managed, `--settings`)
@@ -34,11 +30,3 @@ export type SyncKey = Extract<PolicyKey, 'syncClaudeAiPlugins' | 'syncClaudeAiSk
  * a higher file only stops the sync.
  */
 export const syncDecision = (view: PolicyView): SyncDecision => call('syncDecision', view);
-
-/**
- * The reading both sync keys share: `syncClaudeAiSkills` has the same scope line, the same
- * honored-only-`false` rule and the same move to the trash (settings-reference.md, skills.md "How
- * synced skills behave"), only into `~/.claude/skills/.trash/`.
- */
-export const syncDecisionOf = (view: PolicyView, key: SyncKey): SyncDecision =>
-  call('syncDecisionOf', view, key);

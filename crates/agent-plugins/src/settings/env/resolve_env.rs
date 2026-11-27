@@ -95,7 +95,7 @@ impl NameTest for HostMethod {
 }
 
 /// Why a settings value did not reach the session.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum NotApplied {
     /// A variable Claude Code ignores in `env`.
@@ -105,7 +105,7 @@ pub enum NotApplied {
 }
 
 /// The reasons beyond the ignored variables.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Skip {
     /// The launch environment sets it.
@@ -117,7 +117,7 @@ pub enum Skip {
 }
 
 /// A value left out, with the reason; the debug log names each one.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NotAppliedVariable {
     /// The variable.
     pub name: String,
@@ -128,7 +128,7 @@ pub struct NotAppliedVariable {
 }
 
 /// What the files come to, and the environments of the session.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvResolution {
     /// What the files come to, by variable: the highest file's value.

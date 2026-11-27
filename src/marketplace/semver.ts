@@ -11,10 +11,6 @@ import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('marketplace/semver');
 
-/** The version `text` names, spelled one way (`v2.1.100` is `2.1.100`), or `undefined` when it is no version. */
-export const normalizedVersion = (text: string): string | undefined =>
-  call('normalizedVersion', text);
-
 /**
  * Whether some version satisfies all of `ranges` (each valid), or `undefined` when there are too
  * many `||` alternatives to decide ("has version requirements too complex to intersect"). The

@@ -4,6 +4,8 @@
 pub mod candidates;
 pub mod command_match;
 pub mod entries;
+pub mod lists;
+pub mod load_settings;
 pub mod managed;
 pub mod managed_entry;
 pub mod managed_file;

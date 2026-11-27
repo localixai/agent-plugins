@@ -5,3 +5,4 @@ pub mod check_env;
 pub mod ignored_variables;
 pub mod resolve_env;
 pub mod settings_env;
+pub mod timing;
