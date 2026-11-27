@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-core/hooks.ts`, switched.
+//! Ported from `src/convert/to-core/hooks.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A core `hooks.json` from a Claude Code plugin's hooks (Agent Plugins Extended §18.4.3 item 4,
 //! J18.17): only `command` hooks on the five shared events convert, each through the hook adapter,
@@ -288,12 +288,5 @@ pub fn core_hooks_of(hooks: &HooksSettings, adapter: bool) -> CoreHooksPart {
         hooks: kept,
         adapted: parts.iter().any(|(_, part)| part.adapted),
         notes: parts.into_iter().flat_map(|(_, part)| part.notes).collect(),
-    }
-}
-
-crate::registry::exports! {
-    "convert/to-core/hooks" {
-        "CORE_HOOKS" => ok || CORE_HOOKS;
-        "coreHooksOf" => ok |hooks: HooksSettings, adapter: bool| core_hooks_of(&hooks, adapter);
     }
 }

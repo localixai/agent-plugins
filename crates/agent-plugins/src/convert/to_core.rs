@@ -4,5 +4,7 @@
 pub mod components;
 pub mod hook_matchers;
 pub mod hooks;
+pub mod index;
 pub mod manifest;
+pub mod mcp;
 pub mod skills;

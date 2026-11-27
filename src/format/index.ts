@@ -179,9 +179,11 @@ export {
   FIELD_READERS,
   SKILL_FIELDS,
   escapeAngleBrackets,
+  type FieldOutcome,
+  type FieldReader,
   type SkillField,
+  type SkillFieldValues,
 } from './skill-fields.ts';
-export type { FieldOutcome, FieldReader, SkillFieldValues } from './skill-field-readers.ts';
 export {
   SKILL_SHELLS,
   type BodyReader,

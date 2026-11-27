@@ -1,8 +1,3 @@
-import type { McpStdioServerConfig } from '../protocol/official.ts';
-import { credentialDebugLine, readsAsEmptyTowardRemote } from './credential-env.ts';
-import { error, warning, type PluginIssue } from './issues.ts';
-import { isRemoteMcpServer, type PluginMcpServer, type RemoteMcpServer } from './mcp-config.ts';
-
 /**
  * `${VAR}` and `${VAR:-default}` in an MCP server's `command`, `args`, `env`, `url` and `headers`
  * (mcp.md, "Environment variable expansion in `.mcp.json`"). Pure over a lookup function, so it
@@ -13,29 +8,30 @@ import { isRemoteMcpServer, type PluginMcpServer, type RemoteMcpServer } from '.
  * Grammar (judgment, shared with `loading/resolve/substitute`): a reference is `${` text `}` with no
  * braces inside; the default ends at the first `}` and nests nothing; the name is a shell variable
  * name, and anything else is left as written.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/mcp_env.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
+import type { PluginMcpServer } from './mcp-config.ts';
+
+const call = coreModule('format/mcp-env');
 
 /** The environment as a function: a name to its value, `undefined` when it is unset. */
 export type EnvLookup = (name: string) => string | undefined;
 
 /** Every `${...}` in a text; the group is what is between the braces. */
-export const BRACED_REFERENCE = /\$\{([^{}]*)\}/g;
+export const BRACED_REFERENCE: RegExp = call('BRACED_REFERENCE');
 
-const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-export const isVariableName = (text: string): boolean => VARIABLE_NAME.test(text);
+export const isVariableName = (text: string): boolean => call('isVariableName', text);
 
 /** `NAME` or `NAME:-default`. */
-export function splitDefault(inner: string): { name: string; fallback: string | undefined } {
-  const at = inner.indexOf(':-');
-  return at < 0
-    ? { name: inner, fallback: undefined }
-    : { name: inner.slice(0, at), fallback: inner.slice(at + 2) };
-}
+export const splitDefault = (inner: string): { name: string; fallback: string | undefined } =>
+  call('splitDefault', inner);
 
 /** The warning text for a reference that stayed as written (mcp.md, "Unset variables without a default"). */
 export const missingVariableMessage = (name: string): string =>
-  `Environment variable ${name} is not set and has no default`;
+  call('missingVariableMessage', name);
 
 export interface EnvReferenceResolution {
   readonly text: string;
@@ -51,21 +47,11 @@ export interface EnvReferenceResolution {
  * or not it is set and its default is ignored, with no warning (mcp.md, "Credential variables that
  * read as empty").
  */
-export function resolveEnvReference(
+export const resolveEnvReference = (
   reference: { readonly name: string; readonly fallback: string | undefined },
   lookup: EnvLookup,
   readsAsEmpty?: (name: string) => boolean,
-): EnvReferenceResolution {
-  const { name, fallback } = reference;
-  const value = lookup(name);
-  if (readsAsEmpty?.(name) === true) {
-    return { text: '', missing: false, credentialRead: value !== undefined };
-  }
-  const text = value ?? fallback;
-  return text === undefined
-    ? { text: `\${${name}}`, missing: true, credentialRead: false }
-    : { text, missing: false, credentialRead: false };
-}
+): EnvReferenceResolution => call('resolveEnvReference', reference, lookup, readsAsEmpty);
 
 export interface EnvExpansion {
   readonly text: string;
@@ -76,23 +62,11 @@ export interface EnvExpansion {
 }
 
 /** Expands every reference of a text in one pass: a value is never scanned again. */
-export function expandEnvText(
+export const expandEnvText = (
   text: string,
   lookup: EnvLookup,
   readsAsEmpty?: (name: string) => boolean,
-): EnvExpansion {
-  const missing = new Set<string>();
-  const credentials = new Set<string>();
-  const expanded = text.replace(BRACED_REFERENCE, (raw, inner: string) => {
-    const reference = splitDefault(inner);
-    if (!isVariableName(reference.name)) return raw;
-    const done = resolveEnvReference(reference, lookup, readsAsEmpty);
-    if (done.missing) missing.add(reference.name);
-    if (done.credentialRead) credentials.add(reference.name);
-    return done.text;
-  });
-  return { text: expanded, missing: [...missing], credentials: [...credentials] };
-}
+): EnvExpansion => call('expandEnvText', text, lookup, readsAsEmpty);
 
 export interface McpExpansion {
   /** Undefined when the server cannot start: its `url` is not a URL after expansion. */
@@ -111,49 +85,6 @@ export interface McpExpansion {
   readonly notConfigured?: true;
 }
 
-/** Collects what the fields of one server raise, in the order they are expanded. */
-function fieldExpander(
-  name: string,
-  lookup: EnvLookup,
-  remote: boolean,
-  options: McpExpansionOptions,
-) {
-  const issues: PluginIssue[] = [];
-  const missing = new Set<string>();
-  const credentials = new Set<string>();
-  const wider = options.readsAsEmpty;
-  const covered = (variable: string): boolean =>
-    readsAsEmptyTowardRemote(variable) || wider?.(variable) === true;
-  const readsAsEmpty = remote ? covered : undefined;
-  const one = (field: string, value: string): string => {
-    const done = expandEnvText(value, lookup, readsAsEmpty);
-    for (const each of done.missing) {
-      missing.add(each);
-      issues.push(warning(`mcpServers.${name}.${field}`, missingVariableMessage(each)));
-    }
-    for (const each of done.credentials) credentials.add(each);
-    return done.text;
-  };
-  const list = (field: string, values: readonly string[]): string[] =>
-    values.map((value) => one(field, value));
-  const table = (field: string, entries: Readonly<Record<string, string>>) =>
-    Object.fromEntries(
-      Object.entries(entries).map(([key, value]) => [key, one(`${field}.${key}`, value)]),
-    );
-  return {
-    one,
-    list,
-    table,
-    issues,
-    result: () => ({
-      missing: [...missing],
-      debug: [...credentials].map(credentialDebugLine),
-    }),
-  };
-}
-
-type Fields = ReturnType<typeof fieldExpander>;
-
 /** What a host adds to the expansion of one server. */
 export interface McpExpansionOptions {
   /**
@@ -163,19 +94,6 @@ export interface McpExpansionOptions {
    */
   readonly readsAsEmpty?: (name: string) => boolean;
 }
-
-const expandStdio = (server: McpStdioServerConfig, fields: Fields): McpStdioServerConfig => ({
-  ...server,
-  command: fields.one('command', server.command),
-  ...(server.args === undefined ? {} : { args: fields.list('args', server.args) }),
-  ...(server.env === undefined ? {} : { env: fields.table('env', server.env) }),
-});
-
-const expandRemote = (server: RemoteMcpServer, fields: Fields): RemoteMcpServer => ({
-  ...server,
-  url: fields.one('url', server.url),
-  ...(server.headers === undefined ? {} : { headers: fields.table('headers', server.headers) }),
-});
 
 /**
  * A server of the local, project or user scope with its references expanded (mcp.md, "Environment
@@ -188,50 +106,17 @@ const expandRemote = (server: RemoteMcpServer, fields: Fields): RemoteMcpServer 
  * the cause, with the docs' `'url' is not a valid URL` (the docs show it for one that expands to
  * `/mcp`); a `url` written empty is a placeholder (`notConfigured`), not an error.
  */
-export function expandMcpServer(
+export const expandMcpServer = (
   name: string,
   server: PluginMcpServer,
   lookup: EnvLookup,
   options: McpExpansionOptions = {},
-): McpExpansion {
-  if (isRemoteMcpServer(server) && server.url === '') {
-    return { server: undefined, issues: [], missing: [], debug: [], notConfigured: true };
-  }
-  const fields = fieldExpander(name, lookup, isRemoteMcpServer(server), options);
-  const expanded = isRemoteMcpServer(server)
-    ? expandRemote(server, fields)
-    : expandStdio(server, fields);
-  const unusable = isRemoteMcpServer(expanded) && !URL.canParse(expanded.url);
-  const dropped = error(
-    `mcpServers.${name}.url`,
-    `Invalid MCP server config for "${name}": 'url' is not a valid URL`,
-  );
-  return {
-    server: unusable ? undefined : expanded,
-    issues: unusable ? [...fields.issues, dropped] : fields.issues,
-    ...fields.result(),
-  };
-}
+): McpExpansion => call('expandMcpServer', name, server, lookup, options);
 
 /** Where a configured server comes from, as far as what the surfaces show is concerned. */
-export const MCP_DISPLAY_SCOPES = ['local', 'project', 'user', 'managed'] as const;
+export const MCP_DISPLAY_SCOPES: readonly ['local', 'project', 'user', 'managed'] =
+  call('MCP_DISPLAY_SCOPES');
 export type McpDisplayScope = (typeof MCP_DISPLAY_SCOPES)[number];
-
-const asWritten = (url: string): string => url;
-
-/** managed-mcp.md, "What users can see and change": "`https://mcp.example.com/…`". */
-const hostOnly = (url: string): string => {
-  if (!URL.canParse(url)) return '…';
-  const { protocol, host } = new URL(url);
-  return `${protocol}//${host}/…`;
-};
-
-const REMOTE_DISPLAY: { readonly [S in McpDisplayScope]: (url: string) => string } = {
-  local: asWritten,
-  project: asWritten,
-  user: asWritten,
-  managed: hostOnly,
-};
 
 /**
  * What `/mcp`, `claude mcp list` and `claude mcp get` show of a server's URL or command line (mcp.md,
@@ -244,32 +129,14 @@ const REMOTE_DISPLAY: { readonly [S in McpDisplayScope]: (url: string) => string
  * `server` is the entry as written, never the result of `expandMcpServer`: the function shows what it
  * is given, so an expanded server would show the resolved value.
  */
-export function displayReference(server: PluginMcpServer, scope: McpDisplayScope): string {
-  return isRemoteMcpServer(server)
-    ? REMOTE_DISPLAY[scope](server.url)
-    : [server.command, ...(server.args ?? [])].join(' ');
-}
+export const displayReference = (server: PluginMcpServer, scope: McpDisplayScope): string =>
+  call('displayReference', server, scope);
 
 /** One header a surface shows: its name, and its value when the scope shows it. */
 export interface DisplayedHeader {
   readonly name: string;
   readonly value?: string;
 }
-
-const headerAsWritten = ([name, value]: readonly [string, string]): DisplayedHeader => ({
-  name,
-  value,
-});
-const headerNameOnly = ([name]: readonly [string, string]): DisplayedHeader => ({ name });
-
-const HEADER_DISPLAY: {
-  readonly [S in McpDisplayScope]: (entry: readonly [string, string]) => DisplayedHeader;
-} = {
-  local: headerAsWritten,
-  project: headerAsWritten,
-  user: headerAsWritten,
-  managed: headerNameOnly,
-};
 
 /**
  * What `claude mcp get` shows of a remote server's headers. For a server the organization provides:
@@ -278,10 +145,7 @@ const HEADER_DISPLAY: {
  * reference by name, as for the URL; pass the entry as written, as for `displayReference`). A stdio
  * server has no headers.
  */
-export function displayHeaders(
+export const displayHeaders = (
   server: PluginMcpServer,
   scope: McpDisplayScope,
-): readonly DisplayedHeader[] {
-  if (!isRemoteMcpServer(server)) return [];
-  return Object.entries(server.headers ?? {}).map(HEADER_DISPLAY[scope]);
-}
+): readonly DisplayedHeader[] => call('displayHeaders', server, scope);

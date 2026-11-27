@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-core/skills.ts`, switched.
+//! Ported from `src/convert/to-core/skills.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A Claude Code plugin's skills in a core client (Agent Plugins Extended §18.4.3 item 2). `skills/`
 //! is shared, so nothing is written: a skill converts when it is `skills/<name>/SKILL.md` and
@@ -79,10 +79,4 @@ fn skill_notes(skill: &PluginTextFile) -> Vec<ConversionNote> {
 #[must_use]
 pub fn core_skill_notes(skills: &[PluginTextFile]) -> Vec<ConversionNote> {
     skills.iter().flat_map(skill_notes).collect()
-}
-
-crate::registry::exports! {
-    "convert/to-core/skills" {
-        "coreSkillNotes" => ok |skills: Vec<PluginTextFile>| core_skill_notes(&skills);
-    }
 }

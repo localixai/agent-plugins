@@ -81,11 +81,15 @@ pub struct PluginWorkflow {
 
 /// What a component reader gives (`ComponentRead`).
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ComponentRead<T> {
     /// The component's values.
     pub value: T,
     /// What is wrong with them.
     pub issues: Vec<PluginIssue>,
+    /// Reading this component failed in a way that keeps the whole plugin from loading (oracle 2.1.319).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rejects_plugin: Option<bool>,
 }
 
 struct Source<'a> {
@@ -141,7 +145,11 @@ pub async fn read_themes(context: &AssetContext) -> ComponentRead<Vec<PluginThem
             theme: read.theme,
         });
     }
-    ComponentRead { value, issues }
+    ComponentRead {
+        value,
+        issues,
+        rejects_plugin: None,
+    }
 }
 
 /// The plugin's workflows.
@@ -167,7 +175,11 @@ pub async fn read_workflows(context: &AssetContext) -> ComponentRead<Vec<PluginW
             meta: report.meta,
         });
     }
-    ComponentRead { value, issues }
+    ComponentRead {
+        value,
+        issues,
+        rejects_plugin: None,
+    }
 }
 
 crate::registry::exports! {

@@ -1,5 +1,7 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
-import { referencesUserConfig } from './user-config.ts';
+import type { PluginIssue } from '../../format/issues.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('loading/resolve/shell-guard');
 
 /**
  * A field whose value is passed to a shell refuses `${user_config.*}` (plugins/manifest-reference.md,
@@ -10,6 +12,9 @@ import { referencesUserConfig } from './user-config.ts';
  * command"). Each surface has its own message and context; the surface's resolver owns its guard and
  * calls this one function, so the three surfaces (shell-form hook, monitor, `headersHelper`) never
  * share code that could drift. This file holds the `headersHelper` guard.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/shell_guard.rs`,
+ * docs/RUST.md).
  */
 export interface ShellGuard<Context> {
   /** The documented message of the surface, quoted from errors.md. */
@@ -17,17 +22,13 @@ export interface ShellGuard<Context> {
 }
 
 /** The error for a template that references `${user_config.*}`, or `undefined` when it does not. */
-export function rejectUserConfigInShell<Context>(
+export const rejectUserConfigInShell = <Context>(
   guard: ShellGuard<Context>,
   template: string,
   context: Context,
   path: string,
-): PluginIssue | undefined {
-  return referencesUserConfig(template) ? error(path, guard.message(context)) : undefined;
-}
+): PluginIssue | undefined => call('rejectUserConfigInShell', guard, template, context, path);
 
 /** An MCP `headersHelper`, which runs through a shell (mcp.md, "dynamic headers"). */
-export const HEADERS_HELPER_GUARD: ShellGuard<{ readonly server: string }> = {
-  message: ({ server }) =>
-    `headersHelper for MCP server '${server}' references \${user_config.*}. The substituted value would be passed to a shell; read the value inside the helper script instead (e.g. from an env var set in the server's "env" block).`,
-};
+export const HEADERS_HELPER_GUARD: ShellGuard<{ readonly server: string }> =
+  call('HEADERS_HELPER_GUARD');

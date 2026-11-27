@@ -1,4 +1,4 @@
-//! Port of `src/format/marketplace/entry-checks.ts`, switched.
+//! Ported from `src/format/marketplace/entry-checks.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The checks of a plugin entry beyond its field types (plugins/marketplace-reference.md,
 //! "Validation messages"): the name, a name used twice, the archive-only header fields, and a
@@ -275,10 +275,4 @@ pub fn version_issues(
             "Entry declares version \"{version}\" but {file} says \"{theirs}\". At install time, plugin.json wins (calculatePluginVersion precedence) \u{2014} the entry version is silently ignored. Update this entry to \"{theirs}\" to match."
         ),
     )]
-}
-
-crate::registry::exports! {
-    "format/marketplace/entry-checks" {
-        "withoutDuplicates" => ok |read: Vec<IndexedEntry>| without_duplicates(&read);
-    }
 }

@@ -47,9 +47,6 @@ export interface McpConnection {
   readonly bareElicitationCapability?: boolean;
 }
 
-/** "Connections that use protocol revision 2026-07-28". */
-export const NEW_REVISION: '2026-07-28' = call('NEW_REVISION');
-
 /**
  * What `elicitation` is declared on a connection: `{form: {}, url: {}}` on revision 2026-07-28 and
  * later, and on earlier revisions to the servers of a user's configuration; the bare `{}` on other

@@ -10,6 +10,3 @@ import { coreModule } from '../../wasm/bridge.ts';
 const call = coreModule('format/validate/received');
 
 export const kindOf = (value: unknown): string => call('kindOf', value);
-
-/** `a string`, `an object`, `null`. */
-export const withArticle = (value: unknown): string => call('withArticle', value);

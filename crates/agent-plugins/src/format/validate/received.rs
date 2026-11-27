@@ -38,7 +38,6 @@ pub fn with_article(value: &JsValue) -> String {
 crate::registry::exports! {
     "format/validate/received" {
         "kindOf" => ok |value: JsValue| kind_of(&value).to_owned();
-        "withArticle" => ok |value: JsValue| with_article(&value);
     }
 }
 

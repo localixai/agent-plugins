@@ -1,9 +1,7 @@
 import type { HooksSettings } from '../protocol/hook-config.ts';
 import type { AgentDefinition } from '../protocol/official.ts';
-import { AGENT_FIELD_NAMES, type AgentFieldName } from './agent-fields.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { AgentExtras } from './agent-record.ts';
-import { writeFrontmatter } from './frontmatter-write.ts';
-import { INVOCABLE_DEFAULTS, SKILL_FIELDS, type SkillField } from './skill-fields.ts';
 import type { InvocableFrontmatter } from './skill-types.ts';
 
 /**
@@ -13,7 +11,12 @@ import type { InvocableFrontmatter } from './skill-types.ts';
  * (`extra`) after them. A skill or command value equal to its documented default is left out, as an
  * author leaves it out; `shell` is the exception, since an explicit `shell: bash` "fails the
  * invocation" when bash is missing (skills.md, "How injected commands run").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/frontmatter_render.rs`,
+ * docs/RUST.md).
  */
+
+const call = coreModule('format/frontmatter-render');
 
 /** What an author sets of the shared fields: the read-only views (`frontmatter`, `undescribed`) are the reader's. */
 export type InvocableDraft = Partial<
@@ -43,89 +46,9 @@ export interface AgentDraft {
   readonly extra?: Readonly<Record<string, unknown>>;
 }
 
-type InvocableProperty = keyof InvocableDraft | 'name';
-
-/** Each skill key's property (K1: a registry typed over the keys). */
-const INVOCABLE_PROPERTY: { readonly [K in SkillField]: InvocableProperty } = {
-  name: 'name',
-  description: 'description',
-  when_to_use: 'whenToUse',
-  'argument-hint': 'argumentHint',
-  arguments: 'arguments',
-  'disable-model-invocation': 'disableModelInvocation',
-  'user-invocable': 'userInvocable',
-  'allowed-tools': 'allowedTools',
-  'disallowed-tools': 'disallowedTools',
-  model: 'model',
-  effort: 'effort',
-  context: 'context',
-  agent: 'agent',
-  background: 'background',
-  hooks: 'hooks',
-  paths: 'paths',
-  shell: 'shell',
-  metadata: 'metadata',
-  license: 'license',
-  compatibility: 'compatibility',
-};
-
-const OMITTED_DEFAULTS: Readonly<Record<string, unknown>> = Object.fromEntries(
-  Object.entries(INVOCABLE_DEFAULTS).filter(([property]) => property !== 'shell'),
-);
-
-const isDefault = (property: string, value: unknown): boolean => {
-  const fallback = OMITTED_DEFAULTS[property];
-  return Array.isArray(fallback)
-    ? Array.isArray(value) && value.length === 0
-    : fallback !== undefined && fallback === value;
-};
-
-function invocableFields(
-  draft: Readonly<Partial<Record<InvocableProperty, unknown>>>,
-): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
-  for (const key of SKILL_FIELDS) {
-    const property = INVOCABLE_PROPERTY[key];
-    const value = draft[property];
-    if (value !== undefined && !isDefault(property, value)) fields[key] = value;
-  }
-  return fields;
-}
-
-export function renderSkillFile(draft: SkillDraft): string {
-  return writeFrontmatter({ ...invocableFields(draft), ...draft.extra }, draft.body);
-}
+export const renderSkillFile = (draft: SkillDraft): string => call('renderSkillFile', draft);
 
 /** A command file is a skill file without `name` and `paths`: the one writer. */
-export function renderCommandFile(draft: CommandDraft): string {
-  return renderSkillFile(draft);
-}
+export const renderCommandFile = (draft: CommandDraft): string => call('renderCommandFile', draft);
 
-/** Each agent key's value (K1); `experimental` holds the one key the kit keeps, `cacheTtl`. */
-const AGENT_VALUE: { readonly [F in AgentFieldName]: (draft: AgentDraft) => unknown } = {
-  name: (draft) => draft.name,
-  description: (draft) => draft.definition.description,
-  tools: (draft) => draft.definition.tools,
-  disallowedTools: (draft) => draft.definition.disallowedTools,
-  model: (draft) => draft.definition.model,
-  permissionMode: (draft) => draft.definition.permissionMode,
-  maxTurns: (draft) => draft.definition.maxTurns,
-  autoCompactWindow: (draft) => draft.definition.autoCompactWindow,
-  skills: (draft) => draft.definition.skills,
-  mcpServers: (draft) => draft.definition.mcpServers,
-  hooks: (draft) => draft.hooks,
-  memory: (draft) => draft.definition.memory,
-  background: (draft) => draft.definition.background,
-  omitClaudeMd: (draft) => draft.definition.omitClaudeMd,
-  effort: (draft) => draft.definition.effort,
-  isolation: (draft) => draft.extras?.isolation,
-  color: (draft) => draft.extras?.color,
-  initialPrompt: (draft) => draft.definition.initialPrompt,
-  experimental: (draft) =>
-    draft.extras?.cacheTtl === undefined ? undefined : { cacheTtl: draft.extras.cacheTtl },
-};
-
-export function renderAgentFile(draft: AgentDraft): string {
-  const fields = Object.fromEntries(AGENT_FIELD_NAMES.map((key) => [key, AGENT_VALUE[key](draft)]));
-  return writeFrontmatter({ ...fields, ...draft.extra }, draft.definition.prompt);
-}
+export const renderAgentFile = (draft: AgentDraft): string => call('renderAgentFile', draft);

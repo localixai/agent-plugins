@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/hook-handlers.ts`, switched.
+//! Ported from `src/format/validate/hook-handlers.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The hook handler schemas of `claude plugin validate` (oracle 2.1.319): five types, each checked
 //! for the fields it needs and the types of the common ones. A handler that fails is reported by
@@ -122,13 +122,6 @@ pub fn handler_advice(handler: &JsValue) -> Option<String> {
         return None;
     }
     shell_command(members).and_then(unquoted_message)
-}
-
-crate::registry::exports! {
-    "format/validate/hook-handlers" {
-        "handlerProblem" => ok |handler: JsValue| handler_problem(&handler);
-        "handlerAdvice" => ok |handler: JsValue| handler_advice(&handler);
-    }
 }
 
 #[cfg(test)]

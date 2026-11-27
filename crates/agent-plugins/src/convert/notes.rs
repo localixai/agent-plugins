@@ -134,6 +134,5 @@ crate::registry::exports! {
         "notConverted" => ok |path: String, field: Option<String>, message: String| not_converted(path, field, message);
         "reported" => ok |path: String, field: Option<String>, message: String| reported(path, field, message);
         "conversion" => ok |to: String, files: Vec<ConvertedFile>, notes: Vec<ConversionNote>, runtime: Option<String>| conversion(to, files, notes, runtime);
-        "jsonFile" => ok |path: String, value: JsValue| json_file(path, &value);
     }
 }

@@ -29,16 +29,16 @@ use crate::protocol::is_record::is_record;
 use crate::registry::{Callback, Function};
 
 /// What reading one entry gave: the entry when it loads, and what was found either way.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntryReading {
     /// The entry, when it loads.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entry: Option<MarketplaceEntry>,
     /// What was found.
     pub issues: Vec<PluginIssue>,
     /// The entry's fields pass the schema; absent is taken as true.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub schema_sound: Option<bool>,
 }
 

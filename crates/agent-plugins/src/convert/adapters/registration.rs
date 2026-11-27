@@ -1,4 +1,4 @@
-//! Port of `src/convert/adapters/registration.ts`, switched.
+//! Ported from `src/convert/adapters/registration.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! How each target's hooks file names a hook adapter (Agent Plugins Extended §18.4.4), and how a
 //! converter tells its own adapter apart when it converts back: an adapter registration of exactly
@@ -297,10 +297,4 @@ pub fn unwrap_claude_code_adapter(handler: &CoreHookHandler) -> Option<ClaudeCod
         command: parts.command,
         args: parts.args,
     })
-}
-
-crate::registry::exports! {
-    "convert/adapters/registration" {
-        "RUN_CLAUDE_CODE_HANDLER" => ok || RUN_CLAUDE_CODE_HANDLER;
-    }
 }

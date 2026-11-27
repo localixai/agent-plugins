@@ -1,30 +1,21 @@
-import { isRecord } from '../protocol/is-record.ts';
 import type { HooksSettings } from '../protocol/hook-config.ts';
-import { normalizePermissionMode } from '../protocol/permission-modes.ts';
 import type { AgentDefinition, AgentMcpServerSpec, EffortLevel } from '../protocol/official.ts';
 import type { Assert, Equal } from '../protocol/type-equality.ts';
-import {
-  autoCompactWindow,
-  boolField,
-  effortField,
-  enumField,
-  experimentalMap,
-  positiveInt,
-  modelField,
-  textField,
-  tokenList,
-  type AgentCoercer,
-  type Experimental,
-} from './agent-scalars.ts';
-import { hooks } from './agent-hooks-field.ts';
-import { warning } from './issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { AgentCoercer, Experimental } from './agent-scalars.ts';
 
 /**
  * The 19 frontmatter fields of a subagent file (sub-agents.md, "Frontmatter reference"), in the
  * table's order. Claude Code "ignores a field it doesn't recognize", so anything else is
  * `unrecognized`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/agent_fields.rs`, docs/RUST.md).
  */
-export const AGENT_FIELD_NAMES = [
+
+const call = coreModule('format/agent-fields');
+
+/** The fields, in the table's order. */
+export const AGENT_FIELD_NAMES: readonly [
   'name',
   'description',
   'tools',
@@ -44,11 +35,11 @@ export const AGENT_FIELD_NAMES = [
   'color',
   'initialPrompt',
   'experimental',
-] as const;
+] = call('AGENT_FIELD_NAMES');
 export type AgentFieldName = (typeof AGENT_FIELD_NAMES)[number];
 
 /** `color`: "Accepts `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, or `cyan`". */
-export const AGENT_COLORS = [
+export const AGENT_COLORS: readonly [
   'red',
   'blue',
   'green',
@@ -57,15 +48,16 @@ export const AGENT_COLORS = [
   'orange',
   'pink',
   'cyan',
-] as const;
+] = call('AGENT_COLORS');
 export type AgentColor = (typeof AGENT_COLORS)[number];
 
 /** `isolation`: "Set to `worktree`"; plugins/components.md: "The only valid `isolation` value". */
-export const AGENT_ISOLATIONS = ['worktree'] as const;
+export const AGENT_ISOLATIONS: readonly ['worktree'] = call('AGENT_ISOLATIONS');
 export type AgentIsolation = (typeof AGENT_ISOLATIONS)[number];
 
 /** `memory`: "`user`, `project`, or `local`", tied to the official `AgentDefinition`. */
-export const AGENT_MEMORY_SCOPES = ['user', 'project', 'local'] as const;
+export const AGENT_MEMORY_SCOPES: readonly ['user', 'project', 'local'] =
+  call('AGENT_MEMORY_SCOPES');
 export type AgentMemoryScope = (typeof AGENT_MEMORY_SCOPES)[number];
 
 /** @public A compile-time drift guard: the typecheck fails when the SDK changes the union. */
@@ -113,85 +105,9 @@ export interface AgentFieldSpec<F extends AgentFieldName> {
   readonly read: AgentCoercer<AgentFieldValue<F>>;
 }
 
-const supported = <F extends AgentFieldName>(
-  read: AgentCoercer<AgentFieldValue<F>>,
-): AgentFieldSpec<F> => ({ plugin: 'supported', read });
-
-const ignoredInPlugins = <F extends AgentFieldName>(
-  read: AgentCoercer<AgentFieldValue<F>>,
-): AgentFieldSpec<F> => ({ plugin: 'ignored', read });
-
-/**
- * An inline definition: a table with at least one key whose every value is a table (the server's
- * config). The config itself is the MCP reader's to validate, so only its outer shape is checked
- * here; the predicate stands in for the SDK's `McpServerConfigForProcessTransport` until that
- * reader exists (judgment, spec/judgments.md).
- */
-const isInlineServer = (value: unknown): value is Exclude<AgentMcpServerSpec, string> =>
-  isRecord(value) && Object.keys(value).length > 0 && Object.values(value).every(isRecord);
-
-/** `permissionMode`: a mode, or `manual` for `default` (the one alias the docs name). */
-const permissionMode: AgentCoercer<AgentFieldValue<'permissionMode'>> = (path, key, raw) => {
-  const text = textField(path, key, raw);
-  if (text.value === undefined) return { value: undefined, issues: text.issues };
-  const mode = normalizePermissionMode(text.value);
-  if (mode !== undefined) return { value: mode, issues: [] };
-  const message = `Invalid "${key}": "${text.value}" is not a permission mode; the field is ignored`;
-  return { value: undefined, issues: [warning(path, message)] };
-};
-
-/**
- * `mcpServers`: "a server name referencing an already-configured server ... or an inline
- * definition with the server name as key and a full MCP server config as value". The config
- * itself is the MCP reader's to validate; an entry of another shape is dropped.
- */
-const mcpServers: AgentCoercer<AgentMcpServerSpec[]> = (path, key, raw) => {
-  if (raw === undefined || raw === null) return { value: undefined, issues: [] };
-  if (!Array.isArray(raw)) {
-    const message = `Invalid "${key}": it is not a list of server names and inline definitions; the field is ignored`;
-    return { value: undefined, issues: [warning(path, message)] };
-  }
-  const entries: AgentMcpServerSpec[] = [];
-  for (const entry of raw) {
-    if (typeof entry === 'string' && entry.trim() !== '') entries.push(entry.trim());
-    else if (isInlineServer(entry)) entries.push(entry);
-  }
-  const issues =
-    entries.length === raw.length
-      ? []
-      : [
-          warning(
-            path,
-            `Invalid "${key}": some entries are neither a name nor a definition; they are ignored`,
-          ),
-        ];
-  return { value: entries, issues };
-};
-
 /** The registry: one spec per field name, so a field added to the table fails the typecheck here. */
-export const AGENT_FIELDS: { readonly [F in AgentFieldName]: AgentFieldSpec<F> } = {
-  name: supported(textField),
-  description: supported(textField),
-  tools: supported(tokenList),
-  disallowedTools: supported(tokenList),
-  model: supported(modelField),
-  permissionMode: ignoredInPlugins(permissionMode),
-  maxTurns: supported(positiveInt),
-  autoCompactWindow: supported(autoCompactWindow),
-  skills: supported(tokenList),
-  mcpServers: ignoredInPlugins(mcpServers),
-  hooks: ignoredInPlugins(hooks),
-  memory: supported(enumField(AGENT_MEMORY_SCOPES)),
-  background: supported(boolField),
-  omitClaudeMd: supported(boolField),
-  effort: supported(effortField),
-  isolation: supported(enumField(AGENT_ISOLATIONS)),
-  color: supported(enumField(AGENT_COLORS)),
-  initialPrompt: ignoredInPlugins(textField),
-  experimental: supported(experimentalMap),
-};
+export const AGENT_FIELDS: { readonly [F in AgentFieldName]: AgentFieldSpec<F> } =
+  call('AGENT_FIELDS');
 
 /** The fields a plugin agent ignores (plugins/components.md): derived from the registry. */
-export const PLUGIN_IGNORED_FIELDS: readonly AgentFieldName[] = AGENT_FIELD_NAMES.filter(
-  (field) => AGENT_FIELDS[field].plugin === 'ignored',
-);
+export const PLUGIN_IGNORED_FIELDS: readonly AgentFieldName[] = call('PLUGIN_IGNORED_FIELDS');

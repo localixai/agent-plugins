@@ -40,10 +40,6 @@ export interface Frontmatter {
   readonly value?: unknown;
 }
 
-/** One line of `text` from `at`, and where the next line starts (past the end on the last line). */
-export const lineAt = (text: string, at: number): { line: string; next: number } =>
-  call('lineAt', text, at);
-
 /**
  * Split a Markdown file into its YAML frontmatter and body, as skills.md and output-styles.md
  * describe: the opening `---` must be line 1, a block that does not parse leaves the file loaded

@@ -1,8 +1,14 @@
-import { parseFrontmatter } from './frontmatter.ts';
-import { warning, type PluginIssue } from './issues.ts';
-import { readInvocable } from './skill-fields.ts';
-import { resolveSkillName } from './skill-name.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
 import type { Skill, SkillLayout } from './skill-types.ts';
+
+/**
+ * One `SKILL.md` read into a `Skill`: its frontmatter, its name and command, and where it is.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/skill.rs`, docs/RUST.md).
+ */
+
+const call = coreModule('format/skill');
 
 export interface SkillRead {
   readonly skill: Skill;
@@ -10,24 +16,7 @@ export interface SkillRead {
 }
 
 /** `skills/review/SKILL.md` is in `skills/review`; a file at the root is in `.`. */
-export function directoryOf(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-  return cut < 0 ? '.' : path.slice(0, cut);
-}
-
-/**
- * The command a frontmatter `name` gives a skill whose folder fixed its name, when it differs from
- * `command` (`Skill.declaredCommand`); a `name` the rules refuse gives none.
- */
-function declaredCommandOf(
-  layout: SkillLayout,
-  declared: string | undefined,
-  command: string,
-): string | undefined {
-  if (layout.fixedName !== true || declared === undefined) return undefined;
-  const own = resolveSkillName({ origin: layout.origin, dirName: layout.dirName }, declared);
-  return own.command === command ? undefined : own.command;
-}
+export const directoryOf = (path: string): string => call('directoryOf', path);
 
 /**
  * Read one `SKILL.md`. Never throws and never refuses the file (skills.md: "If the YAML between
@@ -38,43 +27,5 @@ function declaredCommandOf(
  * The name and the command come from `resolveSkillName`; its issues are reported against the file
  * (an error means the skill is refused: a name Claude Code does not load).
  */
-export function readSkill(path: string, text: string, layout: SkillLayout): SkillRead {
-  const parsed = parseFrontmatter(text);
-  const issues: PluginIssue[] = [];
-  if (parsed.problem !== undefined) {
-    const where = parsed.line === undefined ? '' : ` (line ${parsed.line})`;
-    issues.push(
-      warning(
-        path,
-        `frontmatter ${parsed.problem}${where}; the skill loads with its body and no fields set`,
-      ),
-    );
-  }
-  const { frontmatter, declaredName, problems } = readInvocable(parsed.fields, parsed.body);
-  issues.push(...problems.map((found) => warning(path, `${found.key} ${found.reason}`)));
-  const resolved = resolveSkillName(layout, declaredName);
-  issues.push(
-    ...resolved.issues.map((found) => ({
-      severity: found.severity,
-      path,
-      message: found.message,
-    })),
-  );
-  const { name, command } = resolved;
-  const { origin } = layout;
-  const declaredCommand = declaredCommandOf(layout, declaredName, command);
-  return {
-    skill: {
-      ...frontmatter,
-      kind: 'skill',
-      name,
-      command,
-      ...(declaredCommand === undefined ? {} : { declaredCommand }),
-      path,
-      dir: directoryOf(path),
-      origin,
-      body: parsed.body,
-    },
-    issues,
-  };
-}
+export const readSkill = (path: string, text: string, layout: SkillLayout): SkillRead =>
+  call('readSkill', path, text, layout);

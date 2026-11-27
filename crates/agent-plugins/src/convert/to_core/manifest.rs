@@ -1,4 +1,4 @@
-//! Port of `src/convert/to-core/manifest.ts`, switched.
+//! Ported from `src/convert/to-core/manifest.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The root `plugin.json` of a Claude Code plugin (Agent Plugins Extended §18.4.3 item 1): the name
 //! must satisfy core §5.5 or the conversion stops (§18.4.1 item 2: never renamed); the canonical
@@ -83,12 +83,5 @@ pub fn core_manifest_of(plugin: &PluginNaming) -> CoreManifestPart {
     CoreManifestPart {
         value,
         notes: naming.chain(others).collect(),
-    }
-}
-
-crate::registry::exports! {
-    "convert/to-core/manifest" {
-        "CORE_MANIFEST" => ok || CORE_MANIFEST;
-        "coreManifestOf" => ok |plugin: PluginNaming| core_manifest_of(&plugin);
     }
 }

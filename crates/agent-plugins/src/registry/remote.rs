@@ -25,6 +25,7 @@ mod folder_scan;
 mod http_client;
 mod locations;
 mod marketplace;
+mod mcp_bundle;
 mod mcp_caller;
 mod model_runner;
 mod path_resolver;

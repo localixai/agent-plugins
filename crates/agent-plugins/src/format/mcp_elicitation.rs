@@ -250,7 +250,6 @@ pub fn override_elicitation_result(result: &JsValue, output: &JsValue) -> JsValu
 
 crate::registry::exports! {
     "format/mcp-elicitation" {
-        "NEW_REVISION" => ok || NEW_REVISION;
         "declaredElicitation" => ok |connection: McpConnection| declared_elicitation(&connection);
         "elicitationModes" => ok |capability: JsValue| elicitation_modes(&capability);
         "ELICITATION_URL_ARGUMENT_CAP" => ok || ELICITATION_URL_ARGUMENT_CAP;
