@@ -1,4 +1,4 @@
-//! Port of `src/skills/shell-arguments.ts`, switched.
+//! Ported from `src/skills/shell-arguments.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! How a `!` command receives the invocation's arguments (skills.md, "Available string
 //! substitutions"; docs/SECURITY.md, "`$ARGUMENTS` in `!` blocks"). Judgment (spec/judgments.md,
@@ -229,12 +229,5 @@ pub fn bind_shell_arguments(command: &str, input: &ArgumentInput) -> BoundArgume
         shell,
         checked,
         environment: references.environment,
-    }
-}
-
-crate::registry::exports! {
-    "skills/shell-arguments" {
-        "bindsArguments" => ok |choice: Option<ShellArguments>, shell: SkillShell| binds_arguments(choice, shell);
-        "bindShellArguments" => ok |command: String, input: ArgumentInput| bind_shell_arguments(&command, &input);
     }
 }

@@ -147,7 +147,8 @@ pub struct VariableSource {
 }
 
 /// `ORIGIN_TRAITS[kind]`.
-fn traits_of(kind: SkillOriginKind) -> Option<OriginTraits> {
+#[must_use]
+pub fn traits_of(kind: SkillOriginKind) -> Option<OriginTraits> {
     let name = match kind {
         SkillOriginKind::Plugin => "plugin",
         SkillOriginKind::Managed => "managed",

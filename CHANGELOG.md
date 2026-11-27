@@ -21,6 +21,9 @@
   are a skill's `paths` gate and a memory rule's, a skill's `${CLAUDE_*}` variables and argument
   substitution, the binding of a `!` command's arguments and the text its shell receives, and the
   resolution of a plugin's MCP server (`resolveMcpServer`).
+- A skill or command is expanded on the core (`expandSkill`): its placeholders cut, arguments and
+  `${CLAUDE_*}` substituted, its `!` commands planned and run or left as written, its grants,
+  hooks and file references.
 - The managed settings' repairs run on the core: the `sandbox` block and its credentials, the
   closed fields, the value and list repairs, the permissions merge and the permission flag, the
   MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the

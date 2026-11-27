@@ -1,9 +1,7 @@
-import type { InvocableFrontmatter } from '../format/skill-types.ts';
-import type { Command, Skill } from '../format/skill-types.ts';
-import { coreModule } from '../wasm/bridge.ts';
-
-/** Implemented by the Rust core (`crates/agent-plugins/src/skills/expand_policy.rs`, docs/RUST.md). */
-const call = coreModule('skills/expand-policy');
+/**
+ * Types only: the core runs the policy (`crates/agent-plugins/src/skills/expand_policy.rs`,
+ * docs/RUST.md), and only the core calls it now; the request and its callers share these shapes.
+ */
 
 /**
  * The managed settings that take a skill's `allowed-tools` or `hooks` away (skills.md, "When
@@ -30,24 +28,3 @@ export interface ExpandPolicy {
  *   plugin is `installed`.
  */
 export type SkillPluginSource = 'installed' | 'skills-directory' | 'inline-managed-session';
-
-type Source = Pick<Skill | Command, 'origin' | 'context'> & Pick<InvocableFrontmatter, 'hooks'>;
-
-/** Whether the skill's frontmatter hooks register when it is invoked. */
-export const hooksRegister = (
-  skill: Source,
-  policy: ExpandPolicy | undefined,
-  source: SkillPluginSource = 'installed',
-): boolean => call('hooksRegister', skill, policy, source);
-
-/**
- * Whether the skill's `allowed-tools` grant applies. A skill that declares hooks under the hooks
- * lock "loses its `allowed-tools` pre-approval", except that "when such a skill runs in a subagent
- * through `context: fork`, it keeps the pre-approval". The fork exception is the hooks lock's only;
- * `allowManagedPermissionRulesOnly` ignores the field in a forked skill too.
- */
-export const grantApplies = (
-  skill: Source,
-  policy: ExpandPolicy | undefined,
-  source: SkillPluginSource = 'installed',
-): boolean => call('grantApplies', skill, policy, source);

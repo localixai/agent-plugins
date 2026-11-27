@@ -366,7 +366,6 @@ pub async fn substitute<L: Locations + Clone, E: Environment>(
 
 crate::registry::exports! {
     "skills/substitute" {
-        "appendArguments" => ok |text: String, raw_arguments: String| append_arguments(&text, &raw_arguments);
         "substituteArgumentPieces" => ok |pieces: Vec<String>, input: ArgumentInput| substitute_argument_pieces(&pieces, &input);
         "substituteArguments" => ok |content: String, input: ArgumentInput| substitute_arguments(&content, &input);
         "substitute" => async ok |content: String, input: SubstitutionInput, path: Option<String>| substitute(&content, &input, path.as_deref().unwrap_or("")).await;

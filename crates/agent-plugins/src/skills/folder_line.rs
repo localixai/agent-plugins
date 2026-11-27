@@ -17,6 +17,5 @@ pub fn with_folder_line(text: &str, dir: Option<&str>) -> String {
 crate::registry::exports! {
     "skills/folder-line" {
         "BASE_DIRECTORY" => ok || BASE_DIRECTORY;
-        "withFolderLine" => ok |text: String, dir: Option<String>| with_folder_line(&text, dir.as_deref());
     }
 }

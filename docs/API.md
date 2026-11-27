@@ -324,7 +324,7 @@ resolveExecution(skill, { interactive: true, backgroundTasksDisabled: false, tri
 model catalogue (`availableModels`, the family substitution, auto mode support) is the host's:
 `ModelAvailability` is the three questions the kit asks.
 
-### Skill expansion (done: `skills/shell-scan`, `shell-run`, `shell-result`, `shell-refusal`, `shell-ports`, `expand`, `expand-shell`, `expand-types`, `expand-policy`, `hook-limits`)
+### Skill expansion (done: `skills/shell-scan`, `shell-run`, `shell-result`, `shell-refusal`, `shell-ports`, `expand`, `expand-types`, `expand-policy`, `hook-limits`)
 
 What a skill becomes when it is invoked: the text the model receives and what the host must apply
 for the turn (skills.md, "Inject dynamic context", "How injected commands run", "Pre-approve tools
