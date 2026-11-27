@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/lists.ts`, switched.
+//! Ported from `src/settings/repair/lists.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The repairs of the list values: texts, the allowlists that fail closed, the channel plugins and
 //! the marketplace sources.
@@ -191,16 +191,6 @@ pub fn blocked_sources(value: &JsValue, at: &RepairAt) -> Repaired {
         }
     }
     kept(JsValue::Array(stripped.entries), issues)
-}
-
-crate::registry::exports! {
-    "settings/repair/lists" {
-        "stringList" => ok |value: JsValue, at: RepairAt| string_list(&value, &at);
-        "closedStringList" => ok |value: JsValue, at: RepairAt| closed_string_list(&value, &at);
-        "channelAllowlist" => ok |value: JsValue, at: RepairAt| channel_allowlist(&value, &at);
-        "strictSources" => ok |value: JsValue, at: RepairAt| strict_sources(&value, &at);
-        "blockedSources" => ok |value: JsValue, at: RepairAt| blocked_sources(&value, &at);
-    }
 }
 
 #[cfg(test)]

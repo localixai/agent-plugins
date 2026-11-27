@@ -1,9 +1,13 @@
-import { SKILL_OVERRIDE_STATES } from '../../protocol/settings-keys.ts';
-import type { PolicyScope } from '../layers.ts';
+/**
+ * What `skillOverrides` does to one skill (skills.md, "Override skill visibility from settings").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/skills/overrides.rs`,
+ * docs/RUST.md).
+ */
 import type { PolicyView } from '../view.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
-/** One of the four values of a `skillOverrides` entry. */
-export type SkillOverrideState = (typeof SKILL_OVERRIDE_STATES)[number];
+const call = coreModule('settings/skills/overrides');
 
 /**
  * What a state does to one skill (skills.md, "Override skill visibility from settings": the table
@@ -27,71 +31,10 @@ export interface SkillSubject {
   readonly aliases?: readonly string[];
 }
 
-const SHOWN = {
-  listedToModel: 'full',
-  inSlashMenu: true,
-  inClientCommandLists: true,
-  invokableByFullName: true,
-  blockedBy: undefined,
-} as const satisfies SkillVisibility;
-
-/** One row per state; a registry typed over the union, so a fifth state cannot be forgotten. */
-const VISIBILITY: { readonly [S in SkillOverrideState]: SkillVisibility } = {
-  on: SHOWN,
-  'name-only': { ...SHOWN, listedToModel: 'nameOnly' },
-  'user-invocable-only': { ...SHOWN, listedToModel: 'hidden' },
-  // `off` hides the skill from the terminal `/` menu "and" from the Remote Control and SDK lists.
-  off: {
-    listedToModel: 'hidden',
-    inSlashMenu: false,
-    inClientCommandLists: false,
-    invokableByFullName: false,
-    blockedBy: 'skillOverrides',
-  },
-};
-
-/** Files whose entries under a bundled skill's alias apply (settings-reference.md, `skillOverrides`). */
-const ALIAS_SCOPES: readonly PolicyScope[] = ['managed', 'flag'];
-
-/** Position in the order the docs list the states: later hides more. */
-const strictness = (state: SkillOverrideState): number => SKILL_OVERRIDE_STATES.indexOf(state);
-
-const strictest = (states: readonly SkillOverrideState[]): SkillOverrideState =>
-  states.reduce((a, b) => (strictness(b) > strictness(a) ? b : a), 'on');
-
-const entryOf = (
-  entries: Readonly<Record<string, SkillOverrideState>>,
-  name: string,
-): SkillOverrideState | undefined => (Object.hasOwn(entries, name) ? entries[name] : undefined);
-
-/**
- * The state of a skill after the files combine. Per name the highest file that sets it decides
- * (judgment, spec/judgments.md). Entries under an alias count only from managed settings and
- * `--settings` files; they can only restrict further, and an entry under the skill's own name in
- * managed settings beats them (skills.md).
- */
-function stateOf(view: PolicyView, name: string, aliases: readonly string[]): SkillOverrideState {
-  const holders = view.eachFromHighest('skillOverrides');
-  const own = holders.flatMap((holder) => entryOf(holder.value, name) ?? []);
-  const managedOwn = holders.some(
-    (holder) => holder.scope === 'managed' && entryOf(holder.value, name) !== undefined,
-  );
-  if (managedOwn) return own[0] ?? 'on';
-  const viaAliases = aliases.flatMap((alias) =>
-    holders
-      .filter((holder) => ALIAS_SCOPES.includes(holder.scope))
-      .flatMap((holder) => entryOf(holder.value, alias) ?? [])
-      .slice(0, 1),
-  );
-  return strictest([own[0] ?? 'on', ...viaAliases]);
-}
-
 /** What `skillOverrides` does to one skill; a plugin skill and a skill with no entry are `on`. */
-export function skillVisibility(
+export const skillVisibility = (
   view: PolicyView,
   name: string,
   subject: SkillSubject = {},
-): SkillVisibility {
-  if (subject.plugin === true) return VISIBILITY.on;
-  return VISIBILITY[stateOf(view, name, subject.aliases ?? [])];
-}
+): SkillVisibility =>
+  call('skillVisibility', view, name, { plugin: subject.plugin, aliases: subject.aliases });

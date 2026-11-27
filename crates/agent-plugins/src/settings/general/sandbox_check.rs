@@ -1,5 +1,4 @@
-//! Ported from `src/settings/general/sandbox-check.ts`; only the core uses it now, so it has no
-//! wrapper.
+//! Ported from `src/settings/general/sandbox-check.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A managed `sandbox` block, validated field by field (managed-settings.md, "Invalid values
 //! inside `sandbox`"): one invalid value never drops the block. A quoted Boolean counts as that

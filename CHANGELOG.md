@@ -16,6 +16,11 @@
   its `if`; the host gets its own entries back. `ifEvaluatorFor` is the core's evaluator. So do a
   session's permission start (`startPermissions`) and the rules of a settings view
   (`permissionRulesOf`).
+- The settings layer's readers run on the core: a layer's read and repair, the general key checks,
+  the starting permission mode and the permission lists, auto mode, effort, the managed tier's
+  applicability and parent rules, the marketplace gate and registry, MCP approvals and the
+  allow and deny policy, `skillOverrides`, the `ultracode` keyword, `pluginConfigs`, the mod order
+  and which customization sources load.
 - A command hook's run is the core's from end to end: the plan, the shell prefix, the missing
   plugin directory, the working directory, the environment and the background modes. So are the
   validator's `.mcp.json` checks and `plugin.json` field rules, and the status line, file

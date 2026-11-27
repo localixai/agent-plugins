@@ -8,11 +8,46 @@ import type { Settings } from '../protocol/official.ts';
 import type { PolicyKey } from '../protocol/settings-keys.ts';
 import type { SettingsKey, ValueOf } from './general/keys.ts';
 import type { PolicyScope } from './layers.ts';
-import type { RepairKind } from './repair/kinds.ts';
 import type { ValueSpec } from './value-spec.ts';
 import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('settings/key-spec');
+
+/**
+ * What to do with a value that does not have the type its key documents. One strategy per kind, so
+ * what differs per key is a row of `KEY_SPECS`: the policy tier fails closed where the docs say so
+ * (managed-settings.md, "Find entries Claude Code dropped"), every other source loses the value or
+ * the entry.
+ */
+export type RepairKind =
+  | 'boolean'
+  | 'lockBoolean'
+  | 'hooksSwitch'
+  | 'string'
+  | 'stringList'
+  | 'closedStringList'
+  | 'channelAllowlist'
+  | 'allowedMcpServers'
+  | 'deniedMcpServers'
+  | 'strictSources'
+  | 'blockedSources'
+  | 'enabledPlugins'
+  | 'marketplaceMap'
+  | 'record'
+  | 'skillOverrides'
+  | 'workflowSize'
+  | 'pluginOnly'
+  | 'hooks'
+  | 'asWritten'
+  | 'providerAllowlist'
+  | 'matchMode'
+  | 'modelDenylist'
+  | 'orgUuid'
+  | 'gatewayNetworks'
+  | 'permissions'
+  | 'autoMode'
+  | 'disableMode'
+  | 'consentBoolean';
 
 export interface KeySpec<K extends PolicyKey = PolicyKey> extends ValueSpec<Settings[K]> {
   readonly repair: RepairKind;
@@ -37,15 +72,6 @@ export type ScopeRule =
   | 'userManagedFlag'
   | 'userLocalManagedFlag'
   | 'repositoryCannotElevate';
-
-/**
- * Whether a scope carries any value of `key` at all, whatever the value: a `--add-dir` directory
- * carries two keys (permissions.md), and a global config key is carried by no settings file, only by
- * `~/.claude.json` (settings.md, "Change a setting for one session": `--settings` "can't set
- * `Managed` or `Global config` keys").
- */
-export const scopeCarries = (scope: PolicyScope, key: string): boolean =>
-  call('scopeCarries', scope, key);
 
 /** Whether `key` read from `scope` with `value` is taken into account. */
 export const admits = (key: SettingsKey, scope: PolicyScope, value: unknown): boolean =>

@@ -7,6 +7,7 @@ pub mod claude_json;
 pub mod closed_fields;
 pub mod command_lines;
 pub mod edit_effect;
+pub mod effort;
 pub mod exceptions;
 pub mod file_locations;
 pub mod global_config;

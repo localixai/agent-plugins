@@ -1,6 +1,16 @@
+/**
+ * Whether typing `ultracode` in a prompt starts a dynamic workflow (workflows.md, "Where the keyword
+ * works"; settings-reference.md, `workflowKeywordTriggerEnabled`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/workflows/keyword.rs`,
+ * docs/RUST.md).
+ */
 import type { SDKMessageOrigin } from '../../protocol/official.ts';
 import type { PolicyView } from '../view.ts';
-import { workflowsDecision, type WorkflowsContext } from './enablement.ts';
+import type { WorkflowsContext } from './enablement.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/workflows/keyword');
 
 /**
  * How a prompt reaches the session (workflows.md, "Where the keyword works"): typed at the
@@ -8,7 +18,7 @@ import { workflowsDecision, type WorkflowsContext } from './enablement.ts';
  * application; passed with `-p`; run as a scheduled task; or relayed from a webhook payload or a pull
  * request comment.
  */
-export const PROMPT_SURFACES = [
+export const PROMPT_SURFACES: readonly [
   'interactive',
   'ideExtension',
   'remoteControl',
@@ -16,7 +26,7 @@ export const PROMPT_SURFACES = [
   'print',
   'scheduledTask',
   'relayedEvent',
-] as const;
+] = call('PROMPT_SURFACES');
 export type PromptSurface = (typeof PROMPT_SURFACES)[number];
 
 export interface PromptInput {
@@ -47,53 +57,6 @@ export interface KeywordVerdict {
   readonly highlight: { readonly start: number; readonly end: number } | undefined;
 }
 
-/** The origin kinds of `SDKMessageOrigin`: only the one for keyboard input is a prompt a person typed. */
-const TYPED_BY_HUMAN: { readonly [K in SDKMessageOrigin['kind']]: boolean } = {
-  human: true,
-  channel: false,
-  peer: false,
-  'task-notification': false,
-  'auto-continuation': false,
-  coordinator: false,
-  observer: false,
-  'observer-activity': false,
-  unclassified: false,
-};
-
-const originTyped = (origin: SDKMessageOrigin | undefined): boolean =>
-  origin !== undefined && TYPED_BY_HUMAN[origin.kind];
-
-/** Whether a prompt on each surface is one the person typed. An SDK prompt counts only when stamped. */
-const TYPED: { readonly [S in PromptSurface]: (origin: SDKMessageOrigin | undefined) => boolean } =
-  {
-    interactive: () => true,
-    ideExtension: () => true,
-    remoteControl: () => true,
-    sdk: originTyped,
-    print: () => false,
-    scheduledTask: () => false,
-    relayedEvent: () => false,
-  };
-
-/**
- * The keyword is `ultracode` (workflows.md names it and no more). Judgment (spec/judgments.md): a whole
- * word in any letter case, anywhere in the prompt, and a prompt that is a slash command (`/effort
- * ultracode`) is not scanned: that command is the effort setting, which the key leaves alone.
- */
-const KEYWORD = /\bultracode\b/i;
-
-function find(text: string): { start: number; end: number } | undefined {
-  if (text.trimStart().startsWith('/')) return undefined;
-  const match = KEYWORD.exec(text);
-  return match ? { start: match.index, end: match.index + match[0].length } : undefined;
-}
-
-const miss = (reason: KeywordMiss): KeywordVerdict => ({
-  triggers: false,
-  reason,
-  highlight: undefined,
-});
-
 /**
  * Whether typing `ultracode` in `prompt` starts a dynamic workflow: workflows are on, the prompt is one
  * a person typed (settings-reference.md, `workflowKeywordTriggerEnabled`; workflows.md, "Where the keyword
@@ -101,16 +64,14 @@ const miss = (reason: KeywordMiss): KeywordVerdict => ({
  * not `false` (default `true`). The key switches the keyword only: `/effort ultracode`,
  * `/workflows` and saved workflow commands do not read it.
  */
-export function keywordTrigger(
+export const keywordTrigger = (
   view: PolicyView,
   context: WorkflowsContext,
   prompt: PromptInput,
-): KeywordVerdict {
-  if (!workflowsDecision(view, context).enabled) return miss('workflowsOff');
-  if (!TYPED[prompt.surface](prompt.origin)) return miss('notTypedByHuman');
-  if (prompt.dismissed === true) return miss('dismissed');
-  const highlight = find(prompt.text);
-  if (highlight === undefined) return miss('noKeyword');
-  if (view.get('workflowKeywordTriggerEnabled') === false) return miss('keywordSettingOff');
-  return { triggers: true, reason: undefined, highlight };
-}
+): KeywordVerdict =>
+  call(
+    'keywordTrigger',
+    view,
+    { env: context.env, plan: { pro: context.plan.pro }, orgWorkflowsOff: context.orgWorkflowsOff },
+    prompt,
+  );

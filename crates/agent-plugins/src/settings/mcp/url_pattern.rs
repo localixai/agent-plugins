@@ -172,6 +172,5 @@ fn has(part: &str) -> bool {
 crate::registry::exports! {
     "settings/mcp/url-pattern" {
         "urlPatternMatches" => ok |pattern: String, url: String| url_pattern_matches(&pattern, &url);
-        "referenceInUrlScope" => ok |template: String| reference_in_url_scope(&template);
     }
 }

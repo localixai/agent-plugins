@@ -244,7 +244,7 @@ const OFF_VALUE_OF: [(&str, &[&str]); 6] = [
 
 /// The text of an `env` value as the process gets it: claude sets JavaScript's `String(value)`
 /// for a value that is not a string (oracle 2.1.321, spec/judgments.md
-/// `src/settings/env/check-env.ts`).
+/// `settings::env::check_env`).
 #[must_use]
 pub fn env_text(value: &JsValue) -> String {
     string_of(value)

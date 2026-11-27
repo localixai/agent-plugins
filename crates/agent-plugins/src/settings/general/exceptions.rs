@@ -1,4 +1,4 @@
-//! Port of `src/settings/general/exceptions.ts`, switched.
+//! Ported from `src/settings/general/exceptions.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A key whose managed value is not an override (settings.md, "Exceptions to managed settings
 //! precedence"): a restrictive value from a lower scope stays in force. The rule is the same for
@@ -131,13 +131,6 @@ pub fn strictest_of(ladder: Vec<JsValue>, values: &[JsValue]) -> JsValue {
         unreadable: None,
     };
     honor_exception(&rule, JsValue::Undefined, values)
-}
-
-crate::registry::exports! {
-    "settings/general/exceptions" {
-        "LOWEST_CAP" => ok || LOWEST_CAP.clone();
-        "strictestOf" => ok |ladder: Vec<JsValue>, values: Vec<JsValue>| strictest_of(ladder, &values);
-    }
 }
 
 #[cfg(test)]

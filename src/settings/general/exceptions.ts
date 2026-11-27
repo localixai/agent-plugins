@@ -7,11 +7,7 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/settings/general/exceptions.rs`,
  * docs/RUST.md).
  */
-import type { EffortLevel } from '../../protocol/official.ts';
 import type { PolicyScope } from '../layers.ts';
-import { coreModule } from '../../wasm/bridge.ts';
-
-const call = coreModule('settings/general/exceptions');
 
 export interface ManagedException<V> {
   /** The values the key reads, from the least restrictive to the most; a value off the ladder is not honored. */
@@ -32,13 +28,3 @@ export interface ManagedException<V> {
    */
   readonly unreadable?: { readonly floor: V; readonly from: readonly PolicyScope[] };
 }
-
-/** `maxEffortLevel`: "When several scopes set a cap, the lowest applies"; `"max"` sets no cap. */
-export const LOWEST_CAP: ManagedException<EffortLevel> = call('LOWEST_CAP');
-
-/**
- * The most restrictive of `values` on the ladder, `undefined` when none restricts more than the
- * first rung: the one "strict wins" step, for the view's rows and for the admin sources alike.
- */
-export const strictestOf = <V>(ladder: readonly V[], values: readonly V[]): V | undefined =>
-  call('strictestOf', ladder, values);

@@ -6,7 +6,7 @@ export type { ValueSpec } from './value-spec.ts';
 export { POLICY_SCOPES, type KeyHolder, type PolicyScope, type PolicyLayer } from './layers.ts';
 export type { MergeKind } from './merge.ts';
 export { readSettingsLayer } from './read-layer.ts';
-export type { RepairKind } from './repair/kinds.ts';
+export type { RepairKind } from './key-spec.ts';
 export { loadSettingsLayers, type LoadedSettings, type SettingsSources } from './sources.ts';
 export { createPolicyView, type PolicyView } from './view.ts';
 export {

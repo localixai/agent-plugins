@@ -13,7 +13,6 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/entries.rs`, docs/RUST.md).
  */
-import type { Repair } from '../repair/support.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
 const call = coreModule('settings/mcp/entries');
@@ -37,6 +36,3 @@ export const readMcpEntry = (raw: unknown, list: McpList): McpEntry | undefined 
 /** The valid entries of a list value, in order; what is no list has none. */
 export const readMcpEntries = (value: unknown, list: McpList): readonly McpEntry[] =>
   call('readMcpEntries', value, list);
-
-export const allowedMcpServers: Repair = (value, at) => call('allowedMcpServers', value, at);
-export const deniedMcpServers: Repair = (value, at) => call('deniedMcpServers', value, at);

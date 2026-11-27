@@ -1,4 +1,4 @@
-//! Port of `src/settings/marketplaces/headers-helper.ts`, switched.
+//! Ported from `src/settings/marketplaces/headers-helper.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What the planned source of an `extraKnownMarketplaces` entry keeps of its request headers and
 //! `headersHelper` commands (settings-reference.md, `extraKnownMarketplaces`; plugins/host-marketplace.md,
@@ -158,11 +158,5 @@ pub fn planned_source(source: JsValue, from: PolicyScope) -> JsValue {
         declared_in(from, apply(without_insecure_helper, source))
     } else {
         source
-    }
-}
-
-crate::registry::exports! {
-    "settings/marketplaces/headers-helper" {
-        "plannedSource" => ok |source: JsValue, from: PolicyScope| planned_source(source, from);
     }
 }

@@ -1,5 +1,4 @@
-//! Ported from `src/settings/general/closed-fields.ts`; only the core uses it now, so it has no
-//! wrapper.
+//! Ported from `src/settings/general/closed-fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `worktree` and `attribution` blocks of a managed source, repaired per field instead of
 //! dropped whole (managed-settings.md, "Keys that fail closed": "Claude Code repairs the

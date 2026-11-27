@@ -22,6 +22,7 @@ pub mod merge;
 pub mod paths;
 pub mod permissions;
 pub mod plugins;
+pub mod read_layer;
 pub mod repair;
 pub mod skills;
 pub mod value_spec;

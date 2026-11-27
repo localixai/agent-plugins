@@ -1,6 +1,4 @@
-//! The core's counterpart of `src/settings/marketplaces/source-kinds.ts` at sha256:8836761be04b, which stays TypeScript:
-//! its one function only routes a member to the host's own function for its kind, a look at the
-//! outside of host values (docs/RUST.md, "What stays TypeScript").
+//! Ported from `src/settings/marketplaces/source-kinds.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The kinds of marketplace source an allow or block entry names (the official union's `source`),
 //! and the helpers that ask a registry of per-kind functions about one member.

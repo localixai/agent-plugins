@@ -8,13 +8,9 @@
 //! A checked member that is not text (a `url` or an argument of another type, which the
 //! TypeScript's `matchAll` would throw on) holds no reference here: the file's reader refused it.
 
-use indexmap::IndexMap;
-use serde::Serialize;
-
 use crate::format::mcp_config::is_remote_mcp_server;
 use crate::format::mcp_env::{braced_references, is_variable_name, split_default};
 use crate::js::{JsValue, property_order};
-use crate::registry::Function;
 
 /// Where a server comes from, as far as the lists are concerned.
 pub const MCP_SERVER_ORIGINS: [&str; 6] = [
@@ -135,42 +131,8 @@ pub const ORIGIN_RULES: [(&str, OriginRule); 6] = [
     ),
 ];
 
-/// `skipsAllowlist` as the host's function.
-#[derive(Debug)]
-struct Skips(SkipsAllowlist);
-
-crate::registry::methods! {
-    Skips {
-        "call" => ok |this, server: JsValue| this.0.skips(&server);
-    }
-}
-
-/// A rule as the host holds it.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct OriginRow {
-    denylist: bool,
-    skips_allowlist: Function,
-}
-
-fn origin_rules_table() -> IndexMap<&'static str, OriginRow> {
-    ORIGIN_RULES
-        .into_iter()
-        .map(|(origin, rule)| {
-            (
-                origin,
-                OriginRow {
-                    denylist: rule.denylist,
-                    skips_allowlist: Function::new(Skips(rule.skips_allowlist)),
-                },
-            )
-        })
-        .collect()
-}
-
 crate::registry::exports! {
     "settings/mcp/origins" {
         "MCP_SERVER_ORIGINS" => ok || MCP_SERVER_ORIGINS;
-        "ORIGIN_RULES" => ok origin_rules_table;
     }
 }

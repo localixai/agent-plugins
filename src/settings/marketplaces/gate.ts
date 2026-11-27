@@ -3,12 +3,15 @@
  * policy view (settings-reference.md, both keys; plugins/org.md, "Restrict what users can install").
  * Effects stay the host's: the kit says whether a source may be added, installed, updated,
  * refreshed, auto-updated or loaded, and why.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/marketplaces/gate.rs`,
+ * docs/RUST.md).
  */
 import type { SdkMarketplaceSource } from '../../protocol/official.ts';
-import { readSurfaceLocks } from '../customization/surfaces.ts';
 import type { PolicyView } from '../view.ts';
-import { matchClaudeAiMarketplace, matchMarketplaceSource, type ListKind } from './match-source.ts';
-import { byKind, type ByKind, type SourceKind } from './source-kinds.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/marketplaces/gate');
 
 export type SourceVerdict =
   | { readonly allowed: true }
@@ -54,187 +57,6 @@ export interface MarketplaceGate {
   skillsDirectoryPlugins(): SkillsDirVerdict;
 }
 
-/** What names a place a marketplace comes from: every kind but `skills-dir` (plugins/org.md). */
-const NAMES_A_MARKETPLACE: { readonly [K in SourceKind]: boolean } = {
-  github: true,
-  git: true,
-  url: true,
-  file: true,
-  directory: true,
-  npm: true,
-  settings: true,
-  hostPattern: true,
-  pathPattern: true,
-  'skills-dir': false,
-};
-
-/** The kinds written as the `owner/repo` shorthand, which points at github.com (plugins/org.md). */
-const IS_SHORTHAND: { readonly [K in SourceKind]: boolean } = {
-  github: true,
-  git: false,
-  url: false,
-  file: false,
-  directory: false,
-  npm: false,
-  settings: false,
-  hostPattern: false,
-  pathPattern: false,
-  'skills-dir': false,
-};
-
-/** The kinds that admit a git host by hostname. */
-const ADMITS_BY_HOSTNAME: { readonly [K in SourceKind]: boolean } = {
-  ...IS_SHORTHAND,
-  github: false,
-  hostPattern: true,
-};
-
-/** The one line that names a source in a message (judgment: the docs quote no per-kind wording). */
-const LABELS: ByKind<string> = {
-  github: (source) => `github:${source.repo}`,
-  git: (source) => `git:${source.url}`,
-  url: (source) => `url:${source.url}`,
-  file: (source) => `file:${source.path}`,
-  directory: (source) => `directory:${source.path}`,
-  npm: (source) => `npm:${source.package}`,
-  settings: (source) => `settings:${source.name}`,
-  hostPattern: (source) => `hostPattern:${source.hostPattern}`,
-  pathPattern: (source) => `pathPattern:${source.pathPattern}`,
-  'skills-dir': () => 'skills-dir',
-};
-
-/**
- * "The allowlist and blocklist match a marketplace hosted on claude.ai by its host": only a
- * `hostPattern` entry can name it, tested against `claude.ai` (`matchClaudeAiMarketplace`); on the
- * allowlist it "admits your
- * organization's claude.ai marketplaces and the claude.ai default marketplaces, but not a
- * marketplace made of a member's own claude.ai uploads or one whose scope claude.ai didn't state"
- * (plugins/org.md, "Marketplaces hosted on claude.ai").
- */
-const ADMITTED_SCOPE: { readonly [S in ClaudeAiMarketplaceScope]: boolean } = {
-  organization: true,
-  default: true,
-  member: false,
-};
-
-const label = (source: SdkMarketplaceSource): string => byKind(LABELS, source);
-
-const BLOCKED_BY_POLICY = 'is blocked by enterprise policy';
-const NOT_ALLOWED = 'is not in the allowed marketplace list';
-
-const matchesAny = (
-  list: ListKind,
-  entries: readonly SdkMarketplaceSource[],
-  source: SdkMarketplaceSource,
-): boolean => entries.some((entry) => matchMarketplaceSource(list, entry, source));
-
-const namesClaudeAi = (list: ListKind, entries: readonly SdkMarketplaceSource[]): boolean =>
-  entries.some((entry) => matchClaudeAiMarketplace(list, entry));
-
-const namesSkillsDir = (entries: readonly SdkMarketplaceSource[]): boolean =>
-  entries.some((entry) => !NAMES_A_MARKETPLACE[entry.source]);
-
-const GUIDANCE_BLOCKED = 'This marketplace source is explicitly blocked by your administrator';
-const GUIDANCE_CONTACT = 'Contact your administrator to configure allowed marketplace sources';
-const NO_EXTERNAL = 'No external marketplaces are allowed.';
-const GITHUB_TIP =
-  'Tip: the owner/repo shorthand assumes github.com. If the repository lives on your internal host, add it again with its full URL, such as git@your-git-host.com:owner/repo.git';
-
-const allowedSources = (entries: readonly SdkMarketplaceSource[]): string =>
-  `Allowed sources: ${entries.map(label).join(', ')}`;
-
-/** Judgment: the tail the docs name; an empty list says so, a non-empty one lists its sources. */
-const allowlistTail = (entries: readonly SdkMarketplaceSource[]): string =>
-  entries.length === 0 ? NO_EXTERNAL : allowedSources(entries);
-
-/** The allowlist admits a git host by hostname, yet the shorthand points at github.com. */
-const needsGithubTip = (
-  entries: readonly SdkMarketplaceSource[],
-  source: SdkMarketplaceSource,
-): boolean =>
-  IS_SHORTHAND[source.source] && entries.some((entry) => ADMITS_BY_HOSTNAME[entry.source]);
-
-const blockedMessage = (source: SdkMarketplaceSource): string =>
-  `Marketplace source '${label(source)}' ${BLOCKED_BY_POLICY}`;
-
-const notAllowedMessage = (name: string, entries: readonly SdkMarketplaceSource[]): string =>
-  `Marketplace "${name}" ${NOT_ALLOWED}\n${entries.length === 0 ? GUIDANCE_CONTACT : allowedSources(entries)}`;
-
-const registeredBlockedMessage = (name: string): string =>
-  `Marketplace "${name}" ${BLOCKED_BY_POLICY}\n${GUIDANCE_BLOCKED}`;
-
-export function createMarketplaceGate(view: PolicyView): MarketplaceGate {
-  // The view never changes, so each list is read from it once.
-  const allowed = view.get('strictKnownMarketplaces');
-  const blockedList = view.get('blockedMarketplaces') ?? [];
-  const strict = (): readonly SdkMarketplaceSource[] | undefined => allowed;
-  const blocked = (): readonly SdkMarketplaceSource[] => blockedList;
-  const active =
-    allowed !== undefined || blockedList.some((entry) => NAMES_A_MARKETPLACE[entry.source]);
-  const restrictionActive = (): boolean => active;
-
-  return {
-    check(source) {
-      if (matchesAny('blocked', blocked(), source)) {
-        return {
-          allowed: false,
-          by: 'blockedMarketplaces',
-          message: blockedMessage(source),
-        };
-      }
-      const allowlist = strict();
-      if (allowlist === undefined || matchesAny('strict', allowlist, source))
-        return { allowed: true };
-      return {
-        allowed: false,
-        by: 'strictKnownMarketplaces',
-        message: `${blockedMessage(source)}. ${allowlistTail(allowlist)}${needsGithubTip(allowlist, source) ? `\n${GITHUB_TIP}` : ''}`,
-      };
-    },
-    checkRegistered(name, source) {
-      if (matchesAny('blocked', blocked(), source)) {
-        return { loads: false, message: registeredBlockedMessage(name) };
-      }
-      const allowlist = strict();
-      return allowlist === undefined || matchesAny('strict', allowlist, source)
-        ? { loads: true }
-        : { loads: false, message: notAllowedMessage(name, allowlist) };
-    },
-    checkClaudeAi(name, scope) {
-      if (namesClaudeAi('blocked', blocked())) {
-        return { loads: false, message: registeredBlockedMessage(name) };
-      }
-      const allowlist = strict();
-      const admitted =
-        allowlist === undefined ||
-        (scope !== undefined && ADMITTED_SCOPE[scope] && namesClaudeAi('strict', allowlist));
-      return admitted
-        ? { loads: true }
-        : { loads: false, message: notAllowedMessage(name, allowlist ?? []) };
-    },
-    checkMissing(name) {
-      if (!restrictionActive()) return { loads: true };
-      // Judgment: the docs say /plugin "shows the policy error"; the allowlist's wording wins when
-      // both lists are set, since it is the one that makes every unlisted marketplace unusable.
-      const allowlist = strict();
-      return {
-        loads: false,
-        message:
-          allowlist === undefined
-            ? registeredBlockedMessage(name)
-            : notAllowedMessage(name, allowlist),
-      };
-    },
-    restrictionActive,
-    skillsDirectoryPlugins() {
-      if (namesSkillsDir(blocked())) return { admitted: false, by: 'blockedMarketplaces' };
-      // Applies "whether or not the entry is present" (plugins/org.md, "Keep skills-directory plugins loading").
-      if (readSurfaceLocks(view.get('strictPluginOnlyCustomization')).locked.size > 0)
-        return { admitted: false, by: 'strictPluginOnlyCustomization' };
-      const allowlist = strict();
-      return allowlist === undefined || namesSkillsDir(allowlist)
-        ? { admitted: true }
-        : { admitted: false, by: 'strictKnownMarketplaces' };
-    },
-  };
-}
+/** The gate over a view; the view never changes, so each list is read from it once. */
+export const createMarketplaceGate = (view: PolicyView): MarketplaceGate =>
+  call('createMarketplaceGate', view);

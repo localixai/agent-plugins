@@ -10,7 +10,6 @@
 //! - **Managed settings**: the document that is not JSON puts none of its settings in effect, and
 //!   Claude Code exits at startup rather than run without the policy (`stops_startup`).
 
-use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::format::issues::{PluginIssue, Severity, error};
@@ -120,7 +119,6 @@ pub const fn problem_kind(scope: PolicyScope, issue: &PluginIssue) -> ProblemKin
 
 crate::registry::exports! {
     "settings/broken-file" {
-        "SCOPE_LABEL" => ok || SCOPE_LABEL.iter().map(|(scope, label)| (scope.name(), *label)).collect::<IndexMap<&str, &str>>();
         "stopsStartup" => ok |scope: PolicyScope| stops_startup(scope);
         "brokenSource" => ok |scope: PolicyScope, reason: Option<String>, source: Option<String>| broken_source(scope, reason.as_deref(), source.as_deref());
         "problemKind" => ok |scope: PolicyScope, issue: PluginIssue| problem_kind(scope, &issue);

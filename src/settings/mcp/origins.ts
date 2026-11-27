@@ -3,7 +3,6 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/origins.rs`, docs/RUST.md).
  */
-import type { PluginMcpServer } from '../../format/mcp-config.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
 const call = coreModule('settings/mcp/origins');
@@ -22,12 +21,3 @@ export const MCP_SERVER_ORIGINS: readonly [
   'inProcess',
 ] = call('MCP_SERVER_ORIGINS');
 export type McpServerOrigin = (typeof MCP_SERVER_ORIGINS)[number];
-
-export interface OriginRule {
-  /** The denylist applies; in-process `type: "sdk"` servers "skip all three" checks. */
-  readonly denylist: boolean;
-  /** The server is not checked against the allowlist. */
-  readonly skipsAllowlist: (server: PluginMcpServer) => boolean;
-}
-
-export const ORIGIN_RULES: { readonly [O in McpServerOrigin]: OriginRule } = call('ORIGIN_RULES');

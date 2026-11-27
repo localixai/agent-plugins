@@ -2,5 +2,6 @@
 //! npm package).
 
 pub mod bundled;
+pub mod overrides;
 pub mod shell;
 pub mod sync_skills;

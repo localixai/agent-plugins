@@ -192,8 +192,6 @@ crate::registry::exports! {
         "MCP_LISTS" => ok || MCP_LISTS;
         "readMcpEntry" => ok |raw: JsValue, list: McpList| read_mcp_entry(&raw, list);
         "readMcpEntries" => ok |value: JsValue, list: McpList| read_mcp_entries(&value, list);
-        "allowedMcpServers" => ok |value: JsValue, at: RepairAt| allowed_mcp_servers(&value, &at);
-        "deniedMcpServers" => ok |value: JsValue, at: RepairAt| denied_mcp_servers(&value, &at);
     }
 }
 
