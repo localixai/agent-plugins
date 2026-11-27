@@ -287,14 +287,37 @@ it hands out:
   once on the combined outcome. An engine of its own (`createHookEngine`) gets its registry as
   `{serials, fresh}`, the edge numbering each handler by identity (a `WeakMap`), and keeps its own
   claims. The run ports, the `if` evaluator and `userConfigOf` are the host's, called as needs.
-- **Not moved yet, each with its module**: the skill-hook ledger (with `session-skill-hooks`,
-  which fills it); the monitor ledger (with `session-monitors`; a subagent's core then shares its
-  parent's ledger as one `Arc`, and `LEDGERS` goes); `sdk-hooks`. `hooks/registry.ts` stays
-  TypeScript: a `HookRegistry` is closures over the host's arrays, and its methods are public.
-  `session-environment` builds host ports from closures and stays at the edge.
-  `session-core-dispatch` and `session-core-hooks` read the host's state objects (`ActivePlugin`,
-  a core package through `coreOf`) and wait on the state's move. `session-skill-entries`' memo
-  by `HostState` becomes the core's by the state it took up, its entries naming their plugin by
+- **The host's state is the core's** (`host/state.rs`, `Own<HostState>`). Each `Plugin` and
+  `CorePackage` object the host gives crosses once: the edge (`src/host/core-view.ts`) keeps, by
+  identity, the core's copy of it (`pluginData` / `corePackageData`, an `$own` handle of a
+  `GivenPlugin`: the plugin as data without its Markdown, a core package's view and the package),
+  as an engine numbers its handlers. A plugin's Markdown (`skills`, `commands`, `agents`,
+  `outputStyles`) crosses only when its catalog is read, once per object (`readCatalog`, or the
+  `markdown(at)` function `createHostState` asks for a plugin that runs), so a plugin that never
+  runs has it neither read nor copied. `createHostState` is one crossing per host generation (and
+  per session that brings its own settings or plugins, per host generation): given each plugin as
+  `{id, plugin: GivenPlugin handle, enabled?, source?}`, the host's list and the session's own
+  (layered by id in the core, `plugin-set`), the settings view (a port the state keeps), the
+  parent settings (the edge's default when the host gives none), the saved `userConfig` and the
+  options' data members (`HostFacts`, `host/facts.rs`: `windows`, `shells`, `processId`, `hipaa`,
+  `hookExecution`, `shellPaths`, `shellArguments`, `extraScopeFolders`, `launchOwnsEnvironment`,
+  `workflows`), it answers the state's `handle`, `all`, `active` as `{given, userConfig,
+  catalog?}` (`given` the index into the list the edge gave, which the edge maps back to its
+  `HostPlugin`; `catalog` only when it was read in this call), `issues`, `customization` and
+  `gates`. The Rust `HostState` holds `options: HostFacts`, `view`, `parent`, `customization`,
+  `gates`, `all`, `issues` and `active: Vec<ActivePlugin>`, each `ActivePlugin { entry:
+  HostPlugin { id, plugin: Arc<GivenPlugin>, enabled, source, given }, catalog:
+  Arc<PluginCatalog>, user_config }` (`id()`, `core()` for its package), so a ported module takes
+  `state: Own<HostState>` (the edge passes `state.handle`) and a plugin by its id
+  (`host/session_core_hooks.rs` reads the core packages so). The edge's `HostState` keeps the
+  host's own: `options` (its ports, `envFiles`), the `HostPlugin` objects of `active`, and
+  `handle`. `mergeHostOptions` and the state cells stay at the edge: they keep host objects.
+- **The ledgers are the core's**: the skill-hook ledger (`session-skill-hooks`) and the monitor
+  ledger (`session-monitors`) live in `SessionCore`; a subagent's core shares its parent's ledger
+  as one `Arc`, found by the parent session's core handle, not by the session object.
+  `hooks/registry.ts` stays TypeScript: a `HookRegistry` is closures over the host's arrays, and
+  its methods are public (its counterpart `hooks/registry.rs`). `session-skill-entries`' memo by
+  `HostState` becomes the core's by the state it took up, its entries naming their plugin by
   index into the state's `active` list, which the edge maps back to the host's `ActivePlugin` and
   `readBody`.
 

@@ -1,12 +1,8 @@
-import type { CoreMcpServer, CoreStdioServer } from '../format/core/mcp-server.ts';
-import type { CorePaths } from '../format/core/placeholders.ts';
-import { coreServerProcess } from '../format/core/subprocess.ts';
-import { error, type PluginIssue } from '../format/issues.ts';
-import { pluginNameOf } from '../format/marketplace/ids.ts';
+import type { PluginIssue } from '../format/issues.ts';
 import type { CorePackage } from '../loading/core/index.ts';
-import { mcpServerKey, type ResolvedMcpServer } from '../loading/index.ts';
-import { mcpStdioStart } from '../loading/resolve/shell-prefix.ts';
+import type { ResolvedMcpServer } from '../loading/index.ts';
 import type { Environment, Locations } from '../ports/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { ActivePlugin } from './state.ts';
 
 /**
@@ -18,6 +14,8 @@ import type { ActivePlugin } from './state.ts';
  * `./` command resolved, `args`, `env` and `cwd` expanded (core §9.2) and the `cwd` contained;
  * `streamable-http` as `http`; `sse` as `sse`; `url` and `headers` never expanded. The process gets
  * `PLUGIN_ROOT`, `PLUGIN_DATA` and `CLAUDE_PROJECT_DIR` (§18.1.3, J18.12), no `CLAUDE_PLUGIN_*`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/core_servers.rs`, docs/RUST.md).
  */
 
 export interface CorePlace {
@@ -26,93 +24,14 @@ export interface CorePlace {
   readonly signal?: AbortSignal;
 }
 
-/** The two directories of core §9.1: the install's root and its data directory (J18.13). */
-export async function corePathsOf(plugin: ActivePlugin, place: CorePlace): Promise<CorePaths> {
-  return {
-    root: place.locations.pluginRoot(plugin.id),
-    data: await place.locations.pluginData(plugin.id, place.signal),
-  };
-}
-
-const RESERVED: ReadonlySet<string> = new Set(['PLUGIN_ROOT', 'PLUGIN_DATA']);
-
-function stdioServer(
-  base: Omit<ResolvedMcpServer, 'server' | 'environment'>,
-  server: CoreStdioServer,
-  paths: CorePaths,
-  place: CorePlace,
-): { readonly resolved?: ResolvedMcpServer; readonly issue?: PluginIssue } {
-  const made = coreServerProcess(server, { paths });
-  if ('problem' in made) {
-    return {
-      issue: error(`mcpServers.${base.name}`, `Server "${base.name}" is skipped: ${made.problem}`),
-    };
-  }
-  const launch = made.process;
-  // `env` is the server's own, expanded; the two reserved variables come in `environment`.
-  const env = Object.fromEntries(
-    Object.entries(launch.env).filter(([name]) => !RESERVED.has(name)),
-  );
-  return {
-    resolved: {
-      ...base,
-      server: { type: 'stdio', command: launch.command, args: [...launch.args], env },
-      environment: {
-        PLUGIN_ROOT: paths.root,
-        PLUGIN_DATA: paths.data,
-        CLAUDE_PROJECT_DIR: place.locations.projectDir(),
-      },
-      start: mcpStdioStart({ command: launch.command, args: [...launch.args] }, place.environment),
-      core: { cwd: launch.cwd },
-    },
-  };
-}
-
-/** The Claude Code transport each remote core transport runs as (§18.1.4 item 3). */
-const REMOTE_TYPE = { 'streamable-http': 'http', sse: 'sse' } as const;
-
-function serverOf(
-  plugin: ActivePlugin,
-  name: string,
-  server: CoreMcpServer,
-  context: { readonly paths: CorePaths; readonly place: CorePlace },
-): { readonly resolved?: ResolvedMcpServer; readonly issue?: PluginIssue } {
-  const base = {
-    name,
-    key: mcpServerKey(pluginNameOf(plugin.id), name),
-    pluginId: plugin.id,
-  };
-  if ('command' in server) return stdioServer(base, server, context.paths, context.place);
-  const { url, headers } = server;
-  return {
-    resolved: {
-      ...base,
-      server: {
-        type: REMOTE_TYPE[server.type],
-        url,
-        ...(headers === undefined ? {} : { headers: { ...headers } }),
-      },
-      environment: {},
-      core: {},
-    },
-  };
-}
+const call = coreModule('host/core-servers');
 
 /** The servers of one core package, in the order `mcp.json` names them. */
-export async function coreServers(
+export const coreServers = (
   plugin: ActivePlugin,
   core: CorePackage,
   place: CorePlace,
 ): Promise<{
   readonly resolved: readonly ResolvedMcpServer[];
   readonly issues: readonly PluginIssue[];
-}> {
-  const entries = Object.entries(core.mcpServers);
-  if (entries.length === 0) return { resolved: [], issues: [] };
-  const paths = await corePathsOf(plugin, place);
-  const made = entries.map(([name, server]) => serverOf(plugin, name, server, { paths, place }));
-  return {
-    resolved: made.flatMap((one) => (one.resolved === undefined ? [] : [one.resolved])),
-    issues: made.flatMap((one) => (one.issue === undefined ? [] : [one.issue])),
-  };
-}
+}> => call.async('coreServers', { id: plugin.id }, { mcpServers: core.mcpServers }, place);

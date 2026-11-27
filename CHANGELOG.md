@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- A host's state is the core's: each generation's plugin set (ids, name conflicts, dependencies,
+  what runs), the saved options, the customization lock and the hook gates are made in one call,
+  and the core keeps them as one handle the session's modules read by plugin id. Each `Plugin`
+  object crosses once, without its Markdown, which crosses only when its catalog is read, so a
+  plugin that never runs is never read. A core package's hook handlers and MCP servers are run and
+  resolved by the core too.
 - The settings areas are built by the core: the hook policy and the hook session gates (with the
   hook gate and the commands that follow the hooks), the customization lock, the plugin, skill,
   workflow and permission policies, `pluginSuggestionMarketplaces`, the command sources and the

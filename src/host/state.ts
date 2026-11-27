@@ -1,19 +1,11 @@
 import type { PluginIssue } from '../format/issues.ts';
 import type { ResolvedUserConfig } from '../loading/index.ts';
-import { enabledPlugin, pluginConfig } from '../settings/plugins/index.ts';
 import type { ParentSettingsContext } from '../settings/managed/index.ts';
 import { createPolicyView, type PolicyView } from '../settings/index.ts';
-import {
-  createCustomizationPolicy,
-  type CustomizationPolicy,
-} from '../settings/customization/index.ts';
-
-import { bundleSettingKey } from '../format/mcpb-manifest.ts';
-import type { OptionValues } from '../settings/plugins/index.ts';
+import type { CustomizationPolicy } from '../settings/customization/index.ts';
 import type { Locations } from '../ports/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import { readCatalog, type PluginCatalog } from './catalog.ts';
-import { withDependencies } from './plugin-dependencies.ts';
-import { distinctPlugins, layeredPlugins, withNameConflicts } from './plugin-set.ts';
 import type {
   HostCorePackage,
   HostedPlugin,
@@ -21,8 +13,19 @@ import type {
   HostUpdate,
   PluginHostOptions,
 } from './types.ts';
-import { coreOf, hostPluginOfCore } from './core-view.ts';
-import { hookSessionGates, type HookSessionGates } from '../settings/hooks/session-gates.ts';
+import { givenOf, hostPluginOfCore, markdownOf } from './core-view.ts';
+import type { CoreHandle } from './session-core.ts';
+import type { HookSessionGates } from '../settings/hooks/session-gates.ts';
+
+/**
+ * What every session of a host shares: the state of one generation of the host, made by the Rust
+ * core (`crates/agent-plugins/src/host/state.rs`, docs/RUST.md, "The host session") and held there
+ * as one handle a ported module takes back. This module is its edge: what stays the host's (the
+ * options with their ports, the `HostPlugin` objects the core names by their place in the list
+ * given, the state cells, and `mergeHostOptions` over the host's options).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/state.rs`, docs/RUST.md).
+ */
 
 /** A plugin the host runs: what its components read to, and the options saved for it. */
 export interface ActivePlugin extends HostPlugin {
@@ -45,99 +48,87 @@ export interface HostState {
   /** The plugins that run, in the order given. */
   readonly active: readonly ActivePlugin[];
   readonly issues: readonly PluginIssue[];
+  /** The core's state: given back to the core, it is the core's own object again. */
+  readonly handle: CoreHandle;
 }
+
+const call = coreModule('host/state');
 
 const NO_SETTINGS = createPolicyView([]);
+const NO_PARENT: ParentSettingsContext = { hasManagedSettings: false, parentMerge: false };
 
-/**
- * Whether the host runs the plugin: the value the host gave, else what `enabledPlugins` says;
- * managed settings that turn it off win over both (settings-reference.md, `enabledPlugins`).
- */
-function runs(view: PolicyView, entry: HostPlugin): boolean {
-  const decision = enabledPlugin(view, entry.id, entry.plugin.manifest?.defaultEnabled);
-  return decision.blockedByManaged ? false : (entry.enabled ?? decision.on);
+/** What the core answers: its handle, and each plugin that runs by its place in the list given. */
+interface StateAnswer {
+  readonly handle: CoreHandle;
+  readonly all: readonly HostedPlugin[];
+  /** A catalog is given when the core read it in this call: the edge keeps it with the plugin. */
+  readonly active: readonly {
+    readonly given: number;
+    readonly userConfig: ResolvedUserConfig;
+    readonly catalog?: PluginCatalog;
+  }[];
+  readonly issues: readonly PluginIssue[];
+  readonly customization: CustomizationPolicy;
+  readonly gates: HookSessionGates;
 }
 
-/** `pluginConfigs.<id>.mcpServers` as values under `<server>.<key>`, the form a bundled server reads. */
-const serverValues = (servers: Readonly<Record<string, OptionValues>>): OptionValues =>
-  Object.fromEntries(
-    Object.entries(servers).flatMap(([server, values]) =>
-      Object.entries(values).map(([key, value]) => [bundleSettingKey(server, key), value]),
-    ),
-  );
-
-/**
- * The saved options of a plugin: those of `pluginConfigs` in the settings (a bundled server's under
- * `<server>.<key>`), then the host's own values over them (the host keeps the secure store;
- * docs/API.md, "Variable substitution").
- */
-function userConfigOf(
-  view: PolicyView,
-  options: PluginHostOptions,
-  entry: HostPlugin,
-): { readonly config: ResolvedUserConfig; readonly issues: readonly PluginIssue[] } {
-  const saved = pluginConfig(view, entry.id);
-  return {
-    config: {
-      declared: entry.plugin.userConfig,
-      values: {
-        ...serverValues(saved.mcpServers),
-        ...saved.options,
-        ...options.userConfig?.[entry.id],
-      },
-    },
-    issues: saved.issues,
-  };
-}
+/** A plugin as the core takes it: its copy (`givenOf`) in place of the host's object. */
+const wireOf = ({ plugin, ...entry }: HostPlugin) => ({ ...entry, plugin: givenOf(plugin).handle });
 
 /** The plugins and the core packages given, as one list in which the core packages come last. */
-const givenPlugins = (options: PluginHostOptions): readonly HostPlugin[] => [
-  ...options.plugins,
-  ...(options.corePackages ?? []).map(hostPluginOfCore),
-];
+const givenPlugins = (
+  plugins: readonly HostPlugin[] | undefined,
+  corePackages: readonly HostCorePackage[] | undefined,
+): readonly HostPlugin[] => [...(plugins ?? []), ...(corePackages ?? []).map(hostPluginOfCore)];
 
-export function createHostState(options: PluginHostOptions): HostState {
+/**
+ * The state of `options`, with a session's own plugins (`own`) layered over the host's by id in the
+ * core. The options' data members cross as `facts`; the ports and `envFiles` stay here.
+ */
+function stateOf(options: PluginHostOptions, own?: readonly HostPlugin[]): HostState {
   const view = options.settings ?? NO_SETTINGS;
-  const distinct = distinctPlugins(givenPlugins(options));
-  const named = withNameConflicts(
-    view,
-    distinct.kept.map((entry) => ({ entry, enabled: runs(view, entry) })),
-  );
-  const needed = withDependencies(named.runs);
-  const states = needed.runs;
-  const active = states.flatMap(({ entry, enabled }) => {
-    if (!enabled) return [];
-    const config = userConfigOf(view, options, entry);
-    const catalog = readCatalog(entry.plugin);
-    return [
-      {
-        active: { ...entry, catalog, userConfig: config.config },
-        issues: [...catalog.issues, ...config.issues],
-      },
-    ];
-  });
-  const parent = options.parentSettings ?? { hasManagedSettings: false, parentMerge: false };
-  return {
-    options,
-    view,
-    parent,
-    customization: createCustomizationPolicy(view, parent),
-    gates: hookSessionGates(view, parent),
-    all: states.map(({ entry, enabled }) => ({
-      id: entry.id,
-      name: entry.plugin.name,
-      enabled,
-      ...(coreOf(entry.plugin) === undefined ? {} : { core: true as const }),
-    })),
-    active: active.map((each) => each.active),
-    issues: [
-      ...distinct.issues,
-      ...named.issues,
-      ...needed.issues,
-      ...active.flatMap((each) => each.issues),
-    ],
+  const parent = options.parentSettings ?? NO_PARENT;
+  const plugins = givenPlugins(options.plugins, options.corePackages);
+  const given = [...plugins, ...(own ?? [])];
+  /** The Markdown of the plugin at `at`, which the core asks for a plugin that runs, once per object. */
+  const markdown = (at: number) => {
+    const entry = given[at];
+    return entry === undefined ? undefined : markdownOf(entry.plugin);
   };
+  const made: StateAnswer = call(
+    'createHostState',
+    {
+      plugins: plugins.map(wireOf),
+      own: own?.map(wireOf),
+      view,
+      parent,
+      userConfig: options.userConfig,
+      facts: {
+        windows: options.windows,
+        shells: options.shells,
+        processId: options.processId,
+        hipaa: options.hipaa,
+        hookExecution: options.hookExecution,
+        shellPaths: options.shellPaths,
+        shellArguments: options.shellArguments,
+        extraScopeFolders: options.extraScopeFolders,
+        launchOwnsEnvironment: options.launchOwnsEnvironment,
+        workflows: options.workflows,
+      },
+    },
+    markdown,
+  );
+  const active = made.active.flatMap(({ given: at, userConfig, catalog }) => {
+    const entry = given[at];
+    if (entry === undefined) return [];
+    if (catalog !== undefined) givenOf(entry.plugin).catalog = catalog;
+    return [{ ...entry, catalog: readCatalog(entry.plugin), userConfig }];
+  });
+  const { handle, all, issues, customization, gates } = made;
+  return { options, view, parent, customization, gates, all, active, issues, handle };
 }
+
+export const createHostState = (options: PluginHostOptions): HostState => stateOf(options);
 
 /**
  * The options after an update: each part the update gives replaces the host's, a part left out or
@@ -181,9 +172,10 @@ export interface SessionOwn {
 }
 
 /**
- * The host's options with what the session brings in place of the host's, its plugins over the host's.
- * The session's locations replace the host's port, so every part of the session that reads
- * `options.ports.locations` (hooks, skills, agents, servers, monitors, folders) reads the session's.
+ * The host's options with what the session brings in place of the host's; its plugins are layered
+ * over the host's in the core. The session's locations replace the host's port, so every part of
+ * the session that reads `options.ports.locations` (hooks, skills, agents, servers, monitors,
+ * folders) reads the session's.
  */
 const sessionOptionsOf = (host: PluginHostOptions, own: SessionOwn): PluginHostOptions => {
   const settings = own.settings ?? host.settings;
@@ -191,19 +183,19 @@ const sessionOptionsOf = (host: PluginHostOptions, own: SessionOwn): PluginHostO
   return {
     ...host,
     ports: { ...host.ports, locations: own.locations ?? host.ports.locations },
-    // Both forms layer by id together: a session's own core package replaces a host plugin of its id.
-    plugins: layeredPlugins(givenPlugins(host), ownPlugins(own)),
-    corePackages: [],
     ...(settings === undefined ? {} : { settings }),
     ...(userConfig === undefined ? {} : { userConfig }),
   };
 };
 
-/** The session's own plugins and core packages, or `undefined` when it brings neither. */
+/**
+ * The session's own plugins and core packages, or `undefined` when it brings neither. Both forms
+ * layer by id together: a session's own core package replaces a host plugin of its id.
+ */
 const ownPlugins = (own: SessionOwn): readonly HostPlugin[] | undefined =>
   own.plugins === undefined && own.corePackages === undefined
     ? undefined
-    : [...(own.plugins ?? []), ...(own.corePackages ?? []).map(hostPluginOfCore)];
+    : givenPlugins(own.plugins, own.corePackages);
 
 /** Whether the session brings anything of its own, so its state is not the host's. */
 const bringsOwn = (own: SessionOwn): boolean =>
@@ -224,7 +216,7 @@ export function sessionStateSource(cell: HostStateSource, own: SessionOwn): Host
     current: () => {
       const host = cell.current();
       if (made === undefined || from !== host) {
-        made = createHostState(sessionOptionsOf(host.options, own));
+        made = stateOf(sessionOptionsOf(host.options, own), ownPlugins(own));
         from = host;
       }
       return made;

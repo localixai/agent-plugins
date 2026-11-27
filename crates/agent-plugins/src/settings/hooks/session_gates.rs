@@ -67,6 +67,9 @@ pub struct HookSessionGates {
     /// The plugin is force-enabled in managed `enabledPlugins`, which `allowManagedHooksOnly`
     /// exempts.
     pub force_enabled: Function,
+    /// The gate `force_enabled` asks, for the core's own reads (`host/state.rs`).
+    #[serde(skip)]
+    pub gate: Arc<HookGate>,
 }
 
 /// The decision about hooks the settings make, read once from a view the parent rules were
@@ -145,7 +148,8 @@ async fn session_gates_of(decision: HookDecision) -> HookSessionGates {
             allowed_env_vars: variables,
         },
         settings_hooks,
-        force_enabled: Function::new(ForceEnabledOf(gate)),
+        force_enabled: Function::new(ForceEnabledOf(Arc::clone(&gate))),
+        gate,
     }
 }
 
