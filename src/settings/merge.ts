@@ -1,8 +1,7 @@
 /**
  * How the layers that set one key combine into its value. A strategy is typed over the key's own
  * value type `V`: `combine` takes the key's value in every layer that sets it, highest precedence
- * first, and returns a `V`. So a row of `KEY_SPECS` cannot name a merge that returns another shape,
- * and the policy view needs no cast. One strategy per kind, never a branch.
+ * first, and returns a `V`. One strategy per kind, never a branch.
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/settings/merge.rs`, docs/RUST.md).
  */
@@ -27,11 +26,6 @@ const MERGE_KINDS = [
   'anyTrue',
 ] as const;
 export type MergeKind = (typeof MERGE_KINDS)[number];
-
-export interface Merge<V> {
-  readonly kind: MergeKind;
-  readonly combine: (values: readonly NonNullable<V>[]) => V;
-}
 
 /** What every strategy has, whatever value type it is typed over. */
 interface AnyMerge {

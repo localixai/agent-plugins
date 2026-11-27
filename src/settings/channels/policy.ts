@@ -1,11 +1,11 @@
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/channels/policy.rs`, docs/RUST.md). */
 import type { PolicyView } from '../view.ts';
-import {
-  effectiveChannelAllowlist,
-  type ChannelAllowlist,
-  type ChannelAllowlistContext,
-} from './allowlist.ts';
-import { channelGate, type ChannelGate } from './channel-gate.ts';
-import { channelVerdict, type ChannelEntry, type ChannelVerdict } from './verdict.ts';
+import type { ChannelAllowlist, ChannelAllowlistContext } from './allowlist.ts';
+import type { ChannelGate } from './channel-gate.ts';
+import type { ChannelEntry, ChannelVerdict } from './verdict.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/channels/policy');
 
 /** What the host tells the channel keys besides the layers. */
 export type ChannelPolicyContext = ChannelAllowlistContext;
@@ -20,15 +20,12 @@ export interface ChannelSettingsPolicy {
   allowed(entry: ChannelEntry): ChannelVerdict;
 }
 
-export function createChannelSettingsPolicy(
+export const createChannelSettingsPolicy = (
   view: PolicyView,
   context: ChannelPolicyContext,
-): ChannelSettingsPolicy {
-  const gate = channelGate(view, context);
-  const allowlist = effectiveChannelAllowlist(view, context);
-  return {
-    gate: () => gate,
-    allowlist: () => allowlist,
-    allowed: (entry) => channelVerdict(gate, allowlist, entry),
-  };
-}
+): ChannelSettingsPolicy =>
+  call('createChannelSettingsPolicy', view, {
+    account: context.account,
+    hasManagedSettings: context.hasManagedSettings,
+    defaultChannelAllowlist: context.defaultChannelAllowlist,
+  });

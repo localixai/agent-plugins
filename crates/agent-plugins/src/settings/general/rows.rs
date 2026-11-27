@@ -1,8 +1,6 @@
-//! The core's counterpart of `src/settings/general/rows.ts` at sha256:fc290bc73fc3, which stays
-//! TypeScript: its rows hold functions (`read`, `admin.pinnedWhen`, `merge.combine`) that the
-//! package's `createPolicyView` (`src/settings/view.ts`) calls, so they cannot cross the boundary
-//! as data. The same rows, each function a Rust one, so the core asks a general key's row without
-//! the TypeScript table.
+//! Ported from `src/settings/general/rows.ts`; only the core uses it now, so it has no wrapper.
+//! Its rows hold functions (`read`, `admin.pinnedWhen`, `merge.combine`) the core's view calls
+//! (`settings/view.rs`); the package reads them as data through `SPECS` (`settings/key_spec.rs`).
 //!
 //! One row per general key, from its entry in settings-reference.md (the Scope line and the notes
 //! under it) and settings.md, "Lists merge instead of overriding" and "Exceptions to managed

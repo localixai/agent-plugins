@@ -178,7 +178,6 @@ crate::registry::exports! {
             .map(|(scope, rank)| (scope.name(), *rank))
             .collect::<IndexMap<_, _>>();
         "orderedLayers" => ok |layers: Vec<JsValue>| ordered_layers(&layers);
-        "holdersOf" => ok |ordered: Vec<PolicyLayer>, key: String| holders_of(&ordered, &key);
     }
 }
 

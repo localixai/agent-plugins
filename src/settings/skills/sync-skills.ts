@@ -1,5 +1,9 @@
-import { syncDecisionOf, type SyncDecision } from '../plugins/sync-plugins.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/skills/sync_skills.rs`, docs/RUST.md). */
+import type { SyncDecision } from '../plugins/sync-plugins.ts';
 import type { PolicyView } from '../view.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/skills/sync-skills');
 
 /**
  * Whether Claude Code syncs and loads the skills of the claude.ai account (settings-reference.md,
@@ -10,4 +14,4 @@ import type { PolicyView } from '../view.ts';
  * key's (skills.md, "Where synced skills load").
  */
 export const syncSkillsDecision = (view: PolicyView): SyncDecision =>
-  syncDecisionOf(view, 'syncClaudeAiSkills');
+  call('syncSkillsDecision', view);

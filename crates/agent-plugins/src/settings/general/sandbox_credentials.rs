@@ -1,4 +1,5 @@
-//! Port of `src/settings/general/sandbox-credentials.ts`, switched.
+//! Ported from `src/settings/general/sandbox-credentials.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! Managed `sandbox.credentials` entries (settings-reference.md, "Invalid credential entries in
 //! managed settings"): an entry in `files` or `envVars` with a valid `path` or `name` and a `mode`
@@ -275,12 +276,6 @@ pub fn repair_credentials(at: &RepairAt, block: &JsValue) -> RepairedCredentials
     RepairedCredentials {
         value: JsValue::Object(in_property_order(value)),
         found,
-    }
-}
-
-crate::registry::exports! {
-    "settings/general/sandbox-credentials" {
-        "isDenyEntry" => ok |entry: JsValue| is_deny_entry(&entry);
     }
 }
 

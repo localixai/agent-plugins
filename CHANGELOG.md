@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Breaking** (`/settings`): `ValueSpec` is data: `merge.combine`, `admin.pinnedWhen` and `read`
+  are gone, with no replacement on the type; a key's merge, its admin tier and how its value is read
+  are answered by the core, through `createPolicyView`.
 - A command hook's run is the core's from end to end: the plan, the shell prefix, the missing
   plugin directory, the working directory, the environment and the background modes. So are the
   validator's `.mcp.json` checks and `plugin.json` field rules, and the status line, file
@@ -15,8 +18,14 @@
 - The settings merges, the layers' order and each key's holders, how `managedSourcesBehavior:
   "merge"` combines the sources and the cross-source keys, the `env` block's ignored variables,
   `resolveEnv` and `resolveSettingsEnv`, and the environment of a subprocess and of a command hook
-  run on the core. The key table (`KEY_SPECS`, `SPECS`) has a core counterpart; the TypeScript
-  table stays for the policy view.
+  run on the core. So do the policy view (`createPolicyView`, `createGeneralView`) and the key
+  table: `KEY_SPECS` and `SPECS` are now data (a row's scope rule, merge kind, repair, exception,
+  admin tier and path; its functions run in the core), and `ValueSpec` drops `merge.combine`,
+  `admin.pinnedWhen` and `read`.
+- Claude Code's version policy (`readVersionPolicy`, `pickAllowedVersion`, `startGate`,
+  `channelSwitch`), the HTTP hook allowlists, the channel settings policy, the MCP lists and load
+  switches, the claude.ai skills sync and the `env` timing (`envChange`, `envAfterCd`) run on the
+  core.
 - `${...}` substitution runs on the core: one string (`runWith`), the surfaces and their
   policies, a plugin's command hooks, monitors and LSP servers, Markdown content, the exported
   and shell-parsed environments, and the deep walk of a JSON value. So do the LSP runtime

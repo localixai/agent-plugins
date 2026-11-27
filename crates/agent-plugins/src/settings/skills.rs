@@ -3,3 +3,4 @@
 
 pub mod bundled;
 pub mod shell;
+pub mod sync_skills;

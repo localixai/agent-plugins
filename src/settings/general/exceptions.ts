@@ -33,31 +33,8 @@ export interface ManagedException<V> {
   readonly unreadable?: { readonly floor: V; readonly from: readonly PolicyScope[] };
 }
 
-/** `true` restricts and any scope's `true` is honored: `disableClaudeAiConnectors`, `isolatePeerMachines`, the two `block…Outside…` keys. */
-export const TRUE_FROM_ANY_SCOPE: ManagedException<boolean> = call('TRUE_FROM_ANY_SCOPE');
-
-/**
- * `true` restricts and only `~/.claude/settings.json` or `--settings` may beat a managed `false`:
- * `autoMode.classifyAllShell` and `permissions.denyInsteadOfPrompting`.
- */
-export const TRUE_FROM_USER_OR_FLAG: ManagedException<boolean | undefined> =
-  call('TRUE_FROM_USER_OR_FLAG');
-
-/** `false` restricts and the scopes the key's own line admits may set it: the claude.ai sync keys, `useAutoModeDuringPlan`, `enableArtifact`. */
-export const FALSE_FROM_ANY_SCOPE: ManagedException<boolean> = call('FALSE_FROM_ANY_SCOPE');
-
 /** `maxEffortLevel`: "When several scopes set a cap, the lowest applies"; `"max"` sets no cap. */
 export const LOWEST_CAP: ManagedException<EffortLevel> = call('LOWEST_CAP');
-
-/**
- * The value in force: the one precedence picks (`winning`, `undefined` when nothing applies), or the
- * most restrictive of the honored values when one restricts more.
- */
-export const honorException = <V>(
-  rule: ManagedException<V>,
-  winning: V | undefined,
-  honored: readonly V[],
-): V | undefined => call('honorException', rule, winning, honored);
 
 /**
  * The most restrictive of `values` on the ladder, `undefined` when none restricts more than the
