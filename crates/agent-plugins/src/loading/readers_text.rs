@@ -44,22 +44,22 @@ pub struct PluginTextFile {
 
 /// What discovery finds of one file: its path and name, nothing parsed (`DiscoveredFile` of
 /// `src/loading/discovered.ts`, a module of types only).
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredFile {
     /// Relative to the plugin root; `None` for a command whose `content` is inline in the manifest.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
     /// The name inside the plugin.
     pub name: String,
     /// A skill's folder, which also holds its supporting files.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub directory: Option<String>,
     /// A skill folder named by itself rather than found among the folders of a parent.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub alone: Option<bool>,
     /// A command declared in the manifest's object map.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "JsValue::is_undefined")]
     pub entry: JsValue,
 }
 

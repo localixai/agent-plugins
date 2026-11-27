@@ -9,29 +9,11 @@
 //! TypeScript's table holds a function per kind.
 
 use indexmap::IndexMap;
-use serde::Deserialize;
 
+use super::walk::ListedKind;
 use crate::format::messages::{agents_entry_not_file, skills_entry_not_directory};
 use crate::ports::files::FileStat;
 use crate::registry::Function;
-
-/// A kind a manifest lists paths of (`ListedKind` of `src/loading/walk.ts`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ListedKind {
-    /// `skills`.
-    Skills,
-    /// `agents`.
-    Agents,
-    /// `commands`.
-    Commands,
-    /// `outputStyles`.
-    OutputStyles,
-    /// `workflows`.
-    Workflows,
-    /// `themes`.
-    Themes,
-}
 
 /// A path of any shape is right.
 const fn either(_: &FileStat, _: &str) -> Option<String> {

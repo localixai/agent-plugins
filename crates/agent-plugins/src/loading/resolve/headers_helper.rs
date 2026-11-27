@@ -246,7 +246,6 @@ pub async fn plan_headers_helper(
 
 crate::registry::exports! {
     "loading/resolve/headers-helper" {
-        "HEADERS_HELPER_TIMEOUT_MS" => ok || HEADERS_HELPER_TIMEOUT_MS;
         "planHeadersHelper" => async ok |server: HelperServer, origin: HeadersHelperOrigin, trust: HelperTrust, context: HelperContext<Port>|
             plan_headers_helper(&server, origin, &trust, &context).await;
     }

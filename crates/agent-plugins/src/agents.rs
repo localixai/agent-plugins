@@ -18,4 +18,5 @@ pub mod subagent_permission;
 pub mod teammate;
 pub mod tool_filters;
 pub mod tool_list;
+pub mod tool_resolution;
 pub mod workflow;

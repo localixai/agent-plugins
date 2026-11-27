@@ -22,4 +22,5 @@ pub mod repository_trust;
 pub mod resolve;
 pub mod trust_gates;
 pub mod validate;
+pub mod walk;
 pub mod workspace_trust;
