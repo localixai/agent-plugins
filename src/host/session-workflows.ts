@@ -1,7 +1,14 @@
-import { workflowsDecision } from '../settings/workflows/index.ts';
+/**
+ * The plugin workflows a session offers as commands.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_workflows.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
 import { portsOf } from './session-environment.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState } from './state.ts';
+
+const call = coreModule('host/session-workflows');
 
 /**
  * A plugin workflow the session offers as `/<plugin>:<meta.name>` (workflows.md, "Distribute a
@@ -15,36 +22,20 @@ export interface WorkflowCommand {
   readonly path: string;
 }
 
-/** The plugin context of the decision: not Pro and no organization switch unless the host says so. */
-const NOT_PRO = { plan: { pro: false } } as const;
-
-/** Whether the workflow commands are available (workflows.md, "Turn workflows off"). */
-function commandsOn(state: HostState, options: SessionOptions): boolean {
-  const context = state.options.workflows ?? NOT_PRO;
-  const env = portsOf(state, options).environment.snapshot();
-  return workflowsDecision(state.view, { ...context, env }).surfaces.workflowCommands;
-}
-
 /**
  * The workflow commands of the plugins that run, in their loading order. Oracle 2.1.319
  * (spec/judgments.md): a script whose `meta` does not read (not the first statement, no description)
- * is not one, and of two scripts with one `meta.name` the first in the folder listing is kept.
+ * is not one, and of two scripts with one `meta.name` the first in the folder listing is kept. The
+ * state is the host's object: its fields the core reads cross, the view and the environment as ports.
  */
-export function workflowCommandsOf(
+export const workflowCommandsOf = (
   state: HostState,
   options: SessionOptions,
-): readonly WorkflowCommand[] {
-  // The decision reads the whole environment; with no workflow to list it would change nothing.
-  if (!state.active.some((plugin) => plugin.plugin.workflows.length > 0)) return [];
-  if (!commandsOn(state, options)) return [];
-  const seen = new Set<string>();
-  return state.active.flatMap((plugin) =>
-    plugin.plugin.workflows.flatMap((workflow) => {
-      const name = workflow.qualifiedName;
-      const description = workflow.meta?.description;
-      if (name === undefined || description === undefined || seen.has(name)) return [];
-      seen.add(name);
-      return [{ name, description, pluginId: plugin.id, path: workflow.path }];
-    }),
+): readonly WorkflowCommand[] =>
+  call(
+    'workflowCommandsOf',
+    state.active.map((plugin) => ({ id: plugin.id, workflows: plugin.plugin.workflows })),
+    state.view,
+    state.options.workflows,
+    portsOf(state, options).environment,
   );
-}

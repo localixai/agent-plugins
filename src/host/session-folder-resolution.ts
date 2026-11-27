@@ -1,20 +1,24 @@
-import { SCOPE_RULES } from '../skills/scan/locations.ts';
-import { resolveFolderSkills, type ScannedEntry, type Resolution } from '../skills/index.ts';
+import type { ScannedEntry } from '../skills/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { SessionDirectories } from './session-directories.ts';
 import type { HostState } from './state.ts';
 import type { FolderSkillSources } from './session-folders.ts';
-import { placeOf, type Entry } from './session-skill-entries.ts';
+import type { Entry } from './session-skill-entries.ts';
 
-const sourcesOf = (resolution: Resolution): FolderSkillSources => ({
-  entries: resolution.resolved.map(({ invocable, names, scope, yielded }) => ({
-    command: invocable.command,
-    names,
-    scope,
-    origin: invocable.origin,
-    yielded,
-  })),
-  shadowed: resolution.shadowed,
-});
+/**
+ * The folder skills a session lists, resolved to their names.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_folder_resolution.rs`,
+ * docs/RUST.md). The memo stays here: it compares the host's state object and the `taken` array
+ * it was given.
+ */
+
+const call = coreModule('host/session-folder-resolution');
+
+interface FolderResolution {
+  readonly listed: readonly Entry[];
+  readonly sources: FolderSkillSources;
+}
 
 /**
  * Memoized names and source-policy decisions, invalidated by scans, host.update and a change of
@@ -27,31 +31,16 @@ export function createFolderResolution(
 ) {
   let scanned: readonly ScannedEntry[] = [];
   let previous: { readonly state: HostState; readonly taken: readonly string[] } | undefined;
-  let listed: readonly Entry[] = [];
-  let sources: FolderSkillSources = { entries: [], shadowed: [] };
+  let resolved: FolderResolution = { listed: [], sources: { entries: [], shadowed: [] } };
   const resolve = () => {
     const state = stateOf();
     const names = taken();
     if (previous?.state === state && previous.taken === names) return;
-    const policy = state.customization;
-    const kinds = { skill: 'skills', command: 'commands' } as const;
-    const allowed = scanned.filter((entry) => {
-      const source = SCOPE_RULES[entry.scope][kinds[entry.invocable.kind]];
-      return source !== undefined && policy.loads('skills', source.origin);
-    });
-    const resolution = resolveFolderSkills(allowed, {
+    resolved = call('resolveFolderEntries', scanned, state.customization.locked, {
       cwd: directories.cwd(),
       addedDirectories: directories.added(),
       taken: names,
     });
-    listed = resolution.resolved.map((each): Entry => ({
-      invocable: each.invocable,
-      names: each.names,
-      readBody: each.readBody,
-      source: { kind: 'folder', scope: each.scope },
-      ...placeOf(each.invocable),
-    }));
-    sources = sourcesOf(resolution);
     previous = { state, taken: names };
   };
   return {
@@ -62,11 +51,11 @@ export function createFolderResolution(
     },
     current() {
       resolve();
-      return listed;
+      return resolved.listed;
     },
     sources() {
       resolve();
-      return sources;
+      return resolved.sources;
     },
   };
 }

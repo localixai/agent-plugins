@@ -1,11 +1,17 @@
+import { coreModule } from '../wasm/bridge.ts';
 import type { OutputStyle } from './output-style.ts';
-import { firstContentLine } from './skill-fields.ts';
 
 /**
  * Which output style is active, and what that means for the system prompt (output-styles.md,
  * "Change your output style" and "How output styles work"). Pure: the host reads its settings and
  * passes the values in.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/output_style_select.rs`,
+ * docs/RUST.md). A selection holds the host's own style object: the core names it by its place in
+ * `styles`, and `withStyle` puts the object back.
  */
+
+const call = coreModule('format/output-style-select');
 
 interface BuiltinStyle {
   readonly id: string;
@@ -16,34 +22,10 @@ interface BuiltinStyle {
  * `default` and the four built-in styles, in the order output-styles.md lists them. The
  * descriptions are the docs' own words ("What changes" column; Default section).
  */
-export const BUILTIN_OUTPUT_STYLES: readonly BuiltinStyle[] = [
-  {
-    id: 'default',
-    description: "Claude Code's standard instructions for completing software engineering tasks",
-  },
-  {
-    id: 'Proactive',
-    description:
-      'Claude starts work right away and makes reasonable assumptions rather than asking about routine decisions',
-  },
-  {
-    id: 'Concise',
-    description: 'Responses lead with the result and leave out preamble, narration, and recaps',
-  },
-  {
-    id: 'Explanatory',
-    description:
-      'Claude adds short `Insight` blocks that explain the choices behind the code it writes',
-  },
-  {
-    id: 'Learning',
-    description:
-      'Claude explains its choices and leaves small pieces of code for you to write yourself',
-  },
-];
+export const BUILTIN_OUTPUT_STYLES: readonly BuiltinStyle[] = call('BUILTIN_OUTPUT_STYLES');
 
 /** The id Default has in the `/output-style` list. */
-export const DEFAULT_OUTPUT_STYLE_ID = 'default';
+export const DEFAULT_OUTPUT_STYLE_ID: 'default' = call('DEFAULT_OUTPUT_STYLE_ID');
 
 /** The style in force: Default, a built-in one, or a custom one (`style` is set). */
 export interface StyleSelection {
@@ -57,21 +39,18 @@ export interface StyleSelection {
   readonly style?: OutputStyle;
 }
 
-const builtinSelection = ({ id }: BuiltinStyle): StyleSelection => ({
-  id,
-  keepCodingInstructions: true,
-});
+/** A selection as the core answers it: a custom style by its place in `styles`. */
+interface Selected {
+  readonly id: string;
+  readonly keepCodingInstructions: boolean;
+  readonly at?: number;
+}
 
-const DEFAULT_SELECTION: StyleSelection = {
-  id: DEFAULT_OUTPUT_STYLE_ID,
-  keepCodingInstructions: true,
-};
-
-const customSelection = (style: OutputStyle): StyleSelection => ({
-  id: style.id,
-  keepCodingInstructions: style.keepCodingInstructions,
-  style,
-});
+/** The selection with the host's own style object at the place the core named. */
+function withStyle(styles: readonly OutputStyle[], { at, ...selection }: Selected): StyleSelection {
+  const style = at === undefined ? undefined : styles[at];
+  return style === undefined ? selection : { ...selection, style };
+}
 
 export interface OutputStyleRequest {
   /** The `outputStyle` setting, as the merged settings hold it. */
@@ -86,10 +65,6 @@ export interface OutputStyleRequest {
   readonly styles: readonly OutputStyle[];
 }
 
-function candidates(styles: readonly OutputStyle[]): readonly StyleSelection[] {
-  return [...BUILTIN_OUTPUT_STYLES.map(builtinSelection), ...styles.map(customSelection)];
-}
-
 /**
  * The style the argument of `/output-style <style>` names, a built-in or a custom one, without
  * regard to case; `undefined` when it names none, which leaves the choice to the setting.
@@ -98,8 +73,8 @@ export function findOutputStyle(
   styles: readonly OutputStyle[],
   argument: string,
 ): StyleSelection | undefined {
-  const wanted = argument.trim().toLowerCase();
-  return candidates(styles).find((entry) => entry.id.toLowerCase() === wanted);
+  const found: Selected | undefined = call('findOutputStyle', styles, argument);
+  return found === undefined ? undefined : withStyle(styles, found);
 }
 
 /**
@@ -108,41 +83,21 @@ export function findOutputStyle(
  * which is case-sensitive: "A value that doesn't match a style name exactly, such as
  * `explanatory`, gives you the Default style."
  */
-export function resolveOutputStyle({
-  setting,
-  command,
-  styles,
-}: OutputStyleRequest): StyleSelection {
-  const forced = styles.find((style) => style.forceForPlugin);
-  if (forced) return customSelection(forced);
-  const byCommand = command === undefined ? undefined : findOutputStyle(styles, command);
-  const bySetting = candidates(styles).find((entry) => entry.id === setting);
-  return byCommand ?? bySetting ?? DEFAULT_SELECTION;
-}
+export const resolveOutputStyle = (request: OutputStyleRequest): StyleSelection =>
+  withStyle(request.styles, call('resolveOutputStyle', request));
 
 /** Which system prompt Claude Code builds. */
 export type PromptKind = 'full' | 'short';
-
-/**
- * Whether the prompt has Claude Code's section of software engineering instructions at all: "the
- * shorter system prompt doesn't include that section, so the field has no effect there".
- */
-const PROMPT_HAS_CODING_SECTION: { readonly [K in PromptKind]: boolean } = {
-  full: true,
-  short: false,
-};
 
 /**
  * Whether the final prompt carries Claude Code's software engineering instructions. On the full
  * prompt a custom style drops them unless `keep-coding-instructions` is true; on the short prompt
  * there is nothing to keep or drop.
  */
-export function includeCodingInstructions(
+export const includeCodingInstructions = (
   selection: StyleSelection,
   promptKind: PromptKind,
-): boolean {
-  return PROMPT_HAS_CODING_SECTION[promptKind] && selection.keepCodingInstructions;
-}
+): boolean => call('includeCodingInstructions', selection, promptKind);
 
 export interface OutputStyleChoice {
   readonly id: string;
@@ -153,42 +108,13 @@ export interface OutputStyleChoice {
 }
 
 /**
- * The text beside a custom style's name: its `description`, else the first non-empty line of its
- * body (spec J6.3, oracle 2.1.325: a style without `description` is listed with its first body
- * line); nothing for an empty body. The style's own `description` stays unset.
- */
-function describe(style: OutputStyle): { description?: string } {
-  const description = style.description ?? firstContentLine(style.instructions);
-  return description === undefined ? {} : { description };
-}
-
-/**
  * What `/output-style` lists with no argument and the `/config` picker shows: Default, the
- * built-in styles, then each custom style with its `name` and `description`. It lists the same pool
+ * built-in styles, then each custom style with its `name` and `description` (else the first
+ * non-empty line of its body: spec J6.3, oracle 2.1.325). It lists the same pool
  * `resolveOutputStyle` selects from, so a custom style that reuses a built-in id or an earlier
  * style's id is left out (the first wins) and exactly one row is current.
  */
-export function listOutputStyles(
+export const listOutputStyles = (
   styles: readonly OutputStyle[],
   current: StyleSelection,
-): readonly OutputStyleChoice[] {
-  const builtin = BUILTIN_OUTPUT_STYLES.map(({ id, description }) => ({
-    id,
-    name: id,
-    description,
-    current: id === current.id,
-  }));
-  const builtinIds = new Set(BUILTIN_OUTPUT_STYLES.map(({ id }) => id));
-  const custom = styles
-    .filter(
-      (style, index) =>
-        !builtinIds.has(style.id) && styles.findIndex(({ id }) => id === style.id) === index,
-    )
-    .map((style) => ({
-      id: style.id,
-      name: style.name,
-      ...describe(style),
-      current: style.id === current.id,
-    }));
-  return [...builtin, ...custom];
-}
+): readonly OutputStyleChoice[] => call('listOutputStyles', styles, current);

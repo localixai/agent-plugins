@@ -216,7 +216,7 @@ async fn tool_names_given(names: Option<HostToolNamesGiven>) -> Handle {
         Some(given) => Some(given.read().await),
         None => None,
     };
-    Handle::new(tool_names_of(names))
+    Handle::own(tool_names_of(names))
 }
 
 crate::registry::exports! {

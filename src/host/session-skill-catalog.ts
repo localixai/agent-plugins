@@ -1,23 +1,24 @@
 import type { PluginIssue } from '../format/issues.ts';
-import {
-  invocationPolicy,
-  isDormant,
-  listedAs,
-  skillLookup,
-  type InvocationPolicy,
-  type ModelListing,
-  type NamedInvocable,
-  type OverrideState,
-  type SkillOverrides,
+import type {
+  InvocationPolicy,
+  ModelListing,
+  NamedInvocable,
+  OverrideState,
+  SkillOverrides,
 } from '../skills/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { Entry, SkillPlace, SkillSource } from './session-skill-entries.ts';
-import { overrideState } from '../skills/visibility.ts';
 
 /**
  * The session's skills and commands as rows: what the kit itself lists (`skills()`), expands
  * (`expandSkill`, `expandMessage`) and preloads, so a host's own list, roster and prompt listing are
  * the kit's. Pure over the entries the session already holds: no port is called.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_skill_catalog.rs`,
+ * docs/RUST.md). An entry crosses as its data: its `readBody` and its plugin stay here.
  */
+
+const call = coreModule('host/session-skill-catalog');
 
 /**
  * One skill or command the session can invoke. `file` and `directory` say where it lives, absolute
@@ -66,26 +67,16 @@ export interface CatalogInput {
 }
 
 /** The rows, in listing order: plugins first, then the folders, then the host's skills. */
-export function catalogRows(input: CatalogInput): readonly SessionSkill[] {
-  const { overrides, activated } = input;
-  const entries = input.entries.filter((entry) => !input.workflows.has(entry.invocable.command));
-  const lookup = skillLookup(entries);
-  return entries
-    .filter((entry) => lookup.find(entry.invocable.command) === entry)
-    .map((entry) => {
-      const { invocable } = entry;
-      return {
-        invocable,
-        names: entry.names.filter(
-          (name) => !input.workflows.has(name) && lookup.find(name) === entry,
-        ),
-        source: entry.source,
-        ...(entry.file === undefined ? {} : { file: entry.file }),
-        ...(entry.directory === undefined ? {} : { directory: entry.directory }),
-        override: overrideState(invocable, overrides),
-        policy: invocationPolicy(invocable, overrides),
-        listed: listedAs(invocable, { ...(overrides && { overrides }), activated }),
-        dormant: isDormant(invocable, activated),
-      };
-    });
-}
+export const catalogRows = (input: CatalogInput): readonly SessionSkill[] =>
+  call('catalogRows', {
+    entries: input.entries.map(({ invocable, names, source, file, directory }) => ({
+      invocable,
+      names,
+      source,
+      file,
+      directory,
+    })),
+    workflows: input.workflows,
+    overrides: input.overrides,
+    activated: input.activated,
+  });

@@ -1,16 +1,22 @@
-import { preToolUseHookOutcome, type HookOutcome } from '../hooks/index.ts';
+/**
+ * Whether a tool call may run: the PreToolUse hooks, then the permission decision over the input
+ * they return.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_tool_check.rs`, docs/RUST.md).
+ */
+import type { HookOutcome } from '../hooks/index.ts';
 import type { PortFailure } from '../ports/failure.ts';
-import {
-  decide,
-  prepareCall,
-  resolveRuleDirectories,
-  type ToolNames,
-  type DecideContext,
-  type Decision,
-  type PathResolver,
-  type PreparedCall,
+import type {
+  ToolNames,
+  DecideContext,
+  Decision,
+  PathResolver,
+  PreparedCall,
 } from '../rules/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { HookPart } from './session-hooks.ts';
+
+const call = coreModule('host/session-tool-check');
 
 /** What `checkTool` found for one tool call. */
 export interface ToolCheck {
@@ -54,59 +60,29 @@ export interface ToolCheckPart {
   ): Promise<ToolCheck>;
 }
 
-interface Resolving {
-  readonly resolver: PathResolver;
-  readonly signal: AbortSignal;
-}
-
-/** The context with the real locations of the rules' and the working directories, unless the host gave them. */
-async function withRealDirectories(
-  context: PermissionContext,
-  { resolver, signal }: Resolving,
-): Promise<PermissionContext> {
-  const { paths } = context.match;
-  if (paths.realDirectories !== undefined) return context;
-  const realDirectories = await resolveRuleDirectories(context.rules, paths, resolver, { signal });
-  return { ...context, match: { ...context.match, paths: { ...paths, realDirectories } } };
-}
-
-/** The call that runs and the context it is decided in, with the symlink check done when a resolver is given. */
-async function preparedRun(
-  call: PreparedCall,
-  input: unknown,
-  context: PermissionContext,
-  resolving: Resolving | undefined,
-): Promise<{ readonly run: PreparedCall | PortFailure; readonly context: PermissionContext }> {
-  if (resolving === undefined) return { run: { ...call, input }, context };
-  const { resolvedPaths: _stale, ...rest } = call;
-  const run = await prepareCall({ ...rest, input }, context.match.paths, resolving.resolver, {
-    signal: resolving.signal,
-  });
-  return { run, context: await withRealDirectories(context, resolving) };
-}
-
-/** `names` reads the call's tool name in Claude Code's terms (`SessionOptions.toolNames`). */
+/**
+ * `names` reads the call's tool name in Claude Code's terms (`SessionOptions.toolNames`). The
+ * permission context's three functions cross beside its data, as `decide`'s do.
+ */
 export function createToolCheckPart(
   hooks: Pick<HookPart, 'dispatch'>,
   names: () => ToolNames,
 ): ToolCheckPart {
   return {
-    async checkTool(given, { toolUseId, permissionContext, signal, resolver }) {
-      // The dispatch reads the host's name itself; the rules decide the Claude Code name.
-      const facts = { tool_name: given.toolName, tool_input: given.input, tool_use_id: toolUseId };
-      const hook = await hooks.dispatch('PreToolUse', facts, { signal });
-      // The merge already drops `updatedInput` after a deny or a defer (hooks/output).
-      const input = hook.effects.updatedInput ?? given.input;
-      // The rules decide the Claude Code name of the call that runs, read from the input it runs with.
-      const call = { ...given, toolName: names().claudeName(given.toolName, input) };
-      const resolving = resolver === undefined ? undefined : { resolver, signal };
-      const { run, context } = await preparedRun(call, input, permissionContext, resolving);
-      if ('failure' in run) {
-        const decision: Decision = { outcome: 'deny', reason: 'unresolvable-path' };
-        return { hook, input, decision, refused: run };
-      }
-      const decision = decide(run, { ...context, hook: preToolUseHookOutcome(hook) });
-      return { hook, input, decision };
+    checkTool: (given, { toolUseId, permissionContext, signal, resolver }) => {
+      const { requiresPermission, preapprovedFetchDomain, foreignArtifact, ...context } =
+        permissionContext;
+      return call.async(
+        'checkTool',
+        hooks,
+        names(),
+        given,
+        { toolUseId, signal, resolver },
+        context,
+        requiresPermission,
+        preapprovedFetchDomain,
+        foreignArtifact,
+      );
     },
   };
 }

@@ -1,8 +1,9 @@
-import { readBundledSkill, type BundledSkillHead } from '../format/bundled-skill.ts';
-import { error, type PluginIssue } from '../format/issues.ts';
+import type { BundledSkillHead } from '../format/bundled-skill.ts';
+import type { PluginIssue } from '../format/issues.ts';
 import type { BodyReader } from '../format/skill-types.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import { skillSettingsOf } from './session-skill-expand.ts';
-import { placeOf, type Entry } from './session-skill-entries.ts';
+import type { Entry } from './session-skill-entries.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState } from './state.ts';
 
@@ -15,6 +16,9 @@ import type { HostState } from './state.ts';
  * `disableSkillShellExecution`, `allowManagedPermissionRulesOnly` nor the plugin-only lock touches it.
  * A skill that should behave as a plugin's belongs in a plugin (`SessionOptions.plugins`), as the
  * Agent SDK adds skills (`plugins: [{ type: 'local', path }]`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_host_skills.rs`,
+ * docs/RUST.md). The memo by the host's own array stays here, as it is the host's object.
  */
 export interface HostSkill extends BundledSkillHead {
   /** The Markdown after the frontmatter, or a reader the session calls at each expansion and preload. */
@@ -26,8 +30,7 @@ export interface HostSkillEntries {
   readonly issues: readonly PluginIssue[];
 }
 
-const readerOf = (body: string | BodyReader): BodyReader =>
-  typeof body === 'string' ? () => Promise.resolve(body) : body;
+const call = coreModule('host/session-host-skills');
 
 const NONE: HostSkillEntries = { entries: [], issues: [] };
 
@@ -42,33 +45,7 @@ export function hostEntriesOf(list: readonly HostSkill[] | undefined): HostSkill
   if (list === undefined || list.length === 0) return NONE;
   const cached = READ.get(list);
   if (cached !== undefined) return cached;
-  const entries: Entry[] = [];
-  const issues: PluginIssue[] = [];
-  const seen = new Set<string>();
-  for (const skill of list) {
-    const read = readBundledSkill(skill, typeof skill.body === 'string' ? skill.body : '');
-    issues.push(...read.issues);
-    const { invocable } = read;
-    if (invocable === undefined) continue;
-    if (seen.has(invocable.command)) {
-      issues.push(
-        error(
-          `hostSkills.${skill.name}`,
-          'a host skill of this name came first; this one is not used',
-        ),
-      );
-      continue;
-    }
-    seen.add(invocable.command);
-    entries.push({
-      invocable,
-      names: [invocable.command],
-      readBody: readerOf(skill.body),
-      source: { kind: 'host' },
-      ...placeOf(invocable),
-    });
-  }
-  const read = { entries, issues };
+  const read: HostSkillEntries = call('hostEntriesOf', list);
   READ.set(list, read);
   return read;
 }

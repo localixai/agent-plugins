@@ -8,9 +8,10 @@
 //! argument text for every expanded skill. `readSkillMentions` finds the words; this decides which
 //! of them are skills of the session that may be stacked.
 //!
-//! The catalog is the host's `SkillLookup` (`skills/lookup`, which stays TypeScript: its callers
-//! compare the rows it finds by identity), so it crosses as a port: `find` is asked of the host and
-//! a row comes back as the value it gave. Its `names` are read once per call.
+//! The catalog is a `StackCatalog`: the host's `SkillLookup` given to `stackSkills` (`skills/lookup`,
+//! whose `find` hands back the host's own rows), which crosses as a port: `find` is asked of the host
+//! and a row comes back as the value it gave; or the core's own rows (`host/session-mentions`). Its
+//! `names` are read once per call.
 
 use std::sync::Arc;
 
@@ -20,6 +21,7 @@ use super::invocation::{Invocable, invocation_policy};
 use super::mention::{CoreStackable, SkillMention, is_leading, read_skill_mentions_with};
 use super::visibility::SkillOverrides;
 use crate::js::JsValue;
+use crate::ports::BoxFuture;
 use crate::registry::{Port, Set};
 
 /// How a stack is read.
@@ -68,9 +70,27 @@ fn stackable_after(options: &StackOptions, row: &JsValue) -> bool {
     inline && invocation_policy(&skill, &overrides).user && !open_ended
 }
 
-/// `catalog.find(name)`: the row a name invokes, or `undefined`.
-async fn find(catalog: Port, name: &str) -> JsValue {
-    catalog.method::<JsValue>("find", vec![name.into()]).await
+/// The catalog a message is read against (`SkillLookup`).
+pub trait StackCatalog: Send + Sync + 'static {
+    /// `find(name)`: the row a name invokes, or `undefined`.
+    fn find(&self, name: &str) -> BoxFuture<'_, JsValue>;
+    /// `names`: every name that invokes a row.
+    fn names(&self) -> BoxFuture<'_, Option<Vec<JsValue>>>;
+}
+
+/// The host's `SkillLookup`.
+impl StackCatalog for Port {
+    fn find(&self, name: &str) -> BoxFuture<'_, JsValue> {
+        let name = JsValue::from(name);
+        Box::pin(async move { self.method::<JsValue>("find", vec![name]).await })
+    }
+
+    fn names(&self) -> BoxFuture<'_, Option<Vec<JsValue>>> {
+        Box::pin(async move {
+            let names = self.member::<Option<Set<JsValue>>>("names").await;
+            names.map(|names| names.members)
+        })
+    }
 }
 
 fn arguments_of(mention: &SkillMention) -> &str {
@@ -82,7 +102,7 @@ fn arguments_of(mention: &SkillMention) -> &str {
     }
 }
 
-fn command_of(mention: &SkillMention) -> &str {
+pub(crate) fn command_of(mention: &SkillMention) -> &str {
     match mention {
         SkillMention::Direct { command, .. }
         | SkillMention::Stacked { command, .. }
@@ -92,17 +112,22 @@ fn command_of(mention: &SkillMention) -> &str {
 
 /// The skills a message starts with and the argument text they share. No skills when the message
 /// does not start with a name of the catalog; the host then treats it as text.
-pub async fn stack_skills(message: &str, catalog: Port, options: StackOptions) -> Stack {
+pub async fn stack_skills<C: StackCatalog>(
+    message: &str,
+    catalog: Arc<C>,
+    options: StackOptions,
+) -> Stack {
     let can_stack = Arc::new(options.clone());
+    let asked = Arc::clone(&catalog);
     let stackable: CoreStackable = Arc::new(move |name| {
         let can_stack = Arc::clone(&can_stack);
+        let catalog = Arc::clone(&asked);
         Box::pin(async move {
-            let row = find(catalog, &name).await;
+            let row = catalog.find(&name).await;
             !matches!(row, JsValue::Undefined) && stackable_after(&can_stack, &row)
         })
     });
-    let names = catalog.member::<Option<Set<JsValue>>>("names").await;
-    let names = names.map(|names| names.members);
+    let names = catalog.names().await;
     let mentions = read_skill_mentions_with(message, options.interactive, names, stackable).await;
     let leading: Vec<&SkillMention> = mentions
         .iter()
@@ -110,7 +135,7 @@ pub async fn stack_skills(message: &str, catalog: Port, options: StackOptions) -
         .collect();
     let mut skills = Vec::new();
     for mention in &leading {
-        let row = find(catalog, command_of(mention)).await;
+        let row = catalog.find(command_of(mention)).await;
         if !matches!(row, JsValue::Undefined) {
             skills.push(row);
         }
@@ -132,6 +157,6 @@ pub async fn stack_skills(message: &str, catalog: Port, options: StackOptions) -
 crate::registry::exports! {
     "skills/stack" {
         "stackSkills" => async ok |message: String, catalog: Port, options: Option<StackOptions>|
-            stack_skills(&message, catalog, options.unwrap_or_default()).await;
+            stack_skills(&message, Arc::new(catalog), options.unwrap_or_default()).await;
     }
 }

@@ -1,15 +1,19 @@
-import {
-  isLeading,
-  skillLookup,
-  stackSkills,
-  type Expansion,
-  type LeadingMention,
-  type SkillMention,
-} from '../skills/index.ts';
-import type { ExpandOptions, SkillInvoker } from './session-skill-expand.ts';
+import type { Expansion, LeadingMention, SkillMention } from '../skills/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { SkillInvoker } from './session-skill-expand.ts';
 import type { SkillPart } from './session-skills.ts';
 import type { SessionOptions } from './session-types.ts';
 import { currentOf, type SessionCore } from './session-core.ts';
+
+/**
+ * What a typed message asks of the skills.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_mentions.rs`, docs/RUST.md).
+ * The part reads the catalog's rows and the `skillOverrides` in force and passes them; the core
+ * asks `expandSkill` of the skill part.
+ */
+
+const call = coreModule('host/session-mentions');
 
 /** How a message is read: the host's commands that take another command as their arguments. */
 export interface MentionOptions {
@@ -75,45 +79,23 @@ export function createMentionPart(
   options: SessionOptions,
   skills: Pick<SkillPart, 'expandSkill' | 'skillCatalog'>,
 ): MentionPart {
-  const read = (message: string, asked: MentionOptions = {}): MessageMentions => {
-    const overrides = currentOf(core).state.view.get('skillOverrides');
-    const lookup = skillLookup(skills.skillCatalog().skills);
-    const stack = stackSkills(message, lookup, {
-      interactive: options.interactive ?? true,
-      ...(overrides === undefined ? {} : { overrides }),
-      ...(asked.takesCommandArguments === undefined
-        ? {}
-        : { takesCommandArguments: asked.takesCommandArguments }),
-    });
-    const permitted = new Set(
-      stack.mentions
-        .filter((mention) => !isLeading(mention))
-        .map((mention) => lookup.find(mention.command)?.invocable.command ?? mention.command),
-    );
-    return {
-      mentions: stack.mentions,
-      leading: stack.skills.map((row) => row.invocable.command),
-      arguments: stack.arguments,
-      permitted,
-    };
-  };
+  const facts = (asked: MentionOptions) => ({
+    interactive: options.interactive ?? true,
+    overrides: currentOf(core).state.view.get('skillOverrides'),
+    takesCommandArguments: asked.takesCommandArguments,
+  });
   return {
-    messageMentions: read,
-    async expandMessage(message, request) {
-      const found = read(message, request);
-      const asked: ExpandOptions = {
-        arguments: found.arguments,
-        signal: request.signal,
-        ...(request.invoker === undefined ? {} : { invoker: request.invoker }),
-      };
-      const leading = found.mentions.filter(isLeading);
-      const expansions: MentionExpansion[] = [];
-      for (const [index, command] of found.leading.entries()) {
-        const mention = leading[index];
-        if (mention === undefined) continue;
-        expansions.push({ mention, expansion: await skills.expandSkill(command, asked) });
-      }
-      return { ...found, expansions };
-    },
+    messageMentions: (message, asked = {}) =>
+      call('messageMentions', skills.skillCatalog().skills, message, facts(asked)),
+    expandMessage: (message, request) =>
+      call.async(
+        'expandMessage',
+        skills,
+        skills.skillCatalog().skills,
+        message,
+        facts(request),
+        request.signal,
+        request.invoker,
+      ),
   };
 }

@@ -13,6 +13,7 @@ pub mod hook_limits;
 pub mod invocation;
 pub mod lifecycle;
 pub mod listing;
+pub mod lookup;
 pub mod mention;
 pub mod path_gate;
 pub mod portable;

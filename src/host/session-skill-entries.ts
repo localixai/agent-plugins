@@ -1,9 +1,19 @@
 import type { FolderSource, PluginSource } from '../format/component-source.ts';
 import type { BodyReader, InvocableHead } from '../format/skill-types.ts';
-import type { Locations } from '../ports/index.ts';
 import { type ScanScope } from '../skills/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { ActivePlugin, HostState } from './state.ts';
-import { skillPathIn } from '../skills/variables.ts';
+
+/**
+ * The session's skills and commands without their bodies, with every name that invokes them.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_skill_entries.rs`,
+ * docs/RUST.md). Each plugin entry names its plugin by its index into `state.active`, mapped back
+ * here to the host's `ActivePlugin`; the memo by the host's state object stays here until the state
+ * is the core's.
+ */
+
+const call = coreModule('host/session-skill-entries');
 
 /** The host gave the skill itself (`SessionOptions.hostSkills`): a bundled skill of the host. */
 export interface HostSource {
@@ -36,54 +46,9 @@ export interface Entry extends SkillPlace {
   readonly plugin?: ActivePlugin;
 }
 
-/**
- * A skill's place: its path and folder below the plugin's `root` (`skillPathIn`, the rule of
- * `${CLAUDE_SKILL_DIR}`), or as the scan or the host wrote them, already absolute, without one.
- */
-export function placeOf(
-  invocable: InvocableHead,
-  below?: { readonly root: () => string; readonly locations: Pick<Locations, 'joinPath'> },
-): SkillPlace {
-  const at = (path: string) =>
-    below === undefined ? path : skillPathIn(below.root(), path, below.locations);
-  const { path } = invocable;
-  return {
-    ...(path === undefined ? {} : { file: at(path) }),
-    ...('dir' in invocable ? { directory: at(invocable.dir) } : {}),
-  };
-}
-
-const folderName = (dir: string): string =>
-  dir.slice(Math.max(dir.lastIndexOf('/'), dir.lastIndexOf('\\')) + 1);
-
-/**
- * The name a plugin skill's frontmatter `name` also gives it without the plugin prefix: "The bare
- * `/fancy` also invokes the skill unless another command already uses that name" (skills.md, "How a
- * skill gets its command name"). A skill that keeps its folder's name has no bare name (judgment: the
- * docs state it for a `name`), and neither has a plugin's root `SKILL.md`. A skill its folder named
- * despite a `name` takes the bare part of its `declaredCommand` (oracle 2.1.322).
- */
-function bareName(invocable: InvocableHead): string | undefined {
-  const { origin } = invocable;
-  if (!('plugin' in origin) || origin.rootSkill === true || !('dir' in invocable)) return undefined;
-  const named = invocable.declaredCommand ?? invocable.command;
-  const bare = named.slice(`${origin.plugin}:`.length);
-  return bare === folderName(invocable.dir) ? undefined : bare;
-}
-
-/** The listed command, then the command a frontmatter `name` gives (`Skill.declaredCommand`). */
-const commandsOf = (invocable: InvocableHead): string[] =>
-  'declaredCommand' in invocable && invocable.declaredCommand !== undefined
-    ? [invocable.command, invocable.declaredCommand]
-    : [invocable.command];
-
-/** The plugin's root, asked of the port once per plugin, when its first path needs it. */
-function rootOf(plugin: ActivePlugin, locations: Locations): () => string {
-  let root: string | undefined;
-  return () => {
-    root ??= locations.pluginRoot(plugin.id);
-    return root;
-  };
+/** A plugin entry as the core answers it: its plugin by its index into `state.active`. */
+interface PluginEntry extends Omit<Entry, 'plugin'> {
+  readonly plugin: number;
 }
 
 const ENTRIES = new WeakMap<HostState, readonly Entry[]>();
@@ -95,31 +60,16 @@ const ENTRIES = new WeakMap<HostState, readonly Entry[]>();
 export function entriesOf(state: HostState): readonly Entry[] {
   const cached = ENTRIES.get(state);
   if (cached !== undefined) return cached;
-  const { locations } = state.options.ports;
-  // Oracle 2.1.319: a command, not a skill, wins a plugin-local name collision.
-  const entries = state.active.flatMap((plugin) => {
-    const commands = new Set(plugin.catalog.commands.map((command) => command.command));
-    const skills = plugin.catalog.skills.filter((skill) => !commands.has(skill.command));
-    const root = rootOf(plugin, locations);
-    const source: SkillSource = { kind: 'plugin', pluginId: plugin.id };
-    // A plugin's Markdown is read at load (`readCatalog`), so its body is already in hand.
-    // The body stays behind `readBody`: the entry holds the head, as a folder entry does.
-    return [...skills, ...plugin.catalog.commands].map(({ body, ...invocable }): Entry => ({
-      plugin,
-      invocable,
-      names: commandsOf(invocable),
-      readBody: () => Promise.resolve(body),
-      source,
-      ...placeOf(invocable, { root, locations }),
-    }));
+  const given = state.active.map(({ id, catalog }) => ({
+    id,
+    skills: catalog.skills,
+    commands: catalog.commands,
+  }));
+  const built: readonly PluginEntry[] = call('entriesOf', given, state.options.ports.locations);
+  const entries = built.flatMap(({ plugin, ...entry }): Entry[] => {
+    const active = state.active[plugin];
+    return active === undefined ? [] : [{ ...entry, plugin: active }];
   });
-  const used = new Set(entries.map((entry) => entry.invocable.command));
-  const named = entries.map((entry) => {
-    const bare = bareName(entry.invocable);
-    if (bare === undefined || used.has(bare)) return entry;
-    used.add(bare);
-    return { ...entry, names: [...entry.names, bare] };
-  });
-  ENTRIES.set(state, named);
-  return named;
+  ENTRIES.set(state, entries);
+  return entries;
 }

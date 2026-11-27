@@ -1,8 +1,10 @@
-//! Port of `src/format/output-style-select.ts` at sha256:eb425c06a310.
+//! Port of `src/format/output-style-select.ts`, switched.
 //!
 //! Which output style is active, and what that means for the system prompt (output-styles.md,
 //! "Change your output style" and "How output styles work"). Pure: the host reads its settings and
-//! passes the values in.
+//! passes the values in. A selection hands back the host's own style object (`StyleSelection.style`
+//! is the very value given), so the boundary answers a custom style by its place in `styles`
+//! (`Selected.at`) and the wrapper puts the host's object there.
 
 use std::collections::HashSet;
 
@@ -60,6 +62,9 @@ pub struct StyleSelection {
     /// The custom style.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub style: Option<OutputStyle>,
+    /// Where the custom style is in the list it was selected from; the core's own, never crossed.
+    #[serde(skip)]
+    pub at: Option<usize>,
 }
 
 fn builtin_selection(builtin: &BuiltinStyle) -> StyleSelection {
@@ -67,14 +72,16 @@ fn builtin_selection(builtin: &BuiltinStyle) -> StyleSelection {
         id: builtin.id.to_owned(),
         keep_coding_instructions: true,
         style: None,
+        at: None,
     }
 }
 
-fn custom_selection(style: &OutputStyle) -> StyleSelection {
+fn custom_selection(at: usize, style: &OutputStyle) -> StyleSelection {
     StyleSelection {
         id: style.id.clone(),
         keep_coding_instructions: style.keep_coding_instructions,
         style: Some(style.clone()),
+        at: Some(at),
     }
 }
 
@@ -93,10 +100,12 @@ pub struct OutputStyleRequest {
 }
 
 fn candidates(styles: &[OutputStyle]) -> impl Iterator<Item = StyleSelection> + '_ {
-    BUILTIN_OUTPUT_STYLES
-        .iter()
-        .map(builtin_selection)
-        .chain(styles.iter().map(custom_selection))
+    BUILTIN_OUTPUT_STYLES.iter().map(builtin_selection).chain(
+        styles
+            .iter()
+            .enumerate()
+            .map(|(at, style)| custom_selection(at, style)),
+    )
 }
 
 /// The style the argument of `/output-style <style>` names, a built-in or a custom one, without
@@ -114,8 +123,12 @@ pub fn find_output_style(styles: &[OutputStyle], argument: &str) -> Option<Style
 #[must_use]
 pub fn resolve_output_style(request: &OutputStyleRequest) -> StyleSelection {
     let styles = &request.styles;
-    if let Some(forced) = styles.iter().find(|style| style.force_for_plugin) {
-        return custom_selection(forced);
+    if let Some((at, forced)) = styles
+        .iter()
+        .enumerate()
+        .find(|(_, style)| style.force_for_plugin)
+    {
+        return custom_selection(at, forced);
     }
     let by_command = request
         .command
@@ -130,6 +143,7 @@ pub fn resolve_output_style(request: &OutputStyleRequest) -> StyleSelection {
             id: DEFAULT_OUTPUT_STYLE_ID.to_owned(),
             keep_coding_instructions: true,
             style: None,
+            at: None,
         })
 }
 
@@ -213,12 +227,33 @@ pub fn list_output_styles(
     rows
 }
 
+/// A selection as it crosses: the custom style by its place in the list it was selected from.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Selected {
+    /// The style's id.
+    pub id: String,
+    /// Whether Claude Code's software engineering instructions stay in the prompt.
+    pub keep_coding_instructions: bool,
+    /// The custom style's place in `styles`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub at: Option<usize>,
+}
+
+fn selected(selection: StyleSelection) -> Selected {
+    Selected {
+        id: selection.id,
+        keep_coding_instructions: selection.keep_coding_instructions,
+        at: selection.at,
+    }
+}
+
 crate::registry::exports! {
     "format/output-style-select" {
         "BUILTIN_OUTPUT_STYLES" => ok || BUILTIN_OUTPUT_STYLES;
         "DEFAULT_OUTPUT_STYLE_ID" => ok || DEFAULT_OUTPUT_STYLE_ID;
-        "findOutputStyle" => ok |styles: Vec<OutputStyle>, argument: String| find_output_style(&styles, &argument);
-        "resolveOutputStyle" => ok |request: OutputStyleRequest| resolve_output_style(&request);
+        "findOutputStyle" => ok |styles: Vec<OutputStyle>, argument: String| find_output_style(&styles, &argument).map(selected);
+        "resolveOutputStyle" => ok |request: OutputStyleRequest| selected(resolve_output_style(&request));
         "includeCodingInstructions" => ok |selection: StyleSelection, prompt_kind: PromptKind|
             include_coding_instructions(&selection, prompt_kind);
         "listOutputStyles" => ok |styles: Vec<OutputStyle>, current: StyleSelection| list_output_styles(&styles, &current);
