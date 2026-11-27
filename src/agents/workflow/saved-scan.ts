@@ -1,21 +1,3 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
-import { reservedNamespace } from '../../format/skill-name.ts';
-import { readWorkflowMeta } from '../../format/workflow-meta.ts';
-import { configFolderOf } from '../../format/config-directory.ts';
-import {
-  placePath,
-  readScopeFiles,
-  SCOPE_BASES,
-  type ScopeRequest,
-} from '../../foundation/scope-folders.ts';
-import type { FolderScan } from '../../ports/folder-scan.ts';
-import {
-  resolveSavedWorkflows,
-  type SavedResolution,
-  type SavedWorkflow,
-  type SaveScope,
-} from './saved.ts';
-
 /**
  * Reads the saved workflows (workflows.md, "Save the workflow for reuse") through the `FolderScan`
  * port: `<dir>/.claude/workflows/*.js` for the working directory and every parent up to the
@@ -25,7 +7,17 @@ import {
  * drops `/<name>` from `/` autocomplete"), with the issues of its `meta` at the file's path. A
  * workflow named `anthropic-skills` or `anthropic-skills:<name>` does not load (skills.md, "Names
  * reserved for synced skills"), with an error at its path.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/workflow/saved_scan.rs`,
+ * docs/RUST.md).
  */
+import type { PluginIssue } from '../../format/issues.ts';
+import type { ScopeRequest } from '../../foundation/scope-folders.ts';
+import type { FolderScan } from '../../ports/folder-scan.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+import type { SavedResolution } from './saved.ts';
+
+const call = coreModule('agents/workflow/saved-scan');
 
 export interface SavedScanRequest extends ScopeRequest {
   readonly signal?: AbortSignal | undefined;
@@ -35,80 +27,7 @@ export interface SavedScan extends SavedResolution {
   readonly issues: readonly PluginIssue[];
 }
 
-interface Place {
-  readonly base: string;
-  /** The workflows folder below the base. */
-  readonly folder: string;
-  readonly scope: SaveScope;
-  readonly distance: number;
-}
-
-/** skills.md, "Names reserved for synced skills": a saved workflow of that name "doesn't load". */
-const reservedWorkflow =
-  'name uses "anthropic-skills", a name reserved for skills synced from claude.ai; the workflow does not load, rename it';
-
-async function readPlace(folders: FolderScan, place: Place, signal?: AbortSignal) {
-  const opened = await folders.open(place.base, signal);
-  if (opened === undefined) return { found: [], issues: [] };
-  const read = await readScopeFiles(opened, place.folder, {
-    extension: '.js',
-    depth: 'flat',
-    signal,
-  });
-  const metas = read.files.map((file) => ({
-    path: file.hostPath,
-    read: readWorkflowMeta(file.text),
-  }));
-  const loaded = metas.flatMap(({ path, read: { meta } }) =>
-    meta === undefined ? [] : [{ path, meta }],
-  );
-  const reserved = loaded.filter(({ meta }) => reservedNamespace(meta.name) !== undefined);
-  return {
-    found: loaded
-      .filter((each) => !reserved.includes(each))
-      .map(({ path, meta }): SavedWorkflow => ({
-        name: meta.name,
-        description: meta.description,
-        scope: place.scope,
-        distance: place.distance,
-        path,
-      })),
-    issues: [
-      ...read.issues,
-      ...metas.flatMap(({ path, read: { issues } }) => issues.map((issue) => ({ ...issue, path }))),
-      ...reserved.map(({ path }) => error(path, reservedWorkflow)),
-    ],
-  };
-}
-
-const WORKFLOWS = '.claude/workflows';
-
-export async function scanSavedWorkflows(
+export const scanSavedWorkflows = (
   folders: FolderScan,
   request: SavedScanRequest,
-): Promise<SavedScan> {
-  const { signal } = request;
-  const user = configFolderOf(request.home, request.configDir);
-  const chain = await SCOPE_BASES.repository({
-    folders,
-    request,
-    ...(signal === undefined ? {} : { signal }),
-  });
-  const places: Place[] = [
-    ...chain.map((base, distance): Place => ({
-      base,
-      folder: WORKFLOWS,
-      scope: 'project',
-      distance,
-    })),
-    {
-      base: user.base,
-      folder: placePath({ root: user.folder }, 'workflows'),
-      scope: 'personal',
-      distance: 0,
-    },
-  ];
-  const reads = await Promise.all(places.map((place) => readPlace(folders, place, signal)));
-  const resolved = resolveSavedWorkflows(reads.flatMap((read) => read.found));
-  return { ...resolved, issues: reads.flatMap((read) => read.issues) };
-}
+): Promise<SavedScan> => call.async('scanSavedWorkflows', folders, request);

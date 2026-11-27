@@ -1,25 +1,19 @@
-import { PLUGIN_ONLY_SURFACES, type PluginOnlySurface } from '../../protocol/settings-keys.ts';
+/**
+ * The kinds of customization `strictPluginOnlyCustomization` locks.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/customization/surfaces.rs`,
+ * docs/RUST.md).
+ */
+import type { PluginOnlySurface } from '../../protocol/settings-keys.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/customization/surfaces');
 
 /** The kinds of customization the lock covers, and how many names in the list were no kind. */
 export interface SurfaceLocks {
   readonly locked: ReadonlySet<PluginOnlySurface>;
   /** Names this version does not recognize: they lock nothing, and a status note counts them. */
   readonly unknownNames: number;
-}
-
-const ALL: ReadonlySet<PluginOnlySurface> = new Set(PLUGIN_ONLY_SURFACES);
-
-const locks = (locked: ReadonlySet<PluginOnlySurface>, unknownNames = 0): SurfaceLocks => ({
-  locked,
-  unknownNames,
-});
-
-const surfaceNamed = (name: unknown): PluginOnlySurface | undefined =>
-  PLUGIN_ONLY_SURFACES.find((surface) => surface === name);
-
-function fromList(names: readonly unknown[]): SurfaceLocks {
-  const known = names.flatMap((name) => surfaceNamed(name) ?? []);
-  return locks(new Set(known), names.length - known.length);
 }
 
 /**
@@ -30,8 +24,4 @@ function fromList(names: readonly unknown[]): SurfaceLocks {
  * value "neither a boolean nor an array" as `true`. `false` is the SDK type's "explicit no-op"
  * (spec/judgments.md).
  */
-export function readSurfaceLocks(value: unknown): SurfaceLocks {
-  if (value === undefined || value === null || value === false) return locks(new Set());
-  if (Array.isArray(value)) return fromList(value);
-  return locks(ALL);
-}
+export const readSurfaceLocks = (value: unknown): SurfaceLocks => call('readSurfaceLocks', value);

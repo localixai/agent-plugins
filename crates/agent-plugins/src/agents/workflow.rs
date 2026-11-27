@@ -6,5 +6,6 @@ pub mod limits;
 pub mod relaunch;
 pub mod replay;
 pub mod saved;
+pub mod saved_scan;
 pub mod structured_output;
 pub mod usage_limit;
