@@ -61,6 +61,23 @@ pub enum RuleSource {
     Session,
 }
 
+impl RuleSource {
+    /// The source's `kind`, as the TypeScript's tables are keyed by it.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Managed => "managed",
+            Self::EmbedderManaged => "embedder-managed",
+            Self::Project => "project",
+            Self::Local => "local",
+            Self::User => "user",
+            Self::FlagSettings { .. } => "flag-settings",
+            Self::Cli => "cli",
+            Self::Session => "session",
+        }
+    }
+}
+
 /// What follows the tool name inside the parentheses, once read.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "form", rename_all = "lowercase")]

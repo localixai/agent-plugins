@@ -1,8 +1,5 @@
-//! The core's counterpart of `src/rules/memo.ts` at sha256:35757834d654, which stays TypeScript: its
-//! answer is a function that keeps the host's own values (a compiled `RegExp`, a glob set) by key
-//! and hands back the very object it made, which no value crossing the boundary can be
-//! (docs/RUST.md, "What stays TypeScript"). The core keeps this copy for its own readings
-//! (`bash/split.rs`).
+//! Ported from `src/rules/memo.ts`; only the core uses it now, so it has no wrapper. The core's
+//! readings keep their answers with it (`bash/split.rs`, `tool_pattern.rs`).
 //!
 //! A function of a text key that keeps its last `limit` answers, so a pattern, a glob set or a
 //! command line read once is not read again for the next rule or the next gate of the same call.

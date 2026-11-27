@@ -3,10 +3,13 @@
 
 pub mod bash;
 pub mod decide;
+pub mod evaluate;
 pub mod hook_matcher;
 pub mod issues;
 pub mod matchers;
 pub mod memo;
+pub mod param;
+pub mod parse;
 pub mod path;
 pub mod restricts;
 pub mod rule_warnings;

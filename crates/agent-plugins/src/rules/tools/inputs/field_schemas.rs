@@ -1,11 +1,8 @@
-//! Port of `src/rules/tools/inputs/field-schemas.ts` at sha256:ec03868a2f22.
+//! Ported from `src/rules/tools/inputs/field-schemas.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The zod building blocks of the tool input tables (hooks.md, "PreToolUse input"). A message says
 //! what is wrong with the value: `is required` for a field that is absent, `expected ...` for one of
 //! another type. The issue path is added by `parseToolInput`.
-//!
-//! Every export is a schema or a function that builds one, so nothing here crosses the boundary:
-//! the Rust modules that read tool inputs and responses build on these.
 
 use std::sync::LazyLock;
 

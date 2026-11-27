@@ -4,12 +4,11 @@
 //! any matching (permissions.md, "Tool-specific permission rules"). The SDK's input types are the
 //! field lists; the TypeScript's drift guards check them at compile time.
 
-use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::registry::Set;
 use crate::rules::tools::catalog::catalog_entry;
-use crate::rules::tools::rule_formats::{RULE_FORMATS, RuleFormatId};
+use crate::rules::tools::rule_formats::RuleFormatId;
 
 /// The tools the SDK no longer lists but a rule may still name: the legacy `MultiEdit` edits files
 /// like `Edit` (spec/judgments.md); it is still not a known tool, so its rules draw `matches no
@@ -159,19 +158,9 @@ pub fn specifier_syntax(format: RuleFormatId) -> SpecifierSyntax {
     }
 }
 
-/// `SPECIFIER_SYNTAX`: each format's syntax, in the order of `RULE_FORMATS`.
-#[must_use]
-pub fn specifier_syntax_table() -> IndexMap<RuleFormatId, SpecifierSyntax> {
-    RULE_FORMATS
-        .iter()
-        .map(|format| (*format, specifier_syntax(*format)))
-        .collect()
-}
-
 crate::registry::exports! {
     "rules/specifier-formats" {
         "ruleFormatOf" => ok |tool_name: String| rule_format_of(&tool_name);
-        "SPECIFIER_SYNTAX" => ok specifier_syntax_table;
     }
 }
 

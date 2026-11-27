@@ -1,4 +1,4 @@
-//! Port of `src/format/permission-rule-shape.ts`, switched.
+//! Ported from `src/format/permission-rule-shape.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The shape of a permission rule's text, shared by the settings reader (a malformed rule is a
 //! Settings Warning) and the rules parser (permissions.md, "Permission rule syntax"; errors.md,
@@ -52,12 +52,4 @@ pub fn split_rule(raw: &str) -> Option<RuleParts> {
         tool_name: tool_name.to_owned(),
         content: Some(content.to_owned()),
     })
-}
-
-crate::registry::exports! {
-    "format/permission-rule-shape" {
-        "MALFORMED_RULE" => ok || MALFORMED_RULE;
-        "invalidRuleMessage" => ok |raw: String, reason: String| invalid_rule_message(&raw, &reason);
-        "splitRule" => ok |raw: String| split_rule(&raw);
-    }
 }

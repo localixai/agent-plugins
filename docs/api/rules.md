@@ -69,7 +69,7 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `FetchTimings` | type | What `webFetchTimings` returns |
 | `FieldRole` | type | What a rule can do with a field: - `primary`: the content field of the tool |
 | `FieldSource` | type | Where a field is documented: the SDK's input type, or only the docs (which the compiler cannot tie to the SDK) |
-| `FieldSpec` | type | One field of a tool input: its type, role, source and schema |
+| `FieldSpec` | type | One field of a tool input: its type, optionality, role and source |
 | `FieldType` | type | The JSON types of the tables of hooks.md ("PreToolUse input") |
 | `formatRule` | function | A rule's text, as `parseRule` reads it back to the same value |
 | `GlobMatch` | type | The `matches` argument of `capGlobMatches` |

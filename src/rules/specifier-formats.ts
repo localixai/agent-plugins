@@ -58,18 +58,3 @@ type AgentInputField =
 
 /** @public A compile-time drift guard: a field the SDK adds to or drops from `AgentInput` fails the typecheck. */
 export type AgentFieldsMatchSdk = Assert<Equal<AgentInputField, keyof AgentInput>>;
-
-/** What a format changes about reading a specifier, before any matching. */
-export interface SpecifierSyntax {
-  /** `domain:` opens a domain pattern (permissions.md, "WebFetch"). */
-  readonly domainPrefix: boolean;
-  /** `name:*` is a trailing wildcard, the `:*` suffix (permissions.md, "Wildcard patterns"). */
-  readonly colonStarSuffix: boolean;
-  /** `Tool(*)` is the bare tool name: documented for Bash ("`Bash(*)` is equivalent to `Bash`"). */
-  readonly starIsBare: boolean;
-  /** The only names `name:value` may use as a parameter rule; `undefined` is any name. */
-  readonly parameterNames: ReadonlySet<string> | undefined;
-}
-
-export const SPECIFIER_SYNTAX: { readonly [F in RuleFormatId]: SpecifierSyntax } =
-  call('SPECIFIER_SYNTAX');

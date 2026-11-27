@@ -111,10 +111,10 @@ scenario (`scripts/bench/scenarios/`) measures one entry point at three sizes, N
 names the law each measurement keeps (`scripts/bench/laws.ts`): `linear` (the step from 2N to 4N
 is exactly twice the step from N to 2N, for every counter), `constant`, `no-io` (no port call) or
 `nothing` (no counter at all). A measurement listed in `repeats` (the same call again, warm) builds
-no pattern, and no measurement reads or lists a path twice. The kit keeps module-level memos
-(`src/rules/memo.ts`), so the counts run in a fresh process, each scenario is warmed once at its
-smallest size, and every measurement gets text of its own (a salt in each name), so a memo is never
-warm from another measurement.
+no pattern, and no measurement reads or lists a path twice. The core keeps module-level memos
+(`crates/agent-plugins/src/rules/memo.rs`), so the counts run in a fresh process, each scenario is
+warmed once at its smallest size, and every measurement gets text of its own (a salt in each name),
+so a memo is never warm from another measurement.
 
 `tests/bench/counts.test.ts` runs `scripts/bench/counts.ts --json` twice and fails when the two runs
 differ, when a law is broken, or when any count differs from the committed baseline,

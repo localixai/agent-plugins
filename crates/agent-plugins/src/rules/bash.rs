@@ -9,6 +9,7 @@ pub mod bash;
 pub mod dialect;
 pub mod exec_wrappers;
 pub mod heredoc;
+pub mod if_eval;
 pub mod keywords;
 pub mod powershell;
 pub mod powershell_aliases;
