@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::js::url::parse;
 use crate::js::{code_unit_length, is_whitespace};
-use crate::registry::RegExp;
 
 /// A repository as the blocklist compares it: the host (lower case) and the path on it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,9 +123,6 @@ pub fn same_repo(first: &RepoId, second: &RepoId) -> bool {
 
 crate::registry::exports! {
     "settings/marketplaces/git-url" {
-        "SCHEME_URL" => ok || RegExp { source: "^[A-Za-z][A-Za-z0-9+.-]*:\\/\\/".to_owned(), flags: String::new() };
         "canonicalRepo" => ok |address: String| canonical_repo(&address);
-        "githubRepo" => ok |repo: String| github_repo(&repo);
-        "sameRepo" => ok |first: RepoId, second: RepoId| same_repo(&first, &second);
     }
 }

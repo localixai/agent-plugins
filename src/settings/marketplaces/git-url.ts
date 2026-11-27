@@ -14,11 +14,5 @@ export interface RepoId {
   readonly path: string;
 }
 
-export const SCHEME_URL: RegExp = call('SCHEME_URL');
-
 export const canonicalRepo = (address: string): RepoId | undefined =>
   call('canonicalRepo', address);
-
-export const githubRepo = (repo: string): RepoId => call('githubRepo', repo);
-
-export const sameRepo = (a: RepoId, b: RepoId): boolean => call('sameRepo', a, b);

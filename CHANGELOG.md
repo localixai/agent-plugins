@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The managed settings' repairs run on the core: the `sandbox` block and its credentials, the
+  closed fields, the value and list repairs, the permissions merge and the permission flag, the
+  MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the
+  hook origins' stops, and the channel verdict and permission relay. So do `--agent`, `--agents`,
+  `--mcp-config`, `--strict-mcp-config` and the sideload checks of the flags.
 - Planning a plugin fetch, the dated-copy sweep, the `enabledPlugins` notes, the Node.js package
   install plan, its checks and its failure note, reading and writing `installed_plugins.json` and
   its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and

@@ -32,7 +32,7 @@ pub struct ChannelAllowlistContext {
 }
 
 /// Whether the organization's list replaced the default.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AllowlistSource {
     /// `allowedChannelPlugins` replaced the default.
@@ -42,7 +42,7 @@ pub enum AllowlistSource {
 }
 
 /// The allowlist in force.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelAllowlist {
     /// `organization` when `allowedChannelPlugins` replaced the default, `default` otherwise.
@@ -99,6 +99,5 @@ crate::registry::exports! {
     "settings/channels/allowlist" {
         "effectiveChannelAllowlist" => async ok |view: Port, context: ChannelAllowlistContext|
             effective_channel_allowlist(&view, &context).await;
-        "isListed" => ok |list: Vec<ChannelPluginRef>, reference: ChannelPluginRef| is_listed(&list, &reference);
     }
 }

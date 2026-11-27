@@ -7,6 +7,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::js::JsValue;
+use crate::ports::BoxFuture;
+use crate::registry::Callback;
+
 /// A plugin that ships hooks, with the facts the locks look at.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,24 +62,6 @@ pub enum HookFrontmatterOwner {
     Agent,
 }
 
-/// The sources a skill, command or agent can come from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum HookFrontmatterSource {
-    /// A personal file.
-    User,
-    /// A project file.
-    Project,
-    /// An added directory.
-    AddDir,
-    /// Synced from claude.ai.
-    Synced,
-    /// Deployed through managed settings.
-    Managed,
-    /// Bundled with Claude Code.
-    Bundled,
-}
-
 /// Where a hook comes from.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -91,17 +77,36 @@ pub enum PolicyHookSource {
     },
     /// A plugin's hooks.
     Plugin(PluginHookSource),
-    /// Frontmatter of a skill, command or agent that is not a plugin's.
+    /// Frontmatter of a skill, command or agent: one member per source, a plugin's with the
+    /// plugin.
     Frontmatter {
         /// What declares it.
         owner: HookFrontmatterOwner,
         /// Where the file comes from.
-        from: HookFrontmatterSource,
+        #[serde(flatten)]
+        from: FrontmatterFrom,
     },
-    /// Frontmatter of a plugin's skill, command or agent.
-    PluginFrontmatter {
-        /// What declares it.
-        owner: HookFrontmatterOwner,
+}
+
+/// The sources a skill, command or agent can come from (`from`, the package's
+/// `HookFrontmatterSource`), or a plugin with its facts.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "from", rename_all = "camelCase")]
+pub enum FrontmatterFrom {
+    /// A personal file.
+    User,
+    /// A project file.
+    Project,
+    /// An added directory.
+    AddDir,
+    /// Synced from claude.ai.
+    Synced,
+    /// Deployed through managed settings.
+    Managed,
+    /// Bundled with Claude Code.
+    Bundled,
+    /// A plugin's skill, command or agent.
+    Plugin {
         /// The plugin.
         plugin: PluginHookSource,
     },
@@ -143,7 +148,8 @@ pub struct HookVerdict {
 }
 
 /// Which of the locks stops a hook of one origin.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 #[expect(
     clippy::struct_excessive_bools,
     reason = "the package's Stops holds one flag per lock"
@@ -159,6 +165,25 @@ pub struct Stops {
     pub plugin_only: bool,
     /// `disableCommandPluginSources`, or `allowManagedHooksOnly` standing in for it.
     pub command_source: bool,
+}
+
+/// Whether managed settings force-enable the plugin of this id: the host's function, so its answer
+/// may wait; a Rust host passes a closure, answered at once.
+pub trait ForceEnabled: Send + Sync {
+    /// Whether the plugin `id` is force-enabled.
+    fn force_enabled<'a>(&'a self, id: &'a str) -> BoxFuture<'a, bool>;
+}
+
+impl<F: Fn(&str) -> bool + Send + Sync> ForceEnabled for F {
+    fn force_enabled<'a>(&'a self, id: &'a str) -> BoxFuture<'a, bool> {
+        Box::pin(std::future::ready(self(id)))
+    }
+}
+
+impl ForceEnabled for Callback {
+    fn force_enabled<'a>(&'a self, id: &'a str) -> BoxFuture<'a, bool> {
+        Box::pin(self.call(vec![JsValue::String(id.to_owned())]))
+    }
 }
 
 crate::registry::exports! {

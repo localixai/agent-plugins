@@ -30,6 +30,5 @@ pub fn words_of(value: &str) -> Vec<String> {
 crate::registry::exports! {
     "cli/flags/values" {
         "parseJson" => ok |text: String| parse_json(&text);
-        "wordsOf" => ok |value: String| words_of(&value);
     }
 }

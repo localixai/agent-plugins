@@ -3,6 +3,7 @@
 
 pub mod agent_keys;
 pub mod claude_json;
+pub mod closed_fields;
 pub mod edit_effect;
 pub mod exceptions;
 pub mod file_locations;
@@ -13,6 +14,8 @@ pub mod permission_rules;
 pub mod plugin_defaults;
 pub mod process_wrapper;
 pub mod reach;
+pub mod sandbox_check;
+pub mod sandbox_credentials;
 pub mod sandbox_fields;
 pub mod session_overrides;
 pub mod subagent_status_line;

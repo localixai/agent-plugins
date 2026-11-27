@@ -4,4 +4,6 @@
 pub mod allowlist;
 pub mod channel_gate;
 pub mod contract;
+pub mod relay;
 pub mod sanitize;
+pub mod verdict;

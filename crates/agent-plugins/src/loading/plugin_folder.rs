@@ -6,7 +6,7 @@
 //! own; the folder itself then loads nothing. A host loads a folder of plugins by classifying each
 //! child, then calls `loadPlugin` on those that are plugins.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::format::listing::list_sorted;
 use crate::ports::Signal;
@@ -64,7 +64,7 @@ pub async fn classify_plugin_folder(
 }
 
 /// A folder passed as `--plugin-dir` and what it holds.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PluginDirectoryReading {
     /// The directory is a folder that holds plugins, not a plugin itself.

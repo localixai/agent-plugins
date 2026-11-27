@@ -208,7 +208,6 @@ pub async fn mid_session_mcp_updates(
 
 crate::registry::exports! {
     "settings/managed/sideload" {
-        "SIDELOAD_CLOSING" => ok || SIDELOAD_CLOSING;
         "sideloadVerdict" => async ok |view: Port, facts: SideloadFacts|
             sideload_verdict(&view, &facts).await;
         "addPluginsRefusal" => async ok |view: Port| add_plugins_refusal(&view).await;

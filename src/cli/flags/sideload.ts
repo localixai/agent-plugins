@@ -1,6 +1,3 @@
-import { SIDELOAD_CLOSING } from '../../settings/managed/sideload.ts';
-import type { FlagFacts, FlagName } from './types.ts';
-
 /**
  * What managed `disableSideloadFlags` rejects (plugins/org.md, control matrix: "`--plugin-dir`,
  * `--plugin-url`, `--agents`, the Agent SDK `plugins` option, and folders named in the
@@ -9,36 +6,25 @@ import type { FlagFacts, FlagName } from './types.ts';
  * session": Claude Code "prints that the flag is disabled by your organization's managed settings
  * and exits `1` without starting"). The wording follows `claude --plugin-dir ./x`'s "message naming
  * `disableSideloadFlags`" (plugins/org.md) and is the one `mods/load/plugin-dirs.ts` prints.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/sideload.rs`, docs/RUST.md).
  */
-export const SIDELOAD_FLAGS: readonly FlagName[] = [
-  '--plugin-dir',
-  '--plugin-url',
-  '--agents',
-  '--mcp-config',
-];
+import type { FlagFacts, FlagName } from './types.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
-export const sideloadMessage = (name: string): string =>
-  `${name} is disabled by your organization's managed settings (disableSideloadFlags)`;
+const call = coreModule('cli/flags/sideload');
 
-/** The refusal for `flag`, or `undefined` when managed settings allow it. */
-export const sideloadRefusal = (flag: FlagName, facts: FlagFacts): string | undefined =>
-  facts.sideloadDisabled && SIDELOAD_FLAGS.includes(flag) ? sideloadMessage(flag) : undefined;
+export const SIDELOAD_FLAGS: readonly FlagName[] = call('SIDELOAD_FLAGS');
+
+export const sideloadMessage = (name: string): string => call('sideloadMessage', name);
 
 /** The refusal for the folders `CLAUDE_CODE_PLUGIN_DIRS` names, when it names any: it says to unset it (J14.8). */
-export function pluginDirsVariableRefusal(facts: FlagFacts): string | undefined {
-  const named = (facts.env.CLAUDE_CODE_PLUGIN_DIRS ?? '').trim();
-  return facts.sideloadDisabled && named !== ''
-    ? `${sideloadMessage('CLAUDE_CODE_PLUGIN_DIRS')}: unset the variable`
-    : undefined;
-}
-
-const SIDELOAD_MARK = '(disableSideloadFlags)';
+export const pluginDirsVariableRefusal = (facts: FlagFacts): string | undefined =>
+  call('pluginDirsVariableRefusal', facts);
 
 /**
  * The refusals with the docs' closing line after the rejected flags, once, when any was rejected
  * (plugins/troubleshooting.md, "`--plugin-dir is disabled …`"), as `sideloadVerdict` words it.
  */
-export function withSideloadClosing(refusals: readonly string[]): readonly string[] {
-  const sideloaded = refusals.some((line) => line.includes(SIDELOAD_MARK));
-  return sideloaded ? [...refusals, SIDELOAD_CLOSING] : refusals;
-}
+export const withSideloadClosing = (refusals: readonly string[]): readonly string[] =>
+  call('withSideloadClosing', refusals);

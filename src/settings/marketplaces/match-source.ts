@@ -4,170 +4,27 @@
  * "Blocklist with `blockedMarketplaces`"). The allowlist matches by exact entry, owner wildcard or
  * regular expression; the blocklist matches the same entries more widely: canonical git URLs,
  * `github` and `git` as one, owner comparison in any case, no `ref` or `path` meaning every one.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/marketplaces/match_source.rs`,
+ * docs/RUST.md).
  */
 import type { SdkMarketplaceSource } from '../../protocol/official.ts';
-import { sameRepo } from './git-url.ts';
-import { CLAUDE_AI_FACTS, factsOf, type Facts } from './facts.ts';
-import { byKindWith, type Registry, type SourceKind, type SourceOf } from './source-kinds.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/marketplaces/match-source');
 
 /** Which list an entry is read as. */
 export type ListKind = 'strict' | 'blocked';
-
-type Matcher<K extends SourceKind> = (entry: SourceOf<K>, own: Facts, source: Facts) => boolean;
-type Matchers = Registry<[own: Facts, source: Facts], boolean>;
-
-/** `<owner>/*`: "Only the whole repository-name position can be a wildcard". */
-const OWNER_WILDCARD = /^([^/*\s]+)\/\*$/;
-
-const ownerOf = (repo: string): string | undefined => OWNER_WILDCARD.exec(repo)?.[1];
-
-/** A name with `*` that is not a valid wildcard is "ignored as invalid, so it matches nothing". */
-const isBrokenWildcard = (repo: string): boolean =>
-  repo.includes('*') && ownerOf(repo) === undefined;
-
-const never = (): boolean => false;
-
-/** Regex flavour is JavaScript's (spec/judgments.md); a pattern that does not compile matches nothing. */
-function matchesPattern(pattern: string, text: string | undefined): boolean {
-  if (text === undefined) return false;
-  try {
-    return new RegExp(pattern).test(text);
-  } catch {
-    return false;
-  }
-}
-
-/** `repo`/`url`, `ref` and `path` "must match exactly, or both must be undefined". */
-const sameExactly = (own: Facts, source: Facts): boolean =>
-  own.kind === source.kind &&
-  own.locator === source.locator &&
-  own.ref === source.ref &&
-  own.subpath === source.subpath;
-
-const exact = (_entry: unknown, own: Facts, source: Facts): boolean =>
-  source.concrete && sameExactly(own, source);
-
-const pinned = (wanted: string | undefined, actual: string | undefined): boolean =>
-  wanted === undefined || wanted === actual;
-
-/** The two-segment `owner/name` of a repository on github.com, as its owner and name. */
-function githubOwner(source: Facts): string | undefined {
-  const [owner, name, ...deeper] = (
-    source.repo?.host === 'github.com' ? source.repo.path : ''
-  ).split('/');
-  return owner !== undefined && name !== undefined && deeper.length === 0 && !name.includes('*')
-    ? owner
-    : undefined;
-}
-
-/** Owner-wildcard entry, allowlist: case-sensitive owner, exact `ref`, any `path` unless pinned. */
-function strictWildcard(owner: string, own: Facts, source: Facts): boolean {
-  const [sourceOwner, name, ...deeper] = source.locator.split('/');
-  return (
-    source.kind === own.kind &&
-    sourceOwner === owner &&
-    name !== undefined &&
-    name !== '' &&
-    !name.includes('*') &&
-    deeper.length === 0 &&
-    own.ref === source.ref &&
-    pinned(own.subpath, source.subpath)
-  );
-}
-
-const strictGithub: Matcher<'github'> = (entry, own, source) => {
-  if (isBrokenWildcard(entry.repo)) return false;
-  const owner = ownerOf(entry.repo);
-  if (!source.concrete) return false;
-  return owner === undefined ? sameExactly(own, source) : strictWildcard(owner, own, source);
-};
-
-/** Blocklist: an entry without `ref` or `path` blocks every one; a pinned value must be the same. */
-const blockedRepoScope = (own: Facts, source: Facts): boolean =>
-  pinned(own.ref, source.ref) && pinned(own.subpath, source.subpath);
-
-function blockedWildcard(owner: string, own: Facts, source: Facts): boolean {
-  const sourceOwner = githubOwner(source);
-  return (
-    sourceOwner !== undefined &&
-    sourceOwner.toLowerCase() === owner.toLowerCase() &&
-    blockedRepoScope(own, source)
-  );
-}
-
-const blockedGithub: Matcher<'github'> = (entry, own, source) => {
-  if (isBrokenWildcard(entry.repo) || !source.cloned) return false;
-  const owner = ownerOf(entry.repo);
-  if (owner !== undefined) return blockedWildcard(owner, own, source);
-  return blockedRepoScope(own, source) && sameRepoOf(own, source);
-};
-
-const sameRepoOf = (own: Facts, source: Facts): boolean =>
-  own.repo !== undefined && source.repo !== undefined && sameRepo(own.repo, source.repo);
-
-const blockedGit: Matcher<'git'> = (_entry, own, source) =>
-  source.cloned && blockedRepoScope(own, source) && sameRepoOf(own, source);
-
-/** A `url` entry blocks that url, and a bare repository URL that is cloned (`.git` and `#ref` ignored). */
-const blockedUrl: Matcher<'url'> = (_entry, own, source) =>
-  source.cloned ? sameRepoOf(own, source) : source.concrete && sameExactly(own, source);
-
-const hostMatch =
-  (wide: boolean): Matcher<'hostPattern'> =>
-  (entry, _own, source) =>
-    source.concrete && matchesPattern(entry.hostPattern, source.host(wide));
-
-const pathMatch: Matcher<'pathPattern'> = (entry, _own, source) =>
-  source.concrete && matchesPattern(entry.pathPattern, source.filePath);
-
-/**
- * An inline marketplace on the allowlist "allows an entry with the same `name` and identical
- * `plugins`" (marketplace-reference.md, "Marketplace sources"); the blocklist "blocks the same
- * `name`", whatever its catalog.
- */
-const strictSettings: Matcher<'settings'> = (entry, own, source) =>
-  exact(entry, own, source) && own.catalog === source.catalog;
-
-const COMMON = {
-  file: exact,
-  directory: exact,
-  // No `npm` marketplace registers, so an `npm` entry matches nothing on either list (§14.8.3).
-  npm: never,
-  pathPattern: pathMatch,
-  'skills-dir': never,
-};
-
-const STRICT: Matchers = {
-  ...COMMON,
-  settings: strictSettings,
-  github: strictGithub,
-  git: exact,
-  url: exact,
-  hostPattern: hostMatch(false),
-};
-
-const BLOCKED: Matchers = {
-  ...COMMON,
-  settings: exact,
-  github: blockedGithub,
-  git: blockedGit,
-  url: blockedUrl,
-  hostPattern: hostMatch(true),
-};
-
-const LISTS: { readonly [L in ListKind]: Matchers } = { strict: STRICT, blocked: BLOCKED };
 
 /**
  * Whether a list entry matches the source of a marketplace. `skills-dir` entries match no
  * marketplace; they only decide whether skills-directory plugins load (see `gate.ts`).
  */
-export function matchMarketplaceSource(
+export const matchMarketplaceSource = (
   list: ListKind,
   entry: SdkMarketplaceSource,
   source: SdkMarketplaceSource,
-): boolean {
-  return byKindWith(LISTS[list], entry, [factsOf(entry), factsOf(source)]);
-}
+): boolean => call('matchMarketplaceSource', list, entry, source);
 
 /**
  * Whether a list entry matches a marketplace hosted on claude.ai, by its host `claude.ai`: only a
@@ -175,4 +32,4 @@ export function matchMarketplaceSource(
  * is decides the allowlist's admission (`MarketplaceGate.checkClaudeAi`), not the match.
  */
 export const matchClaudeAiMarketplace = (list: ListKind, entry: SdkMarketplaceSource): boolean =>
-  byKindWith(LISTS[list], entry, [factsOf(entry), CLAUDE_AI_FACTS]);
+  call('matchClaudeAiMarketplace', list, entry);

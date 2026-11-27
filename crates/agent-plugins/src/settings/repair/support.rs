@@ -190,18 +190,29 @@ pub async fn strip_invalid(
     Stripped { entries, issues }
 }
 
+/// `strip_invalid` with a reader of the core's own, which answers at once (`ports::now`): what a
+/// repair of the core passes.
+#[must_use]
+pub fn strip_invalid_now(
+    list: &[JsValue],
+    at: &RepairAt,
+    read: impl Fn(&JsValue) -> Option<JsValue> + Send + Sync,
+    reason: &str,
+) -> Stripped {
+    crate::ports::now(strip_invalid(list, at, &read, reason)).unwrap_or_else(|| Stripped {
+        entries: Vec::new(),
+        issues: Vec::new(),
+    })
+}
+
 crate::registry::exports! {
     "settings/repair/support" {
-        "isParent" => ok |at: RepairAt| is_parent(&at);
         "where" => ok |at: RepairAt, field: Option<String>| where_(&at, field.as_deref().unwrap_or(""));
         "kept" => ok |value: JsValue, issues: Option<Vec<PluginIssue>>| kept(value, issues.unwrap_or_default());
         "note" => ok |at: RepairAt, field: String, message: String| note(&at, &field, &message);
         "dropped" => ok |at: RepairAt, reason: String| dropped(&at, &reason);
         "mustBe" => ok |at: RepairAt, expected: String| must_be(&at, &expected);
         "presentButInvalid" => ok |at: RepairAt, effect: String, field: Option<String>| present_but_invalid(&at, &effect, field.as_deref().unwrap_or(""));
-        "failedClosed" => ok |at: RepairAt, value: JsValue, effect: String| failed_closed(&at, value, &effect);
-        "failedClosedNoValue" => ok |at: RepairAt, effect: String| failed_closed_no_value(&at, &effect);
-        "entryDropped" => ok |at: RepairAt, index: EntryAt, reason: String| entry_dropped(&at, &index, &reason);
         "stripInvalid" => async ok |list: Vec<JsValue>, at: RepairAt, read: Callback, reason: String|
             strip_invalid(&list, &at, &read, &reason).await;
     }

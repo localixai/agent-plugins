@@ -149,7 +149,6 @@ pub fn ranges_overlap(ranges: &[String]) -> Result<Option<bool>, String> {
 crate::registry::exports! {
     "marketplace/semver" {
         "normalizedVersion" => ok |text: String| normalized_version(&text);
-        "satisfiesRange" => ok |version: String, range: String| satisfies_range(&version, &range);
         "rangesOverlap" => fallible |ranges: Vec<String>| ranges_overlap(&ranges);
     }
 }

@@ -32,10 +32,3 @@ function apply<K extends SourceKind, Rest extends readonly unknown[], T>(
 
 export const byKind = <T>(registry: ByKind<T>, source: SdkMarketplaceSource): T =>
   apply(registry, source.source, source, []);
-
-/** Asks a registry of functions that take more than the member. */
-export const byKindWith = <Rest extends readonly unknown[], T>(
-  registry: Registry<Rest, T>,
-  source: SdkMarketplaceSource,
-  rest: Rest,
-): T => apply(registry, source.source, source, rest);

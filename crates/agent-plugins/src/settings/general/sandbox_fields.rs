@@ -1,4 +1,4 @@
-//! Port of `src/settings/general/sandbox-fields.ts`, switched.
+//! Ported from `src/settings/general/sandbox-fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What an invalid Boolean inside a managed `sandbox` block reads as (managed-settings.md,
 //! "Invalid values inside `sandbox`"): a key that turns the sandbox or one of its restrictions on
@@ -6,14 +6,8 @@
 //! than treating it as `true`". The docs name `enabled`, `network.allowManagedDomainsOnly` and
 //! `allowUnsandboxedCommands`; the stance of every other key is a judgment (spec/judgments.md).
 
-use indexmap::IndexMap;
-use serde::Serialize;
-
-use crate::js::JsValue;
-
 /// What an invalid Boolean reads as.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stance {
     /// `true`.
     Restricts,
@@ -52,14 +46,6 @@ pub const fn stance_value(stance: Stance) -> Option<bool> {
     }
 }
 
-const fn stance_name(stance: Stance) -> &'static str {
-    match stance {
-        Stance::Restricts => "restricts",
-        Stance::Loosens => "loosens",
-        Stance::Dropped => "dropped",
-    }
-}
-
 /// The lists outside `credentials` (the docs name `excludedCommands` and
 /// `network.allowedDomains`).
 pub const SANDBOX_LISTS: [&str; 9] = [
@@ -87,15 +73,3 @@ pub const WITHHELD_BY: [(&str, &[&str]); 3] = [
         &["filesystem.allowRead", "filesystem.allowWrite"],
     ),
 ];
-
-crate::registry::exports! {
-    "settings/general/sandbox-fields" {
-        "BOOLEAN_STANCES" => ok || BOOLEAN_STANCES.iter().copied().collect::<IndexMap<&str, Stance>>();
-        "STANCE_VALUE" => ok || [Stance::Restricts, Stance::Loosens, Stance::Dropped]
-            .into_iter()
-            .map(|stance| (stance_name(stance), stance_value(stance).map_or(JsValue::Undefined, JsValue::Bool)))
-            .collect::<IndexMap<&str, JsValue>>();
-        "SANDBOX_LISTS" => ok || SANDBOX_LISTS;
-        "WITHHELD_BY" => ok || WITHHELD_BY.iter().copied().collect::<IndexMap<&str, &[&str]>>();
-    }
-}

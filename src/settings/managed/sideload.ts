@@ -44,9 +44,6 @@ export interface SideloadVerdict {
   readonly droppedServers: readonly string[];
 }
 
-/** The line after the rejected flags (plugins/troubleshooting.md, "`--plugin-dir is disabled …`"). */
-export const SIDELOAD_CLOSING: string = call('SIDELOAD_CLOSING');
-
 /** What the session does with its flags and the plugin-folder variable under managed `disableSideloadFlags`. */
 export const sideloadVerdict = (view: PolicyView, facts: SideloadFacts): SideloadVerdict =>
   call('sideloadVerdict', view, facts);
