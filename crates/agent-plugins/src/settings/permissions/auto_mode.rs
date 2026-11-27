@@ -9,7 +9,6 @@ use serde::Serialize;
 use crate::format::issues::{PluginIssue, warning};
 use crate::js::value::JsObject;
 use crate::js::{JsValue, in_property_order};
-use crate::registry::Port;
 use crate::settings::permissions::read::flag_value;
 use crate::settings::repair::support::{
     RepairAt, Repaired, dropped, kept, strip_invalid_now, where_,
@@ -223,6 +222,5 @@ pub async fn auto_mode_settings(view: &dyn PolicyView) -> AutoModeSettings {
 crate::registry::exports! {
     "settings/permissions/auto-mode" {
         "AUTO_MODE_LISTS" => ok || AUTO_MODE_LISTS;
-        "autoModeSettings" => async ok |view: Port| auto_mode_settings(&view).await;
     }
 }

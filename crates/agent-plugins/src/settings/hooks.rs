@@ -7,4 +7,6 @@ pub mod http_policy;
 pub mod merge_groups;
 pub mod origin_stops;
 pub mod origins;
+pub mod policy;
+pub mod session_gates;
 pub mod url_pattern;

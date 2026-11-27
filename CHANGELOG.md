@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The settings areas are built by the core: the hook policy and the hook session gates (with the
+  hook gate and the commands that follow the hooks), the customization lock, the plugin, skill,
+  workflow and permission policies, `pluginSuggestionMarketplaces`, the command sources and the
+  official marketplace's registration. Each policy's questions are functions of the core's, so a
+  question costs one call.
 - The permission decision runs on the core in one call: the rules stage, the permission modes,
   file targets, redirects, shell commands, PowerShell edits and the hook and mod outcomes. A hook's
   input is parsed by the core (`parseFacts`); no TypeScript module builds a hook input schema.

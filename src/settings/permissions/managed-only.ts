@@ -1,8 +1,5 @@
 import type { PermissionBehavior } from '../../protocol/official.ts';
-import type { PolicyContext } from '../context.ts';
 import type { PolicyScope } from '../layers.ts';
-import type { PolicyView } from '../view.ts';
-import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * Which settings files contribute permission rules and directories: `allowManagedPermissionRulesOnly`
@@ -32,15 +29,3 @@ export interface SettingsDirectory {
    */
   readonly repositoryOnly: boolean;
 }
-
-const call = coreModule('settings/permissions/managed-only');
-
-export interface PermissionLists {
-  readonly managedOnly: boolean;
-  readonly rules: readonly SettingsRule[];
-  readonly directories: readonly SettingsDirectory[];
-}
-
-/** The rules and directories in force, in precedence order (highest file first). */
-export const permissionLists = (view: PolicyView, context: PolicyContext): PermissionLists =>
-  call('permissionLists', view, context);

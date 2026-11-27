@@ -1,4 +1,4 @@
-//! Port of `src/settings/hooks/origin-stops.ts`, switched.
+//! Ported from `src/settings/hooks/origin-stops.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Which lock stops a hook of each origin: one registry typed over the origin kinds, so a new kind
 //! fails to compile until it says what the locks do to it. `disableAllHooks` is two columns
@@ -7,7 +7,6 @@
 use super::origins::{
     ForceEnabled, FrontmatterFrom, HookFrontmatterOwner, PluginHookSource, PolicyHookSource, Stops,
 };
-use crate::registry::Callback;
 use crate::settings::plugins::plugin_id::parse_plugin_id;
 
 const NEVER: Stops = Stops {
@@ -115,13 +114,6 @@ pub async fn stops_of(origin: &PolicyHookSource, force_enabled: &dyn ForceEnable
             owner,
             from: source,
         } => from(*owner, source, force_enabled).await,
-    }
-}
-
-crate::registry::exports! {
-    "settings/hooks/origin-stops" {
-        "stopsOf" => async ok |origin: PolicyHookSource, force_enabled: Callback|
-            stops_of(&origin, &force_enabled).await;
     }
 }
 

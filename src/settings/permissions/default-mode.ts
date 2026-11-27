@@ -1,7 +1,6 @@
 import type { PluginIssue } from '../../format/issues.ts';
 import type { PermissionMode } from '../../protocol/official.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PolicyView } from '../view.ts';
 
 /**
  * Which permission mode a session starts in (permission-modes.md, "Which mode a session starts in",
@@ -68,23 +67,5 @@ export type StartingMode =
 /** The notice a background session shows for an ignored bypass request (permission-modes.md, verbatim). */
 export const BYPASS_IGNORED_NOTICE: string = call('BYPASS_IGNORED_NOTICE');
 
-/** The settings keys the start reads, from the view. */
-export interface StartSettings {
-  readonly disableAutoMode: boolean;
-  readonly disableBypassPermissionsMode: boolean;
-  readonly skipDangerousModePermissionPrompt: boolean;
-}
-
 /** permission-modes.md, verbatim. */
 export const BYPASS_AS_ROOT: string = call('BYPASS_AS_ROOT');
-
-/**
- * The mode a session starts in. The first of these applies: the flag, `permissions.defaultMode`,
- * the built-in default; `disableAutoMode` turns an `auto` start (from any of the three) into
- * `default`, and `permissions.disableBypassPermissionsMode` rejects the flag.
- */
-export const startingMode = (
-  view: PolicyView,
-  settings: StartSettings,
-  input: StartInput,
-): StartingMode => call('startingMode', view, settings, input);

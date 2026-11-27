@@ -1,4 +1,4 @@
-//! Port of `src/settings/hooks/http-policy.ts`, switched.
+//! Ported from `src/settings/hooks/http-policy.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The two allowlists of HTTP hooks (settings-reference.md, `allowedHttpHookUrls` and
 //! `httpHookAllowedEnvVars`). Both merge across files, both are read from "hooks from every
@@ -9,7 +9,6 @@ use indexmap::IndexSet;
 use serde::Serialize;
 
 use crate::js::JsValue;
-use crate::registry::{Handle, Port};
 use crate::settings::hooks::url_pattern::match_url_pattern;
 use crate::settings::view::PolicyView;
 
@@ -98,18 +97,4 @@ pub async fn create_http_hook_policy(view: &dyn PolicyView) -> HttpHookUrlPolicy
     let urls = strings(view.get("allowedHttpHookUrls").await);
     let variables = strings(view.get("httpHookAllowedEnvVars").await);
     HttpHookUrlPolicy { urls, variables }
-}
-
-crate::registry::methods! {
-    HttpHookUrlPolicy {
-        "check" => ok |this, url: String, hook_allowed_env_vars: Vec<String>|
-            this.check(&url, &hook_allowed_env_vars);
-    }
-}
-
-crate::registry::exports! {
-    "settings/hooks/http-policy" {
-        "createHttpHookPolicy" => async ok |view: Port|
-            Handle::new(create_http_hook_policy(&view).await);
-    }
 }

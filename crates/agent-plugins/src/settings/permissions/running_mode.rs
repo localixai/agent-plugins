@@ -9,7 +9,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
-use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::view::PolicyView;
 
@@ -92,7 +91,5 @@ pub async fn running_mode_of(view: &dyn PolicyView, current: PermissionMode) -> 
 crate::registry::exports! {
     "settings/permissions/running-mode" {
         "AUTO_MODE_DISABLED_NOTICE" => ok || AUTO_MODE_DISABLED_NOTICE;
-        "runningModeOf" => async ok |view: Port, current: PermissionMode|
-            running_mode_of(&view, current).await;
     }
 }

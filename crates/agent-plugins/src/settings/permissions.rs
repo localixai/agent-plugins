@@ -5,6 +5,7 @@ pub mod auto_mode;
 pub mod default_mode;
 pub mod managed_only;
 pub mod merge;
+pub mod policy;
 pub mod read;
 pub mod running_mode;
 pub mod sandbox_read_block;

@@ -1,10 +1,12 @@
-import { applyParentRules, type ParentSettingsContext } from '../managed/parent.ts';
+import type { ParentSettingsContext } from '../managed/parent.ts';
 import type { SyncDecision } from '../plugins/sync-plugins.ts';
 import type { PolicyView } from '../view.ts';
-import { bundledSkills, type BundledSkillsDecision } from './bundled.ts';
-import { skillVisibility, type SkillSubject, type SkillVisibility } from './overrides.ts';
-import { shellVerdict, type ShellOrigin, type ShellVerdict } from './shell.ts';
-import { syncSkillsDecision } from './sync-skills.ts';
+import type { BundledSkillsDecision } from './bundled.ts';
+import type { SkillSubject, SkillVisibility } from './overrides.ts';
+import type { ShellOrigin, ShellVerdict } from './shell.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/skills/policy');
 
 /** What the host tells the skill policy besides the layers. */
 export interface SkillPolicyContext extends ParentSettingsContext {
@@ -25,18 +27,15 @@ export interface SkillSettingsPolicy {
  * `disableSkillShellExecution: true` in the SDK's `managedSettings` takes effect, but parent settings
  * are ignored where an administrator deploys managed settings (claude-apps-gateway.md): the shell
  * verdict reads the view under the parent rules.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/skills/policy.rs`, docs/RUST.md).
  */
-export function createSkillSettingsPolicy(
+export const createSkillSettingsPolicy = (
   view: PolicyView,
   context: SkillPolicyContext,
-): SkillSettingsPolicy {
-  const effective = applyParentRules(view, context);
-  const bundled = bundledSkills(view, context.env);
-  return {
-    visibility: (name, subject) => skillVisibility(view, name, subject),
-    bundled: () => bundled,
-    bundledSkillsDisabled: bundled.disabled,
-    shell: (origin) => shellVerdict(effective, origin),
-    syncClaudeAiSkills: () => syncSkillsDecision(view),
-  };
-}
+): SkillSettingsPolicy =>
+  call('createSkillSettingsPolicy', view, {
+    hasManagedSettings: context.hasManagedSettings,
+    parentMerge: context.parentMerge,
+    env: context.env,
+  });

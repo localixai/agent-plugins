@@ -3,5 +3,6 @@
 
 pub mod bundled;
 pub mod overrides;
+pub mod policy;
 pub mod shell;
 pub mod sync_skills;

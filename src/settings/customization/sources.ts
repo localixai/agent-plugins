@@ -1,6 +1,4 @@
-import type { PluginOnlySurface } from '../../protocol/settings-keys.ts';
 import type { PolicyHookSource } from '../hooks/origins.ts';
-import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * Which origins each locked surface still loads: one table per surface, typed over that surface's own
@@ -54,14 +52,3 @@ export interface OriginOf {
   readonly hooks: HooksOrigin;
   readonly mcp: McpOrigin;
 }
-
-export type LockedSurfaces = ReadonlySet<PluginOnlySurface>;
-
-const call = coreModule('settings/customization/sources');
-
-/** Whether a customization of `surface` from `origin` loads under these locks. */
-export const loads = <S extends PluginOnlySurface>(
-  locked: LockedSurfaces,
-  surface: S,
-  origin: OriginOf[S],
-): boolean => call('loads', locked, surface, origin);
