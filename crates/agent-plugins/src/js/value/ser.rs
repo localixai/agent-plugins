@@ -56,6 +56,23 @@ pub fn serialize_number<S: ser::Serializer>(
     serializer.serialize_f64(*number)
 }
 
+/// An optional field whose key is always written: its value, or `undefined` where the TypeScript
+/// writes `key: undefined`. For such a field:
+/// `#[serde(serialize_with = "crate::js::value::serialize_or_undefined")]`.
+///
+/// # Errors
+///
+/// What the serializer refuses.
+pub fn serialize_or_undefined<T: Serialize, S: ser::Serializer>(
+    value: &Option<T>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    match value {
+        Some(value) => value.serialize(serializer),
+        None => JsValue::Undefined.serialize(serializer),
+    }
+}
+
 /// Any serializable value as a [`JsValue`]: a struct is an object of its fields, `None` and `()`
 /// are `null` (as `serde_json` writes them), every number a double, a wire tag its value.
 ///

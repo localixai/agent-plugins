@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Planning a plugin fetch, the dated-copy sweep, the `enabledPlugins` notes, the Node.js package
+  install plan, its checks and its failure note, reading and writing `installed_plugins.json` and
+  its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and
+  `--plugin-url` plugins, the orphaned-version cleanup and the uninstall's record selection run on
+  the core. The install's record plan stays TypeScript: its callers get the records they passed
+  back as the same objects.
 - `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
   `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
   preparation and the specifier matchers run on the core.

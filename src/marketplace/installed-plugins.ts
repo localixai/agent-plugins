@@ -1,8 +1,6 @@
-import { error, type PluginIssue } from '../format/issues.ts';
-import { isPluginIdPart } from '../format/marketplace/ids.ts';
-import { unknownFormatMessage, unreadableRecordsMessage } from './install-messages.ts';
-import { INSTALL_SCOPES, type InstallScope } from './install-scopes.ts';
-import { isRecord } from '../protocol/is-record.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import type { InstallScope } from './install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * `installed_plugins.json`, the record of what Claude Code has installed (plugins/loading.md,
@@ -18,10 +16,12 @@ import { isRecord } from '../protocol/is-record.ts';
  * `lastUpdated`, `gitCommitSha` and `projectPath` are optional text; fields the kit does not know
  * are kept and written back; a file with no numeric `version` is not a list of plugins in any
  * format and is rebuilt.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/installed_plugins.rs`,
+ * docs/RUST.md).
  */
 
-/** The format this version of the kit reads and writes. */
-const INSTALLED_PLUGINS_VERSION = 2;
+const call = coreModule('marketplace/installed-plugins');
 
 export interface InstallRecord {
   readonly scope: InstallScope;
@@ -57,135 +57,15 @@ export interface InstalledPluginsRead {
   readonly issues: readonly PluginIssue[];
 }
 
-const NOTHING: InstalledPluginsRead = {
-  records: {},
-  setAside: {},
-  unreadable: [],
-  writable: true,
-  issues: [],
-};
-
-const OPTIONAL_TEXT = ['installedAt', 'lastUpdated', 'gitCommitSha', 'projectPath'] as const;
-const KNOWN_KEYS: ReadonlySet<string> = new Set([
-  'scope',
-  'installPath',
-  'version',
-  ...OPTIONAL_TEXT,
-]);
-
-const scopeOf = (value: unknown): InstallScope | undefined =>
-  INSTALL_SCOPES.find((scope) => scope === value);
-
-const optionalText = (
-  raw: Record<string, unknown>,
-): Partial<Record<(typeof OPTIONAL_TEXT)[number], string>> | undefined => {
-  const found: Partial<Record<(typeof OPTIONAL_TEXT)[number], string>> = {};
-  for (const key of OPTIONAL_TEXT) {
-    const value = raw[key];
-    if (value === undefined) continue;
-    if (typeof value !== 'string') return undefined;
-    found[key] = value;
-  }
-  return found;
-};
-
-function readRecord(raw: unknown): InstallRecord | undefined {
-  if (!isRecord(raw)) return undefined;
-  const scope = scopeOf(raw['scope']);
-  const { installPath, version } = raw;
-  const optional = optionalText(raw);
-  if (scope === undefined || optional === undefined) return undefined;
-  if (typeof installPath !== 'string' || installPath === '' || typeof version !== 'string') {
-    return undefined;
-  }
-  const extra = Object.fromEntries(Object.entries(raw).filter(([key]) => !KNOWN_KEYS.has(key)));
-  return {
-    scope,
-    installPath,
-    version,
-    ...optional,
-    ...(Object.keys(extra).length === 0 ? {} : { extra }),
-  };
-}
-
-/** A list of records, every one of which must read; anything else is not this version's. */
-function readRecords(value: unknown): readonly InstallRecord[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const records = value.map(readRecord);
-  return records.every((one) => one !== undefined) ? records : undefined;
-}
-
-/** A plugin id is `<name>@<origin>`: one `@`, each side a part of a plugin id. */
-function isUsableId(key: string): boolean {
-  const parts = key.split('@');
-  return parts.length === 2 && parts.every(isPluginIdPart);
-}
-
-function readPlugins(plugins: Record<string, unknown>): InstalledPluginsRead {
-  // `Object.fromEntries` defines own properties, so a key named `__proto__` is kept, never taken as
-  // the prototype the way `object[key] = value` takes it.
-  const entries = Object.entries(plugins).map(([key, value]) => ({
-    key,
-    value,
-    read: isUsableId(key) ? readRecords(value) : undefined,
-    usable: isUsableId(key),
-  }));
-  const unreadable = entries.filter((one) => one.usable && one.read === undefined);
-  const ids = unreadable.map((one) => one.key);
-  return {
-    records: Object.fromEntries(
-      entries.flatMap((one) => (one.read === undefined ? [] : [[one.key, one.read] as const])),
-    ),
-    setAside: Object.fromEntries(
-      entries.filter((one) => !one.usable).map((one) => [one.key, one.value]),
-    ),
-    unreadable: ids,
-    writable: ids.length === 0,
-    issues:
-      ids.length === 0 ? [] : [error('installed_plugins.json', unreadableRecordsMessage(ids))],
-  };
-}
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * What a file's text says. A file that "isn't valid JSON, or isn't a list of plugins" is rebuilt
  * (its text kept); a key that is not a plugin id has its record set aside; a record whose fields
  * do not parse is named and keeps the file from being rewritten; a format this version does not
  * know is named and read no further. No file is no installs.
  */
-export function parseInstalledPlugins(text: string | undefined): InstalledPluginsRead {
-  if (text === undefined) return NOTHING;
-  const parsed = parseJson(text);
-  const version = isRecord(parsed) ? parsed['version'] : undefined;
-  const plugins = isRecord(parsed) ? parsed['plugins'] : undefined;
-  if (typeof version !== 'number' || !isRecord(plugins)) return { ...NOTHING, rebuilt: { text } };
-  if (version !== INSTALLED_PLUGINS_VERSION) {
-    return {
-      ...NOTHING,
-      unknownFormat: version,
-      writable: false,
-      issues: [error('installed_plugins.json', unknownFormatMessage(version))],
-    };
-  }
-  return readPlugins(plugins);
-}
-
-const wire = (record: InstallRecord): Record<string, unknown> => {
-  const { extra, ...fields } = record;
-  return { ...extra, ...fields };
-};
+export const parseInstalledPlugins = (text: string | undefined): InstalledPluginsRead =>
+  call('parseInstalledPlugins', text);
 
 /** The file's text for these records: two-space indented JSON and a final newline (a judgment). */
-export function serializeInstalledPlugins(records: InstalledRecords): string {
-  const plugins = Object.fromEntries(
-    Object.entries(records).map(([id, installs]) => [id, installs.map(wire)]),
-  );
-  return `${JSON.stringify({ version: INSTALLED_PLUGINS_VERSION, plugins }, null, 2)}\n`;
-}
+export const serializeInstalledPlugins = (records: InstalledRecords): string =>
+  call('serializeInstalledPlugins', records);

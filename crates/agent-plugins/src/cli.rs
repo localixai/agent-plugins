@@ -12,6 +12,7 @@ pub mod marketplace_update;
 pub mod plugin_details;
 pub mod plugin_list;
 pub mod plugin_ref;
+pub mod records_refusal;
 pub mod result;
 pub mod uninstall_data;
 pub mod uninstall_flags;

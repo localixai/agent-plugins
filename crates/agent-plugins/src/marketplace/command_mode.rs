@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/command-mode.ts`, switched.
+//! Ported from `src/marketplace/command-mode.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `mode` of a `command` source (plugins/marketplace-reference.md, "Copy mode and link mode").
 
@@ -28,11 +28,4 @@ pub fn link_on_windows_issue() -> PluginIssue {
         "source.mode",
         "A link-mode plugin cannot be installed on Windows. Declare \"mode\": \"copy\" there",
     )
-}
-
-crate::registry::exports! {
-    "marketplace/command-mode" {
-        "LINKS_NEED_POSIX" => ok || LINKS_NEED_POSIX;
-        "linkOnWindowsIssue" => ok link_on_windows_issue;
-    }
 }

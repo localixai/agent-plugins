@@ -229,11 +229,26 @@ pub async fn fetch_archive(
 }
 
 /// The ports of `fetchArchive` as they cross: a record of the host's objects.
-#[derive(Deserialize)]
-struct ArchivePortsGiven {
-    http: Port,
-    sha256: Port,
-    archive: Port,
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub struct ArchivePortsGiven {
+    /// The download.
+    pub http: Port,
+    /// The digest.
+    pub sha256: Port,
+    /// The zip's entries.
+    pub archive: Port,
+}
+
+impl ArchivePortsGiven {
+    /// The ports as `fetch_archive` takes them.
+    #[must_use]
+    pub fn ports(&self) -> ArchivePorts<'_> {
+        ArchivePorts {
+            http: &self.http,
+            sha256: &self.sha256,
+            archive: &self.archive,
+        }
+    }
 }
 
 /// `{ signal }`.
@@ -255,12 +270,7 @@ async fn fetch_given(
     given: ArchivePortsGiven,
     options: WithSignal,
 ) -> Fetched {
-    let ports = ArchivePorts {
-        http: &given.http,
-        sha256: &given.sha256,
-        archive: &given.archive,
-    };
-    match fetch_archive(&plan, &ports, &options.signal).await {
+    match fetch_archive(&plan, &given.ports(), &options.signal).await {
         Ok(archive) => Fetched::Archive(archive),
         Err(issue) => Fetched::Issue(issue),
     }

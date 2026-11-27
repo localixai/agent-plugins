@@ -65,6 +65,16 @@ pub enum RefusingCommand {
 }
 
 impl RefusingCommand {
+    /// The command's name, as its result names it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Install => "install",
+            Self::Uninstall => "uninstall",
+            Self::Update => "update",
+        }
+    }
+
     /// The word its refusal uses.
     const fn refused(self) -> &'static str {
         match self {

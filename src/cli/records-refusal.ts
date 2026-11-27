@@ -1,8 +1,6 @@
-import {
-  refuseForUnreadableRecords,
-  type RefusingCommand,
-} from '../marketplace/install-messages.ts';
-import { commandFailed, type CommandOutput } from './result.ts';
+import type { RefusingCommand } from '../marketplace/install-messages.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { CommandOutput } from './result.ts';
 
 /**
  * While `installed_plugins.json` holds a record this version cannot read, or is in a format it does
@@ -10,13 +8,14 @@ import { commandFailed, type CommandOutput } from './result.ts';
  * item 1): `Plugin "<name>" was not installed:` (`uninstalled`, `updated`) and the text `plugin
  * list` prints as its note, with `failureCode: "install_records_unreadable"`. `unreadable` is that
  * text, as `readInstalledPlugins` reported it; `undefined` when every record was read.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/records_refusal.rs`, docs/RUST.md).
  */
-export function recordsRefusal(
+
+const call = coreModule('cli/records-refusal');
+
+export const recordsRefusal = (
   command: RefusingCommand,
   name: string,
   unreadable: string | undefined,
-): CommandOutput | undefined {
-  if (unreadable === undefined) return undefined;
-  const refusal = refuseForUnreadableRecords(command, name, unreadable);
-  return commandFailed(command, refusal.message, { failureCode: refusal.failureCode });
-}
+): CommandOutput | undefined => call('recordsRefusal', command, name, unreadable);

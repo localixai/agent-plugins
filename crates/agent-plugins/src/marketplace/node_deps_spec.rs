@@ -326,11 +326,18 @@ pub struct PackageJson {
     /// `peerDependencies`.
     #[serde(default)]
     pub peer_dependencies: Option<IndexMap<String, String>>,
+    /// npm `overrides`, present as written.
+    #[serde(default)]
+    pub overrides: Option<JsValue>,
+    /// Bun `patchedDependencies`, present as written.
+    #[serde(default)]
+    pub patched_dependencies: Option<JsValue>,
 }
 
 impl PackageJson {
     /// `packageJson[section]`.
-    fn section(&self, section: &str) -> Option<&IndexMap<String, String>> {
+    #[must_use]
+    pub fn section(&self, section: &str) -> Option<&IndexMap<String, String>> {
         match section {
             "dependencies" => self.dependencies.as_ref(),
             "devDependencies" => self.dev_dependencies.as_ref(),

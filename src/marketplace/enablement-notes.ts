@@ -1,6 +1,5 @@
-import { enabledNotInstalled } from './install-errors.ts';
 import type { ErrorsTabEntry } from './install-messages.ts';
-import { SETTINGS_FILE } from '../format/settings-files.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * Two questions about `enabledPlugins` that the loading reference answers (plugins/loading.md,
@@ -8,31 +7,17 @@ import { SETTINGS_FILE } from '../format/settings-files.ts';
  * Code fetches a plugin only a project enables. Pure over the facts a host read from the settings
  * layers; which layer wins is the settings module's (`enabledPlugin`), so a caller passes its
  * `decidedBy` here, and this module imports nothing from it (same layer).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/enablement_notes.rs`,
+ * docs/RUST.md).
  */
+
+const call = coreModule('marketplace/enablement-notes');
 
 /** The sources an `enabledPlugins` entry can come from (the table of "Find where a plugin is enabled"). */
 export type EnableSource = 'addDir' | 'user' | 'project' | 'local' | 'flag' | 'managed';
 
 // ---- "Disabled in user settings but still loads" ----
-
-interface Overrider {
-  /** How the message names the source that overrode the user setting. */
-  readonly label: string;
-  /** Whether a `false` in `.claude/settings.local.json` can opt out of it. */
-  readonly optOut: boolean;
-}
-
-/**
- * The sources above user settings, with the names the docs give: `project`, `project, gitignored`
- * for `.claude/settings.local.json`, `cli flag` and `managed`. `--add-dir` ranks below user
- * settings and never overrides it.
- */
-const OVERRIDERS: { readonly [S in EnableSource]?: Overrider } = {
-  project: { label: 'project', optOut: true },
-  local: { label: 'project, gitignored', optOut: false },
-  flag: { label: 'cli flag', optOut: false },
-  managed: { label: 'managed', optOut: false },
-};
 
 export interface UserDisableOverridden {
   /** The row's text in `claude plugin list` and `/plugin`. */
@@ -48,18 +33,11 @@ export interface UserDisableOverridden {
  * quote the sentence for `project` only, so another source is named in the same place by its
  * label (`cli flag settings enable it`).
  */
-export function overriddenUserDisable(winner: {
+export const overriddenUserDisable = (winner: {
   readonly user?: boolean;
   readonly decidedBy: EnableSource;
   readonly on: boolean;
-}): UserDisableOverridden | undefined {
-  const overrider = OVERRIDERS[winner.decidedBy];
-  if (winner.user !== false || !winner.on || overrider === undefined) return undefined;
-  const message = `Disabled in ${SETTINGS_FILE.user} but still loads — ${overrider.label} settings enable it, which overrides your user setting`;
-  return overrider.optOut
-    ? { message, optOut: { file: SETTINGS_FILE.local, value: false } }
-    : { message };
-}
+}): UserDisableOverridden | undefined => call('overriddenUserDisable', winner);
 
 // ---- "Enabled in project settings but not installed" ----
 
@@ -91,18 +69,6 @@ export interface EnabledFetchDecision {
   readonly error?: ErrorsTabEntry;
 }
 
-/** "Claude Code fetches a plugin with an external source only when one of these sources sets it to `true`." */
-const FETCHES: { readonly [S in EnableSource]: (gitTracked: boolean | undefined) => boolean } = {
-  user: () => true,
-  flag: () => true,
-  managed: () => true,
-  local: (gitTracked) => gitTracked === false,
-  project: () => false,
-  addDir: () => false,
-};
-
-const NOTHING: EnabledFetchDecision = { fetch: false, inPlace: false };
-
 /**
  * What Claude Code does with an enabled plugin that has no install record on this machine. A
  * relative-path plugin "needs no install record because it loads from the marketplace itself", and
@@ -112,23 +78,5 @@ const NOTHING: EnabledFetchDecision = { fetch: false, inPlace: false };
  * tab says so. Judgment (spec/judgments.md): a `true` from `--add-dir` alone neither fetches nor
  * reports, since the docs name it in neither list.
  */
-export function decideEnabledFetch(facts: EnabledFacts): EnabledFetchDecision {
-  if (facts.installed || facts.seeded || facts.trueIn.length === 0) return NOTHING;
-  if (facts.relativePath) return { fetch: false, inPlace: true };
-  if (facts.trueIn.some((one) => FETCHES[one.source](one.gitTracked))) {
-    return { fetch: true, inPlace: false };
-  }
-  return facts.trueIn.some((one) => ISSUES_ERROR[one.source])
-    ? { ...NOTHING, error: enabledNotInstalled(facts.name, facts.marketplace) }
-    : NOTHING;
-}
-
-/** Only the project's own file makes the "isn't installed here" entry. */
-const ISSUES_ERROR: { readonly [S in EnableSource]: boolean } = {
-  project: true,
-  user: false,
-  local: false,
-  flag: false,
-  managed: false,
-  addDir: false,
-};
+export const decideEnabledFetch = (facts: EnabledFacts): EnabledFetchDecision =>
+  call('decideEnabledFetch', facts);

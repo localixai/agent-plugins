@@ -12,6 +12,9 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use super::source_safety::NpmSpec;
+use super::submodules::MarketplaceSource;
+use crate::format::path_text::PathPlatform;
 use crate::js::JsValue;
 use crate::ports::marketplace::GitRepository;
 
@@ -216,4 +219,114 @@ pub struct ArchiveFetchPlan {
     pub limits: ArchiveLimits,
     /// The headers the download sends.
     pub headers: HeaderMap,
+    /// Where the plugin root may sit in the zip.
+    #[serde(default)]
+    pub root_depth: RootDepth,
+}
+
+/// Where an archive's plugin root may sit: at the top or one folder down.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RootDepth {
+    /// `top-or-one-down`.
+    #[default]
+    #[serde(rename = "top-or-one-down")]
+    TopOrOneDown,
+}
+
+/// What a clone ends on: `sha` wins over `ref`, which wins over the default branch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Checkout {
+    /// `sha`.
+    Sha,
+    /// `ref`.
+    Ref,
+    /// `default-branch`.
+    DefaultBranch,
+}
+
+/// A git source's fetch plan (`kind: "git"`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitFetchPlan {
+    /// The repository.
+    pub repo: GitRepository,
+    /// A branch or tag.
+    #[serde(default, rename = "ref", skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+    /// A commit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sha: Option<String>,
+    /// What the clone ends on: `sha` wins over `ref`, which wins over the default branch.
+    pub checkout: Checkout,
+    /// The folder checked out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subdir: Option<String>,
+    /// A sparse checkout.
+    pub sparse: bool,
+    /// A partial clone.
+    pub partial_clone: bool,
+    /// "The clone never downloads LFS content, so LFS-tracked files arrive as pointer files"
+    /// (host-marketplace.md, "Keep plugin files out of Git LFS"): a host runs the clone without
+    /// fetching LFS objects.
+    pub lfs: String,
+}
+
+/// An npm source's fetch plan (`kind: "npm"`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NpmFetchPlan {
+    /// The package and version, or a tarball link.
+    pub spec: NpmSpec,
+    /// The registry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub registry: Option<String>,
+    /// Always `false`.
+    pub run_install_scripts: bool,
+    /// Always `false`.
+    pub install_dependencies: bool,
+}
+
+/// How a plugin source is fetched, as data: the kit plans it, the host (or an engine over ports)
+/// runs it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum FetchPlan {
+    /// Files already in the marketplace.
+    Local {
+        /// The plugin's path from the marketplace root.
+        #[serde(rename = "fromMarketplaceRoot")]
+        from_marketplace_root: String,
+        /// The submodules it needs.
+        submodules: SubmoduleRule,
+    },
+    /// A clone.
+    Git(GitFetchPlan),
+    /// An npm package.
+    Npm(NpmFetchPlan),
+    /// A zip download.
+    Archive(ArchiveFetchPlan),
+    /// A command that puts the plugin in place.
+    Command(CommandFetchPlan),
+}
+
+/// What planning a plugin fetch needs to know about the host and the marketplace it reads.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchPlanContext {
+    /// How the marketplace was added.
+    #[serde(default)]
+    pub marketplace_origin: Option<MarketplaceSource>,
+    /// The `<plugin>@<marketplace>` being installed, named by a refusal (`Cannot install <id>: …`).
+    #[serde(default)]
+    pub plugin_id: Option<String>,
+    /// Whose path rules apply.
+    pub platform: PathPlatform,
+    /// The registry the user's own npm configuration names; the only `http://` or non-default one
+    /// allowed.
+    #[serde(default)]
+    pub default_npm_registry: Option<String>,
+    /// The session's folder.
+    #[serde(default)]
+    pub session_cwd: Option<String>,
 }

@@ -89,11 +89,6 @@ export type SkipOf<R extends SkipReason> = {
 
 export type NodeDepsSkip = { readonly [R in SkipReason]: SkipOf<R> }[SkipReason];
 
-/** The reasons that carry nothing. */
-export type BareReason = {
-  readonly [R in SkipReason]: SkipFields[R] extends object ? never : R;
-}[SkipReason];
-
 export interface StagedFile {
   readonly from: string;
   readonly to: string;
@@ -129,9 +124,3 @@ export interface NodeDepsResult {
   readonly plan: NodeDepsPlan;
   readonly issues: readonly PluginIssue[];
 }
-
-/** A skip that carries nothing but its reason. */
-export const skipFor = (reason: BareReason): NodeDepsSkip => call('skipFor', reason);
-
-export const isSkip = (plan: NodeDepsPlan): plan is NodeDepsSkip =>
-  call('isSkip', { action: plan.action });
