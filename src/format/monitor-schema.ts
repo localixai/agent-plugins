@@ -9,17 +9,17 @@ import { closedObject } from './strict-keys.ts';
  * aborts the entry, so inside the source union it is a bare `Invalid input` at the key.
  */
 
-export const ALWAYS = 'always';
+const ALWAYS = 'always';
 const ON_SKILL_INVOKE = 'on-skill-invoke:';
 
 const WHEN_PREFIX = `Invalid string: must start with "${ON_SKILL_INVOKE}"`;
-export const WHEN_SKILL = 'on-skill-invoke: must specify a skill name';
-export const UNIQUE_NAMES = 'Monitor names must be unique within a plugin';
+const WHEN_SKILL = 'on-skill-invoke: must specify a skill name';
+const UNIQUE_NAMES = 'Monitor names must be unique within a plugin';
 
 const text = z.string().min(1);
 
 /** The skill after the prefix, empty when there is none or no prefix (spec J9.8: read as written). */
-export const skillOf = (when: string): string =>
+const skillOf = (when: string): string =>
   when.startsWith(ON_SKILL_INVOKE) ? when.slice(ON_SKILL_INVOKE.length) : '';
 
 /**
@@ -31,7 +31,7 @@ const when = z
   .refine((value) => value === ALWAYS || value.startsWith(ON_SKILL_INVOKE), { error: WHEN_PREFIX })
   .refine((value) => value === ALWAYS || skillOf(value).length > 0, { error: WHEN_SKILL });
 
-export const monitorEntrySchema = closedObject({
+const monitorEntrySchema = closedObject({
   name: text,
   command: text,
   description: text,

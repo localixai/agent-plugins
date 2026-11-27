@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/common.ts`, switched.
+//! Ported from `src/hooks/input/common.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The fields every event's input has (hooks.md, "Common input fields"). `scratchpad_dir` is in the
 //! docs ("Requires Claude Code v2.1.257 or later") but not in the SDK's `BaseHookInput`, so it is
@@ -192,10 +192,4 @@ pub fn common_input(event: &str, session: &HookSession) -> CommonFields {
         agent_type: given(agent.and_then(|agent| agent.kind.as_ref())),
     };
     CommonFields { fields, issues }
-}
-
-crate::registry::exports! {
-    "hooks/input/common" {
-        "commonInput" => ok |event: String, session: HookSession| common_input(&event, &session);
-    }
 }

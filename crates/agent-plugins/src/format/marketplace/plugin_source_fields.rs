@@ -1,4 +1,4 @@
-//! Port of `src/format/marketplace/plugin-source-fields.ts`, switched.
+//! Ported from `src/format/marketplace/plugin-source-fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The field checks every object plugin source shares (plugins/marketplace-reference.md, "Plugin
 //! sources" and "Invalid input on a source"): a known type "with a required field missing or of the
@@ -223,10 +223,4 @@ pub fn read_git_pin(raw: &RawSource, site: &SourceSite) -> Option<Checked<GitPin
         },
         issues,
     })
-}
-
-crate::registry::exports! {
-    "format/marketplace/plugin-source-fields" {
-        "invalidInput" => ok |site: SourceSite| invalid_input(&site);
-    }
 }

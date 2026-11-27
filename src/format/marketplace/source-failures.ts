@@ -13,6 +13,3 @@ export const SOURCE_FAILURE: {
   readonly npm: 'NPM marketplace sources not yet implemented';
   readonly policyOnly: 'Unsupported marketplace source type';
 } = call('SOURCE_FAILURE');
-
-/** The notice for a type only a policy list takes, outside one. */
-export const policyOnlyNotice = (kind: string): string => call('policyOnlyNotice', kind);

@@ -29,3 +29,4 @@ pub mod settings;
 pub mod skills;
 pub mod updates;
 mod yaml;
+pub mod zod;

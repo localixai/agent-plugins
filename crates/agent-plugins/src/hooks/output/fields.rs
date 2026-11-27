@@ -1,4 +1,4 @@
-//! The core's counterpart of `src/hooks/output/fields.ts` at sha256:7bb2ac9733fe, which stays TypeScript:
+//! The core's counterpart of `src/hooks/output/fields.ts` at sha256:56c9c804cdbd, which stays TypeScript:
 //! guards over a host value, which crossing the boundary would copy whole (docs/RUST.md, "What
 //! stays TypeScript").
 //!

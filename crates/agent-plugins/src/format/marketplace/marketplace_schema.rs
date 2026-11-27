@@ -394,13 +394,7 @@ pub fn read_top_level(raw: &JsObject) -> TopLevelResult {
 
 crate::registry::exports! {
     "format/marketplace/marketplace-schema" {
-        "typeName" => ok |value: JsValue| type_name(&value);
         "mismatch" => ok |path: String, expected: String, value: JsValue| mismatch(&path, &expected, &value);
-        "readOwner" => ok |value: JsValue| read_owner(&value);
-        "unknownField" => ok |key: String, path: String, known: Vec<String>| {
-            let known: Vec<&str> = known.iter().map(String::as_str).collect();
-            unknown_field(&key, &path, &known)
-        };
         "readTopLevel" => ok |raw: JsObject| read_top_level(&raw);
     }
 }

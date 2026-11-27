@@ -1,4 +1,4 @@
-//! Port of `src/hooks/input/conditional-fields.ts`, switched.
+//! Ported from `src/hooks/input/conditional-fields.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Fields an event's input has only in some cases (hooks.md, the input tables). A host that supplies
 //! one where the docs say it is absent gets it dropped, with a warning, so a hook never sees a field
@@ -178,11 +178,5 @@ pub fn apply_conditional_fields(event: &str, facts: &JsObject) -> Refined {
         "SessionStart" => session_start(facts),
         "Stop" | "SubagentStop" => refine_stop(event, facts),
         _ => unchanged(facts),
-    }
-}
-
-crate::registry::exports! {
-    "hooks/input/conditional-fields" {
-        "applyConditionalFields" => ok |event: String, facts: JsObject| apply_conditional_fields(&event, &facts);
     }
 }

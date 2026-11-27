@@ -95,6 +95,19 @@ pub fn from_code_point(code: u32) -> Vec<u16> {
     }
 }
 
+/// `text.charAt(0).toUpperCase() + text.slice(1)`: the first code unit upper-cased. A first
+/// character above U+FFFF is two units, and a lone half has no upper case, so it stays as it was.
+#[must_use]
+pub fn upper_case_first(text: &str) -> String {
+    let mut characters = text.chars();
+    match characters.next() {
+        Some(first) if first.len_utf16() == 1 => {
+            format!("{}{}", first.to_uppercase(), characters.as_str())
+        }
+        Some(_) | None => text.to_owned(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +137,13 @@ mod tests {
             text_of(&replace_all(&units("a\\`b\\`"), "\\`", "`")),
             "a`b`"
         );
+    }
+
+    #[test]
+    fn upper_cases_the_first_code_unit_only() {
+        assert_eq!(upper_case_first("terraform"), "Terraform");
+        assert_eq!(upper_case_first("ßx"), "SSx");
+        assert_eq!(upper_case_first("\u{10428}x"), "\u{10428}x");
+        assert_eq!(upper_case_first(""), "");
     }
 }

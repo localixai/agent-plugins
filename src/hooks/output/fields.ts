@@ -10,7 +10,3 @@ export const stringIn = (source: object | undefined, key: string): string | unde
   const value = valueIn(source, key);
   return typeof value === 'string' ? value : undefined;
 };
-
-/** A string with something in it: an empty `additionalContext` adds nothing. */
-export const hasText = (text: string | undefined): text is string =>
-  text !== undefined && text !== '';

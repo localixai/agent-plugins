@@ -5,8 +5,6 @@
 //! issues that say why the object matches no type. What a field means at fetch time is the fetch
 //! plan's.
 
-use indexmap::IndexMap;
-
 use super::archive_url::archive_url_issues;
 use super::plugin_source_fields::{
     Checked, RawSource, SourceSite, field_error, invalid_input, is_text, optional_digest,
@@ -16,7 +14,6 @@ use super::types::{CommandMode, PluginSource, PluginSourceKind};
 use crate::format::issues::{PluginIssue, error};
 use crate::js::value::to_js_value;
 use crate::js::{JsValue, code_unit_length};
-use crate::registry::Function;
 
 /// `Parsed`: a `PluginSource`, or the issues that say why the object matches no type.
 pub type Parsed = JsValue;
@@ -224,26 +221,8 @@ pub const OBJECT_PARSERS: [(PluginSourceKind, ObjectParser); 6] = [
     (PluginSourceKind::Command, read_command),
 ];
 
-/// One entry of `OBJECT_PARSERS`, a function the host calls.
-struct Parser(ObjectParser);
-
-crate::registry::methods! {
-    Parser {
-        "call" => ok |this, raw: RawSource, site: SourceSite| (this.0)(&raw, &site);
-    }
-}
-
-/// `OBJECT_PARSERS` as the host's table of functions.
-fn object_parsers() -> IndexMap<PluginSourceKind, Function> {
-    OBJECT_PARSERS
-        .iter()
-        .map(|(kind, parser)| (*kind, Function::new(Parser(*parser))))
-        .collect()
-}
-
 crate::registry::exports! {
     "format/marketplace/plugin-source-kinds" {
         "commandTextIssues" => ok |command: String, path: String| command_text_issues(&command, &path);
-        "OBJECT_PARSERS" => ok object_parsers;
     }
 }

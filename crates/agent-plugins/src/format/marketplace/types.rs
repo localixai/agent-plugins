@@ -300,11 +300,11 @@ pub enum MarketplaceSource {
     Github {
         /// `owner/name`.
         repo: String,
+        /// The file. Before `ref`: the order `parseMarketplaceSource` builds a source in.
+        path: String,
         /// A branch or tag.
         #[serde(default, rename = "ref", skip_serializing_if = "Option::is_none")]
         reference: Option<String>,
-        /// The file.
-        path: String,
         /// The folders to fetch.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sparse_paths: Option<Vec<String>>,
@@ -318,11 +318,11 @@ pub enum MarketplaceSource {
     Git {
         /// The URL.
         url: String,
+        /// The file. Before `ref`: the order `parseMarketplaceSource` builds a source in.
+        path: String,
         /// A branch or tag.
         #[serde(default, rename = "ref", skip_serializing_if = "Option::is_none")]
         reference: Option<String>,
-        /// The file.
-        path: String,
         /// The folders to fetch.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sparse_paths: Option<Vec<String>>,
@@ -483,9 +483,9 @@ pub struct MarketplaceContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marketplace_name: Option<String>,
     /// `plugin.json` of each relative-path entry by entry index, for the `plugins[i] plugin.json
-    /// →` reports.
+    /// →` reports: a `ReadonlyMap`, as the wrapper tags it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plugin_manifests: Option<IndexMap<u32, JsValue>>,
+    pub plugin_manifests: Option<crate::registry::Map<u32, JsValue>>,
 }
 
 /// What reading a marketplace gave.

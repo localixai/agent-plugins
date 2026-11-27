@@ -7,5 +7,6 @@ pub mod http_policy;
 pub mod mcp_input;
 pub mod mcp_tool;
 pub mod ok_false;
+pub mod prompt_response;
 pub mod prompt_text;
 pub mod types;

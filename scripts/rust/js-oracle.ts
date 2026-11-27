@@ -6,7 +6,8 @@
  * reads of it), and `normalize`, `toUpperCase` and `toLowerCase` (an archive's names are folded
  * by them), `new RegExp(source, flags)` with `exec`, `replace`, `split` and `matchAll` (a hook's
  * matcher and a relevance signal are patterns from input), npm's `semver`, which the package's
- * version ranges are read by, and npm's `ignore`, which its path rules were matched by. The
+ * version ranges are read by, npm's `ignore`, which its path rules were matched by, and zod 4
+ * (`safeParse` of the schemas in `js-oracle/zod-schemas.ts`, whose issues reach a plugin's). The
  * inputs are fixed seeds and every single-character edit of them, so the set is the same on every
  * run and covers the edges a hand-picked list would miss; a fixed list adds what one edit cannot
  * reach (deep nesting, long numbers, every escape). The
@@ -23,6 +24,7 @@ import { recordRegExps } from './js-oracle/reg-exp.ts';
 import { recordRegExp } from './js-oracle/regexp.ts';
 import { recordSemver } from './js-oracle/semver.ts';
 import { recordUrlBases, recordUrls } from './js-oracle/url.ts';
+import { recordZod } from './js-oracle/zod.ts';
 
 recordJsonParse();
 recordNumbers();
@@ -33,3 +35,4 @@ recordUrlBases();
 recordRegExp();
 recordSemver();
 recordIgnore();
+recordZod();

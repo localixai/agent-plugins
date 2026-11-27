@@ -32,7 +32,7 @@ const extensions = z
   .record(text.regex(/^\./), text)
   .refine((map) => Object.keys(map).length > 0, { error: NO_MAPPING });
 
-export const lspServerSchema = closedObject({
+const lspServerSchema = closedObject({
   command,
   extensionToLanguage: extensions,
   args: z.array(text).exactOptional(),

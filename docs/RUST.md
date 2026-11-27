@@ -245,6 +245,10 @@ for the loop's tests (`tests/wasm/loop.test.ts`); no module of `src/` names it.
    the package's tests hold it now. `bun scripts/rust/ports.ts --check` checks that a switched
    module's wrapper calls exactly the exports the Rust declares.
 
+A module whose exported zod schema (a value with methods; `crates/agent-plugins/src/zod.rs` builds
+it in Rust) another TypeScript module imports is ported but not switched until its importers move:
+a schema cannot cross the boundary, so the importer would lose it.
+
 ## How a ported module is held to the TypeScript
 
 Five checks, each deterministic:

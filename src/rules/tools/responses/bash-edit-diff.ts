@@ -1,8 +1,11 @@
-import { z } from 'zod';
-import { error, warning, type PluginIssue } from '../../../format/issues.ts';
-import { flag, list, num, text } from '../inputs/field-schemas.ts';
-import { issuesOf, objectOf, RESPONSE_ROOT } from './shape.ts';
-import { isRecord } from '../../../protocol/is-record.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/responses/bash_edit_diff.rs`,
+ * docs/RUST.md).
+ */
+import type { PluginIssue } from '../../../format/issues.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/responses/bash-edit-diff');
 
 /**
  * One entry of `bashEditDiff.files` (hooks.md, "Bash"): the diff of a changed file "for display".
@@ -41,107 +44,14 @@ export interface BashEditDiffParse {
   readonly issues: readonly PluginIssue[];
 }
 
-/** "at most 200" paths and "up to 5" diffs. */
-const MAX_CHANGED_FILES = 200;
-const MAX_DIFFED_FILES = 5;
-
-const FIELD = `${RESPONSE_ROOT}.bashEditDiff`;
-
-const count = num.refine((value) => Number.isInteger(value) && value >= 0, {
-  error: 'expected a whole number from 0',
-});
-
-const SCHEMA = objectOf({
-  changedFiles: list(text).optional(),
-  files: list(
-    objectOf({
-      filePath: text,
-      hunks: z.unknown().optional(),
-      created: flag.optional(),
-      deleted: flag.optional(),
-    }),
-  ).optional(),
-  moreFiles: count.optional(),
-  unavailable: flag.optional(),
-  skipped: flag.optional(),
-  shared: flag.optional(),
-});
-
-/** A POSIX path, a Windows drive path or a UNC path; hooks receive native separators. */
-const ABSOLUTE = /^(?:[\\/]|[A-Za-z]:[\\/])/;
-
-const notAbsolute = (paths: readonly string[], at: string): PluginIssue[] =>
-  paths.flatMap((path, index) =>
-    ABSOLUTE.test(path) ? [] : [warning(`${at}.${index}`, 'is not an absolute path')],
-  );
-
-type Check = (diff: BashEditDiff) => readonly PluginIssue[];
-
-/** What the table states as a limit or an invariant; a violation is a warning that keeps the data. */
-const CHECKS: readonly Check[] = [
-  ({ changedFiles }) =>
-    changedFiles !== undefined && changedFiles.length > MAX_CHANGED_FILES
-      ? [
-          warning(
-            `${FIELD}.changedFiles`,
-            `lists ${changedFiles.length} paths and the docs allow at most ${MAX_CHANGED_FILES}`,
-          ),
-        ]
-      : [],
-  ({ files }) =>
-    files !== undefined && files.length > MAX_DIFFED_FILES
-      ? [
-          warning(
-            `${FIELD}.files`,
-            `holds ${files.length} diffs and the docs allow at most ${MAX_DIFFED_FILES}`,
-          ),
-        ]
-      : [],
-  ({ changedFiles, files = [], moreFiles = 0 }) =>
-    changedFiles === undefined && (files.length > 0 || moreFiles > 0)
-      ? [
-          warning(
-            `${FIELD}.changedFiles`,
-            'is missing, it is present whenever files holds a diff or moreFiles is above zero',
-          ),
-        ]
-      : [],
-  ({ changedFiles = [], files = [] }) => [
-    ...notAbsolute(changedFiles, `${FIELD}.changedFiles`),
-    ...files.flatMap((file, index) =>
-      notAbsolute([file.filePath], `${FIELD}.files.${index}`).map((found) => ({
-        ...found,
-        path: `${FIELD}.files.${index}.filePath`,
-      })),
-    ),
-  ],
-  ({ skipped, files = [] }) =>
-    skipped === true && files.length > 0
-      ? [
-          warning(
-            `${FIELD}.skipped`,
-            'is set, so Claude Code takes no diff and files should be empty',
-          ),
-        ]
-      : [],
-];
-
 /**
  * Reads `tool_response.bashEditDiff` of a Bash PostToolUse call (hooks.md, "Bash"): "the changed
  * files". A call without the field has no diff (background and read-only commands carry none, and
  * recording may be off); a wrong type is an error issue and nothing throws; a broken limit is a
  * warning and the data is kept whole.
  */
-export function parseBashEditDiff(toolResponse: unknown): BashEditDiffParse {
-  if (!isRecord(toolResponse)) {
-    return { diff: undefined, issues: [error(RESPONSE_ROOT, 'expected an object')] };
-  }
-  const { bashEditDiff } = toolResponse;
-  if (bashEditDiff === undefined) return { diff: undefined, issues: [] };
-  const parsed = SCHEMA.safeParse(bashEditDiff);
-  if (!parsed.success) return { diff: undefined, issues: issuesOf(FIELD, parsed.error) };
-  return { diff: parsed.data, issues: CHECKS.flatMap((check) => check(parsed.data)) };
-}
+export const parseBashEditDiff = (toolResponse: unknown): BashEditDiffParse =>
+  call('parseBashEditDiff', toolResponse);
 
 /** How far a list can be relied on: "how complete and how reliable that list is". */
 export interface BashEditDiffTrust {
@@ -152,11 +62,6 @@ export interface BashEditDiffTrust {
 }
 
 /** The two flags that say a list is incomplete and the one that says it may hold another command's changes. */
-export function bashEditDiffTrust(
+export const bashEditDiffTrust = (
   diff: Pick<BashEditDiff, 'unavailable' | 'skipped' | 'shared'>,
-): BashEditDiffTrust {
-  return {
-    complete: diff.unavailable !== true && diff.skipped !== true,
-    attributable: diff.shared !== true,
-  };
-}
+): BashEditDiffTrust => call('bashEditDiffTrust', diff);
