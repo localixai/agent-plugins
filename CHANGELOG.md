@@ -173,6 +173,11 @@
   environment variables and text patterns, approval memory, hook permission updates and
   rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the
   Edit, Read, Grep, WebFetch and WebSearch rules check.
+- **Breaking** (`/rules`): a `FieldSpec` of `TOOL_INPUT_FIELDS` has no `schema` member; the
+  table is data from the core (`type`, `optional`, `role`, `source`). To check a value against
+  its tool's table, call `parseToolInput(tool, input)`, whose issues name each field.
+- Permission rules are read on the core (`parseRule`, `formatRule`, parameter rules), and so is a
+  hook's `if` (`evaluateIf`) and `answerQuestions`; the core keeps the patterns it compiled.
 - **Breaking** (`/layout`): a `ManifestKey` is the key alone (`{ key }`); its `read` member is
   gone, as `declaredKey` reads the manifest in the core. The `/layout` entry now loads the core.
 - Hooks run more of their work on the core: what a handler's exit code and stdout mean, the

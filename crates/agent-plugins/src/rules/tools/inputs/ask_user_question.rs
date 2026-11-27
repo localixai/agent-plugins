@@ -1,4 +1,4 @@
-//! Port of `src/rules/tools/inputs/ask-user-question.ts` at sha256:266ae022b0c6.
+//! Port of `src/rules/tools/inputs/ask-user-question.ts`, switched.
 //!
 //! AskUserQuestion's input (hooks.md, "AskUserQuestion"): "one to four" questions, "each with a
 //! `question` string, short `header`, `options` array, and optional `multiSelect` flag". The table

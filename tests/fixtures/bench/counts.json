@@ -516,20 +516,17 @@
     "counts": {
       "4": {
         "resolve": {
-          "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 48
+          "cpu.JSON.parse": 4
         }
       },
       "8": {
         "resolve": {
-          "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 96
+          "cpu.JSON.parse": 4
         }
       },
       "16": {
         "resolve": {
-          "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 192
+          "cpu.JSON.parse": 4
         }
       }
     }

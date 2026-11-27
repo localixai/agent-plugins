@@ -1,6 +1,4 @@
-//! Port of `src/rules/sources.ts`, switched.
-
-use indexmap::IndexMap;
+//! Ported from `src/rules/sources.ts`; only the core uses it now, so it has no wrapper.
 
 /// Whether a source is a settings file or object, as against the command line or the session.
 /// Claude Code skips an `mcp__` rule with parentheses only "when it loads a settings file"; a deny
@@ -25,10 +23,4 @@ pub fn is_settings_source(kind: &str) -> bool {
     IS_SETTINGS_SOURCE
         .iter()
         .any(|(name, settings)| *name == kind && *settings)
-}
-
-crate::registry::exports! {
-    "rules/sources" {
-        "IS_SETTINGS_SOURCE" => ok || IS_SETTINGS_SOURCE.into_iter().collect::<IndexMap<_, _>>();
-    }
 }

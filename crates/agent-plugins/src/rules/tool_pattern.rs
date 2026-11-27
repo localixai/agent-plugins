@@ -1,9 +1,11 @@
 //! Port of `src/rules/tool-pattern.ts`, switched.
 //!
-//! A rule's tool-name glob and the tool-name position of a rule. The package keeps the last 256
-//! patterns it compiled (`rules/memo.ts`); the core compiles a pattern on each call, which answers
-//! the same.
+//! A rule's tool-name glob and the tool-name position of a rule. The core keeps the last 256
+//! patterns it compiled (`memo.rs`), as every rule of every decision compiles its globs again.
 
+use std::sync::LazyLock;
+
+use super::memo::{LIMIT, Memo, memoize};
 use super::target::mcp::{deny_covers_cowork_tool, mcp_tool_rule_matches};
 use super::types::PermissionRule;
 use crate::format::wildcard::wildcard_source;
@@ -18,8 +20,12 @@ fn compiled(key: &str) -> Result<RegExp, SyntaxError> {
 /// A `*` pattern as a regular expression that must match the whole text: `*` stands for any
 /// sequence of characters, spaces and slashes included, and every other character is literal.
 pub fn wildcard_reg_exp(pattern: &str, flags: Option<&str>) -> Result<RegExp, SyntaxError> {
-    compiled(&format!("{}\0{pattern}", flags.unwrap_or_default()))
+    COMPILED.get(&format!("{}\0{pattern}", flags.unwrap_or_default()))
 }
+
+/// The patterns compiled last, by `<flags>\0<pattern>`.
+static COMPILED: LazyLock<Memo<Result<RegExp, SyntaxError>>> =
+    LazyLock::new(|| memoize(compiled, LIMIT));
 
 /// Whether an allow rule's tool-name glob names one server: permissions.md ("Tool name wildcards")
 /// accepts one "only after a literal `mcp__<server>__` prefix", so `mcp__puppeteer__*` and
@@ -49,8 +55,6 @@ pub fn tool_name_matches(rule: &PermissionRule, tool_name: &str) -> bool {
 
 crate::registry::exports! {
     "rules/tool-pattern" {
-        "wildcardRegExp" => fallible |pattern: String, flags: Option<String>| wildcard_reg_exp(&pattern, flags.as_deref()).map(|compiled| crate::registry::RegExp { source: compiled.source().to_owned(), flags: compiled.flags().to_owned() });
-        "isAnchoredAllowGlob" => ok |tool_name: String| is_anchored_allow_glob(&tool_name);
         "toolNameMatches" => ok |rule: PermissionRule, tool_name: String| tool_name_matches(&rule, &tool_name);
     }
 }

@@ -13,8 +13,7 @@
 //! event with matcher support uses `standard`. Which value an event is matched against, and that an
 //! event without matcher support ignores the matcher, is the caller's (hooks/select).
 //!
-//! The package keeps the last 256 selectors it read (`rules/memo.ts`); the core reads a matcher
-//! again on each call, which answers the same.
+//! The core reads a matcher again on each call.
 
 use serde::{Deserialize, Serialize};
 

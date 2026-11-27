@@ -7,9 +7,6 @@ import { coreModule } from '../../wasm/bridge.ts';
  */
 const call = coreModule('rules/bash/wildcard');
 
-/** `ls:*` is `ls *`: "an equivalent way to write a trailing wildcard", recognized only at the end. */
-export const normalizePattern = (pattern: string): string => call('normalizePattern', pattern);
-
 export interface PatternOptions {
   /** PowerShell matches without regard to case. */
   readonly ignoreCase?: boolean;

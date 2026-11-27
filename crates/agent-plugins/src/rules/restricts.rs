@@ -1,6 +1,4 @@
-//! Port of `src/rules/restricts.ts`, switched.
-
-use indexmap::IndexMap;
+//! Ported from `src/rules/restricts.ts`; only the core uses it now, so it has no wrapper.
 
 use crate::rules::types::PermissionBehavior;
 
@@ -14,24 +12,5 @@ pub const fn restricts(behavior: PermissionBehavior) -> bool {
     match behavior {
         PermissionBehavior::Allow => false,
         PermissionBehavior::Deny | PermissionBehavior::Ask => true,
-    }
-}
-
-/// `RESTRICTS` as the TypeScript's object: each behavior by its name and `restricts` of it, in its
-/// order.
-fn table() -> IndexMap<&'static str, bool> {
-    [
-        ("allow", PermissionBehavior::Allow),
-        ("deny", PermissionBehavior::Deny),
-        ("ask", PermissionBehavior::Ask),
-    ]
-    .into_iter()
-    .map(|(name, behavior)| (name, restricts(behavior)))
-    .collect()
-}
-
-crate::registry::exports! {
-    "rules/restricts" {
-        "RESTRICTS" => ok table;
     }
 }

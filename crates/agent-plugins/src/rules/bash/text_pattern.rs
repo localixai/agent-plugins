@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/text-pattern.ts`, switched.
+//! Ported from `src/rules/bash/text-pattern.ts`; only the core uses it now, so it has no wrapper.
 
 use crate::rules::types::{PermissionRule, Specifier};
 
@@ -14,10 +14,4 @@ fn text_of(specifier: &Specifier) -> Option<&str> {
 #[must_use]
 pub fn text_pattern_of(rule: &PermissionRule) -> Option<&str> {
     rule.specifier.as_ref().and_then(text_of)
-}
-
-crate::registry::exports! {
-    "rules/bash/text-pattern" {
-        "textPatternOf" => ok |rule: PermissionRule| text_pattern_of(&rule).map(str::to_owned);
-    }
 }

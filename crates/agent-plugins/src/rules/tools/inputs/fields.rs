@@ -1,11 +1,12 @@
-//! Port of `src/rules/tools/inputs/fields.ts` at sha256:aed2ab5cad59.
+//! Port of `src/rules/tools/inputs/fields.ts`, switched.
 //!
 //! The tables of hooks.md ("PreToolUse input"), one per tool, each field with its JSON type, its
-//! role for a parameter rule, where it is documented and the zod schema of its value.
+//! role for a parameter rule, where it is documented and, in the core only, the zod schema of its
+//! value.
 //!
-//! The TypeScript's `official<I>()` ties a table to the SDK's input type `I` at compile time; the
-//! core has no SDK types, so `official` only marks the source. `TOOL_INPUT_FIELDS` holds a schema
-//! per field, so it never crosses the boundary: the Rust readers of tool inputs use it.
+//! The core has no SDK types, so `official` only marks the source where the TypeScript's tables
+//! were tied to the SDK's input types. A field's schema stays in the core (`parseToolInput` reads
+//! with it, `schemas.rs`): `TOOL_INPUT_FIELDS` crosses as data, without it.
 
 use std::sync::LazyLock;
 
@@ -66,21 +67,25 @@ pub enum FieldSource {
 }
 
 /// One field of a tool input.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FieldSpec {
     /// `type`.
+    #[serde(rename = "type")]
     pub field_type: FieldType,
-    /// `optional`.
-    pub optional: bool,
     /// `role`.
     pub role: FieldRole,
+    /// `optional`.
+    pub optional: bool,
     /// `source`.
     pub source: FieldSource,
-    /// The schema of the field's value, with `optional` already applied.
+    /// The schema of the field's value, with `optional` already applied; the core's own, so it
+    /// never crosses.
+    #[serde(skip)]
     pub schema: Schema,
 }
 
-/// `Omit<FieldSpec, 'source'>`.
+/// A field before its source is known.
 #[derive(Clone, Debug)]
 struct Draft {
     field_type: FieldType,
@@ -130,8 +135,8 @@ fn with_source<const N: usize>(source: FieldSource, drafts: [(&str, Draft); N]) 
         .map(|(field, entry)| {
             let spec = FieldSpec {
                 field_type: entry.field_type,
-                optional: entry.optional,
                 role: entry.role,
+                optional: entry.optional,
                 source,
                 schema: entry.schema,
             };
@@ -174,7 +179,8 @@ fn shell() -> Fields {
 }
 
 /// `TOOL_INPUT_FIELDS`: one table per tool, under the tool's name.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct ToolInputFields {
     /// `Bash`.
     pub bash: Fields,
@@ -289,9 +295,16 @@ pub static TOOL_INPUT_FIELDS: LazyLock<ToolInputFields> = LazyLock::new(|| ToolI
     ]),
 });
 
+crate::registry::exports! {
+    "rules/tools/inputs/fields" {
+        "TOOL_INPUT_FIELDS" => ok || &*TOOL_INPUT_FIELDS;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js::JsValue;
 
     #[test]
     fn the_tables_keep_the_typescript_roles_and_sources() {
@@ -331,6 +344,41 @@ mod tests {
         assert_eq!(
             message.as_deref(),
             Some("expected one of content, files_with_matches, count")
+        );
+    }
+
+    #[test]
+    fn the_table_crosses_as_data_without_the_schemas() {
+        let crossed = to_js_value(&*TOOL_INPUT_FIELDS).ok();
+        let field = crossed
+            .as_ref()
+            .and_then(|tables| tables.get("Agent"))
+            .and_then(|agent| agent.get("subagent_type"))
+            .and_then(JsValue::as_object)
+            .map(|spec| {
+                spec.iter()
+                    .map(|(key, value)| (key.as_str(), value.as_str()))
+                    .collect()
+            });
+        let expected: Vec<(&str, Option<&str>)> = vec![
+            ("type", Some("string")),
+            ("role", Some("subject")),
+            ("optional", None),
+            ("source", Some("sdk")),
+        ];
+        assert_eq!(field, Some(expected));
+        let names = crossed.as_ref().and_then(JsValue::as_object).map(|tables| {
+            tables
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(",")
+        });
+        assert_eq!(
+            names.as_deref(),
+            Some(
+                "Bash,PowerShell,Write,Edit,Read,Glob,Grep,WebFetch,WebSearch,Agent,AskUserQuestion,ExitPlanMode"
+            )
         );
     }
 }
