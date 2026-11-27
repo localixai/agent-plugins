@@ -3,15 +3,8 @@
  */
 import { coreModule } from '../../wasm/bridge.ts';
 import { BASH_DIALECT, type ShellDialect } from './dialect.ts';
-import type { ShellCommand } from './words.ts';
 
 const call = coreModule('rules/bash/split');
-
-/** Where something sits in the text that was scanned (the core's `rules/bash/scanner.rs`). */
-interface Span {
-  readonly start: number;
-  readonly end: number;
-}
 
 /** The subcommands a command line runs, and whether the kit could read it all. */
 export interface SplitCommand {
@@ -20,38 +13,6 @@ export interface SplitCommand {
   /** False for a command with nothing after `&&` or `||`, or an unclosed quote or bracket. */
   readonly parseable: boolean;
 }
-
-/**
- * Everything the kit reads from one command line, read once per line (`scanCommand`) and shared by
- * the rule matchers, the read-only and `acceptEdits` checks, the redirect checks, the critical-path
- * check, the file targets and the hook `if` filter.
- */
-export interface CommandScan extends SplitCommand {
-  /** Each subcommand read into its words and redirections, in the order of `subcommands`. */
-  readonly commands: readonly ShellCommand[];
-  /** The whole line read as one command: what a deny or ask rule tries when the line is unparseable. */
-  readonly whole: ShellCommand;
-  /**
-   * `$(`, a backtick (Bash), `${` or `$NAME` outside single quotes and not escaped: the command may
-   * run something its text does not show.
-   */
-  readonly substitutes: boolean;
-  /** A subshell, a command or process substitution, or an arithmetic expansion. */
-  readonly nests: boolean;
-  /** The functions the line defines (`f() { ... }`, `function f`): a later `f` runs their body. */
-  readonly functions: readonly string[];
-  /** Where the comments are (cut from the subcommands). */
-  readonly comments: readonly Span[];
-  /** Where the here-document bodies are (text, not commands). */
-  readonly heredocs: readonly Span[];
-}
-
-/**
- * The reading of a command line (`CommandScan`), remembered for the last lines read so every check
- * of one call shares it.
- */
-export const scanCommand = (command: string, dialect: ShellDialect = BASH_DIALECT): CommandScan =>
-  call('scanCommand', command, dialect);
 
 /**
  * Splits a command line into the commands it runs (permissions.md, "Compound commands"): at every

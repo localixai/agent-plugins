@@ -1,81 +1,27 @@
-//! Port of `src/rules/decide/block-exceptions.ts`, switched.
+//! Ported from `src/rules/decide/block-exceptions.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The read and write blocks (settings-reference.md,
 //! `permissions.blockReadsOutsideWorkingDirectories` and
 //! `permissions.blockWritesOutsideWorkingDirectories`): what they refuse and the files Claude Code
 //! itself needs, which stay open.
 
-use serde::Deserialize;
-
-use super::context::ProtectedPathOptions;
+use super::context::{DecideContext, ProtectedPathOptions};
 use super::protected_paths::{config_directory_of, is_own_file, is_stored_remote_settings};
 use super::scope::{in_scope, posix_of};
 use super::write_block_messages::WriteBlockReason;
-use crate::registry::Port;
 use crate::rules::path::posix::{fold_path, relative_within};
-use crate::rules::types::{MatchContext, PathContext};
+use crate::rules::types::PathContext;
 
-/// The members of `DecideContext` the blocks read.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BlockContext {
-    /// `match`.
-    #[serde(rename = "match")]
-    pub match_context: MatchContext,
-    /// `protectedPaths`.
-    #[serde(default)]
-    pub protected_paths: Option<ProtectedPathOptions>,
-    /// `repositoryDirectories`.
-    #[serde(default)]
-    pub repository_directories: Option<Vec<String>>,
-    /// `blockReadsOutsideWorkingDirectories`.
-    #[serde(default)]
-    pub block_reads_outside_working_directories: Option<bool>,
-    /// `blockWritesOutsideWorkingDirectories`.
-    #[serde(default)]
-    pub block_writes_outside_working_directories: Option<bool>,
-    /// `managedSettingsFolderUnresolved`.
-    #[serde(default)]
-    pub managed_settings_folder_unresolved: Option<bool>,
-    /// `sessionDirectories`.
-    #[serde(default)]
-    pub session_directories: Option<Vec<String>>,
-}
-
-/// A `DecideContext` as it crosses: data, or, when it holds a function (`requiresPermission`), a
-/// port whose members are read.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum BlockContextGiven {
-    /// The host's record, holding a function.
-    Host(Port),
-    /// Plain data.
-    Data(Box<BlockContext>),
-}
-
-impl BlockContextGiven {
-    /// The members the blocks read.
-    pub async fn read(self) -> BlockContext {
-        match self {
-            Self::Data(data) => *data,
-            Self::Host(port) => BlockContext {
-                match_context: port.member("match").await,
-                protected_paths: port.member("protectedPaths").await,
-                repository_directories: port.member("repositoryDirectories").await,
-                block_reads_outside_working_directories: port
-                    .member("blockReadsOutsideWorkingDirectories")
-                    .await,
-                block_writes_outside_working_directories: port
-                    .member("blockWritesOutsideWorkingDirectories")
-                    .await,
-                managed_settings_folder_unresolved: port
-                    .member("managedSettingsFolderUnresolved")
-                    .await,
-                session_directories: port.member("sessionDirectories").await,
-            },
-        }
-    }
-}
+/// No protected-path options: `ctx.protectedPaths ?? {}`.
+static NO_OPTIONS: ProtectedPathOptions = ProtectedPathOptions {
+    files: None,
+    symlink_targets: None,
+    config_directory: None,
+    directories: None,
+    plans_directory: None,
+    remote_settings_files: None,
+    restricted: None,
+};
 
 const SETTINGS_NAMES: [&str; 3] = [
     "settings.json",
@@ -83,19 +29,21 @@ const SETTINGS_NAMES: [&str; 3] = [
     "managed-settings.json",
 ];
 
-impl BlockContext {
-    fn options(&self) -> ProtectedPathOptions {
-        self.protected_paths.clone().unwrap_or_default()
+impl DecideContext {
+    /// `ctx.protectedPaths ?? {}`.
+    pub(crate) fn options(&self) -> &ProtectedPathOptions {
+        self.protected_paths.as_ref().unwrap_or(&NO_OPTIONS)
     }
 
-    fn paths(&self) -> &PathContext {
+    /// `ctx.match.paths`.
+    pub(crate) fn paths(&self) -> &PathContext {
         &self.match_context.paths
     }
 }
 
 /// `settings.json` and `settings.local.json` in a `.claude` directory or the configuration
 /// directory, and `managed-settings.json`.
-fn is_named_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -> bool {
+fn is_named_settings_file(path: &str, paths: &PathContext, ctx: &DecideContext) -> bool {
     let folded = fold_path(path, paths.platform);
     let segments: Vec<&str> = folded
         .split('/')
@@ -110,7 +58,7 @@ fn is_named_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -
     if !SETTINGS_NAMES.contains(&name) {
         return false;
     }
-    let configured = config_directory_of(paths, &ctx.options());
+    let configured = config_directory_of(paths, ctx.options());
     parent == Some(".claude")
         || name == "managed-settings.json"
         || relative_within(&format!("{configured}/{name}"), path, Some(paths.platform)).as_deref()
@@ -124,7 +72,7 @@ fn is_named_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -
 /// blocked"). The write block refuses these "inside the working directories too, because a
 /// settings file can lift the block". The list is the kit's reading (spec/judgments.md, J13.28 of
 /// the specification).
-fn is_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -> bool {
+fn is_settings_file(path: &str, paths: &PathContext, ctx: &DecideContext) -> bool {
     let options = ctx.options();
     let launched = options
         .files
@@ -138,7 +86,7 @@ fn is_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -> bool
     let any_json = ctx.managed_settings_folder_unresolved == Some(true) && path.ends_with(".json");
     is_named_settings_file(path, paths, ctx)
         || launched
-        || is_stored_remote_settings(path, paths, &options)
+        || is_stored_remote_settings(path, paths, options)
         || any_json
 }
 
@@ -146,7 +94,7 @@ fn is_settings_file(path: &str, paths: &PathContext, ctx: &BlockContext) -> bool
 /// from.
 const READ_DIRECTORIES: [&str; 5] = ["skills", "plugins", "rules", "agents", "commands"];
 
-fn in_session_directory(path: &str, ctx: &BlockContext) -> bool {
+fn in_session_directory(path: &str, ctx: &DecideContext) -> bool {
     let paths = ctx.paths();
     ctx.session_directories
         .as_deref()
@@ -160,9 +108,9 @@ fn in_session_directory(path: &str, ctx: &BlockContext) -> bool {
 /// Whether the read block leaves `path` readable although it is outside the working directories:
 /// "your skills, plugins, rules, agents, commands, and the `CLAUDE.md` memory file under
 /// `~/.claude/`", and the session's own directories.
-fn readable_under_block(path: &str, ctx: &BlockContext) -> bool {
+fn readable_under_block(path: &str, ctx: &DecideContext) -> bool {
     let paths = ctx.paths();
-    let configured = config_directory_of(paths, &ctx.options());
+    let configured = config_directory_of(paths, ctx.options());
     let below = relative_within(&configured, path, Some(paths.platform));
     let own = below
         .as_deref()
@@ -174,14 +122,14 @@ fn readable_under_block(path: &str, ctx: &BlockContext) -> bool {
 /// Whether the write block leaves `path` writable although it is outside the working directories:
 /// "plan files, the scratchpad, a background session's `tmp` directory, and `.md` files in this
 /// project's auto memory".
-fn writable_under_block(path: &str, ctx: &BlockContext) -> bool {
-    is_own_file(path, ctx.paths(), &ctx.options()) || in_session_directory(path, ctx)
+fn writable_under_block(path: &str, ctx: &DecideContext) -> bool {
+    is_own_file(path, ctx.paths(), ctx.options()) || in_session_directory(path, ctx)
 }
 
 /// The working directories as the blocks count them: a directory that only repository settings
 /// add "doesn't count" (settings-reference.md, `permissions.blockReadsOutsideWorkingDirectories`).
 #[must_use]
-pub fn block_paths(ctx: &BlockContext) -> PathContext {
+pub fn block_paths(ctx: &DecideContext) -> PathContext {
     let paths = ctx.paths();
     let excluded: Vec<String> = ctx
         .repository_directories
@@ -201,7 +149,7 @@ pub fn block_paths(ctx: &BlockContext) -> PathContext {
 
 /// Why the write block refuses `paths`, or `None` when it lets them through.
 #[must_use]
-pub fn write_block_reason(paths: &[String], ctx: &BlockContext) -> Option<WriteBlockReason> {
+pub fn write_block_reason(paths: &[String], ctx: &DecideContext) -> Option<WriteBlockReason> {
     if ctx.block_writes_outside_working_directories != Some(true) {
         return None;
     }
@@ -220,19 +168,11 @@ pub fn write_block_reason(paths: &[String], ctx: &BlockContext) -> Option<WriteB
 
 /// Whether the read block refuses a read of `paths`.
 #[must_use]
-pub fn read_blocked(paths: &[String], ctx: &BlockContext) -> bool {
+pub fn read_blocked(paths: &[String], ctx: &DecideContext) -> bool {
     ctx.block_reads_outside_working_directories == Some(true) && {
         let counted = block_paths(ctx);
         paths
             .iter()
             .any(|path| !in_scope(path, &counted) && !readable_under_block(path, ctx))
-    }
-}
-
-crate::registry::exports! {
-    "rules/decide/block-exceptions" {
-        "blockPaths" => async ok |ctx: BlockContextGiven| block_paths(&ctx.read().await);
-        "writeBlockReason" => async ok |paths: Vec<String>, ctx: BlockContextGiven| write_block_reason(&paths, &ctx.read().await);
-        "readBlocked" => async ok |paths: Vec<String>, ctx: BlockContextGiven| read_blocked(&paths, &ctx.read().await);
     }
 }

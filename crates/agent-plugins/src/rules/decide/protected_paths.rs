@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/protected-paths.ts`, switched.
+//! Ported from `src/rules/decide/protected-paths.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! permission-modes.md, "Protected paths": "Protected directories" and "Protected files". A
 //! directory matches wherever it sits in a path (`.git` of the project and of a nested folder);
@@ -319,11 +319,4 @@ fn started_with(path: &str, paths: &PathContext, options: &ProtectedPathOptions)
         .any(|directory| {
             relative_within(&posix_of(directory, paths), path, Some(paths.platform)).is_some()
         })
-}
-
-crate::registry::exports! {
-    "rules/decide/protected-paths" {
-        "isSymlinkTargetOnly" => ok |path: String, paths: PathContext, options: ProtectedPathOptions| is_symlink_target_only(&path, &paths, &options);
-        "isProtectedPath" => ok |path: String, paths: PathContext, options: Option<ProtectedPathOptions>| is_protected_path(&path, &paths, &options.unwrap_or_default());
-    }
 }

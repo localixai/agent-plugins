@@ -1,15 +1,13 @@
-//! Port of `src/rules/decide/read-only-set.ts`, switched.
+//! Ported from `src/rules/decide/read-only-set.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The built-in read-only Bash commands (permissions.md, "Read-only commands") and what keeps each
-//! one's arguments read-only. `cd` and `git` have their own rules in `shell-commands.ts`.
+//! one's arguments read-only. `cd` and `git` have their own rules in `shell_commands.rs`.
 
 use std::sync::LazyLock;
 
-use indexmap::IndexMap;
 use regex::Regex;
 
 use crate::js::{Pattern, SPACE_CLASS, regex_test};
-use crate::registry::{Function, Set};
 use crate::rules::bash::words::{ShellWord, spellings_of};
 use crate::rules::path::network::is_network_path;
 use crate::rules::types::{PathContext, Platform};
@@ -200,28 +198,6 @@ pub fn touches_special_variable(command: &str) -> bool {
     SPECIAL_WRITES
         .iter()
         .any(|pattern| pattern.is_match(command))
-}
-
-/// One entry of `GIT_READ_ONLY`, a function the host calls.
-struct GitCheck(GitForm);
-
-crate::registry::methods! {
-    GitCheck {
-        "call" => ok |this, args: Vec<String>| (this.0)(&args);
-    }
-}
-
-crate::registry::exports! {
-    "rules/decide/read-only-set" {
-        "READ_ONLY_PROGRAMS" => ok || Set { members: READ_ONLY_PROGRAMS.to_vec() };
-        "GIT_READ_ONLY" => ok || GIT_READ_ONLY
-            .map(|(name, form)| (name, Function::new(GitCheck(form))))
-            .into_iter()
-            .collect::<IndexMap<_, _>>();
-        "argumentsAreReadOnly" => ok |program: String, words: Vec<String>| arguments_are_read_only(&program, &words);
-        "hasNetworkArgument" => ok |words: Vec<ShellWord>, paths: PathContext| has_network_argument(&words, &paths);
-        "touchesSpecialVariable" => ok |command: String| touches_special_variable(&command);
-    }
 }
 
 #[cfg(test)]

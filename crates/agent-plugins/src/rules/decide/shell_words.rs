@@ -1,24 +1,29 @@
-//! Port of `src/rules/decide/shell-words.ts`, switched.
+//! Ported from `src/rules/decide/shell-words.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Where a command's operands lead, read against the directory a `cd` moved to.
 
-use serde::Deserialize;
-
+use super::context::ProtectedPathOptions;
 use crate::rules::bash::words::ShellWord;
 use crate::rules::path::posix::{HostPaths, absolute_path};
 use crate::rules::types::PathContext;
 
-/// The state of the walk over a command's subcommands, in the order they run: what the operand
-/// functions read of it (`paths` and `base`; the rest of the TypeScript's `Walk` is the walk's own).
-#[derive(Clone, Debug, Deserialize)]
-pub struct Walk {
+/// The state of the walk over a command's subcommands, in the order they run.
+pub struct Walk<'a> {
     /// The folders and platform the paths are read against.
-    pub paths: PathContext,
+    pub paths: &'a PathContext,
+    /// The session's protected-path options.
+    pub options: &'a ProtectedPathOptions,
+    /// Where the host's symlink check says the call's paths lead.
+    pub resolved: &'a [String],
     /// The directory later operands are read against: moved by a `cd`.
     pub base: String,
+    /// A `cd` moved `base`.
+    pub changed_directory: bool,
+    /// A `git` subcommand ran.
+    pub used_git: bool,
 }
 
-fn host_paths(walk: &Walk) -> HostPaths {
+fn host_paths(walk: &Walk<'_>) -> HostPaths {
     HostPaths {
         cwd: walk.base.clone(),
         home: walk.paths.home.clone(),
@@ -34,7 +39,7 @@ pub fn has_unquoted_glob(words: &[ShellWord]) -> bool {
 
 /// The absolute POSIX path of an operand, or `None` when a variable, substitution or glob hides it.
 #[must_use]
-pub fn operand_path(operand: &ShellWord, walk: &Walk) -> Option<String> {
+pub fn operand_path(operand: &ShellWord, walk: &Walk<'_>) -> Option<String> {
     if operand.value.is_empty() || operand.expands || operand.globs {
         return None;
     }
@@ -44,7 +49,7 @@ pub fn operand_path(operand: &ShellWord, walk: &Walk) -> Option<String> {
 /// Where a file-reading operand reads: the path itself, the directory a glob starts in, or
 /// `None` for an operand whose value a variable or substitution hides.
 #[must_use]
-pub fn read_path(operand: &ShellWord, walk: &Walk) -> Option<String> {
+pub fn read_path(operand: &ShellWord, walk: &Walk<'_>) -> Option<String> {
     if operand.expands {
         return None;
     }
@@ -71,12 +76,4 @@ pub fn read_path(operand: &ShellWord, walk: &Walk) -> Option<String> {
         }
     };
     Some(absolute_path(&literal, &host_paths(walk)))
-}
-
-crate::registry::exports! {
-    "rules/decide/shell-words" {
-        "hasUnquotedGlob" => ok |words: Vec<ShellWord>| has_unquoted_glob(&words);
-        "operandPath" => ok |operand: ShellWord, walk: Walk| operand_path(&operand, &walk);
-        "readPath" => ok |operand: ShellWord, walk: Walk| read_path(&operand, &walk);
-    }
 }

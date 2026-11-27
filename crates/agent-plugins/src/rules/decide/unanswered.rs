@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/unanswered.ts`, switched.
+//! Ported from `src/rules/decide/unanswered.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What becomes of a would-be prompt where nobody may answer it. Two facts of the session say so:
 //! `cannotPrompt`, a `-p` or SDK run with no permission callback ("Calls needing approval are
@@ -55,9 +55,3 @@ pub const PROMPT_DENIALS: [DecisionReason; 2] = [
     DecisionReason::PromptUnavailable,
     DecisionReason::NoApprovalSurface,
 ];
-
-crate::registry::exports! {
-    "rules/decide/unanswered" {
-        "settlePrompt" => ok |decision: Decision, facts: PromptFacts| settle_prompt(decision, facts);
-    }
-}

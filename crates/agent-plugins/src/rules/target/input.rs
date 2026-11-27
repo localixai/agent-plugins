@@ -1,4 +1,4 @@
-//! Port of `src/rules/target/input.ts`, switched.
+//! Ported from `src/rules/target/input.ts`; only the core uses it now, so it has no wrapper.
 
 use crate::js::JsValue;
 
@@ -12,10 +12,4 @@ pub type TargetField = str;
 #[must_use]
 pub fn input_string<'a>(input: &'a JsValue, field: &TargetField) -> Option<&'a str> {
     input.as_object()?.get(field)?.as_str()
-}
-
-crate::registry::exports! {
-    "rules/target/input" {
-        "inputString" => ok |input: JsValue, field: String| input_string(&input, &field).map(str::to_owned);
-    }
 }
