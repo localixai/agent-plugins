@@ -1,4 +1,8 @@
-import { error, type PluginIssue } from '../../format/issues.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/general/claude_json.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../../format/issues.ts';
+
+const call = coreModule('settings/general/claude-json');
 
 /**
  * What the host must do with the text of `~/.claude.json`, the file Claude Code writes for itself
@@ -34,49 +38,5 @@ export type ClaudeJsonOutcome =
       readonly afterwards: 'exit' | 'ask';
     };
 
-const parseFailure = (text: string): string | undefined => {
-  try {
-    JSON.parse(text);
-    return undefined;
-  } catch (failure) {
-    return failure instanceof Error ? failure.message : 'invalid JSON';
-  }
-};
-
-/** The lines Claude Code prints for a corrupted file, the backup's `cp` line only when a backup holds something. */
-function outputOf(facts: ClaudeJsonFacts, reason: string): readonly string[] {
-  const restore =
-    facts.backup === undefined
-      ? []
-      : [
-          `A backup file exists at: ${facts.backup}`,
-          `You can manually restore it by running: cp -f "${facts.backup}" "${facts.path}"`,
-        ];
-  return [
-    `Claude configuration file at ${facts.path} is corrupted: ${reason}`,
-    `The corrupted file has been backed up to: ${facts.corruptedCopy}`,
-    ...restore,
-    '',
-    `Configuration error in ${facts.path}: ${reason}`,
-  ];
-}
-
-export function readClaudeJson(facts: ClaudeJsonFacts): ClaudeJsonOutcome {
-  const { text } = facts;
-  if (text === undefined) return { outcome: 'usable' };
-  if (text.trim() === '' && facts.backup === undefined) {
-    return {
-      outcome: 'starts-with-defaults',
-      message: `Claude configuration file at ${facts.path} was empty and no backup holds anything: starting with defaults.`,
-    };
-  }
-  const reason = text.trim() === '' ? 'Unexpected end of JSON input' : parseFailure(text);
-  if (reason === undefined) return { outcome: 'usable' };
-  return {
-    outcome: 'configuration-error',
-    issue: error(facts.path, `Configuration error in ${facts.path}: ${reason}`),
-    output: outputOf(facts, reason),
-    copyTo: facts.corruptedCopy,
-    afterwards: facts.interactive ? 'ask' : 'exit',
-  };
-}
+export const readClaudeJson = (facts: ClaudeJsonFacts): ClaudeJsonOutcome =>
+  call('readClaudeJson', facts);

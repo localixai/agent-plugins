@@ -1,6 +1,15 @@
+/**
+ * The workflow size guideline in force (settings-reference.md, `workflowSizeGuideline`; workflows.md,
+ * "Set a size guideline", "Cost").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/workflows/size.rs`, docs/RUST.md).
+ */
 import type { Settings } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyScope } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/workflows/size');
 
 export type WorkflowSize = NonNullable<Settings['workflowSizeGuideline']>;
 
@@ -47,28 +56,6 @@ export interface WorkflowSizeDecision {
   readonly largeWorkflowTokens: number | undefined;
 }
 
-/** "fewer than 5", "fewer than 10", "fewer than 50" (workflows.md, "Set a size guideline"). */
-const AGENTS_BELOW: { readonly [S in WorkflowSize]: number | undefined } = {
-  unrestricted: undefined,
-  small: 5,
-  medium: 10,
-  large: 50,
-};
-
-/** The built-in threshold of the `Large workflow` warning (workflows.md, "Cost"). */
-const DEFAULT_THRESHOLD = 25;
-
-/** The projected token total that also shows it: "its projected token total passes 1.5 million". */
-const TOKEN_THRESHOLD = 1_500_000;
-
-const defaultSize = (pro: boolean): WorkflowSize => (pro ? 'small' : 'medium');
-
-/** A chosen size replaces the 25-agent threshold with its own count; `unrestricted` has none. */
-const agentThreshold = (
-  chosen: WorkflowSize | undefined,
-  agentsBelow: number | undefined,
-): number => (chosen === undefined ? DEFAULT_THRESHOLD : (agentsBelow ?? DEFAULT_THRESHOLD));
-
 /**
  * The size guideline in force: a value in a settings file, else the `/config` choice, else the default
  * (`medium`, `small` on Pro). A value of another shape was dropped when the file was read, so it never
@@ -76,21 +63,12 @@ const agentThreshold = (
  * `unrestricted` has none, so it leaves 25 (spec/judgments.md). With ultracode on there is no warning,
  * so neither threshold is returned.
  */
-export function workflowSize(view: PolicyView, context: WorkflowSizeContext): WorkflowSizeDecision {
-  const holder = view.winner('workflowSizeGuideline');
-  const chosen = holder?.value ?? context.configChoice;
-  const size = chosen ?? defaultSize(context.plan.pro);
-  const source: WorkflowSizeSource = holder ? 'settings' : chosen ? 'config' : 'default';
-  const agentsBelow = AGENTS_BELOW[size];
-  const warns = context.ultracode !== true;
-  return {
-    size,
-    source,
-    settingsScope: holder?.scope,
-    agentsBelow,
-    enforced: false,
-    configRowVisible: holder === undefined,
-    largeWorkflowThreshold: warns ? agentThreshold(chosen, agentsBelow) : undefined,
-    largeWorkflowTokens: warns ? TOKEN_THRESHOLD : undefined,
-  };
-}
+export const workflowSize = (
+  view: PolicyView,
+  context: WorkflowSizeContext,
+): WorkflowSizeDecision =>
+  call('workflowSize', view, {
+    plan: { pro: context.plan.pro },
+    configChoice: context.configChoice,
+    ultracode: context.ultracode,
+  });

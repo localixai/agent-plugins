@@ -14,14 +14,14 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use super::saved::{SaveScope, SavedResolution, SavedWorkflow, resolve_saved_workflows};
-use crate::foundation::scope_folders::{
-    Depth, ScopeBase, ScopeContext, ScopeFilesOptions, ScopeRequest, place_path, read_scope_files,
-    scope_bases,
-};
 use crate::format::config_directory::config_folder_of;
 use crate::format::issues::{PluginIssue, error};
 use crate::format::skill_name::reserved_namespace;
 use crate::format::workflow_meta::{WorkflowMeta, read_workflow_meta};
+use crate::foundation::scope_folders::{
+    Depth, ScopeBase, ScopeContext, ScopeFilesOptions, ScopeRequest, place_path, read_scope_files,
+    scope_bases,
+};
 use crate::js::promise_all;
 use crate::ports::folder_scan::FolderScan;
 use crate::ports::{BoxFuture, Signal};

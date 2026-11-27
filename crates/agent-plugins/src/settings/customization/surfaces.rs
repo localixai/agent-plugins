@@ -64,7 +64,12 @@ fn from_list(names: &[JsValue]) -> SurfaceLocks {
 #[must_use]
 pub fn read_surface_locks(value: &JsValue) -> SurfaceLocks {
     match value {
-        JsValue::Undefined | JsValue::Null | JsValue::Bool(false) => locks(Set { members: Vec::new() }, 0),
+        JsValue::Undefined | JsValue::Null | JsValue::Bool(false) => locks(
+            Set {
+                members: Vec::new(),
+            },
+            0,
+        ),
         JsValue::Array(names) => from_list(names),
         _ => locks(all(), 0),
     }

@@ -1,14 +1,17 @@
-import type { CommandRunner } from '../../ports/command-runner.ts';
-import type { BaseHookInput, Settings } from '../../protocol/official.ts';
-import { isRecord } from '../../protocol/is-record.ts';
-
 /**
  * Running a `subagentStatusLine` (statusline.md, "Subagent status lines"): what the command reads on
  * stdin and how its lines rewrite the subagent rows. Which line runs, under which gates, is
  * `readSubagentStatusLine`; when a refresh tick fires, the environment the command gets and how a
  * row body is drawn stay the host's. statusline.md is outside the requirement set, so each rule
  * here is a judgment (spec/judgments.md).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/general/subagent_status_line.rs`, docs/RUST.md).
  */
+import type { CommandRunner } from '../../ports/command-runner.ts';
+import type { BaseHookInput, Settings } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/general/subagent-status-line');
 
 /**
  * One entry of `tasks` (statusline.md, "Task fields"); the SDK has no type for it. Fields marked
@@ -44,33 +47,12 @@ export type SubagentStatusLineInput = BaseHookInput & {
   readonly tasks: readonly SubagentStatusTask[];
 };
 
-const MAX_TOKEN_SAMPLES = 16;
-
 /** The stdin object of one tick, each row's `tokenSamples` cut to its last 16 readings. */
 export const subagentStatusLineInput = (
   base: BaseHookInput,
   columns: number,
   tasks: readonly SubagentStatusTask[],
-): SubagentStatusLineInput => ({
-  ...base,
-  columns,
-  tasks: tasks.map((task) => ({
-    ...task,
-    tokenSamples: task.tokenSamples.slice(-MAX_TOKEN_SAMPLES),
-  })),
-});
-
-/** One printed line as a row, or `undefined` for a line that is not `{"id","content"}` JSON. */
-function rowOf(line: string): { readonly id: string; readonly content: string } | undefined {
-  try {
-    const parsed: unknown = JSON.parse(line);
-    if (!isRecord(parsed)) return undefined;
-    const { id, content } = parsed;
-    return typeof id === 'string' && typeof content === 'string' ? { id, content } : undefined;
-  } catch {
-    return undefined;
-  }
-}
+): SubagentStatusLineInput => call('subagentStatusLineInput', base, columns, tasks);
 
 /**
  * The rows the command rewrote, by task id: each body exactly as printed (ANSI and OSC 8 kept), an
@@ -78,18 +60,10 @@ function rowOf(line: string): { readonly id: string; readonly content: string } 
  * Judgment: a line that is not such a JSON object, or names no visible task, is skipped, and a later
  * line for the same id wins.
  */
-export function readSubagentStatusRows(
+export const readSubagentStatusRows = (
   stdout: string,
   tasks: readonly Pick<SubagentStatusTask, 'id'>[],
-): ReadonlyMap<string, string> {
-  const visible = new Set(tasks.map((task) => task.id));
-  const rows = new Map<string, string>();
-  for (const line of stdout.split('\n')) {
-    const row = rowOf(line.trim());
-    if (row !== undefined && visible.has(row.id)) rows.set(row.id, row.content);
-  }
-  return rows;
-}
+): ReadonlyMap<string, string> => call('readSubagentStatusRows', stdout, tasks);
 
 /** What one run needs beyond the line: the stdin object and the whole environment of the process. */
 export interface SubagentStatusLineRun {
@@ -104,18 +78,10 @@ export interface SubagentStatusLineRun {
  * run a new tick replaces through `signal`); like the main status line ("displays your script's
  * output only after the script exits with code 0"), a run that does not exit 0 rewrites no row.
  */
-export async function runSubagentStatusLine(
+export const runSubagentStatusLine = (
   line: NonNullable<Settings['subagentStatusLine']>,
   run: SubagentStatusLineRun,
   runner: CommandRunner,
   { signal }: { readonly signal: AbortSignal },
-): Promise<ReadonlyMap<string, string>> {
-  const result = await runner.run({
-    spec: { form: 'shell', command: line.command, shell: 'bash' },
-    cwd: run.input.cwd,
-    env: run.env,
-    stdin: JSON.stringify(run.input),
-    signal,
-  });
-  return result.exitCode === 0 ? readSubagentStatusRows(result.stdout, run.input.tasks) : new Map();
-}
+): Promise<ReadonlyMap<string, string>> =>
+  call.async('runSubagentStatusLine', line, run, runner, signal);

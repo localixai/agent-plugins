@@ -1,5 +1,14 @@
+/**
+ * A plugin's default settings below every settings source (plugins/components.md, "Default
+ * settings").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/general/plugin_defaults.rs`, docs/RUST.md).
+ */
 import type { PluginSettings } from '../../format/plugin-settings.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/general/plugin-defaults');
 
 /** A plugin as its defaults are merged: its name (for the debug line) and its applied settings. */
 export interface PluginWithDefaults {
@@ -16,29 +25,10 @@ export interface PluginDefaults<P extends PluginWithDefaults = PluginWithDefault
   readonly debug: readonly string[];
 }
 
-const KEYS = ['agent', 'subagentStatusLine'] as const satisfies readonly (keyof PluginSettings)[];
-
 /** The plugins' defaults merged in the order given (the load order): a later plugin's key wins. */
-export function pluginDefaultsOf<P extends PluginWithDefaults>(
+export const pluginDefaultsOf = <P extends PluginWithDefaults>(
   plugins: readonly P[],
-): PluginDefaults<P> {
-  const owners: { [K in keyof PluginSettings]?: P } = {};
-  const settings: PluginSettings = {};
-  const debug: string[] = [];
-  const apply = <K extends keyof PluginSettings>(plugin: P, key: K) => {
-    const value = plugin.settings[key];
-    if (value === undefined) return;
-    const previous = owners[key];
-    if (previous !== undefined)
-      debug.push(
-        `Plugin "${plugin.name}" overrides setting "${key}" set by plugin "${previous.name}"`,
-      );
-    settings[key] = value;
-    owners[key] = plugin;
-  };
-  for (const plugin of plugins) for (const key of KEYS) apply(plugin, key);
-  return { settings, owners, debug };
-}
+): PluginDefaults<P> => call('pluginDefaultsOf', plugins);
 
 /** A key's value after the plugin defaults: from a settings source, or from the plugin named. */
 export interface SettingWithDefault<K extends keyof PluginSettings, P> {
@@ -47,27 +37,15 @@ export interface SettingWithDefault<K extends keyof PluginSettings, P> {
   readonly plugin?: P;
 }
 
-/** What the settings sources themselves set of the two keys. */
-const ownSettings = (view: PolicyView): PluginSettings => {
-  const agent = view.get('agent');
-  const line = view.get('subagentStatusLine');
-  return {
-    ...(agent === undefined ? {} : { agent }),
-    ...(line === undefined ? {} : { subagentStatusLine: line }),
-  };
-};
-
 /**
  * The value of `agent` or `subagentStatusLine`: "plugin defaults are the lowest layer, so a user's
  * own `agent` in `~/.claude/settings.json` overrides yours". `undefined` when nothing sets it.
  */
-export function valueWithPluginDefaults<
+export const valueWithPluginDefaults = <
   K extends keyof PluginSettings,
   P extends PluginWithDefaults,
->(view: PolicyView, key: K, defaults: PluginDefaults<P>): SettingWithDefault<K, P> | undefined {
-  const set = ownSettings(view)[key];
-  if (set !== undefined) return { value: set };
-  const value = defaults.settings[key];
-  const plugin = defaults.owners[key];
-  return value === undefined || plugin === undefined ? undefined : { value, plugin };
-}
+>(
+  view: PolicyView,
+  key: K,
+  defaults: PluginDefaults<P>,
+): SettingWithDefault<K, P> | undefined => call('valueWithPluginDefaults', view, key, defaults);

@@ -1,10 +1,15 @@
-import type { PolicyView } from '../view.ts';
-
 /**
  * The `worktree` block (settings-reference.md, `worktree` and its entries): the fields as the files
  * combine them, with the documented default of each. An invalid field never reaches the layer: the
  * read drops it with a warning (`closed-fields.ts`), so a lower file's value or the default applies.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/general/worktree_block.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/general/worktree-block');
+
 export interface WorktreeSettings {
   /** `"fresh"` branches from `origin/<default-branch>`, `"head"` from the current local `HEAD`. */
   readonly baseRef: 'fresh' | 'head';
@@ -18,16 +23,7 @@ export interface WorktreeSettings {
   readonly location: string | undefined;
 }
 
-export function readWorktree(view: PolicyView): WorktreeSettings {
-  const block = view.get('worktree');
-  return {
-    baseRef: block?.baseRef ?? 'fresh',
-    symlinkDirectories: block?.symlinkDirectories ?? [],
-    sparsePaths: block?.sparsePaths,
-    bgIsolation: block?.bgIsolation ?? 'worktree',
-    location: view.get('worktree.location'),
-  };
-}
+export const readWorktree = (view: PolicyView): WorktreeSettings => call('readWorktree', view);
 
 /** Where a new worktree starts from. */
 export type BaseRefTarget = 'origin-default-branch' | 'checkout-head' | 'linked-worktree-head';
@@ -41,13 +37,10 @@ export interface BaseRefFacts {
  * What a `baseRef` resolves to: `"head"` is the current local `HEAD`, and "inside a linked worktree,
  * `"head"` resolves to that worktree's `HEAD`, not the main checkout's".
  */
-export function baseRefTarget(
+export const baseRefTarget = (
   baseRef: WorktreeSettings['baseRef'],
   facts: BaseRefFacts,
-): BaseRefTarget {
-  if (baseRef === 'fresh') return 'origin-default-branch';
-  return facts.insideLinkedWorktree ? 'linked-worktree-head' : 'checkout-head';
-}
+): BaseRefTarget => call('baseRefTarget', baseRef, facts);
 
 export interface BackgroundEditFacts {
   /** The session was moved to the background with `←` or `/background`. */
@@ -65,22 +58,19 @@ export interface BackgroundEditFacts {
  * a session moved to the background "edits files in place whatever this key says"; and "outside a
  * git repository, a `WorktreeCreate` hook that fails releases the block".
  */
-export function backgroundEditsBlocked(
+export const backgroundEditsBlocked = (
   bgIsolation: WorktreeSettings['bgIsolation'],
   facts: BackgroundEditFacts,
-): boolean {
-  if (bgIsolation === 'none' || facts.movedToBackground || facts.enteredWorktree) return false;
-  return facts.insideGitRepository || !facts.worktreeCreateHookFailed;
-}
+): boolean => call('backgroundEditsBlocked', bgIsolation, facts);
 
 /** Who creates a worktree. */
-export const WORKTREE_CONSUMERS = [
+export const WORKTREE_CONSUMERS: readonly [
   'desktop-ssh',
   'worktree-flag',
   'enter-worktree-tool',
   'isolated-subagent',
   'background-session',
-] as const;
+] = call('WORKTREE_CONSUMERS');
 export type WorktreeConsumer = (typeof WORKTREE_CONSUMERS)[number];
 
 export interface WorktreeFolderFacts {
@@ -91,26 +81,12 @@ export interface WorktreeFolderFacts {
   readonly organizationRestrictsFolders?: boolean;
 }
 
-/** The consumers that read `worktree.location`: "Only the desktop app reads this key". */
-const READS_LOCATION: { readonly [C in WorktreeConsumer]: boolean } = {
-  'desktop-ssh': true,
-  'worktree-flag': false,
-  'enter-worktree-tool': false,
-  'isolated-subagent': false,
-  'background-session': false,
-};
-
 /**
  * The folder worktrees go in instead of `<project-root>/.claude/worktrees/`, or `undefined` for the
  * project's own. The connection's folder "takes precedence"; an organization's restriction keeps the
  * worktrees inside the project.
  */
-export function worktreeFolder(
+export const worktreeFolder = (
   settings: WorktreeSettings,
   facts: WorktreeFolderFacts,
-): string | undefined {
-  if (!READS_LOCATION[facts.consumer] || facts.organizationRestrictsFolders === true) {
-    return undefined;
-  }
-  return facts.connectionFolder ?? settings.location;
-}
+): string | undefined => call('worktreeFolder', settings, facts);

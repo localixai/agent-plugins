@@ -1,5 +1,8 @@
-import { canonicalJson } from '../../format/canonical-json.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/managed_timing.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { McpCandidate } from './scope.ts';
+
+const call = coreModule('settings/mcp/managed-timing');
 
 /**
  * How `managedMcpServers` reaches the machine (managed-mcp.md, "When provided servers connect"):
@@ -7,7 +10,9 @@ import type { McpCandidate } from './scope.ts';
  * Code loads the policy before the session starts", or from the device itself (MDM, registry,
  * `managed-settings.json`), judged to be read before the session too (spec/judgments.md).
  */
-export const MANAGED_DELIVERIES = ['serverManaged', 'gateway', 'device'] as const;
+export const MANAGED_DELIVERIES: readonly ['serverManaged', 'gateway', 'device'] =
+  call('MANAGED_DELIVERIES');
+
 export type ManagedDelivery = (typeof MANAGED_DELIVERIES)[number];
 
 export interface ProvidedTimingInput {
@@ -33,51 +38,15 @@ export interface ProvidedTiming {
   readonly withheld: string | undefined;
 }
 
-const WITHHELD =
-  'Managed MCP servers are withheld: the server did not confirm the managed settings for this session';
-
-const atStart: ProvidedTiming = {
-  waitsForConfirmation: false,
-  connectsAtStart: true,
-  connectsOnArrival: false,
-  mayFinishWithout: false,
-  withheld: undefined,
-};
-
-/** "withholds the cached copy of this key until the server confirms", then "waits for that confirmation". */
-const cachedCopy = (input: ProvidedTimingInput): ProvidedTiming => ({
-  ...atStart,
-  waitsForConfirmation: true,
-  connectsAtStart: !input.confirmationFailed,
-  withheld: input.confirmationFailed ? WITHHELD : undefined,
-});
-
-/** "On a machine's first launch, with nothing cached yet". */
-const firstLaunch = (input: ProvidedTimingInput): ProvidedTiming => ({
-  ...atStart,
-  connectsAtStart: false,
-  connectsOnArrival: input.interactive,
-  mayFinishWithout: !input.interactive,
-});
-
-const TIMINGS: { readonly [D in ManagedDelivery]: (input: ProvidedTimingInput) => ProvidedTiming } =
-  {
-    serverManaged: (input) => (input.cached ? cachedCopy(input) : firstLaunch(input)),
-    gateway: () => atStart,
-    device: () => atStart,
-  };
-
 /** When the provided servers connect in a session that starts (managed-mcp.md, "When provided servers connect"). */
 export const providedServersTiming = (input: ProvidedTimingInput): ProvidedTiming =>
-  TIMINGS[input.delivery](input);
+  call('providedServersTiming', input);
 
 export interface ManagedServerChanges {
   readonly add: readonly string[];
   readonly change: readonly string[];
   readonly remove: readonly string[];
 }
-
-const NO_CHANGES: ManagedServerChanges = { add: [], change: [], remove: [] };
 
 /**
  * What a running session does when the provided servers change: "Add a server: Claude Code connects
@@ -88,19 +57,8 @@ const NO_CHANGES: ManagedServerChanges = { add: [], change: [], remove: [] };
  * `-p` run applies none of the three, as "Interactive sessions that are already running apply your
  * edits".
  */
-export function reconcileManagedServers(
+export const reconcileManagedServers = (
   previous: readonly McpCandidate[],
   next: readonly McpCandidate[],
   session: { readonly interactive: boolean },
-): ManagedServerChanges {
-  if (!session.interactive) return NO_CHANGES;
-  const before = new Map(previous.map((each) => [each.name, canonicalJson(each.server)]));
-  const after = new Map(next.map((each) => [each.name, canonicalJson(each.server)]));
-  return {
-    add: [...after.keys()].filter((name) => !before.has(name)),
-    change: [...after]
-      .filter(([name, text]) => before.has(name) && before.get(name) !== text)
-      .map(([name]) => name),
-    remove: [...before.keys()].filter((name) => !after.has(name)),
-  };
-}
+): ManagedServerChanges => call('reconcileManagedServers', previous, next, session);

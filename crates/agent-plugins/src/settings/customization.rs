@@ -1,4 +1,4 @@
-//! What `strictPluginOnlyCustomization` locks and the policy built on it
-//! (`src/settings/customization/` in the npm package).
+//! Layer 4: the customization lock (`src/settings/customization/` in the npm package).
 
+pub mod preapproval;
 pub mod surfaces;

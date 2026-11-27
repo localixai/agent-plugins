@@ -1,5 +1,13 @@
-import { isTruthyEnv } from '../../format/env-flag.ts';
+/**
+ * Whether dynamic workflows are on (settings-reference.md, `disableWorkflows`, `enableWorkflows`;
+ * workflows.md, "Turn workflows off").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/workflows/enablement.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/workflows/enablement');
 
 /** What the host tells the workflow keys besides the layers: plain data, the kit reads no `process.env`. */
 export interface WorkflowsContext {
@@ -15,16 +23,16 @@ export interface WorkflowsContext {
 }
 
 /** `CLAUDE_CODE_DISABLE_WORKFLOWS`, equivalent to `disableWorkflows` for one session (env-vars.md). */
-export const WORKFLOWS_ENV = 'CLAUDE_CODE_DISABLE_WORKFLOWS';
+export const WORKFLOWS_ENV: string = call('WORKFLOWS_ENV');
 
 /** What can turn workflows off, in the order a decision lists them. */
-export const WORKFLOWS_OFF_BY = [
+export const WORKFLOWS_OFF_BY: readonly [
   'disableWorkflows',
   'env',
   'orgPolicy',
   'enableWorkflows',
   'plan',
-] as const;
+] = call('WORKFLOWS_OFF_BY');
 export type WorkflowsOffBy = (typeof WORKFLOWS_OFF_BY)[number];
 
 /** What turned workflows on, when nothing turned them off. */
@@ -56,45 +64,6 @@ export interface WorkflowsDecision {
   readonly configRowVisible: boolean;
 }
 
-type Reading = (view: PolicyView, context: WorkflowsContext) => boolean;
-
-/**
- * `true` in any file turns workflows off for everyone those files reach; `false` "is the same as unset"
- * and does not lift a `true` elsewhere (spec/judgments.md).
- */
-const disabledByFile: Reading = (view) =>
-  view.eachFromHighest('disableWorkflows').some((holder) => holder.value);
-
-const OFF_BY: { readonly [R in WorkflowsOffBy]: Reading } = {
-  disableWorkflows: disabledByFile,
-  // An on/off variable: any on spelling (env-vars.md, "Variables"; spec J3.16).
-  env: (_view, context) => isTruthyEnv(context.env[WORKFLOWS_ENV]),
-  orgPolicy: (_view, context) => context.orgWorkflowsOff === true,
-  enableWorkflows: (view) => view.get('enableWorkflows') === false,
-  plan: (view, context) => view.get('enableWorkflows') === undefined && context.plan.pro,
-};
-
-const surfaces = (available: boolean): WorkflowSurfaces => ({
-  workflowsView: available,
-  workflowCommands: available,
-  workflowAuthoringSkill: available,
-  keyword: available,
-  ultracodeToggle: available,
-});
-
-/**
- * "Claude Code hides the `/config` row while a source other than your user settings sets
- * `enableWorkflows`, or sets `disableWorkflows` to `true`" (settings-reference.md, `enableWorkflows`).
- * Read with the one subject, a source other than user settings (spec/judgments.md).
- */
-function configRowVisible(view: PolicyView): boolean {
-  const enables = view.eachFromHighest('enableWorkflows').some((holder) => holder.scope !== 'user');
-  const disables = view
-    .eachFromHighest('disableWorkflows')
-    .some((holder) => holder.scope !== 'user' && holder.value);
-  return !enables && !disables;
-}
-
 /**
  * Whether dynamic workflows are on: off by `disableWorkflows`, by `CLAUDE_CODE_DISABLE_WORKFLOWS=1`,
  * by the organization's policy or by `enableWorkflows: false`; otherwise on, except on the Pro plan
@@ -102,15 +71,9 @@ function configRowVisible(view: PolicyView): boolean {
  * `enableWorkflows: true` or by the other off switch (settings-reference.md, `disableWorkflows`,
  * `enableWorkflows`).
  */
-export function workflowsDecision(view: PolicyView, context: WorkflowsContext): WorkflowsDecision {
-  const offBy = WORKFLOWS_OFF_BY.filter((reason) => OFF_BY[reason](view, context));
-  const enabled = offBy.length === 0;
-  const explicit = view.get('enableWorkflows') === true;
-  return {
-    enabled,
-    offBy,
-    enabledBy: enabled ? (explicit ? 'enableWorkflows' : 'plan') : undefined,
-    surfaces: surfaces(enabled),
-    configRowVisible: configRowVisible(view),
-  };
-}
+export const workflowsDecision = (view: PolicyView, context: WorkflowsContext): WorkflowsDecision =>
+  call('workflowsDecision', view, {
+    env: context.env,
+    plan: { pro: context.plan.pro },
+    orgWorkflowsOff: context.orgWorkflowsOff,
+  });

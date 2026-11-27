@@ -1,11 +1,16 @@
 /**
  * The notice a terminal session shows under the HIPAA configuration, where the built-in `auto` default
  * does not apply (permission-modes.md, "Permission modes with the HIPAA configuration", verbatim).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/permissions/start_notices.rs`, docs/RUST.md).
  */
-export const HIPAA_AUTO_NOTICE =
-  "Auto mode isn't the default for your organization · Shift+Tab to switch";
+import { coreModule } from '../../wasm/bridge.ts';
 
-/** What decides the notices of a start. */
+const call = coreModule('settings/permissions/start-notices');
+
+export const HIPAA_AUTO_NOTICE: "Auto mode isn't the default for your organization · Shift+Tab to switch" =
+  call('HIPAA_AUTO_NOTICE');
+
 export interface NoticeFacts {
   /** The HIPAA configuration is applied and the session is eligible for it. */
   readonly hipaa: boolean;
@@ -15,11 +20,4 @@ export interface NoticeFacts {
   readonly builtIn: boolean;
 }
 
-/**
- * What a session shows at its start, as text: under the HIPAA configuration "A terminal session also
- * shows" the notice when nothing else chose the mode, "and the VS Code extension shows no notice". The
- * first-time notice of the built-in `auto` default has no quoted text and needs a record of earlier
- * starts, so the host shows it (spec/judgments.md).
- */
-export const startNotices = (facts: NoticeFacts): readonly string[] =>
-  facts.hipaa && facts.terminal && facts.builtIn ? [HIPAA_AUTO_NOTICE] : [];
+export const startNotices = (facts: NoticeFacts): readonly string[] => call('startNotices', facts);

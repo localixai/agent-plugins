@@ -416,8 +416,10 @@ const fn session_state(result: &RunResult) -> SessionState {
 /// loads the new version at its next launch (judgment, spec/judgments.md).
 #[must_use]
 pub fn after_command_run(result: &RunResult) -> AfterRun {
-    if is_update(result.installed_version.as_deref(), &result.computed_version)
-        == UpdateOutcome::Unchanged
+    if is_update(
+        result.installed_version.as_deref(),
+        &result.computed_version,
+    ) == UpdateOutcome::Unchanged
     {
         return AfterRun {
             install: false,
