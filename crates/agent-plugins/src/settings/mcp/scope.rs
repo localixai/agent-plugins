@@ -1,4 +1,4 @@
-//! Port of `src/settings/mcp/scope.ts` at sha256:f0b9e3846119.
+//! Port of `src/settings/mcp/scope.ts`, switched.
 //!
 //! Where an MCP server comes from, highest precedence first (mcp.md, "Scope hierarchy and
 //! precedence"), and the ranking that loads each server once.

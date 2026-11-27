@@ -193,7 +193,7 @@ async fn target_of(subject: &McpPolicySubject, live: &PolicyEnv) -> Target {
 /// server until it is dropped: a host that sees settings change before a user reconnects a server
 /// (the docs run the checks again then) builds a new policy, as `McpSettingsPolicy.serverPolicy()`
 /// does.
-struct McpServerPolicy {
+pub struct McpServerPolicy {
     lists: McpLists,
     allowed: EntryExpansion,
     denied: EntryExpansion,
@@ -202,7 +202,7 @@ struct McpServerPolicy {
 
 impl McpServerPolicy {
     /// Whether the server may load, and why not.
-    async fn check(&self, subject: &McpPolicySubject) -> McpServerVerdict {
+    pub async fn check(&self, subject: &McpPolicySubject) -> McpServerVerdict {
         let origin = subject.origin.as_deref().unwrap_or("configured");
         let Some((_, rule)) = ORIGIN_RULES.iter().find(|(name, _)| *name == origin) else {
             return ALLOWED;
@@ -245,7 +245,10 @@ impl McpServerPolicy {
 /// loads"). A remote server is allowed by a `serverUrl` entry, a stdio server by a `serverCommand`
 /// entry, and a `serverName` match counts only when the list holds no entry of the server's kind.
 /// The origins that skip a check are `origins.ts`.
-async fn create_mcp_server_policy(view: &dyn PolicyView, env: &McpPolicyEnv) -> McpServerPolicy {
+pub async fn create_mcp_server_policy(
+    view: &dyn PolicyView,
+    env: &McpPolicyEnv,
+) -> McpServerPolicy {
     let lists = read_mcp_lists(view).await;
     let expansions = entry_expansions(view, &policy_env_of(&env.startup)).await;
     McpServerPolicy {

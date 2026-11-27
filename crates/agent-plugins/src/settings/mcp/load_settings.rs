@@ -8,7 +8,7 @@ use crate::registry::Port;
 use crate::settings::view::{PolicyView, create_policy_view};
 
 /// The switches that decide what loads next to, or instead of, the MCP servers a user configured.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[expect(
     clippy::struct_excessive_bools,

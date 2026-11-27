@@ -9,36 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::issues::{PluginIssue, warning};
 use crate::js::JsValue;
-
-/// A source of the managed composition (`admin-source.ts`'s `ManagedSource`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ManagedSource {
-    /// Server-managed settings.
-    Remote,
-    /// A macOS configuration profile.
-    Plist,
-    /// The `HKLM` registry.
-    Hklm,
-    /// The managed file and its drop-ins.
-    File,
-    /// The `HKCU` registry.
-    Hkcu,
-}
-
-impl ManagedSource {
-    /// The source's name as the package writes it.
-    #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Remote => "remote",
-            Self::Plist => "plist",
-            Self::Hklm => "hklm",
-            Self::File => "file",
-            Self::Hkcu => "hkcu",
-        }
-    }
-}
+use crate::settings::managed::admin_source::ManagedSource;
 
 /// The platforms.
 pub const PLATFORMS: [Platform; 4] = [

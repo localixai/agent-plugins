@@ -48,7 +48,7 @@ pub const fn managed_mcp_file_path(platform: ManagedMcpPlatform) -> &'static str
 }
 
 /// The servers a deployed `managed-mcp.json` defines, already read like a project `.mcp.json`.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ManagedMcpFile {
     /// The servers by name (`PluginMcpServer`s).
     pub servers: JsObject,

@@ -1,4 +1,4 @@
-//! Port of `src/settings/mcp/toggles.ts` at sha256:8556a6de588f.
+//! Port of `src/settings/mcp/toggles.ts`, switched.
 //!
 //! The per-project lists a toggle in `/mcp` writes to `~/.claude.json` (mcp.md, "Disable a server
 //! without removing it"). They are unrelated to `enabledMcpjsonServers` and `disabledMcpjsonServers`.

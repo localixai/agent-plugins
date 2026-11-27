@@ -1,17 +1,18 @@
-//! Port of `src/settings/general/session-overrides.ts` at sha256:67f6ac2c941c.
+//! Port of `src/settings/general/session-overrides.ts` switched.
 //!
 //! The ways to change one setting for one session without saving it (settings.md, "Change a
 //! setting for one session"): a flag for that key and an environment variable paired with it.
 //! Environment variables "aren't a level in this stack": which one applies is decided per pair
 //! (env-vars.md, "Precedence"; model-config.md, "Setting your model"; settings-reference.md,
-//! `effortLevel`). The table `SESSION_OVERRIDES` holds readers (functions), so it stays
-//! TypeScript with the module: only `resolveSessionValue` is exported.
+//! `effortLevel`). The table `SESSION_OVERRIDES` crosses with each reader as a function of the
+//! core's (`registry::Function`), as the package's table holds functions.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::format::model_id::model_id_names;
 use crate::js::trim;
+use crate::registry::Function;
 
 /// What the session knows of one key's override.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -59,10 +60,17 @@ pub struct OverrideSource {
 impl OverrideSource {
     /// What the source reads of the input.
     fn read(&self, input: &SessionInput) -> Option<String> {
-        match self.read {
-            Reader::Flag(name) => input.flags.get(name).cloned().flatten(),
-            Reader::Variable(name) => input.env.get(name).cloned().flatten(),
-            Reader::Files => input.settings_value.clone(),
+        self.read.read(input)
+    }
+}
+
+impl Reader {
+    /// The value this reader finds in the session input.
+    fn read(self, input: &SessionInput) -> Option<String> {
+        match self {
+            Self::Flag(name) => input.flags.get(name).cloned().flatten(),
+            Self::Variable(name) => input.env.get(name).cloned().flatten(),
+            Self::Files => input.settings_value.clone(),
         }
     }
 }
@@ -144,7 +152,7 @@ fn variable_when(name: &'static str, admit: Admit) -> OverrideSource {
 }
 
 /// The keys with a per-session override.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OverriddenKey {
     /// `agent`.
     #[serde(rename = "agent")]
@@ -174,6 +182,19 @@ pub enum OverriddenKey {
     #[serde(rename = "autoConnectIde")]
     AutoConnectIde,
 }
+
+/// The keys of `SESSION_OVERRIDES`, in its order.
+pub const OVERRIDDEN_KEYS: [OverriddenKey; 9] = [
+    OverriddenKey::Agent,
+    OverriddenKey::TeammateMode,
+    OverriddenKey::ProcessWrapper,
+    OverriddenKey::Model,
+    OverriddenKey::EffortLevel,
+    OverriddenKey::ModelSettings,
+    OverriddenKey::PermissionsDefaultMode,
+    OverriddenKey::AutoCompactWindow,
+    OverriddenKey::AutoConnectIde,
+];
 
 /// `--effort` for the level, with `CLAUDE_CODE_EFFORT_LEVEL` over both and the files under.
 fn effort() -> Vec<OverrideSource> {
@@ -255,8 +276,49 @@ pub fn resolve_session_value(key: OverriddenKey, input: &SessionInput) -> Option
     None
 }
 
+/// A row of `SESSION_OVERRIDES` as the package writes it: its name and its readers as functions.
+#[derive(Serialize)]
+struct SourceRow {
+    name: &'static str,
+    read: Function,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    admit: Option<Function>,
+}
+
+/// `read(input)` of a row.
+struct ReadOf(Reader);
+
+/// `admit(value, input)` of a row.
+struct AdmitOf(Admit);
+
+crate::registry::methods! {
+    ReadOf {
+        "call" => ok |this, input: SessionInput| this.0.read(&input);
+    }
+}
+
+crate::registry::methods! {
+    AdmitOf {
+        "call" => ok |this, value: String, input: SessionInput| (this.0)(&value, &input);
+    }
+}
+
+/// The table: each key with its sources highest first.
+fn session_overrides_table() -> IndexMap<OverriddenKey, Vec<SourceRow>> {
+    let row = |source: OverrideSource| SourceRow {
+        name: source.name,
+        read: Function::new(ReadOf(source.read)),
+        admit: source.admit.map(|admit| Function::new(AdmitOf(admit))),
+    };
+    OVERRIDDEN_KEYS
+        .into_iter()
+        .map(|key| (key, session_overrides(key).into_iter().map(row).collect()))
+        .collect()
+}
+
 crate::registry::exports! {
     "settings/general/session-overrides" {
+        "SESSION_OVERRIDES" => ok || session_overrides_table();
         "resolveSessionValue" => ok |key: OverriddenKey, input: SessionInput| resolve_session_value(key, &input);
     }
 }

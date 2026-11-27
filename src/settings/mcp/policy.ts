@@ -1,18 +1,22 @@
+/**
+ * The MCP keys of the settings policy: the approval of a project's `.mcp.json` servers, the allow
+ * and deny lists, the provided servers and the load plan, over one view.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/policy.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyContext, PolicyEnv } from '../context.ts';
 import type { PolicyLayer } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
-import { createMcpServerPolicy, type McpServerPolicy } from './allow-deny.ts';
-import {
-  projectServerApproval,
-  type ApprovalSession,
-  type McpTrust,
-  type ProjectServerApproval,
-} from './approvals.ts';
-import { mcpLoadPlan, type McpLoadInput, type McpLoadPlan } from './exclusive.ts';
-import { readMcpLoadSettings, type McpLoadSettings } from './load-settings.ts';
+import type { McpServerPolicy } from './allow-deny.ts';
+import type { ApprovalSession, McpTrust, ProjectServerApproval } from './approvals.ts';
+import type { McpLoadInput, McpLoadPlan } from './exclusive.ts';
+import type { McpLoadSettings } from './load-settings.ts';
 import type { ManagedMcpFile } from './managed-file.ts';
-import { readManagedMcpServers, type ProvidedServers } from './managed-servers.ts';
+import type { ProvidedServers } from './managed-servers.ts';
 import type { ManagedServerOptions } from './managed.ts';
+
+const call = coreModule('settings/mcp/policy');
 
 /** The MCP keys of the settings policy: the approval of a project's `.mcp.json` servers and the allow and deny lists. */
 export interface McpSettingsPolicy {
@@ -61,43 +65,8 @@ export interface McpPolicyExtras {
   readonly deviceManaged?: readonly PolicyLayer[];
 }
 
-export function createMcpSettingsPolicy(
+export const createMcpSettingsPolicy = (
   view: PolicyView,
   context: PolicyContext,
   extras: McpPolicyExtras = {},
-): McpSettingsPolicy {
-  const loadSettings = (): McpLoadSettings =>
-    readMcpLoadSettings(view, {
-      env: context.env,
-      deviceManaged: extras.deviceManaged ?? [],
-      pluginOnlyMcp: extras.pluginOnlyMcp ?? false,
-    });
-  const serverPolicy = (live = context.env) =>
-    createMcpServerPolicy(view, { startup: context.env, live });
-  const providedServers = (options?: ManagedServerOptions) =>
-    readManagedMcpServers(view.layers, options);
-  return {
-    projectServerApproval: (servers, trust, session) =>
-      projectServerApproval(
-        servers,
-        view.layers,
-        { folderTrusted: context.isFolderTrusted('project'), ...trust },
-        session,
-      ),
-    serverPolicy,
-    loadSettings,
-    providedServers,
-    loadPlan: (facts) =>
-      mcpLoadPlan({
-        managedFile: facts.managedFile,
-        managedServers: providedServers(
-          facts.desktopManaged === undefined ? {} : { desktopManaged: facts.desktopManaged },
-        ).servers,
-        candidates: facts.candidates,
-        settings: loadSettings(),
-        policy: serverPolicy(),
-        session: facts.session,
-        toggles: facts.toggles,
-      }),
-  };
-}
+): McpSettingsPolicy => call('createMcpSettingsPolicy', view, context, extras);

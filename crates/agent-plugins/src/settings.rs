@@ -7,6 +7,7 @@
 pub mod broken_file;
 pub mod canonical;
 pub mod channels;
+pub mod context;
 pub mod customization;
 pub mod env;
 pub mod general;
@@ -25,6 +26,7 @@ pub mod plugins;
 pub mod read_layer;
 pub mod repair;
 pub mod skills;
+pub mod sources;
 pub mod value_spec;
 pub mod view;
 pub mod workflows;
