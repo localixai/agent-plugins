@@ -1,6 +1,9 @@
-//! Port of `src/loading/resolve/bundle-scope.ts`, switched.
+//! Ported from `src/loading/resolve/bundle-scope.ts`; only the core uses it now, so it has no wrapper.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+
+use super::substitute::scope::SubstitutionScope;
+use super::user_config::ResolvedUserConfig;
 
 use crate::format::issues::{PluginIssue, error};
 use crate::format::mcpb_manifest::{
@@ -47,27 +50,24 @@ fn option_state_of(setting: &JsValue) -> OptionState {
 }
 
 /// The plain values saved for one bundled server: the plugin's values under `<server>.<key>`.
-fn saved_of(scope: &JsValue, server: &str, declared: &JsObject) -> JsObject {
-    let values = scope
-        .get("userConfig")
-        .and_then(|config| config.get("values"));
+fn saved_of<L, E>(scope: &SubstitutionScope<L, E>, server: &str, declared: &JsObject) -> JsObject {
+    let values = &scope.user_config.values;
     declared
         .keys()
         .filter_map(|key| {
-            let value = values.and_then(|values| values.get(&bundle_setting_key(server, key)));
+            let value = values.get(&bundle_setting_key(server, key));
             is_plain(value).then(|| value.map(|plain| (key.clone(), plain.clone())))?
         })
         .collect()
 }
 
 /// The scope of a bundled server, or why it does not start.
-#[derive(Clone, Debug, Serialize)]
-#[serde(untagged)]
-pub enum BundleScope {
+#[derive(Clone, Debug)]
+pub enum BundleScope<L, E> {
     /// The scope the server's references read.
     Scope {
         /// The plugin's scope with the bundle's own settings in place of its `userConfig`.
-        scope: JsValue,
+        scope: SubstitutionScope<L, E>,
     },
     /// Why the server does not start.
     Issue {
@@ -84,7 +84,11 @@ pub enum BundleScope {
 /// when the server is resolved for a session, so one loaded plugin serves sessions with different
 /// values; a value that is not text, a number or a Boolean is none (judgments, spec/judgments.md).
 #[must_use]
-pub fn bundle_scope(scope: &JsValue, server: &str, bundle: &BundleConfig) -> BundleScope {
+pub fn bundle_scope<L: Clone, E: Clone>(
+    scope: &SubstitutionScope<L, E>,
+    server: &str,
+    bundle: &BundleConfig,
+) -> BundleScope<L, E> {
     let declared = declared_of(bundle);
     let saved = saved_of(scope, server, &declared);
     let flat: JsObject = saved
@@ -103,20 +107,13 @@ pub fn bundle_scope(scope: &JsValue, server: &str, bundle: &BundleConfig) -> Bun
             issue: needs_configuration(server),
         };
     }
-    let user_config = JsValue::Object(JsObject::from_iter([
-        ("declared".to_owned(), JsValue::Object(declared)),
-        ("values".to_owned(), JsValue::Object(saved)),
-    ]));
-    let mut bound = scope.as_object().cloned().unwrap_or_default();
-    bound.insert("userConfig".to_owned(), user_config);
     BundleScope::Scope {
-        scope: JsValue::Object(bound),
-    }
-}
-
-crate::registry::exports! {
-    "loading/resolve/bundle-scope" {
-        "bundleScope" => ok |scope: JsValue, server: String, bundle: BundleConfig|
-            bundle_scope(&scope, &server, &bundle);
+        scope: SubstitutionScope {
+            user_config: ResolvedUserConfig {
+                declared,
+                values: saved,
+            },
+            ..scope.clone()
+        },
     }
 }

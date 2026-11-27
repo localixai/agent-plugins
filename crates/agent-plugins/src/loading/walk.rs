@@ -14,13 +14,13 @@ use super::readers_text::DiscoveredFile;
 use crate::format::issues::PluginIssue;
 use crate::format::layout::{ComponentKind, STANDARD_LAYOUT};
 use crate::format::listing::list_sorted;
+use crate::format::load_files::Files;
 use crate::format::locate::{LocateContext, locate};
 use crate::format::path_escape::LinkRoots;
 use crate::format::path_text::{PathPlatform, child_path};
 use crate::js::JsValue;
 use crate::ports::files::{DirectoryEntry, FileStat, PluginFiles};
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// The kinds a manifest lists paths of, in the table's order.
 pub const LISTED_KINDS: [ListedKind; 6] = [
@@ -51,7 +51,9 @@ pub enum ListedKind {
 }
 
 impl ListedKind {
-    const fn as_str(self) -> &'static str {
+    /// The kind as the layout and the messages name it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Skills => "skills",
             Self::Commands => "commands",
@@ -59,6 +61,19 @@ impl ListedKind {
             Self::OutputStyles => "outputStyles",
             Self::Workflows => "workflows",
             Self::Themes => "themes",
+        }
+    }
+
+    /// The component kind of the layout it is.
+    #[must_use]
+    pub const fn component(self) -> ComponentKind {
+        match self {
+            Self::Skills => ComponentKind::Skills,
+            Self::Commands => ComponentKind::Commands,
+            Self::Agents => ComponentKind::Agents,
+            Self::OutputStyles => ComponentKind::OutputStyles,
+            Self::Workflows => ComponentKind::Workflows,
+            Self::Themes => ComponentKind::Themes,
         }
     }
 }
@@ -69,7 +84,7 @@ impl ListedKind {
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverContext {
     /// The plugin folder.
-    pub files: Port,
+    pub files: Files,
     /// Whose path rules apply.
     pub platform: PathPlatform,
     /// Where the plugin and its marketplace really are.
@@ -85,7 +100,7 @@ pub struct DiscoverContext {
 impl DiscoverContext {
     fn located(&self) -> LocateContext {
         LocateContext {
-            files: self.files,
+            files: self.files.clone(),
             platform: self.platform,
             roots: self.roots.clone(),
             signal: self.signal.clone(),

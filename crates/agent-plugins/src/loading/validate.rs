@@ -9,3 +9,4 @@ pub mod paths;
 pub mod plugin_contents;
 pub mod plugin_target;
 pub mod report;
+pub mod validate_plugin;

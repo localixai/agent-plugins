@@ -15,6 +15,7 @@ use super::mcp_config::{McpBundleConfig, McpConfigRead, read_mcp_config, rejects
 use super::path_escape::LinkRoots;
 use super::path_text::{PathPlatform, root_relative};
 use super::read_json::{JsonRead, parse_json};
+use crate::format::load_files::Files;
 use crate::js::{JsObject, JsValue, in_key_order, in_property_order, json_stringify, string_of};
 use crate::ports::Signal;
 use crate::ports::files::TextFileReader;
@@ -249,7 +250,7 @@ fn bundles_of(loaded: &[McpConfigRead]) -> IndexMap<String, McpBundleConfig> {
 /// a later name replaces an earlier one (a manifest server replaces a `.mcp.json` one,
 /// components.md). A source that fails leaves the others loading.
 pub async fn collect_mcp_servers(
-    files: Port,
+    files: Files,
     manifest_value: &JsValue,
     options: CollectOptions,
 ) -> CollectedMcpServers {
@@ -330,7 +331,7 @@ crate::registry::exports! {
     "format/mcp-sources" {
         "MCP_SOURCE_KINDS" => ok || MCP_SOURCE_KINDS;
         "classifyMcpSource" => ok |value: JsValue| classify_mcp_source(&value).map(held);
-        "collectMcpServers" => async ok |files: Port, manifest_value: JsValue, options: Option<CollectOptions>|
+        "collectMcpServers" => async ok |files: Files, manifest_value: JsValue, options: Option<CollectOptions>|
             collect_mcp_servers(files, &manifest_value, options.unwrap_or_default()).await;
     }
 }

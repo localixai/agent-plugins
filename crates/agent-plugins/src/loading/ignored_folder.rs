@@ -9,12 +9,12 @@ use serde::Deserialize;
 
 use crate::format::issues::{PluginIssue, warning};
 use crate::format::layout::{ComponentKind, STANDARD_LAYOUT, declared_key};
+use crate::format::load_files::Files;
 use crate::format::messages::default_folder_ignored;
 use crate::format::path_text::{PathPlatform, is_within, root_relative};
 use crate::js::JsValue;
 use crate::ports::Signal;
 use crate::ports::files::PluginFiles;
-use crate::registry::Port;
 
 /// What discovery asks of its context here: the manifest, the folder, the platform and the signal
 /// (`DiscoverContext`).
@@ -24,7 +24,7 @@ pub struct DiscoverContext {
     #[serde(default)]
     pub manifest: JsValue,
     /// The plugin folder.
-    pub files: Port,
+    pub files: Files,
     /// Whose path rules apply.
     pub platform: PathPlatform,
     /// Cancels the reads.

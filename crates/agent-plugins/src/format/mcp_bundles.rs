@@ -17,6 +17,7 @@ use super::mcpb_manifest::read_mcpb_options;
 use super::messages::path_not_found;
 use super::path_escape::LinkRoots;
 use super::path_text::PathPlatform;
+use crate::format::load_files::Files;
 use crate::js::JsObject;
 use crate::js::value::to_js_value;
 use crate::ports::mcp_bundle::{McpBundle, McpBundleReader, McpBundleSource};
@@ -32,7 +33,7 @@ const MCPB_CACHE_DIR: &str = ".mcpb-cache";
 #[serde(rename_all = "camelCase")]
 pub struct McpLoadContext {
     /// The plugin folder.
-    pub files: Port,
+    pub files: Files,
     /// Whose path rules apply.
     pub platform: PathPlatform,
     /// Where the plugin and its marketplace really are.
@@ -51,7 +52,7 @@ impl McpLoadContext {
     #[must_use]
     pub fn located(&self) -> LocateContext {
         LocateContext {
-            files: self.files,
+            files: self.files.clone(),
             platform: self.platform,
             roots: self.roots.clone(),
             signal: self.signal.clone(),

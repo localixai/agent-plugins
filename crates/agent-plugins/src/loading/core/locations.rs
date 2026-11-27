@@ -7,12 +7,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::format::issues::{PluginIssue, error};
+use crate::format::load_files::Files;
 use crate::format::locate::{LocateContext, LocateOptions, locate, locate_context};
 use crate::format::read_json::{JsonRead, read_json};
 use crate::js::JsValue;
 use crate::ports::Signal;
 use crate::ports::files::{FileStat, PluginFiles};
-use crate::registry::Port;
 
 /// Where a fixed location stands.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -37,7 +37,7 @@ pub enum FixedLocation {
 
 /// The context every read of a core package's fixed locations shares.
 #[must_use]
-pub fn core_locate(files: Port, signal: Option<Signal>) -> LocateContext {
+pub fn core_locate(files: Files, signal: Option<Signal>) -> LocateContext {
     locate_context(
         files,
         LocateOptions {
@@ -149,6 +149,6 @@ pub async fn fixed_json(context: &LocateContext, path: &str, verdict: &str) -> F
 
 crate::registry::exports! {
     "loading/core/locations" {
-        "coreLocate" => ok |files: Port, signal: Option<Signal>| core_locate(files, signal).to_js();
+        "coreLocate" => ok |files: Files, signal: Option<Signal>| core_locate(files, signal).to_js();
     }
 }

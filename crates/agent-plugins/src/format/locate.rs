@@ -10,11 +10,11 @@ use super::issues::{PluginIssue, error};
 use super::messages::missing_path;
 use super::path_escape::{DeclaredPath, LinkRoots, escaped_path_issue};
 use super::path_text::{PathPlatform, root_relative, without_trailing_slashes};
+use crate::format::load_files::Files;
 use crate::js::value::to_js_value;
 use crate::js::{JsObject, JsValue, promise_all};
 use crate::ports::files::{FileStat, PluginFiles};
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// What a path turned out to be: what it is, or the issue that stops it loading; neither when it is missing.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
@@ -32,7 +32,7 @@ pub struct Located {
 #[serde(rename_all = "camelCase")]
 pub struct LocateContext {
     /// The plugin folder.
-    pub files: Port,
+    pub files: Files,
     /// The backslash rule is the platform's: "on macOS and Linux" a backslash escapes.
     pub platform: PathPlatform,
     /// Where the plugin and its marketplace really are, so links between plugins of one marketplace load.
@@ -61,7 +61,7 @@ pub struct LocateOptions {
 /// The context every loader of plugin paths shares. `platform` defaults to `posix`, the stricter
 /// one: a backslash in a declared path escapes there.
 #[must_use]
-pub fn locate_context(files: Port, options: LocateOptions) -> LocateContext {
+pub fn locate_context(files: Files, options: LocateOptions) -> LocateContext {
     LocateContext {
         files,
         platform: options.platform.unwrap_or(PathPlatform::Posix),
@@ -247,7 +247,7 @@ pub fn missing_at(context: &LocateContext, component: &str, written: &str) -> Pl
 
 crate::registry::exports! {
     "format/locate" {
-        "locateContext" => ok |files: Port, options: Option<LocateOptions>| locate_context(files, options.unwrap_or_default()).to_js();
+        "locateContext" => ok |files: Files, options: Option<LocateOptions>| locate_context(files, options.unwrap_or_default()).to_js();
         "locate" => async ok |context: LocateContext, component: String, written: String, own: Option<bool>| locate(&context, &component, &written, own).await;
         "missingAt" => ok |context: LocateContext, component: String, written: String| missing_at(&context, &component, &written);
     }

@@ -28,7 +28,7 @@ pub mod value;
 pub use array_join::{array_join, string_of};
 pub use json_stringify::{json_stringify, json_stringify_indented};
 pub use math::{math_max, math_min, math_round};
-pub use promise::{promise_all, promise_all_pair};
+pub use promise::{SharedPromise, promise_all, promise_all_pair};
 pub use radix::{to_exponential, to_radix_string};
 pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::readers_text::DiscoveredFile;
 use crate::format::issues::PluginIssue;
+use crate::format::load_files::Files;
 use crate::format::messages::missing_path;
 use crate::format::theme::{Theme, read_theme};
 use crate::format::workflow_meta::WorkflowMeta;
@@ -18,7 +19,6 @@ use crate::format::workflow_script::inspect_workflow_script;
 use crate::js::promise_all;
 use crate::ports::files::TextFileReader;
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// What these readers read of discovery (`Discovered`): the themes and the workflows.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -36,7 +36,7 @@ pub struct DiscoveredAssets {
 #[serde(rename_all = "camelCase")]
 pub struct AssetContext {
     /// The plugin's files.
-    pub files: Port,
+    pub files: Files,
     /// The plugin's name.
     pub plugin_name: String,
     /// What discovery found.

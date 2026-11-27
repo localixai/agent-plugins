@@ -155,6 +155,21 @@ impl Serialize for Signal {
     }
 }
 
+impl Signal {
+    /// `signal.throwIfAborted()`: once the host's signal aborted, the host is asked to throw its
+    /// reason (the need `throwIfAborted` of the signal), so the call rejects with that very value
+    /// unless a `catch_host` scope catches it. A signal the core made has no reason of the host's
+    /// to throw: it goes on, and the ports that watch it answer their `aborted` failure.
+    pub async fn throw_if_aborted(&self) {
+        if !self.is_aborted() {
+            return;
+        }
+        if let Some(id) = self.host() {
+            answered::<JsValue>(id, "throwIfAborted", vec![]).await;
+        }
+    }
+}
+
 /// An argument of a need: a value, or `undefined` for `None` (a signal not given).
 fn arg<T: Serialize>(value: Option<&T>) -> JsValue {
     value

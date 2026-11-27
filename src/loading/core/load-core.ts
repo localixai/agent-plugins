@@ -1,10 +1,13 @@
-import { loadFiles } from '../../format/load-files.ts';
-import { coreExtensionDirectories, coreIcons } from './assets.ts';
-import { readCoreHooksFile, readCoreMcpFile } from './config.ts';
-import { coreLocate } from './locations.ts';
-import { coreManifestStep } from './manifest-step.ts';
+/**
+ * Loading a core package: one crossing per load, the host's files read through one load's view of
+ * them.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/core/load_core.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { LoadCorePackageInput, LoadedCorePackage } from './model.ts';
-import { readCoreSkills } from './skills.ts';
+
+const call = coreModule('loading/core/load-core');
 
 /**
  * Loads a core package (Agent Plugins 1.1.0, core §4–§10; docs/API.md, "Core packages"): the root
@@ -14,36 +17,5 @@ import { readCoreSkills } from './skills.ts';
  * reported and skipped while the rest loads. Nothing of the Claude Code layout is read: a core
  * package has no other component location (core §6.1). Never throws.
  */
-export async function loadCorePackage(input: LoadCorePackageInput): Promise<LoadedCorePackage> {
-  const { signal } = input;
-  const context = coreLocate(loadFiles(input.files, signal), signal);
-  const implemented = input.extensions ?? [];
-  const step = await coreManifestStep(context, implemented);
-  if (step.manifest === undefined || step.version === undefined) {
-    return { package: undefined, issues: step.issues };
-  }
-  const { manifest, version } = step;
-  const [skills, mcp, hooks, icons, extensionDirectories] = await Promise.all([
-    readCoreSkills(context, manifest.name),
-    readCoreMcpFile(context, version, {
-      implemented,
-      ...(input.transports && { transports: input.transports }),
-    }),
-    readCoreHooksFile(context, version, implemented),
-    coreIcons(context, input.iconFormats ?? []),
-    coreExtensionDirectories(context, implemented),
-  ]);
-  return {
-    package: {
-      name: manifest.name,
-      version,
-      manifest,
-      skills: skills.skills,
-      mcpServers: mcp.servers,
-      hooks: hooks.hooks,
-      icons,
-      extensionDirectories,
-    },
-    issues: [...step.issues, ...skills.issues, ...mcp.issues, ...hooks.issues],
-  };
-}
+export const loadCorePackage = (input: LoadCorePackageInput): Promise<LoadedCorePackage> =>
+  call.async('loadCorePackage', input);

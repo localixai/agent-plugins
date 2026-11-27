@@ -1,6 +1,7 @@
 //! Layer 3 (loading), resolving a plugin's components (`src/loading/resolve/` in the npm package).
 
 pub mod bundle_scope;
+pub mod channel;
 pub mod content;
 pub mod data_id;
 pub mod deep;
@@ -21,6 +22,7 @@ pub mod monitor;
 pub mod monitor_trigger;
 pub mod powershell_no_program;
 pub mod prepared;
+pub mod processes;
 pub mod shell_exports;
 pub mod shell_guard;
 pub mod shell_guard_hook;

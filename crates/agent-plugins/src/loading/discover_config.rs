@@ -10,12 +10,12 @@ use super::ignored_folder::{self, ignored_folder_issues};
 use crate::format::issues::PluginIssue;
 use crate::format::layout::{CombineMode, ComponentKind, STANDARD_LAYOUT, declared_key};
 use crate::format::listing::list_sorted;
+use crate::format::load_files::Files;
 use crate::format::locate::{LocateContext, locate, missing_at};
 use crate::format::path_escape::LinkRoots;
 use crate::format::path_text::{PathPlatform, child_path, root_relative};
 use crate::js::{JsValue, promise_all};
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// The kinds whose files are JSON configuration, read by their own reader.
 pub const CONFIG_KINDS: [ConfigKind; 3] = [
@@ -59,7 +59,7 @@ impl ConfigKind {
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverContext {
     /// The plugin folder.
-    pub files: Port,
+    pub files: Files,
     /// Whose path rules apply.
     pub platform: PathPlatform,
     /// Where the plugin and its marketplace really are.
@@ -76,7 +76,7 @@ pub struct DiscoverContext {
 impl DiscoverContext {
     fn located(&self) -> LocateContext {
         LocateContext {
-            files: self.files,
+            files: self.files.clone(),
             platform: self.platform,
             roots: self.roots.clone(),
             signal: self.signal.clone(),
@@ -86,7 +86,7 @@ impl DiscoverContext {
     fn ignored(&self) -> ignored_folder::DiscoverContext {
         ignored_folder::DiscoverContext {
             manifest: self.manifest.clone(),
-            files: self.files,
+            files: self.files.clone(),
             platform: self.platform,
             signal: self.signal.clone(),
         }

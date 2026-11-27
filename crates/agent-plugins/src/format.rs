@@ -35,6 +35,7 @@ pub mod js_tokens;
 pub mod layout;
 pub mod link_rule;
 pub mod listing;
+pub mod load_files;
 pub mod locate;
 pub mod lsp_config;
 pub mod lsp_schema;

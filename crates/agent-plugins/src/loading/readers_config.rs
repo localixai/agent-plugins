@@ -15,6 +15,7 @@ use crate::format::hooks_settings::{
 };
 use crate::format::issues::{PluginIssue, Severity, error, warning};
 use crate::format::layout::{ComponentKind, declared_key};
+use crate::format::load_files::Files;
 use crate::format::lsp_config::{LspConfigRead, LspServer, merge_lsp_sources, read_lsp_config};
 use crate::format::mcp_config::McpBundleConfig;
 use crate::format::mcp_sources::{CollectOptions, collect_mcp_servers};
@@ -25,7 +26,6 @@ use crate::format::plugin_settings::{
 use crate::format::read_json::{JsonRead, read_json, read_json_without_bom};
 use crate::js::{JsObject, JsValue, promise_all};
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// What these readers read of discovery (`Discovered`): the configuration sources.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -50,7 +50,7 @@ pub struct DiscoveredConfig {
 #[serde(rename_all = "camelCase")]
 pub struct ConfigContext {
     /// The plugin's files.
-    pub files: Port,
+    pub files: Files,
     /// The manifest; `undefined` without one.
     #[serde(default)]
     pub manifest: JsValue,
@@ -257,7 +257,8 @@ pub async fn read_mcp_servers(context: &ConfigContext) -> ComponentRead<McpServe
         .get("mcpServers")
         .cloned()
         .unwrap_or_default();
-    let collected = collect_mcp_servers(context.files, &declared, context.mcp.clone()).await;
+    let collected =
+        collect_mcp_servers(context.files.clone(), &declared, context.mcp.clone()).await;
     ComponentRead {
         value: McpServersValue {
             servers: collected.servers,

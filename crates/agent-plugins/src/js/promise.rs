@@ -1,6 +1,7 @@
 //! JavaScript's `Promise.all`: the futures run together, so a port that is the host's is asked
 //! for all of their needs in one step (docs/RUST.md, "Effects").
 
+use std::sync::{Arc, Mutex, PoisonError};
 use std::task::Poll;
 
 use crate::ports::BoxFuture;
@@ -61,13 +62,54 @@ pub fn promise_all_pair<'a, A: Send + 'a, B: Send + 'a>(
     }))
 }
 
+/// A promise awaited by more than one caller: the future runs once, polled by whichever waiter
+/// polls first, and every waiter gets its output (a `Promise` kept in a `Map` and awaited again).
+pub struct SharedPromise<T>(Arc<Mutex<Slot<T>>>);
+
+/// What a shared promise holds: the future still running, or what it gave.
+enum Slot<T> {
+    Running(BoxFuture<'static, T>),
+    Done(T),
+}
+
+impl<T> Clone for SharedPromise<T> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+impl<T: Clone + Send + 'static> SharedPromise<T> {
+    /// The promise of `future`, which runs when a waiter first polls it.
+    #[must_use]
+    pub fn new(future: BoxFuture<'static, T>) -> Self {
+        Self(Arc::new(Mutex::new(Slot::Running(future))))
+    }
+
+    /// `await promise`: its output once the future is done.
+    pub fn wait(&self) -> BoxFuture<'static, T> {
+        let slot = Arc::clone(&self.0);
+        Box::pin(std::future::poll_fn(move |context| {
+            let mut slot = slot.lock().unwrap_or_else(PoisonError::into_inner);
+            let value = match &mut *slot {
+                Slot::Done(value) => return Poll::Ready(value.clone()),
+                Slot::Running(future) => match future.as_mut().poll(context) {
+                    Poll::Ready(value) => value,
+                    Poll::Pending => return Poll::Pending,
+                },
+            };
+            *slot = Slot::Done(value.clone());
+            Poll::Ready(value)
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::future::{Future, ready};
     use std::pin::Pin;
     use std::task::{Context, Poll};
 
-    use super::{promise_all, promise_all_pair};
+    use super::{SharedPromise, promise_all, promise_all_pair};
     use crate::ports::{BoxFuture, now};
 
     /// A future that waits for one poll before it answers.
@@ -112,5 +154,16 @@ mod tests {
     #[test]
     fn nothing_to_wait_for_is_ready_at_once() {
         assert_eq!(now(promise_all::<u8>(Vec::new())), Some(Vec::new()));
+    }
+
+    // `const p = later(5); await Promise.all([p, p])` runs `later` once and gives `[5, 5]`.
+    #[test]
+    fn a_shared_promise_runs_once_for_every_waiter() {
+        let shared = SharedPromise::new(Box::pin(Later(Some(5), false)));
+        let mut both = promise_all(vec![shared.wait(), shared.wait()]);
+        let mut context = Context::from_waker(std::task::Waker::noop());
+        assert_eq!(both.as_mut().poll(&mut context), Poll::Pending);
+        assert_eq!(both.as_mut().poll(&mut context), Poll::Ready(vec![5, 5]));
+        assert_eq!(now(shared.wait()), Some(5));
     }
 }

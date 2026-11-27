@@ -7,11 +7,12 @@ use std::sync::LazyLock;
 use regex::Regex;
 use serde::Deserialize;
 
+use crate::format::load_files::Files;
 use crate::format::path_text::is_within;
 use crate::js::{JsValue, Pattern, promise_all};
 use crate::ports::files::PluginFiles;
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::{Port, catch_host};
+use crate::registry::catch_host;
 
 /// `/^\.\/+/`.
 static LEADING_DOT_SLASH: Pattern = LazyLock::new(|| Regex::new(r"^\./+").ok());
@@ -112,7 +113,7 @@ pub async fn command_directory_debug<F: PluginFiles>(
 
 crate::registry::exports! {
     "loading/command-debug" {
-        "commandDirectoryDebug" => async ok |context: ReaderContext<Port>, commands: Vec<CommandFile>|
+        "commandDirectoryDebug" => async ok |context: ReaderContext<Files>, commands: Vec<CommandFile>|
             command_directory_debug(&context, &commands).await;
     }
 }

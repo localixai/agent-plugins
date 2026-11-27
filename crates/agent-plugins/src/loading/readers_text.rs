@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use super::command_debug::ReaderContext;
 use crate::format::frontmatter::parse_frontmatter;
 use crate::format::issues::PluginIssue;
+use crate::format::load_files::Files;
 use crate::format::messages::missing_path;
 use crate::js::{JsValue, promise_all, trim};
 use crate::ports::BoxFuture;
 use crate::ports::files::TextFileReader;
-use crate::registry::Port;
 
 /// A skill, command, agent or output style as loading finds it: its path, its name inside the plugin
 /// and its text (`PluginTextFile` of `src/loading/plugin-model.ts`, a module of types only).
@@ -79,7 +79,7 @@ fn alone_skill_name(text: &str, fallback: &str) -> String {
 }
 
 /// The text of one discovered file, or an inline command's `content`; `None` when it cannot be read.
-async fn text_of(context: &ReaderContext<Port>, file: &DiscoveredFile) -> Option<String> {
+async fn text_of(context: &ReaderContext<Files>, file: &DiscoveredFile) -> Option<String> {
     let Some(path) = &file.path else {
         return file
             .entry
@@ -94,7 +94,7 @@ async fn text_of(context: &ReaderContext<Port>, file: &DiscoveredFile) -> Option
 /// TypeScript's `issues.push` after its `await`).
 async fn read_one(
     kind: &str,
-    context: &ReaderContext<Port>,
+    context: &ReaderContext<Files>,
     file: &DiscoveredFile,
     issues: &Mutex<Vec<PluginIssue>>,
 ) -> Option<PluginTextFile> {
@@ -136,7 +136,7 @@ pub struct TextFilesRead {
 pub async fn text_files(
     kind: &str,
     found: &[DiscoveredFile],
-    context: &ReaderContext<Port>,
+    context: &ReaderContext<Files>,
 ) -> TextFilesRead {
     let issues = Mutex::new(Vec::new());
     let reads: Vec<BoxFuture<'_, Option<PluginTextFile>>> = found
@@ -156,7 +156,7 @@ pub async fn text_files(
 
 crate::registry::exports! {
     "loading/readers-text" {
-        "textFiles" => async ok |kind: String, found: Vec<DiscoveredFile>, context: ReaderContext<Port>|
+        "textFiles" => async ok |kind: String, found: Vec<DiscoveredFile>, context: ReaderContext<Files>|
             text_files(&kind, &found, &context).await;
     }
 }
