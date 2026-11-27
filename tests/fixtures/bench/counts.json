@@ -4,7 +4,6 @@
     "counts": {
       "4": {
         "run": {
-          "cpu.RegExp.exec": 16,
           "files.bytes": 2077,
           "files.exists": 4,
           "files.list": 3,
@@ -15,7 +14,6 @@
       },
       "8": {
         "run": {
-          "cpu.RegExp.exec": 32,
           "files.bytes": 4037,
           "files.exists": 4,
           "files.list": 3,
@@ -26,7 +24,6 @@
       },
       "16": {
         "run": {
-          "cpu.RegExp.exec": 64,
           "files.bytes": 7957,
           "files.exists": 4,
           "files.list": 3,
@@ -42,8 +39,6 @@
     "counts": {
       "4": {
         "run": {
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 4,
           "files.bytes": 2077,
           "files.exists": 7,
           "files.list": 3,
@@ -54,8 +49,6 @@
       },
       "8": {
         "run": {
-          "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 8,
           "files.bytes": 4037,
           "files.exists": 11,
           "files.list": 3,
@@ -66,8 +59,6 @@
       },
       "16": {
         "run": {
-          "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 16,
           "files.bytes": 7957,
           "files.exists": 19,
           "files.list": 3,
