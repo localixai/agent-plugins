@@ -483,9 +483,9 @@ pub struct MarketplaceContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marketplace_name: Option<String>,
     /// `plugin.json` of each relative-path entry by entry index, for the `plugins[i] plugin.json
-    /// →` reports.
+    /// →` reports: a `ReadonlyMap`, as the wrapper tags it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plugin_manifests: Option<IndexMap<u32, JsValue>>,
+    pub plugin_manifests: Option<crate::registry::Map<u32, JsValue>>,
 }
 
 /// What reading a marketplace gave.

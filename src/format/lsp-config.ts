@@ -1,15 +1,17 @@
-import type { z } from 'zod';
-import { error, type PluginIssue } from './issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
 import type { LSP_TRANSPORTS } from './lsp-schema.ts';
-import { lspServerSchema } from './lsp-schema.ts';
-import { isRecord } from '../protocol/is-record.ts';
 
 /**
  * LSP server entries of a plugin (plugins/manifest-reference.md, "lspServers"; plugins/components.md,
  * "LSP servers"). The SDK has no LSP config type (no match in sdk.d.ts), so `LspServer` is the kit's,
  * transcribed from the field table: "Each server config is a strict object with these fields. An
  * unknown key fails validation."
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/lsp_config.rs`, docs/RUST.md).
  */
+
+const call = coreModule('format/lsp-config');
 
 /** `stdio` (default) or `socket`: "Claude Code accepts `socket` but runs every server over stdio". */
 export type LspTransport = (typeof LSP_TRANSPORTS)[number];
@@ -42,7 +44,7 @@ export interface LspServer {
 }
 
 /** The fourteen rows of the table. */
-export const LSP_FIELDS = [
+export const LSP_FIELDS: readonly [
   'command',
   'extensionToLanguage',
   'args',
@@ -57,18 +59,7 @@ export const LSP_FIELDS = [
   'restartOnCrash',
   'maxRestarts',
   'diagnostics',
-] as const satisfies readonly (keyof LspServer)[];
-
-const reason = (failure: z.ZodError): string =>
-  failure.issues
-    .map((found) =>
-      found.path.length > 0 ? `${found.path.join('.')}: ${found.message}` : found.message,
-    )
-    .join('; ');
-
-/** `Invalid LSP server config for ".lsp.json"` is the prefix components.md quotes. */
-const invalid = (origin: string, why: string): PluginIssue =>
-  error(origin, `Invalid LSP server config for "${origin}": ${why}`);
+] = call('LSP_FIELDS');
 
 export interface LspServerRead {
   /** Undefined when Claude Code would not load the entry. */
@@ -77,14 +68,8 @@ export interface LspServerRead {
 }
 
 /** One entry of a map; `origin` is the file (or `lspServers` for an inline map) it came from. */
-export function readLspServer(name: string, raw: unknown, origin: string): LspServerRead {
-  if (!isRecord(raw))
-    return { server: undefined, issues: [invalid(origin, `${name}: expected an object`)] };
-  const parsed = lspServerSchema.safeParse(raw);
-  return parsed.success
-    ? { server: parsed.data, issues: [] }
-    : { server: undefined, issues: [invalid(origin, `${name}: ${reason(parsed.error)}`)] };
-}
+export const readLspServer = (name: string, raw: unknown, origin: string): LspServerRead =>
+  call('readLspServer', name, raw, origin);
 
 export interface LspConfigRead {
   readonly servers: Record<string, LspServer>;
@@ -99,26 +84,8 @@ export interface LspConfigRead {
  * manifest's schema (manifest-schema.ts), so a bad inline entry keeps the plugin from loading
  * (spec §9.1.1 item 3, J9.5).
  */
-export function readLspConfig(raw: unknown, origin: string): LspConfigRead {
-  if (!isRecord(raw)) {
-    return { servers: {}, issues: [invalid(origin, 'expected an object keyed by server name')] };
-  }
-  const reads = Object.entries(raw).map(([name, entry]) => ({
-    name,
-    ...readLspServer(name, entry, origin),
-  }));
-  const issues = reads.flatMap((read) => [...read.issues]);
-  return {
-    servers: issues.length > 0 ? {} : entriesOf(reads),
-    issues,
-  };
-}
-
-// `fromEntries` defines own properties, so a server called `__proto__` stays a plain entry.
-const entriesOf = (reads: readonly { name: string; server: LspServer | undefined }[]) =>
-  Object.fromEntries(
-    reads.flatMap(({ name, server }) => (server ? [[name, server] as const] : [])),
-  );
+export const readLspConfig = (raw: unknown, origin: string): LspConfigRead =>
+  call('readLspConfig', raw, origin);
 
 /**
  * Joins the maps of a plugin in loading order: `.lsp.json` first, then each declared source
@@ -129,9 +96,5 @@ const entriesOf = (reads: readonly { name: string; server: LspServer | undefined
  * a plain object, so integer-like names (`"9"`, `"10"`) come first in ascending order whatever their
  * position (spec/judgments.md).
  */
-export function mergeLspSources(sources: readonly LspConfigRead[]): LspConfigRead {
-  return {
-    servers: Object.fromEntries(sources.flatMap(({ servers }) => Object.entries(servers))),
-    issues: sources.flatMap(({ issues }) => issues),
-  };
-}
+export const mergeLspSources = (sources: readonly LspConfigRead[]): LspConfigRead =>
+  call('mergeLspSources', sources);

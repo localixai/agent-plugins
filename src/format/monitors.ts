@@ -1,7 +1,5 @@
-import type { z } from 'zod';
-import { error, type PluginIssue } from './issues.ts';
-import { ALWAYS, monitorEntrySchema, skillOf, UNIQUE_NAMES, WHEN_SKILL } from './monitor-schema.ts';
-import { isRecord } from '../protocol/is-record.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
 
 /**
  * Monitor entries of a plugin (plugins/manifest-reference.md, "monitors"; plugins/components.md,
@@ -9,7 +7,11 @@ import { isRecord } from '../protocol/is-record.ts';
  * transcribed from the field table: "Each entry is a strict object with these fields", and "An
  * unknown key inside one is an error, and the plugin doesn't load" (manifest-reference, "Unrecognized
  * fields").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/monitors.rs`, docs/RUST.md).
  */
+
+const call = coreModule('format/monitors');
 
 /** `always`, or the first run of one skill. */
 export type MonitorTrigger =
@@ -27,29 +29,13 @@ export interface Monitor {
   readonly when: MonitorTrigger;
 }
 
-/** What a monitor without `when` starts on: "`\"always\"`, the default". */
-const ALWAYS_TRIGGER: MonitorTrigger = { kind: 'always' };
-
 /**
  * `"always"` or `"on-skill-invoke:<skill>"`. The skill after the colon must not be empty (oracle
  * 2.1.325: `on-skill-invoke: must specify a skill name`), and the value is read as written, with no
  * trimming or case folding (spec J9.8).
  */
-export function parseMonitorTrigger(when: string): MonitorTrigger | undefined {
-  if (when === ALWAYS) return ALWAYS_TRIGGER;
-  const skill = skillOf(when);
-  return skill.length > 0 ? { kind: 'on-skill-invoke', skill } : undefined;
-}
-
-const reason = (failure: z.ZodError): string =>
-  failure.issues
-    .map((found) =>
-      found.path.length > 0 ? `${found.path.join('.')}: ${found.message}` : found.message,
-    )
-    .join('; ');
-
-const invalid = (origin: string, index: number, why: string): PluginIssue =>
-  error(`${origin}[${index}]`, `Invalid monitor at ${origin}[${index}]: ${why}`);
+export const parseMonitorTrigger = (when: string): MonitorTrigger | undefined =>
+  call('parseMonitorTrigger', when);
 
 export interface MonitorRead {
   /** Undefined when Claude Code would not load the entry. */
@@ -58,20 +44,8 @@ export interface MonitorRead {
 }
 
 /** One entry of the array; `index` is its position, for the issue. */
-export function readMonitor(raw: unknown, origin: string, index: number): MonitorRead {
-  if (!isRecord(raw)) {
-    return { monitor: undefined, issues: [invalid(origin, index, 'expected an object')] };
-  }
-  const parsed = monitorEntrySchema.safeParse(raw);
-  if (!parsed.success) {
-    return { monitor: undefined, issues: [invalid(origin, index, reason(parsed.error))] };
-  }
-  const { name, command, description, when } = parsed.data;
-  const trigger = when === undefined ? ALWAYS_TRIGGER : parseMonitorTrigger(when);
-  // The schema refused every other `when`; this narrows the type.
-  if (!trigger) return { monitor: undefined, issues: [invalid(origin, index, WHEN_SKILL)] };
-  return { monitor: { name, command, description, when: trigger }, issues: [] };
-}
+export const readMonitor = (raw: unknown, origin: string, index: number): MonitorRead =>
+  call('readMonitor', raw, origin, index);
 
 export interface MonitorsRead {
   readonly monitors: Monitor[];
@@ -88,25 +62,5 @@ export interface MonitorsRead {
  * the plugin's other components load (J9.7). A later entry of a name already taken is left out, the
  * first keeping the name (J9.7, "at runtime a repeated name keeps the first entry").
  */
-export function readMonitors(raw: unknown, origin: string): MonitorsRead {
-  if (!Array.isArray(raw)) {
-    const why = 'expected an array of monitors';
-    return { monitors: [], issues: [error(origin, `Invalid monitors in ${origin}: ${why}`)] };
-  }
-  const reads = raw.map((entry: unknown, index) => readMonitor(entry, origin, index));
-  const failures = reads.flatMap((read) => [...read.issues]);
-  if (failures.length > 0) return { monitors: [], issues: failures };
-  const monitors: Monitor[] = [];
-  const issues: PluginIssue[] = [];
-  reads.forEach(({ monitor }, index) => {
-    if (!monitor) return;
-    if (monitors.some((kept) => kept.name === monitor.name)) {
-      issues.push(
-        invalid(origin, index, `${UNIQUE_NAMES}; "${monitor.name}" is kept from the first entry`),
-      );
-      return;
-    }
-    monitors.push(monitor);
-  });
-  return { monitors, issues };
-}
+export const readMonitors = (raw: unknown, origin: string): MonitorsRead =>
+  call('readMonitors', raw, origin);

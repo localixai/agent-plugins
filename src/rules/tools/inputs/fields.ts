@@ -158,5 +158,3 @@ export const TOOL_INPUT_FIELDS = {
     documented({ plan: optional(string()), planFilePath: optional(string()) }),
   ),
 } satisfies Readonly<Record<string, Fields>>;
-
-export type InputToolName = keyof typeof TOOL_INPUT_FIELDS;
