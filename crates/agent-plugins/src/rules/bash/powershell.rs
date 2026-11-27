@@ -146,6 +146,5 @@ crate::registry::exports! {
     "rules/bash/powershell" {
         "cmdletCall" => ok |command: ShellCommand| cmdlet_call(&command);
         "canonicalizePowerShell" => ok |command: String| canonicalize_power_shell(&command);
-        "matchPowerShellRule" => ok |rule: PermissionRule, call: PreparedCall, ctx: MatchContext| match_power_shell_rule(&rule, &call, &ctx);
     }
 }

@@ -2,10 +2,14 @@
 //! the host's interface (docs/RUST.md, "What stays TypeScript").
 //! A host path with its links resolved.
 
-use super::{BoxFuture, PortFailure};
+use super::{BoxFuture, PortFailure, Signal};
 
 /// The host's `realpath`.
 pub trait PathResolver: Send + Sync {
     /// The path with every link resolved; `None` when it does not exist.
-    fn realpath<'a>(&'a self, path: &'a str) -> BoxFuture<'a, Option<Result<String, PortFailure>>>;
+    fn realpath<'a>(
+        &'a self,
+        path: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<Result<String, PortFailure>>>;
 }

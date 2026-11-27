@@ -12,6 +12,7 @@
 
 mod support;
 
+mod ignore;
 mod js;
 mod js_regexp;
 mod registry;

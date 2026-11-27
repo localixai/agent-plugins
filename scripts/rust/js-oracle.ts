@@ -5,16 +5,18 @@
  * `String.prototype.trim`, `new URL(text)` and `new URL(text, base)` (the members the package
  * reads of it), and `normalize`, `toUpperCase` and `toLowerCase` (an archive's names are folded
  * by them), `new RegExp(source, flags)` with `exec`, `replace`, `split` and `matchAll` (a hook's
- * matcher and a relevance signal are patterns from input), and npm's `semver`, which the
- * package's version ranges are read by. The inputs are fixed seeds and every single-character edit of them,
- * so the set is the same on every run and covers the edges a hand-picked list would miss; a
- * fixed list adds what one edit cannot reach (deep nesting, long numbers, every escape). The
+ * matcher and a relevance signal are patterns from input), npm's `semver`, which the package's
+ * version ranges are read by, and npm's `ignore`, which its path rules were matched by. The
+ * inputs are fixed seeds and every single-character edit of them, so the set is the same on every
+ * run and covers the edges a hand-picked list would miss; a fixed list adds what one edit cannot
+ * reach (deep nesting, long numbers, every escape). The
  * runtime is the one Claude Code runs on (Bun: JavaScriptCore), whose wording the spec's oracle
  * recorded.
  *
  *   bun scripts/rust/js-oracle.ts     write crates/agent-plugins/tests/vectors/js/*.jsonl
  */
 import { recordJsonParse } from './js-oracle/json.ts';
+import { recordIgnore } from './js-oracle/ignore.ts';
 import { recordNormalize } from './js-oracle/normalize.ts';
 import { recordNumbers } from './js-oracle/number.ts';
 import { recordRegExps } from './js-oracle/reg-exp.ts';
@@ -30,3 +32,4 @@ recordUrls();
 recordUrlBases();
 recordRegExp();
 recordSemver();
+recordIgnore();

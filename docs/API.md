@@ -2137,8 +2137,8 @@ writes. `ruleIssues` also reports a `Bash` allow rule with a `*` before the subc
 (`Bash(git * main)`). The rule matches the text as written, never a path or quote-normalised form:
 `/usr/bin/curl` and `sh -c 'curl ...'` are not `Bash(curl *)`.
 
-A path rule (`src/rules/path`) is a gitignore pattern over the path below its anchor (the `ignore`
-package). Deny and ask rules match when any of a call's paths matches, allow rules when all do (the
+A path rule (`src/rules/path`) is a gitignore pattern over the path below its anchor (matched as
+npm's `ignore` 7.0.14 matches it, by the core's own port of it). Deny and ask rules match when any of a call's paths matches, allow rules when all do (the
 requested path and `PreparedCall.resolvedPaths`, which `prepareCall` fills). A `!` rule carves paths
 out of the rules before it in the same source and list; `evaluateRules` applies it. `Write(...)`,
 `Glob(...)`, `Grep(...)` and `NotebookEdit(...)` rules with a path never match; write `Edit(...)` or

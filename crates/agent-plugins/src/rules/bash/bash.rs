@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/bash.ts`, switched.
+//! Ported from `src/rules/bash/bash.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `Bash(...)` and `Monitor(...)` rules with a command pattern (tools-reference.md, "Rule
 //! format"): wrappers stripped, patterns compared as written.
@@ -80,10 +80,4 @@ const BASH: Shell = Shell {
 #[must_use]
 pub fn match_bash_rule(rule: &PermissionRule, call: &PreparedCall, ctx: &MatchContext) -> bool {
     match_shell_rule(&BASH, rule, call, ctx)
-}
-
-crate::registry::exports! {
-    "rules/bash/bash" {
-        "matchBashRule" => ok |rule: PermissionRule, call: PreparedCall, ctx: MatchContext| match_bash_rule(&rule, &call, &ctx);
-    }
 }
