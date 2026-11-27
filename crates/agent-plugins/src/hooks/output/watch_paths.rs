@@ -1,4 +1,4 @@
-//! Port of `src/hooks/output/watch-paths.ts`, switched.
+//! Ported from `src/hooks/output/watch-paths.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `watchPaths` of `SessionStart`, `CwdChanged` and `FileChanged` asks for absolute paths (hooks.md,
 //! "CwdChanged decision control"); a relative entry is resolved against the hook input's `cwd`, `.`
@@ -48,14 +48,6 @@ pub fn with_resolved_watch_paths(mut outcome: JsObject, cwd: &str) -> JsObject {
     }
     outcome
 }
-
-crate::registry::exports! {
-    "hooks/output/watch-paths" {
-        "withResolvedWatchPaths" => ok |outcome: JsObject, cwd: String|
-            with_resolved_watch_paths(outcome, &cwd);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

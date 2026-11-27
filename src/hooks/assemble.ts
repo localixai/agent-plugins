@@ -2,7 +2,7 @@ import type { PluginIssue } from '../format/issues.ts';
 import type { HookEvent } from '../protocol/official.ts';
 import { coreModule } from '../wasm/bridge.ts';
 import type { HookOutcome } from './outcome.ts';
-import type { HandlerVerdict, MergedOutput, RunFacts } from './verdict/types.ts';
+import type { HandlerVerdict, MergedOutput } from './verdict/types.ts';
 
 /**
  * What an event came to once every handler's run is read and the outputs merged (docs/API.md,
@@ -16,13 +16,6 @@ import type { HandlerVerdict, MergedOutput, RunFacts } from './verdict/types.ts'
  */
 
 const call = coreModule('hooks/assemble');
-
-/**
- * The facts of a verdict's run (`RunFacts`); a verdict the run stage did not time (one built by
- * hand) still names its handler and plugin, and says it finished.
- */
-export const runFactsOfVerdict = (verdict: HandlerVerdict): RunFacts =>
-  call('runFactsOfVerdict', verdict);
 
 export const assemble = <E extends HookEvent>(
   event: E,

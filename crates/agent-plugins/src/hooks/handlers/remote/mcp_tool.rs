@@ -257,6 +257,5 @@ pub async fn run_mcp_tool(entry: &TimedEntry, context: RunContext) -> McpHandled
 crate::registry::exports! {
     "hooks/handlers/remote/mcp-tool" {
         "WAITS_FOR_SERVER" => ok waits_for_server;
-        "runMcpTool" => async ok |entry: TimedEntry, context: RunContext| run_mcp_tool(&entry, context).await;
     }
 }

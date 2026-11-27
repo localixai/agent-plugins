@@ -10,18 +10,25 @@ import type {
   ShellKind,
 } from '../ports/index.ts';
 import type { HookEvent } from '../protocol/official.ts';
-import type { RunPorts } from './handlers/context.ts';
-import type { HookRegistry, ModelCatalog } from './contracts.ts';
-import { dispatchEvent, type DispatchConfig } from './dispatch.ts';
-import { runHandler } from './handlers/registry.ts';
-import { buildHookInput } from './input/build.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { HookRegistry, ModelCatalog, RegisteredHandler } from './contracts.ts';
+import type { EnvFiles } from './env-file/index.ts';
+import type { RunContext } from './handlers/context.ts';
 import type { DispatchRequest, HookOutcome } from './outcome.ts';
-import { createOutputStage } from './output/stage.ts';
 import type { IfEvaluator } from './select/if-guard.ts';
-import { createOnceClaims, type OnceClaims } from './select/once.ts';
-import { selectHandlers } from './select/select.ts';
-import { createStopBlockCap, type StopBlockCap } from './verdict/stop-block-cap.ts';
+import type { StopBlockCap } from './verdict/stop-block-cap.ts';
 import type { HookObserver, OutputStage } from './verdict/types.ts';
+
+/**
+ * The engine over the real stages: select, build, run through the ports, read, merge. One handle
+ * of the core per engine, made with the host's ports, so a dispatch is one call; the registry
+ * crosses by serial, each registered handler numbered here by identity and sent only when the
+ * engine does not hold it from the dispatch before (docs/RUST.md, "The host session").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/engine.rs`, docs/RUST.md).
+ */
+
+const call = coreModule('hooks/engine');
 
 /** The ports the engine runs handlers through: each handler type needs its own (docs/API.md, "Ports"). */
 export interface HookPorts {
@@ -41,10 +48,6 @@ export interface HookPorts {
   readonly modelCatalog?: ModelCatalog;
 }
 
-/** The output stage's one option: where to save text over the cap. */
-const scratchOf = (ports: HookPorts) =>
-  ports.scratch === undefined ? {} : { scratch: ports.scratch };
-
 /** What the engine cannot read off a port: the machine, and the output stage. */
 export interface HookEngineOptions {
   /** Reads the JSON output of each hook and merges them; by default the real one (`createOutputStage`). */
@@ -56,16 +59,16 @@ export interface HookEngineOptions {
   readonly defaultShell?: ShellKind;
   readonly startDirectory?: string;
   readonly tempDirectory?: string;
-  readonly userConfigOf?: DispatchConfig['userConfigOf'];
-  readonly httpPolicy?: DispatchConfig['httpPolicy'];
+  readonly userConfigOf?: RunContext['userConfigOf'];
+  readonly httpPolicy?: RunContext['httpPolicy'];
   /** The host process's id, exported as `CLAUDE_PID` to command hooks. */
-  readonly processId?: DispatchConfig['processId'];
+  readonly processId?: number;
   /** The HIPAA configuration applies to the session (hipaa-setup.md): hooks get no Anthropic credentials. */
-  readonly hipaa?: DispatchConfig['hipaa'];
+  readonly hipaa?: boolean;
   /** The `env` blocks of the settings files, resolved (`resolveSettingsEnv`). */
-  readonly settingsEnv?: DispatchConfig['settingsEnv'];
+  readonly settingsEnv?: RunContext['settingsEnv'];
   /** `CLAUDE_ENV_FILE` for the events that have one (`createEnvFiles`). */
-  readonly envFiles?: DispatchConfig['envFiles'];
+  readonly envFiles?: EnvFiles;
   /**
    * The counter of consecutive Stop blocks (`createStopBlockCap`). By default each engine has its
    * own, which is gone with it; a host that builds an engine per run passes one that outlives the
@@ -73,17 +76,11 @@ export interface HookEngineOptions {
    */
   readonly stopCap?: StopBlockCap;
   /**
-   * The `once` handlers held by a running dispatch and spent by a successful run
-   * (`createOnceClaims`). By default each engine has its own; a host that builds an engine more than
-   * once for one registry passes one that outlives them, as it does `stopCap`.
-   */
-  readonly onceClaims?: OnceClaims;
-  /**
    * Plugin command hooks first check that their plugin's directory exists, so a plugin that is gone
    * from disk fails with the documented notice. On by default; a host that never re-reads its
    * plugins mid-session and wants no lookup per hook run sets `false`.
    */
-  readonly checkPluginDirectories?: DispatchConfig['checkPluginDirectories'];
+  readonly checkPluginDirectories?: boolean;
 }
 
 export interface HookEngine {
@@ -93,50 +90,51 @@ export interface HookEngine {
   ): Promise<HookOutcome<E>>;
 }
 
-/** The ports the run stage reads: only the ones the host gave. */
-const runPortsOf = (ports: HookPorts): RunPorts => ({
-  runner: ports.commands,
-  locations: ports.locations,
-  environment: ports.environment,
-  ...(ports.observer === undefined ? {} : { observer: ports.observer }),
-  ...(ports.http === undefined ? {} : { http: ports.http }),
-  ...(ports.mcp === undefined ? {} : { mcp: ports.mcp }),
-  ...(ports.models === undefined ? {} : { models: ports.models }),
-  ...(ports.clock === undefined ? {} : { clock: ports.clock }),
-});
+/** A registry as the core reads it: its serials in order, and the entries the engine lacks. */
+export interface SentRegistry {
+  readonly serials: readonly number[];
+  readonly fresh: readonly (readonly [number, RegisteredHandler])[];
+}
 
-/** What the host sets about its machine; each is passed on only when set. */
-const hostOf = (options: HookEngineOptions) => ({
-  ...(options.startDirectory === undefined ? {} : { startDirectory: options.startDirectory }),
-  ...(options.tempDirectory === undefined ? {} : { tempDirectory: options.tempDirectory }),
-  ...(options.userConfigOf === undefined ? {} : { userConfigOf: options.userConfigOf }),
-  ...(options.httpPolicy === undefined ? {} : { httpPolicy: options.httpPolicy }),
-  ...(options.processId === undefined ? {} : { processId: options.processId }),
-  ...(options.hipaa === true ? { hipaa: true } : {}),
-  ...(options.settingsEnv === undefined ? {} : { settingsEnv: options.settingsEnv }),
-  ...(options.envFiles === undefined ? {} : { envFiles: options.envFiles }),
-  ...(options.checkPluginDirectories === false ? {} : { checkPluginDirectories: true }),
-});
+/** The core's engine, which a session's dispatch is given as itself (`dispatchIn`). */
+export interface CoreEngine {
+  dispatch<E extends HookEvent>(
+    registry: SentRegistry,
+    request: DispatchRequest<E>,
+  ): Promise<HookOutcome<E>>;
+}
+
+/** The engine of the core; its two functions cross on their own, so the options stay data. */
+export function coreEngine(ports: HookPorts, options: HookEngineOptions = {}): CoreEngine {
+  const { userConfigOf, ifEvaluator, ...data } = options;
+  return call('createHookEngine', ports, data, userConfigOf, ifEvaluator);
+}
+
+const SERIALS = new WeakMap<RegisteredHandler, number>();
+let lastSerial = 0;
+
+/** The serial `entry` crosses under: one per registered handler object, never reused. */
+function serialOf(entry: RegisteredHandler): number {
+  const known = SERIALS.get(entry);
+  if (known !== undefined) return known;
+  lastSerial += 1;
+  SERIALS.set(entry, lastSerial);
+  return lastSerial;
+}
 
 /** The engine over the real stages: select, build, run through the ports, read, merge. */
 export function createHookEngine(ports: HookPorts, options: HookEngineOptions = {}): HookEngine {
-  const config: DispatchConfig = {
-    stages: {
-      select: selectHandlers,
-      build: buildHookInput,
-      run: runHandler,
-      output: options.output ?? createOutputStage(scratchOf(ports)),
+  const core = coreEngine(ports, options);
+  let held = new Set<number>();
+  return {
+    dispatch(registry, request) {
+      const serials = registry.entries.map(serialOf);
+      const fresh = registry.entries.flatMap((entry, index) => {
+        const serial = serials[index] ?? serialOf(entry);
+        return held.has(serial) ? [] : [[serial, entry] as const];
+      });
+      held = new Set(serials);
+      return core.dispatch({ serials, fresh }, request);
     },
-    ports: runPortsOf(ports),
-    stopCap: options.stopCap ?? createStopBlockCap(),
-    onceClaims: options.onceClaims ?? createOnceClaims(),
-    ...scratchOf(ports),
-    windows: options.windows ?? false,
-    defaultShell: options.defaultShell ?? 'bash',
-    ...(ports.observer === undefined ? {} : { observer: ports.observer }),
-    ...(ports.modelCatalog === undefined ? {} : { modelCatalog: ports.modelCatalog }),
-    ...(options.ifEvaluator === undefined ? {} : { ifEvaluator: options.ifEvaluator }),
-    ...hostOf(options),
   };
-  return { dispatch: (registry, request) => dispatchEvent(registry, request, config) };
 }

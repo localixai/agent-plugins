@@ -167,3 +167,41 @@ struct Tag {
 
 #[cfg(test)]
 mod tests;
+
+/// A promise of the core's once handed to the host ([`detach`]): the host's own, which any task
+/// may await, or, outside a task (a Rust host awaiting the core itself), still the core's. Read
+/// from the wire it is the host's.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Detached<T> {
+    /// The host's promise.
+    Host(HostPromise<T>),
+    /// The core's future, for a Rust host.
+    #[serde(skip)]
+    Core(CorePromise<T>),
+}
+
+impl<T: Serialize + DeserializeOwned + Send + 'static> Detached<T> {
+    /// What it settles with.
+    pub async fn settled(self) -> T {
+        match self {
+            Self::Host(promise) => promise.await,
+            Self::Core(promise) => promise.await,
+        }
+    }
+}
+
+/// Hands `promise` to the host at once, by the need `$hold` with it as the argument: reading the
+/// need, the host makes it its promise, which runs to its first wait at once (item 7's order), and
+/// answers with that promise. So the work it starts begins while the task that made it goes on, as
+/// an `async` function runs to its first `await` when called, and the task that awaits it later
+/// need not be this one. Outside a task it stays the core's future.
+pub async fn detach<T: Serialize + DeserializeOwned + Send + 'static>(
+    promise: CorePromise<T>,
+) -> Detached<T> {
+    if task::with_current(|_| ()).is_none() {
+        return Detached::Core(promise);
+    }
+    let value = crate::js::value::to_js_value(&promise).unwrap_or_default();
+    Detached::Host(answered::<HostPromise<T>>(0, "$hold", vec![value]).await)
+}

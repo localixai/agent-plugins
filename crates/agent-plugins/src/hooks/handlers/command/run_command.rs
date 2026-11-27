@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/command/run-command.ts`, switched.
+//! Ported from `src/hooks/handlers/command/run-command.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A `command` hook (hooks.md, "Command hook fields"): the form it runs in, the process it gets,
 //! and the run the port reports. What the exit code means is the interpreter's.
@@ -272,11 +272,4 @@ pub async fn run_command(entry: &CommandEntry, context: CommandContext) -> Handl
         CommandRawRun::Foreground(settle(&runner, prepared.run).await)
     };
     HandlerResult { run, issues }
-}
-
-crate::registry::exports! {
-    "hooks/handlers/command/run-command" {
-        "runCommand" => async ok |entry: CommandEntry, context: CommandContext|
-            run_command(&entry, context).await;
-    }
 }

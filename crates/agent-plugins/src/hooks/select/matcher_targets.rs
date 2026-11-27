@@ -1,4 +1,4 @@
-//! The core's counterpart of `src/hooks/select/matcher-targets.ts` at sha256:1d0c3dea51d3, which stays
+//! The core's counterpart of `src/hooks/select/matcher-targets.ts` at sha256:0be1b4d5b420, which stays
 //! TypeScript: its table holds a reader function per event, which no value crossing the boundary
 //! can carry (docs/RUST.md, "What stays TypeScript"). Here each event's target is a row of data
 //! read by the same rules: what the matcher is tested against, the tool call a tool event carries

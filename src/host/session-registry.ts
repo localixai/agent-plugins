@@ -5,8 +5,8 @@ import type { HookHandle } from './session-hook-scope.ts';
 
 /**
  * The hooks of a session and every change made to them: what the state declares, what a skill, an
- * agent or the host's run registers, what an update keeps and what a `once` run spends. Nothing
- * else writes the core's registry.
+ * agent or the host's run registers, what an update keeps and what a `once` run spends (the
+ * core drops it as the run settles). Nothing else writes the core's registry.
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/host/session_registry.rs`,
  * docs/RUST.md).
@@ -26,15 +26,3 @@ export const registerEntries = (
   prefix: string,
   entries: readonly RegisteredHandler[],
 ): HookHandle => call('registerEntries', core.handle, prefix, entries);
-
-/**
- * Drops the `once` registrations a run spent (`OnceClaims`): by serial, so a hook registered again
- * under the same id while the run was in flight stays.
- */
-export function dropSpent(core: SessionCore): void {
-  const spent = core.registry
-    .get()
-    .entries.filter((entry) => core.onceClaims.spent(entry))
-    .flatMap((entry) => core.registry.serialOf(entry) ?? []);
-  if (spent.length > 0) call('dropSpent', core.handle, spent);
-}

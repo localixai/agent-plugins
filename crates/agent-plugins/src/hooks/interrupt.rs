@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use crate::format::env_flag::is_truthy_env;
 use crate::js::JsValue;
 use crate::ports::environment::Environment;
-use crate::registry::Port;
 
 /// The keys an interrupt is pressed with.
 pub const INTERRUPT_KEYS: [&str; 3] = ["esc", "enter", "ctrl-enter"];
@@ -157,10 +156,6 @@ pub fn with_interrupt(outcome: JsValue, aborted: bool) -> JsValue {
 crate::registry::exports! {
     "hooks/interrupt" {
         "INTERRUPT_KEYS" => ok || INTERRUPT_KEYS;
-        "interruptPlan" => async ok
-            |event: String, interrupt: Option<UserInterrupt>, environment: Port|
-            interrupt_plan(&event, interrupt.as_ref(), &environment).await;
-        "withInterrupt" => ok |outcome: JsValue, aborted: bool| with_interrupt(outcome, aborted);
     }
 }
 

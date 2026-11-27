@@ -12,7 +12,6 @@ import type { HookEvent } from '../protocol/official.ts';
 import { coreModule } from '../wasm/bridge.ts';
 import type { BackgroundListener } from './background-queue.ts';
 import { currentOf, type SessionCore } from './session-core.ts';
-import { dropSpent } from './session-registry.ts';
 
 /**
  * The scoped-hook part of a session: `addHooks`, `removeHooks`, `runScoped`'s turn scope and the
@@ -54,8 +53,7 @@ export const createTurnScope = (): TurnScope => call('createTurnScope');
 
 /**
  * What a dispatch leaves in the core: `watchPaths` of a SessionStart, CwdChanged or FileChanged
- * output replaces the dynamic watch list (no other event's output carries the field), the `once`
- * registrations its runs spent go (a background run's when its process ends), and the background
+ * output replaces the dynamic watch list (no other event's output carries the field), and the background
  * promises join the queue `takeBackground` reads, an async `SessionStart` hook's repeat emptied
  * (`source` is the `SessionStart` input's).
  */
@@ -64,20 +62,13 @@ export function recordOutcome(
   outcome: HookOutcome<HookEvent>,
   source?: unknown,
 ): void {
-  dropSpent(core);
   const watched: readonly Promise<BackgroundDelivery>[] = call(
     'recordOutcome',
     core.handle,
     outcome,
     source,
   );
-  core.background.add(
-    watched.map((delivery) =>
-      delivery.finally(() => {
-        dropSpent(core);
-      }),
-    ),
-  );
+  core.background.add(watched);
 }
 
 export interface HookScope {
