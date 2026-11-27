@@ -535,19 +535,19 @@
       "4": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 72
+          "cpu.RegExp.exec": 64
         }
       },
       "8": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 144
+          "cpu.RegExp.exec": 128
         }
       },
       "16": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 288
+          "cpu.RegExp.exec": 256
         }
       }
     }
