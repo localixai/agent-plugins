@@ -30,7 +30,7 @@ pub struct SourcePolicy {
 }
 
 /// The row of a kind.
-const fn policy_of(kind: HookSourceKind) -> SourcePolicy {
+pub const fn policy_of(kind: HookSourceKind) -> SourcePolicy {
     let (plugin, merges_copies, honors_once, raises_session_end_budget, scoped) = match kind {
         HookSourceKind::Plugin => (true, false, false, false, false),
         HookSourceKind::Settings => (false, true, false, true, false),

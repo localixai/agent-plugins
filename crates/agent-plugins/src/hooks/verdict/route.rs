@@ -1,4 +1,4 @@
-//! Port of `src/hooks/verdict/route.ts`, switched.
+//! Ported from `src/hooks/verdict/route.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Where the text of a block goes (hooks.md, "Exit code 2 behavior per event" and the event
 //! sections): the route of an event's exit-2 row, applied to every block on it, since a failure
@@ -107,13 +107,5 @@ pub fn shown_with(handler_id: &str, block: &BlockInfo) -> Shown {
             to: "claude".to_owned(),
             text: block.message.clone(),
         }),
-    }
-}
-
-crate::registry::exports! {
-    "hooks/verdict/route" {
-        "routedBlock" => ok |event: String, via: BlockVia, text: BlockText, condition: Option<String>|
-            routed_block(&event, via, text, condition);
-        "shownWith" => ok |handler_id: String, block: BlockInfo| shown_with(&handler_id, &block);
     }
 }

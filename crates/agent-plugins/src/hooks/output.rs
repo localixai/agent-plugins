@@ -2,10 +2,14 @@
 
 pub mod background;
 pub mod caps;
+pub mod classifier_note;
 pub mod defer;
 pub mod fields;
 pub mod finalize;
+pub mod merge;
+pub mod merge_gates;
 pub mod merge_rules;
+pub mod merge_simple;
 pub mod messages;
 pub mod permission_request_outcome;
 pub mod pre_tool_use_outcome;

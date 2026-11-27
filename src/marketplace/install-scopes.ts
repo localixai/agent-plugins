@@ -47,9 +47,6 @@ export const SCOPES_BY_PRECEDENCE: readonly InstallScope[] = call('SCOPES_BY_PRE
 export const mostSpecificScope = (scopes: readonly InstallScope[]): ChosenScope | undefined =>
   call('mostSpecificScope', scopes);
 
-/** The shell command that installs a plugin: `claude plugin install <plugin>`. */
-export const installCommand = (plugin: string): string => call('installCommand', plugin);
-
 /** What a collaborator runs once after the project's `.claude/settings.json` enables the plugin. */
 export const collaboratorInstallCommand = (pluginId: string): string =>
   call('collaboratorInstallCommand', pluginId);

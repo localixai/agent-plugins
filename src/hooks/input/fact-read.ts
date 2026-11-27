@@ -5,9 +5,3 @@
  */
 export const factOf = (facts: object, key: string): unknown =>
   Object.entries(facts).find(([name]) => name === key)?.[1];
-
-/** A fact that is a string; any other value reads as absent. */
-export const textFactOf = (facts: object, key: string): string | undefined => {
-  const found = factOf(facts, key);
-  return typeof found === 'string' ? found : undefined;
-};

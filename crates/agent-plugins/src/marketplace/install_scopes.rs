@@ -208,7 +208,6 @@ crate::registry::exports! {
         "scopeReach" => ok |scope: ChosenScope| scope_reach(scope);
         "SCOPES_BY_PRECEDENCE" => ok || SCOPES_BY_PRECEDENCE;
         "mostSpecificScope" => ok |scopes: Vec<InstallScope>| most_specific_scope(&scopes);
-        "installCommand" => ok |plugin: String| install_command(&plugin);
         "collaboratorInstallCommand" => ok |plugin_id: String| collaborator_install_command(&plugin_id);
         "defaultScope" => ok |command: ScopedCommand, listed_in: Vec<InstallScope>| default_scope(command, &listed_in);
     }

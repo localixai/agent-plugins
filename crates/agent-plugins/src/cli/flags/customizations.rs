@@ -110,6 +110,5 @@ crate::registry::exports! {
     "cli/flags/customizations" {
         "SKIP_MODES" => ok || SKIP_MODES;
         "skippedBy" => ok |mode: SkipMode| skipped_by(mode);
-        "MANAGED_UNDER_SAFE_MODE" => ok managed_under_safe_mode;
     }
 }

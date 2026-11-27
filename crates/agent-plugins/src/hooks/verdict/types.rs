@@ -1,11 +1,12 @@
 //! The core's counterpart of `src/hooks/verdict/types.ts` at sha256:bc62e6ae89a2, which stays TypeScript:
 //! types only, so there is nothing to call across the boundary (docs/RUST.md, "What stays
 //! TypeScript"). Only the types the ported modules read are here: what a background hook hands
-//! over (`hooks/output/background.rs`).
+//! over (`hooks/output/background.rs`), the blocks, the merge of the outputs and a parse.
 
 use serde::{Deserialize, Serialize};
 
 use crate::format::issues::PluginIssue;
+use crate::js::JsObject;
 
 /// How a background hook ended (hooks.md, "How async hooks execute"): `cancelled` a hook killed
 /// at teardown ("in non-interactive mode with the `-p` flag, Claude Code kills any async hook
@@ -166,4 +167,66 @@ pub struct Feedback {
     pub to: String,
     /// The text.
     pub text: String,
+}
+
+/// How a merged block holds the action back.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum MergedVia {
+    /// A blocking decision.
+    Decision,
+    /// `continue: false` where the event reads it as a block.
+    ContinueFalse,
+}
+
+/// A decision of the merge that holds the action back.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MergedBlock {
+    /// How it holds the action back.
+    pub via: MergedVia,
+    /// The handler whose output it is.
+    pub by: String,
+    /// The reason the output gave.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// The merge of every hook's output on one event (hooks hold no knowledge of its rules).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergedOutput {
+    /// The block of the merge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block: Option<MergedBlock>,
+    /// Whether Claude goes on.
+    #[serde(rename = "continue")]
+    pub proceeds: bool,
+    /// The reason a hook stopped Claude.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_reason: Option<String>,
+    /// Shown to the user.
+    pub system_messages: Vec<String>,
+    /// Added to Claude's context.
+    pub additional_context: Vec<String>,
+    /// The terminal sequences to write.
+    pub terminal_sequences: Vec<String>,
+    /// The event's effects.
+    pub effects: JsObject,
+    /// What the merge dropped and why.
+    pub issues: Vec<PluginIssue>,
+}
+
+/// The output stage's reading of one JSON value (`parseHookOutput`): the output, or why it failed.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParseResult {
+    /// The validated output.
+    #[serde(default)]
+    pub output: Option<JsObject>,
+    /// Why it failed.
+    #[serde(default)]
+    pub failure: Option<String>,
+    /// Keys of a valid output the schema does not name, ignored.
+    #[serde(default)]
+    pub unrecognized_keys: Option<Vec<String>>,
 }

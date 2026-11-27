@@ -79,8 +79,6 @@ export interface MarketplaceAdd {
   readonly source: string;
 }
 
-export const OFFICIAL_MARKETPLACE_ADD: MarketplaceAdd = call('OFFICIAL_MARKETPLACE_ADD');
-
 /**
  * The marketplaces Claude Code adds on its own at start: "Claude Code adds Anthropic's official
  * marketplace for you the first time you start an interactive terminal session". Nothing is added

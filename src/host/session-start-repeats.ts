@@ -1,5 +1,6 @@
 import type { BackgroundDelivery, HookOutcome } from '../hooks/index.ts';
 import type { HookEvent } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The repeat check of async `SessionStart` hooks (hooks.md, "Limitations"; Agent Plugins Extended
@@ -10,51 +11,16 @@ import type { HookEvent } from '../protocol/official.ts';
  *
  * Judgment (spec/judgments.md): "what Claude last received" is the last delivery of that handler
  * the session handed on, and any text a synchronous `SessionStart` hook adds counts as "other text".
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_start_repeats.rs`,
+ * docs/RUST.md).
  */
 export interface SessionStartRepeats {
   /** The background promises of one dispatch, with the repeats of a `SessionStart`'s emptied. */
   watch(outcome: HookOutcome<HookEvent>, source: unknown): readonly Promise<BackgroundDelivery>[];
 }
 
-/** The `SessionStart` sources after which every hook delivers again. */
-const FORGETS: ReadonlySet<unknown> = new Set(['compact', 'clear']);
+const call = coreModule('host/session-start-repeats');
 
-interface Given {
-  readonly text: string;
-  /** The count of synchronous additions when it was given. */
-  readonly added: number;
-}
-
-const textOf = (delivery: BackgroundDelivery): string =>
-  JSON.stringify([delivery.additionalContext ?? '', delivery.systemMessage ?? '']);
-
-const withoutText = ({
-  additionalContext: _context,
-  systemMessage: _message,
-  ...rest
-}: BackgroundDelivery): BackgroundDelivery => rest;
-
-export function createSessionStartRepeats(): SessionStartRepeats {
-  const given = new Map<string, Given>();
-  let added = 0;
-  const pass = (delivery: BackgroundDelivery): BackgroundDelivery => {
-    if (delivery.additionalContext === undefined && delivery.systemMessage === undefined) {
-      return delivery;
-    }
-    const text = textOf(delivery);
-    const last = given.get(delivery.handlerId);
-    if (last !== undefined && last.text === text && last.added === added) {
-      return withoutText(delivery);
-    }
-    given.set(delivery.handlerId, { text, added });
-    return delivery;
-  };
-  return {
-    watch(outcome, source) {
-      if (outcome.event !== 'SessionStart') return outcome.background;
-      if (FORGETS.has(source)) given.clear();
-      if (outcome.additionalContext.length + outcome.systemMessages.length > 0) added += 1;
-      return outcome.background.map((promise) => promise.then(pass));
-    },
-  };
-}
+export const createSessionStartRepeats = (): SessionStartRepeats =>
+  call('createSessionStartRepeats');

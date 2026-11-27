@@ -439,13 +439,10 @@ pub fn disable_decision(id: &str, facts: &GraphFacts) -> DisableDecision {
 
 crate::registry::exports! {
     "marketplace/dependency-graph" {
-        "recordAt" => ok |id: String, scope: InstallScope, facts: GraphFacts| record_at(&id, scope, &facts).cloned();
         "winningScope" => ok |id: String, facts: GraphFacts| winning_scope(&id, &facts);
         "effectiveEnabled" => ok |id: String, facts: GraphFacts| effective_enabled(&id, &facts);
         "isEnabled" => ok |id: String, facts: GraphFacts| is_enabled(&id, &facts);
-        "dependenciesOf" => ok |id: String, facts: GraphFacts| dependencies_of(&id, &facts).to_vec();
         "constraintsOn" => ok |dependency: String, facts: GraphFacts| constraints_on(&dependency, &facts);
-        "localCopyOf" => ok |dep: NormalizedDependency, facts: GraphFacts, lookup: Option<CopyLookup>| local_copy_of(&dep, &facts, &lookup.unwrap_or_default());
         "findDependencyCopy" => ok |dep: NormalizedDependency, facts: GraphFacts, lookup: Option<CopyLookup>| find_dependency_copy(&dep, &facts, &lookup.unwrap_or_default());
         "checkDeclaredDependency" => ok |dep: NormalizedDependency, facts: GraphFacts, lookup: Option<CopyLookup>| check_declared_dependency(&dep, &facts, &lookup.unwrap_or_default());
         "dependentsOf" => ok |id: String, facts: GraphFacts| dependents_of(&id, &facts);

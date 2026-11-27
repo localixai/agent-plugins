@@ -4,6 +4,7 @@ import type { LockfileFacts, LockfileName } from './node-deps-lockfile.ts';
 import type { ReadPackageJson } from './node-deps-spec.ts';
 import type { InstallMode } from './install-mode.ts';
 import type { PathJoin } from './store-layout.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The Node.js package dependencies of a plugin (plugins/loading.md, "Node.js package dependencies":
@@ -12,7 +13,11 @@ import type { PathJoin } from './store-layout.ts';
  * `package.json` and lockfiles in, a plan out (install through `CommandRunner`, or skip and why);
  * the host copies the two files, runs the command and moves `node_modules`. Why an install did not
  * happen, and what the user is told, is `node-deps-failure`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/node_deps_types.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/node-deps-types');
 
 export type PackageManager = 'bun' | 'npm';
 
@@ -20,18 +25,16 @@ export type PackageManager = 'bun' | 'npm';
 export type DepsOrigin = 'copied' | 'in-place' | 'inline' | 'linked';
 
 /** The install mode of `decideInstallMode` as the origin the dependency plan takes (`inline`: a session-only plugin, never an install mode). */
-export const DEPS_ORIGIN_OF_MODE: { readonly [M in InstallMode]: DepsOrigin } = {
-  copy: 'copied',
-  'in-place': 'in-place',
-  'link-in-cache': 'linked',
-};
+export const DEPS_ORIGIN_OF_MODE: { readonly [M in InstallMode]: DepsOrigin } =
+  call('DEPS_ORIGIN_OF_MODE');
 
 /** The lockfiles Claude Code recognises and skips the install for. */
-export const UNSUPPORTED_LOCKFILES = ['bun.lockb', 'yarn.lock', 'pnpm-lock.yaml'] as const;
+export const UNSUPPORTED_LOCKFILES: readonly ['bun.lockb', 'yarn.lock', 'pnpm-lock.yaml'] =
+  call('UNSUPPORTED_LOCKFILES');
 export type UnsupportedLockfile = (typeof UNSUPPORTED_LOCKFILES)[number];
 
 /** "Claude Code stops an install that runs longer and treats it as failed." */
-export const INSTALL_TIMEOUT_MS = 60_000;
+export const INSTALL_TIMEOUT_MS: number = call('INSTALL_TIMEOUT_MS');
 
 export interface NodeDepsInput {
   readonly origin: DepsOrigin;
@@ -128,8 +131,7 @@ export interface NodeDepsResult {
 }
 
 /** A skip that carries nothing but its reason. */
-export const skipFor = (reason: BareReason): NodeDepsSkip => ({ action: 'skip', reason });
+export const skipFor = (reason: BareReason): NodeDepsSkip => call('skipFor', reason);
 
-const IS_SKIP: { readonly [A in NodeDepsPlan['action']]: boolean } = { skip: true, install: false };
-
-export const isSkip = (plan: NodeDepsPlan): plan is NodeDepsSkip => IS_SKIP[plan.action];
+export const isSkip = (plan: NodeDepsPlan): plan is NodeDepsSkip =>
+  call('isSkip', { action: plan.action });

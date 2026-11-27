@@ -20,12 +20,3 @@ export type SkipMode = (typeof SKIP_MODES)[number];
 
 /** The customizations `mode` skips, in the order of `CUSTOMIZATIONS`. */
 export const skippedBy = (mode: SkipMode): readonly Customization[] => call('skippedBy', mode);
-
-/**
- * What `--safe-mode` does with the managed layer of a customization it skips: "Managed settings
- * policy still applies, including policy-configured hooks, status line, and file-suggestion
- * commands; managed plugins, managed skills, managed CLAUDE.md, and policy-configured MCP servers do
- * not." The docs say nothing of the other kinds, so they are absent.
- */
-export const MANAGED_UNDER_SAFE_MODE: { readonly [C in Customization]?: 'applies' | 'skipped' } =
-  call('MANAGED_UNDER_SAFE_MODE');

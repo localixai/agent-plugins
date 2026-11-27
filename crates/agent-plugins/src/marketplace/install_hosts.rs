@@ -319,7 +319,6 @@ crate::registry::exports! {
         "scopeChoices" => ok |host: InstallHost| scope_choices(host);
         "loadsInstalledPlugins" => ok |host: InstallHost| loads_installed_plugins(host);
         "planPluginApply" => ok |host: InstallHost, origin: ApplyOrigin| plan_plugin_apply(host, origin);
-        "OFFICIAL_MARKETPLACE_ADD" => ok || OFFICIAL_MARKETPLACE_ADD;
         "marketplacesAddedAtStart" => ok |input: MarketplacesAddedAtStartInput| marketplaces_added_at_start(&input);
     }
 }

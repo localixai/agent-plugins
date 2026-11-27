@@ -1,4 +1,4 @@
-//! Port of `src/hooks/verdict/background.ts`, switched.
+//! Ported from `src/hooks/verdict/background.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a background hook hands over once its process ends (hooks.md, "How async hooks execute"):
 //! "Claude Code delivers the `additionalContext` and `systemMessage` fields from the hook's JSON
@@ -95,11 +95,5 @@ pub fn delivery_of(handler_id: &str, result: &BackgroundResult) -> BackgroundDel
         } else {
             Some(issues)
         },
-    }
-}
-
-crate::registry::exports! {
-    "hooks/verdict/background" {
-        "deliveryOf" => ok |handler_id: String, result: BackgroundResult| delivery_of(&handler_id, &result);
     }
 }

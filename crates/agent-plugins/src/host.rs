@@ -2,4 +2,6 @@
 //! core are declared.
 
 pub mod sdk_output;
+pub mod session_directories;
 pub mod session_permission_updates;
+pub mod session_start_repeats;

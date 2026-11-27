@@ -1,4 +1,4 @@
-//! Port of `src/hooks/verdict/notices.ts`, switched.
+//! Ported from `src/hooks/verdict/notices.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The words the docs quote for a hook's errors (hooks.md, "Exit code 2", "Other exit codes",
 //! "Block the action when a hook fails"), kept in one file so each is checked against its source.
@@ -133,23 +133,5 @@ pub fn from_plugin(message: &str, plugin: Option<&str>) -> String {
     match plugin {
         None => message.to_owned(),
         Some(plugin) => format!("{message} This hook comes from the {plugin} plugin."),
-    }
-}
-
-crate::registry::exports! {
-    "hooks/verdict/notices" {
-        "hookName" => ok |event: String, tool_name: Option<String>| hook_name(&event, tool_name.as_deref());
-        "handlerLabel" => ok |handler: JsObject| handler_label(&handler);
-        "hookError" => ok |name: String, label: String, text: String| hook_error(&name, &label, &text);
-        "NON_BLOCKING_STATUS" => ok || NON_BLOCKING_STATUS;
-        "NO_STDERR" => ok || NO_STDERR;
-        "failedBlocking" => ok |detail: String| failed_blocking(&detail);
-        "timedOutBlocking" => ok |detail: String| timed_out_blocking(&detail);
-        "windowsBlocking" => ok |detail: String| windows_blocking(&detail);
-        "TIMED_OUT" => ok || TIMED_OUT;
-        "timedOutBlocksSwitch" => ok |name: String| timed_out_blocks_switch(&name);
-        "timedOutDiscarded" => ok |timeout_ms: Option<f64>| timed_out_discarded(timeout_ms);
-        "firstLine" => ok |text: String| first_line(&text);
-        "fromPlugin" => ok |message: String, plugin: Option<String>| from_plugin(&message, plugin.as_deref());
     }
 }

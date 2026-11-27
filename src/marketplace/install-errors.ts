@@ -83,10 +83,6 @@ export const failedToInstall = (failures: readonly InstallFailure[]): string =>
 
 // ---- reload pending ----
 
-/** The line an install summary ends with when the plugin is not yet active. */
-export const RELOAD_TO_APPLY: 'Run /reload-plugins to apply.' = call('RELOAD_TO_APPLY');
-/** The line an install summary ends with when the plugin is active. */
-export const PLUGIN_ACTIVE: 'Plugin is now active.' = call('PLUGIN_ACTIVE');
 /** The notice above the prompt that can appear at the same time. */
 export const PLUGINS_CHANGED: 'Plugins changed. Run /reload-plugins to activate.' =
   call('PLUGINS_CHANGED');
