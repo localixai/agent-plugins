@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- The workflow script readers run on the core (the tokenizer, the `meta` literal, its rewrite and
+  the script's inspection), and so do the scope folders of the skills, agents and saved-workflows
+  scans. The project directories' scan hands its `AbortSignal` to `FolderScan.repository` and
+  `open` again.
 - `permissions.denyInsteadOfPrompting` denies again a call that would prompt when the session's
   context also holds functions (`requiresPermission`), a hook's `defaultShell` applies again when
   its run context does, and so does `bypassAvailable` for `permissionUpdatesInEffect`: such a

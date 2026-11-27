@@ -3,11 +3,11 @@
 
 use std::sync::Arc;
 
-use super::Port;
+use super::{Port, arg};
 use crate::js::JsValue;
-use crate::ports::BoxFuture;
 use crate::ports::files::PluginFiles;
 use crate::ports::folder_scan::{FolderScan, RepositoryChain, ScanFolder};
+use crate::ports::{BoxFuture, Signal};
 
 impl ScanFolder for Port {
     fn dir(&self) -> BoxFuture<'_, String> {
@@ -36,8 +36,12 @@ impl FolderScan for Port {
         self.ask("managedDirectory", vec![])
     }
 
-    fn open<'a>(&'a self, dir: &'a str) -> BoxFuture<'a, Option<Arc<dyn ScanFolder>>> {
-        let opened = self.ask::<Option<Self>>("open", vec![JsValue::from(dir)]);
+    fn open<'a>(
+        &'a self,
+        dir: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, Option<Arc<dyn ScanFolder>>> {
+        let opened = self.ask::<Option<Self>>("open", vec![JsValue::from(dir), arg(signal)]);
         Box::pin(async move {
             opened.await.map(|folder| {
                 let folder: Arc<dyn ScanFolder> = Arc::new(folder);
@@ -46,8 +50,12 @@ impl FolderScan for Port {
         })
     }
 
-    fn repository<'a>(&'a self, cwd: &'a str) -> BoxFuture<'a, RepositoryChain> {
-        self.ask("repository", vec![JsValue::from(cwd)])
+    fn repository<'a>(
+        &'a self,
+        cwd: &'a str,
+        signal: Option<&'a Signal>,
+    ) -> BoxFuture<'a, RepositoryChain> {
+        self.at("repository", cwd, signal)
     }
 
     fn directories_below<'a>(
@@ -65,26 +73,33 @@ impl FolderScan for Port {
 #[cfg(test)]
 mod tests {
     use super::super::testing::{exchange, json, need, port};
+    use crate::js::JsValue;
     use crate::ports::folder_scan::FolderScan as _;
 
     #[test]
     fn an_opened_folder_is_a_port_whose_properties_are_asked() {
         let (asked, read) = exchange(
             async {
-                let folder = port().open("/p/.claude").await;
+                let folder = port().open("/p/.claude", None).await;
                 folder.is_some()
             },
             json(r#"{"$port": 9}"#),
         );
         assert_eq!(
             (asked, read.as_str()),
-            (need("open", vec!["/p/.claude".into()]), "true")
+            (
+                need("open", vec!["/p/.claude".into(), JsValue::Undefined]),
+                "true"
+            )
         );
         let (asked, read) = exchange(
-            async { port().repository("/p/a").await },
+            async { port().repository("/p/a", None).await },
             json(r#"{"directories": ["/p/a", "/p"]}"#),
         );
-        assert_eq!(asked, need("repository", vec!["/p/a".into()]));
+        assert_eq!(
+            asked,
+            need("repository", vec!["/p/a".into(), JsValue::Undefined])
+        );
         assert_eq!(
             read,
             r#"RepositoryChain { directories: ["/p/a", "/p"], main_checkout: None }"#

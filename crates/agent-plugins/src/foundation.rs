@@ -6,3 +6,4 @@ pub mod json_size;
 pub mod json_value;
 pub mod plain_data;
 pub mod project_directories;
+pub mod scope_folders;

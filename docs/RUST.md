@@ -326,6 +326,11 @@ module's doc comment, never a silent difference:
   package go past 5,000 levels. A level costs the core about 1.4 KiB of WebAssembly's 1 MiB stack
   and about 8 KiB in a debug build (`crates/agent-plugins/src/yaml.rs`, `MAX_DEPTH`). No
   frontmatter comes near it.
+- **A workflow script nested past 128 levels** (`${...}` inside templates, arrays and objects
+  inside the `meta` literal) is the package's own problem for its stack running out (`code nested
+  too deep to scan (Maximum call stack size exceeded.)`, `… to read (…)`), where Bun's stack lets
+  the package go thousands of levels deeper (`format/js_tokens.rs`, `format/js_literal.rs`,
+  `MAX_NESTING`). No script comes near it.
 - **YAML beyond the core schema**: the frontmatter reads the YAML 1.2 core schema, and so does the
   core, always. The package also knows `!!binary`, `!!set`, `!!omap`, `!!pairs` and
   `!!timestamp` (a `Uint8Array`, a `Set`, a `Map`, a `Date`), and reads a `%YAML 1.1` document
