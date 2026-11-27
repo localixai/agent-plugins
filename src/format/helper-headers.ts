@@ -17,7 +17,3 @@ export type HelperHeadersRead =
 
 export const readHelperHeaders = (stdout: string): HelperHeadersRead =>
   call('readHelperHeaders', stdout);
-
-/** Whether a header set holds `Authorization`, in any letter case. */
-export const hasAuthorizationHeader = (headers: Readonly<Record<string, string>>): boolean =>
-  call('hasAuthorizationHeader', headers);

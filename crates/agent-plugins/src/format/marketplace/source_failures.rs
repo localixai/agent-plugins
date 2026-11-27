@@ -20,6 +20,5 @@ pub fn policy_only_notice(kind: &str) -> String {
 crate::registry::exports! {
     "format/marketplace/source-failures" {
         "SOURCE_FAILURE" => ok || crate::js::JsValue::from([("npm", SOURCE_FAILURE_NPM.into()), ("policyOnly", SOURCE_FAILURE_POLICY_ONLY.into())]);
-        "policyOnlyNotice" => ok |kind: String| policy_only_notice(&kind);
     }
 }

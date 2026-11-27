@@ -1,4 +1,4 @@
-//! Port of `src/format/monitor-schema.ts`.
+//! Port of `src/format/monitor-schema.ts` at sha256:f0e2662d3456.
 //!
 //! A monitor entry and the monitors source as Claude Code's schema check reads them, one rule set
 //! for the loader and the validator (plugins/manifest-reference.md, "monitors": "Each entry is a

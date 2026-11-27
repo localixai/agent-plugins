@@ -300,11 +300,11 @@ pub enum MarketplaceSource {
     Github {
         /// `owner/name`.
         repo: String,
+        /// The file. Before `ref`: the order `parseMarketplaceSource` builds a source in.
+        path: String,
         /// A branch or tag.
         #[serde(default, rename = "ref", skip_serializing_if = "Option::is_none")]
         reference: Option<String>,
-        /// The file.
-        path: String,
         /// The folders to fetch.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sparse_paths: Option<Vec<String>>,
@@ -318,11 +318,11 @@ pub enum MarketplaceSource {
     Git {
         /// The URL.
         url: String,
+        /// The file. Before `ref`: the order `parseMarketplaceSource` builds a source in.
+        path: String,
         /// A branch or tag.
         #[serde(default, rename = "ref", skip_serializing_if = "Option::is_none")]
         reference: Option<String>,
-        /// The file.
-        path: String,
         /// The folders to fetch.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sparse_paths: Option<Vec<String>>,

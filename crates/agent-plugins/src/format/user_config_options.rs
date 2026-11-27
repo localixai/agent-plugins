@@ -1,4 +1,4 @@
-//! Port of `src/format/user-config-options.ts`.
+//! Port of `src/format/user-config-options.ts` at sha256:eb6b4a0f8f55.
 //!
 //! The `options` rules of a `userConfig` option (plugins/manifest-reference.md, "Limit a field to
 //! fixed options": "`options` applies to a `string` field that isn't `multiple` or `sensitive`",

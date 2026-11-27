@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/zod-findings.ts`.
+//! Port of `src/format/validate/zod-findings.ts` at sha256:81e08b904a35.
 //!
 //! The findings of a failed zod parse, each at its dotted path. `zodFindings` takes a
 //! `safeParse` result, which holds a `ZodError` and so never crosses the boundary: it is a Rust

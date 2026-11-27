@@ -8,14 +8,8 @@
  */
 import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginIssue } from '../issues.ts';
-import type { RawSource, SourceSite } from './plugin-source-fields.ts';
-import type { PluginSource, PluginSourceKind } from './types.ts';
 
 const call = coreModule('format/marketplace/plugin-source-kinds');
-
-export type ObjectKind = Exclude<PluginSourceKind, 'relative'>;
-export type Parsed = PluginSource | readonly PluginIssue[];
-export type ObjectParser = (raw: RawSource, site: SourceSite) => Parsed;
 
 /**
  * The rules for a command string ("command plugin source": "Write it as printable ASCII, at most
@@ -25,6 +19,3 @@ export type ObjectParser = (raw: RawSource, site: SourceSite) => Parsed;
  */
 export const commandTextIssues = (command: string, path: string): PluginIssue[] =>
   call('commandTextIssues', command, path);
-
-/** One parser per object kind: a new `PluginSourceKind` fails the typecheck until it has one. */
-export const OBJECT_PARSERS: { readonly [K in ObjectKind]: ObjectParser } = call('OBJECT_PARSERS');

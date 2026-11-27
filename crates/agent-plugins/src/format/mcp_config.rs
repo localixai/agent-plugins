@@ -1,4 +1,4 @@
-//! Port of `src/format/mcp-config.ts`.
+//! Port of `src/format/mcp-config.ts`, switched.
 //!
 //! MCP server entries of a plugin (plugins/components.md, "MCP servers"; mcp.md, "Plugin-provided MCP
 //! servers"): stdio, SSE, HTTP and WebSocket. The SDK types the first three and not two things the

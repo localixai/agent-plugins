@@ -115,12 +115,10 @@ fn array(schema: Schema) -> Draft {
 fn object(schema: Schema) -> Draft {
     draft(FieldType::Object, FieldRole::Structured, schema)
 }
-fn optional(field: Draft) -> Draft {
-    Draft {
-        optional: true,
-        schema: field.schema.optional(),
-        ..field
-    }
+fn optional(mut field: Draft) -> Draft {
+    field.optional = true;
+    field.schema = field.schema.optional();
+    field
 }
 
 /// A tool's fields, in the order its table lists them.

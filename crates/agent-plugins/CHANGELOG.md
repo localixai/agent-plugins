@@ -5,8 +5,14 @@
 - `zod` is zod 4 as the package uses it (the builders, methods and checks of `zod.rs`'s
   inventory), its output and issues held to zod itself
   (`crates/agent-plugins/tests/vectors/js/zod.jsonl`, 6,007 cases recorded by
-  `scripts/rust/js-oracle.ts`). `format::plugin_settings` and
-  `hooks::handlers::remote::prompt_response` are its first users, both switched.
+  `scripts/rust/js-oracle.ts`). Its users, switched: `format::plugin_settings`,
+  `hooks::handlers::remote::prompt_response`, `format::hooks_handlers`, `format::lsp_config`,
+  `format::monitors`, `format::mcp_config`, `format::mcp_oauth`, `format::marketplace::entries`,
+  `entry_schema`, `relevance`, `plugin_source`, `marketplace_source`, `format::validate::*`
+  (`hook_handlers`, `inline_sources`), `hooks::input::build`, `hooks::output::parse` and
+  `permission_update`, `rules::tools::inputs::parse_input`, `rules::tools::responses::*`. The
+  schema modules (`format::manifest_schema`, `lsp_schema`, `monitor_schema`, `mcp_oauth_schema`,
+  `hooks::input::facts*`, `rules::tools::inputs::fields`) are ported and wait on their importers.
 - `FolderScan::open` and `repository` take the scan's signal, as the TypeScript port's do.
   `js::identifier` is `\p{ID_Start}` and `\p{ID_Continue}`.
 - `ignore` is npm's `ignore` 7.0.14 as the path rules use it (`add` and `ignores`), its chain of

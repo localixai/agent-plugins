@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
-- Plugin default settings (`readPluginSettings`) and the reply of a `prompt` or `agent` hook
-  (`parseVerdict`, `responseInstruction`) run on the core, their zod schemas checked by the core's
-  own zod (docs/RUST.md).
+- The readers that checked input with zod run on the core, their schemas checked by the core's own
+  zod (docs/RUST.md): plugin default settings, the reply of a `prompt` or `agent` hook, hook handler
+  entries, LSP and monitor configurations, MCP server entries and their `oauth` block, marketplace
+  entries with their `relevance`, plugin sources, marketplace sources and a `settings` source's
+  inline catalog, a hook's JSON output and permission updates, hook inputs, and tool inputs and
+  responses (`parseToolInput`, the `Agent` and `Bash` responses).
 - `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
   `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
   preparation and the specifier matchers run on the core.

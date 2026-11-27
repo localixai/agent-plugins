@@ -1,12 +1,8 @@
-//! Port of `src/format/marketplace/schema-issues.ts`.
+//! Ported from `src/format/marketplace/schema-issues.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Reports of a zod parse as plugin issues: the validator's own wording ("Invalid input: expected
 //! string, received number") at the path of the value, written the way the docs write an entry's
 //! paths (`plugins[1].tags[0]`).
-//!
-//! Its one export takes a `ZodError`, a value of zod's that never crosses the boundary, so it
-//! declares no `exports!`: the core's readers call it, and the TypeScript keeps its own until its
-//! importers are switched.
 
 use crate::format::issues::{PluginIssue, error};
 use crate::js::{JsValue, number_to_string};
@@ -19,7 +15,11 @@ fn path_of(base: &str, segments: &[JsValue]) -> String {
         .fold(base.to_owned(), |path, segment| match segment {
             JsValue::Number(index) => format!("{path}[{}]", number_to_string(*index)),
             JsValue::String(key) => format!("{path}.{key}"),
-            _ => path,
+            JsValue::Undefined
+            | JsValue::Null
+            | JsValue::Bool(_)
+            | JsValue::Array(_)
+            | JsValue::Object(_) => path,
         })
 }
 

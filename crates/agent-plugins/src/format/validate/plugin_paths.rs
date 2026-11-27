@@ -361,6 +361,5 @@ pub fn path_shape_findings(path: &str, shape: &PathShape, value: &JsValue) -> Ve
 crate::registry::exports! {
     "format/validate/plugin-paths" {
         "isPathKey" => ok |key: String| is_path_key(&key);
-        "pathShapeFindings" => ok |path: String, key: PathKey, value: JsValue| path_shape_findings(&path, PATH_SHAPES.of(key), &value);
     }
 }

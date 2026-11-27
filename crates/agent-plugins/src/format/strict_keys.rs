@@ -1,4 +1,4 @@
-//! Port of `src/format/strict-keys.ts`.
+//! Port of `src/format/strict-keys.ts` at sha256:4b316d842c5d.
 //!
 //! A strict object as Claude Code's schema check treats one (plugins/manifest-reference.md,
 //! "Unrecognized fields": "An unknown key inside one is an error"): an unknown key is reported as
@@ -58,9 +58,6 @@ mod tests {
             .iter()
             .map(|found| found.message().to_owned())
             .collect();
-        assert_eq!(
-            messages,
-            [r#"Unrecognized keys: "2", "b", "a""#]
-        );
+        assert_eq!(messages, [r#"Unrecognized keys: "2", "b", "a""#]);
     }
 }

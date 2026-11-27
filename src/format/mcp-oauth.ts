@@ -1,8 +1,6 @@
-import { z } from 'zod';
-import { hasAuthorizationHeader } from './helper-headers.ts';
-import { error, warning, type PluginIssue } from './issues.ts';
-import { signsInWithOAuth, type PluginMcpServer } from './mcp-config.ts';
-import { isRecord } from '../protocol/is-record.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
+import type { PluginMcpServer } from './mcp-config.ts';
 
 /**
  * The `oauth` block of a remote server's entry and what it decides (mcp.md, "Use a fixed OAuth
@@ -10,6 +8,8 @@ import { isRecord } from '../protocol/is-record.ts';
  * "Restrict OAuth scopes", "Use OAuth with a server behind an authenticating proxy", "Authenticate
  * with remote MCP servers"). Pure data: the OAuth flow itself, the browser, the token store and the
  * HTTP requests are the host's.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/mcp_oauth.rs`, docs/RUST.md).
  */
 export interface McpOAuthConfig {
   /** The pre-registered client's ID. */
@@ -28,74 +28,23 @@ export interface McpOAuthRead {
   readonly issues: readonly PluginIssue[];
 }
 
-const isHttps = (text: string): boolean =>
-  URL.canParse(text) && new URL(text).protocol === 'https:';
-
-/** Judgment (spec/judgments.md): a port is a whole number a redirect URI can carry, 1 to 65535. */
-const FIELDS = {
-  clientId: z.string().min(1),
-  callbackPort: z.int().min(1).max(65535),
-  authServerMetadataUrl: z.string().refine(isHttps, { error: 'must be an https:// URL' }),
-  scopes: z.string().min(1),
-} satisfies { readonly [K in keyof McpOAuthConfig]-?: z.ZodType };
-
-const BLOCK = z.looseObject({
-  clientId: FIELDS.clientId.exactOptional(),
-  callbackPort: FIELDS.callbackPort.exactOptional(),
-  authServerMetadataUrl: FIELDS.authServerMetadataUrl.exactOptional(),
-  scopes: FIELDS.scopes.exactOptional(),
-});
-
-const refused = (name: string, why: string): McpOAuthRead => ({
-  oauth: undefined,
-  issues: [error('oauth', `Invalid MCP server config for "${name}": ${why}`)],
-});
-
-/** The one key mcp.md says never lives in the configuration. */
-const SECRET_KEY = 'clientSecret';
-
-function unknownKey(name: string, origin: string, key: string): PluginIssue {
-  const message =
-    key === SECRET_KEY
-      ? `MCP server "${name}" has "oauth.${key}", which is not a configuration field: the client secret is given only when the server is added (--client-secret, MCP_CLIENT_SECRET)`
-      : `MCP server "${name}" has "oauth.${key}", which Claude Code does not read`;
-  return warning(origin, message);
-}
+const call = coreModule('format/mcp-oauth');
 
 /**
  * Reads the value of a server's `oauth` key. Judgments (spec/judgments.md): a field the docs do not
  * list is a warning and is not kept (so a secret never travels in the entry); a field of the wrong
  * type makes the whole block unusable, since half an OAuth setup would sign in with another client.
  */
-export function readMcpOAuth(name: string, raw: unknown, origin: string): McpOAuthRead {
-  if (raw === undefined) return { oauth: undefined, issues: [] };
-  if (!isRecord(raw)) return refused(name, 'oauth: expected an object');
-  const parsed = BLOCK.safeParse(raw);
-  if (!parsed.success) {
-    const why = parsed.error.issues
-      .map((found) => `${['oauth', ...found.path].join('.')}: ${found.message}`)
-      .join('; ');
-    return refused(name, why);
-  }
-  const known = new Set<string>(Object.keys(FIELDS));
-  const kept = Object.entries(parsed.data).filter(([key]) => known.has(key));
-  const extra = Object.keys(parsed.data).filter((key) => !known.has(key));
-  return {
-    oauth: Object.fromEntries(kept),
-    issues: extra.map((key) => unknownKey(name, origin, key)),
-  };
-}
+export const readMcpOAuth = (name: string, raw: unknown, origin: string): McpOAuthRead =>
+  call('readMcpOAuth', name, raw, origin);
 
 /** The redirect URI a fixed callback port registers (mcp.md: `http://localhost:PORT/callback`; never `127.0.0.1`). */
-export const mcpOAuthRedirectUri = (port: number): string => `http://localhost:${port}/callback`;
+export const mcpOAuthRedirectUri = (port: number): string => call('mcpOAuthRedirectUri', port);
 
 /** Where the authorization server's metadata is looked for. */
 export type McpOAuthDiscovery =
   | { readonly kind: 'configured'; readonly url: string }
   | { readonly kind: 'chain'; readonly urls: readonly string[] };
-
-const PROTECTED_RESOURCE = '/.well-known/oauth-protected-resource';
-const AUTHORIZATION_SERVER = '/.well-known/oauth-authorization-server';
 
 /**
  * "By default, Claude Code first checks RFC 9728 Protected Resource Metadata at
@@ -104,19 +53,10 @@ const AUTHORIZATION_SERVER = '/.well-known/oauth-authorization-server';
  * Judgment (spec/judgments.md): both paths are taken from the server's origin, as the docs write them
  * (RFC 9728 and RFC 8414 also define forms that insert the path of the resource).
  */
-export function mcpOAuthDiscovery(
+export const mcpOAuthDiscovery = (
   serverUrl: string,
   config: McpOAuthConfig | undefined,
-): McpOAuthDiscovery {
-  if (config?.authServerMetadataUrl !== undefined) {
-    return { kind: 'configured', url: config.authServerMetadataUrl };
-  }
-  const origin = new URL(serverUrl).origin;
-  return {
-    kind: 'chain',
-    urls: [`${origin}${PROTECTED_RESOURCE}`, `${origin}${AUTHORIZATION_SERVER}`],
-  };
-}
+): McpOAuthDiscovery => call('mcpOAuthDiscovery', serverUrl, config);
 
 /** The metadata of an authorization server as far as scopes go. */
 export interface McpOAuthMetadata {
@@ -125,14 +65,6 @@ export interface McpOAuthMetadata {
   readonly scopesSupported?: readonly string[];
 }
 
-const OFFLINE_ACCESS = 'offline_access';
-
-/** "Metadata fetched from a configured `authServerMetadataUrl` still supplies its `scopes_supported`"; discovered metadata does not. */
-const SUPPLIES_SCOPES: { readonly [S in McpOAuthMetadata['source']]: boolean } = {
-  configured: true,
-  discovered: false,
-};
-
 /**
  * The `scope` of the authorization request, or `undefined` for none (the server decides). "`oauth.scopes`
  * takes precedence over both `authServerMetadataUrl` and the scopes the server discovers"; when the
@@ -140,18 +72,10 @@ const SUPPLIES_SCOPES: { readonly [S in McpOAuthMetadata['source']]: boolean } =
  * does not put its whole `scopes_supported` catalog in the request, while metadata fetched from a
  * configured `authServerMetadataUrl` "still supplies its `scopes_supported` as the requested scopes".
  */
-export function requestedOAuthScopes(
+export const requestedOAuthScopes = (
   config: McpOAuthConfig | undefined,
   metadata: McpOAuthMetadata,
-): string | undefined {
-  const supported = metadata.scopesSupported ?? [];
-  if (config?.scopes !== undefined) {
-    const pinned = config.scopes.split(/\s+/).filter((scope) => scope.length > 0);
-    const refreshable = supported.includes(OFFLINE_ACCESS) && !pinned.includes(OFFLINE_ACCESS);
-    return (refreshable ? [...pinned, OFFLINE_ACCESS] : pinned).join(' ');
-  }
-  return SUPPLIES_SCOPES[metadata.source] && supported.length > 0 ? supported.join(' ') : undefined;
-}
+): string | undefined => call('requestedOAuthScopes', config, metadata);
 
 export type McpOAuthPlan =
   | {
@@ -169,23 +93,13 @@ export type McpOAuthPlan =
  * credential and doesn't fall back to OAuth for that server": `headers` are the ones the connection
  * sends (static headers with a `headersHelper`'s output merged in, as `connectionHeaders` does).
  */
-export function planMcpOAuth(
+export const planMcpOAuth = (
   server: PluginMcpServer,
   connection: {
     readonly headers: Readonly<Record<string, string>>;
     readonly oauth?: McpOAuthConfig;
   },
-): McpOAuthPlan {
-  if (!signsInWithOAuth(server)) return { oauth: false, reason: 'transport' };
-  if (hasAuthorizationHeader(connection.headers)) {
-    return { oauth: false, reason: 'authorization-header' };
-  }
-  return {
-    oauth: true,
-    headers: connection.headers,
-    ...(connection.oauth === undefined ? {} : { config: connection.oauth }),
-  };
-}
+): McpOAuthPlan => call('planMcpOAuth', server, connection);
 
 /** What a rejected request means for a server (mcp.md, "Authenticate with remote MCP servers"). */
 export interface McpAuthRejectionInput {
@@ -205,28 +119,8 @@ export type McpAuthState =
   | 'reconnect-in-claude-ai'
   | 'not-a-rejection';
 
-/** "A remote server as needing authentication when it responds with `401 Unauthorized` or `403 Forbidden`". */
-const REJECTING_STATUSES: ReadonlySet<number> = new Set([401, 403]);
-
-const UNAUTHORIZED = 401;
-
-type Reaction = (input: McpAuthRejectionInput) => McpAuthState;
-
-const REACTIONS: { readonly [S in McpAuthRejectionInput['source']]: Reaction } = {
-  server: ({ authorizationConfigured }) =>
-    authorizationConfigured ? 'failed' : 'needs-authentication',
-  // "A `401` caused by claude.ai rejecting your session token": a `403` is flagged like any other.
-  connector: ({ status, authorizationConfigured, sessionTokenRejected }) => {
-    if (status === UNAUTHORIZED && sessionTokenRejected === true) return 'session-token-rejected';
-    return authorizationConfigured ? 'failed' : 'needs-authentication';
-  },
-  // The session's proxy authenticates with the authorization granted in claude.ai: no sign-in flow here.
-  'cloud-connector': () => 'reconnect-in-claude-ai',
-};
-
-export function mcpAuthRejection(input: McpAuthRejectionInput): McpAuthState {
-  return REJECTING_STATUSES.has(input.status) ? REACTIONS[input.source](input) : 'not-a-rejection';
-}
+export const mcpAuthRejection = (input: McpAuthRejectionInput): McpAuthState =>
+  call('mcpAuthRejection', input);
 
 export interface StoredTokenRecovery {
   readonly first: 'refresh-and-retry' | 'connect-without-token';
@@ -237,14 +131,6 @@ export interface StoredTokenRecovery {
 }
 
 /** A stored OAuth token rejected with 401: "Your stored login has a refresh token" or not. */
-export function storedTokenRecovery(login: {
+export const storedTokenRecovery = (login: {
   readonly refreshToken: boolean;
-}): StoredTokenRecovery {
-  return login.refreshToken
-    ? { first: 'refresh-and-retry', flaggedWhen: 'retry-fails', deletesRejectedToken: false }
-    : {
-        first: 'connect-without-token',
-        flaggedWhen: 'connection-rejected',
-        deletesRejectedToken: true,
-      };
-}
+}): StoredTokenRecovery => call('storedTokenRecovery', login);

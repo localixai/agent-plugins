@@ -81,7 +81,6 @@ pub fn has_authorization_header(headers: &IndexMap<String, String>) -> bool {
 crate::registry::exports! {
     "format/helper-headers" {
         "readHelperHeaders" => ok |stdout: String| read_helper_headers(&stdout);
-        "hasAuthorizationHeader" => ok |headers: IndexMap<String, String>| has_authorization_header(&headers);
     }
 }
 

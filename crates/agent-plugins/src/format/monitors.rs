@@ -157,7 +157,10 @@ pub fn read_monitors(raw: &JsValue, origin: &str) -> MonitorsRead {
         let why = "expected an array of monitors";
         return MonitorsRead {
             monitors: Vec::new(),
-            issues: vec![error(origin, &format!("Invalid monitors in {origin}: {why}"))],
+            issues: vec![error(
+                origin,
+                &format!("Invalid monitors in {origin}: {why}"),
+            )],
         };
     };
     let reads: Vec<MonitorRead> = entries

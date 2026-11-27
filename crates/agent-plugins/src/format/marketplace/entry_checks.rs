@@ -280,8 +280,5 @@ pub fn version_issues(
 crate::registry::exports! {
     "format/marketplace/entry-checks" {
         "withoutDuplicates" => ok |read: Vec<IndexedEntry>| without_duplicates(&read);
-        "nameReports" => ok |name: String, path: String, mode: ReadMode, marketplace: Option<String>| name_reports(&name, &path, mode, marketplace.as_deref());
-        "headerIssues" => ok |entry: HeaderFields, source: PluginSource, base: String| header_issues(&entry, &source, &base);
-        "versionIssues" => ok |version: Option<String>, source: PluginSource, manifest: JsValue, base: String| version_issues(version.as_deref(), &source, &manifest, &base);
     }
 }

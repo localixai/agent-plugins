@@ -159,7 +159,7 @@ pub struct TopicSource {
     pub relevance: Option<Relevance>,
 }
 
-/// The phrase of "Working with <topic>?": `relevance.topic`, which "defaults to the plugin name with
+/// The phrase of "Working with `<topic>`?": `relevance.topic`, which "defaults to the plugin name with
 /// each hyphen segment capitalized" (`terraform-helpers` gives `Terraform Helpers`).
 #[must_use]
 pub fn effective_topic(entry: &TopicSource) -> String {
@@ -179,7 +179,6 @@ pub fn effective_topic(entry: &TopicSource) -> String {
 
 crate::registry::exports! {
     "format/marketplace/relevance" {
-        "readRelevance" => ok |value: JsValue, base: String| read_relevance(&value, &base);
         "effectiveTopic" => ok |entry: TopicSource| effective_topic(&entry);
     }
 }

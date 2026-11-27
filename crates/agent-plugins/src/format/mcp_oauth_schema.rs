@@ -1,4 +1,4 @@
-//! Port of `src/format/mcp-oauth-schema.ts`.
+//! Port of `src/format/mcp-oauth-schema.ts` at sha256:b1605ba7a573.
 //!
 //! The types of a remote server's `oauth` block as the entry is checked (spec §8.2 and §8.7.2, J8.3):
 //! a wrong type, or an `authServerMetadataUrl` that is not `https://` ("The URL must use `https://`",

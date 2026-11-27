@@ -1,6 +1,6 @@
 import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginIssue } from '../issues.ts';
-import type { MarketplaceEntry, PluginSource, ReadMode } from './types.ts';
+import type { MarketplaceEntry } from './types.ts';
 
 /**
  * The checks of a plugin entry beyond its field types (plugins/marketplace-reference.md,
@@ -30,41 +30,3 @@ export const withoutDuplicates = (
   entries: MarketplaceEntry[];
   issues: PluginIssue[];
 } => call('withoutDuplicates', read);
-
-/**
- * The reports on a name, in two parts: what is wrong with its shape, which an entry cannot be
- * read past, and the reserved-name ruling, which leaves the entry otherwise sound.
- */
-export const nameReports = (
-  name: string,
-  path: string,
-  mode: ReadMode,
-  marketplace?: string,
-): { readonly shape: PluginIssue[]; readonly reserved: PluginIssue[] } =>
-  call('nameReports', name, path, mode, marketplace);
-
-export interface HeaderFields {
-  readonly name: string;
-  readonly strict: boolean;
-  readonly headers?: unknown;
-  readonly headersHelper?: unknown;
-}
-
-/** The header reports of an entry: the fields on a source that ignores them, or the ones that apply to an archive. */
-export const headerIssues = (
-  entry: HeaderFields,
-  source: PluginSource,
-  base: string,
-): PluginIssue[] => call('headerIssues', entry, source, base);
-
-/**
- * "Entry declares version "x" but <path>/plugin.json says "y". At install time, plugin.json wins",
- * for a relative-path entry, "whose plugin files are inside the marketplace itself", when the two
- * versions differ.
- */
-export const versionIssues = (
-  version: string | undefined,
-  source: PluginSource,
-  manifest: unknown,
-  base: string,
-): PluginIssue[] => call('versionIssues', version, source, manifest, base);

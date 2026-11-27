@@ -1,4 +1,4 @@
-//! Port of `src/format/validate/inline-sources.ts`.
+//! Port of `src/format/validate/inline-sources.ts`, switched.
 //!
 //! The keys whose inline form is a strict object the validator reads entry by entry (spec §9.1.3,
 //! §9.2.2; oracle 2.1.325): the `lspServers` map and the monitors array, at the top level and under

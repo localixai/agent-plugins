@@ -10,20 +10,9 @@
  * docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PluginIssue } from '../issues.ts';
 import type { Relevance } from './types.ts';
 
 const call = coreModule('format/marketplace/relevance');
-
-export interface RelevanceReading {
-  /** Undefined when the value is dropped (not an object) or invalid. */
-  readonly relevance: Relevance | undefined;
-  readonly issues: readonly PluginIssue[];
-}
-
-/** Reads `plugins[i].relevance` at `base` (`plugins[i].relevance`); a value that is not an object is a warning and is dropped. */
-export const readRelevance = (value: unknown, base: string): RelevanceReading =>
-  call('readRelevance', value, base);
 
 /**
  * The phrase of "Working with <topic>?": `relevance.topic`, which "defaults to the plugin name with

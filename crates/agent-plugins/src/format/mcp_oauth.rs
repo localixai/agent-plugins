@@ -1,4 +1,4 @@
-//! Port of `src/format/mcp-oauth.ts`.
+//! Port of `src/format/mcp-oauth.ts`, switched.
 //!
 //! The `oauth` block of a remote server's entry and what it decides (mcp.md, "Use a fixed OAuth
 //! callback port", "Use pre-configured OAuth credentials", "Override OAuth metadata discovery",
