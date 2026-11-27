@@ -63,6 +63,5 @@ crate::registry::exports! {
     "loading/resolve/powershell-no-program" {
         "onlyQuotedStrings" => ok |command: String| only_quoted_strings(&command);
         "NO_PROGRAM" => ok || NO_PROGRAM;
-        "noProgramIssue" => ok |shell: ShellKind, named: Option<ShellKind>, path: String, command: String| no_program_issue(shell, named, &path, &command);
     }
 }

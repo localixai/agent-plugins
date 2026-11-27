@@ -1,9 +1,14 @@
+/**
+ * An LSP server config resolved for this host.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/lsp.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginIssue } from '../../format/issues.ts';
 import type { LspServer } from '../../format/lsp-config.ts';
-import { exportedEnvironment } from './exported-environment.ts';
-import { fieldOf, fieldRunner, when } from './field-runner.ts';
 import type { SubstitutionScope } from './scope.ts';
-import { substituter } from './substituter.ts';
+
+const call = coreModule('loading/resolve/lsp');
 
 /**
  * What Claude Code does when a field is unset (plugins/manifest-reference.md, "lspServers"):
@@ -11,11 +16,11 @@ import { substituter } from './substituter.ts';
  * default for `startupTimeout` or `maxRestarts`, and "when unset, no timeout applies" for
  * `shutdownTimeout`: those stay unset in the resolved server.
  */
-export const LSP_DEFAULTS = {
-  requestTimeoutMs: 60000,
-  restartOnCrash: true,
-  diagnostics: true,
-} as const;
+export const LSP_DEFAULTS: {
+  readonly requestTimeoutMs: 60000;
+  readonly restartOnCrash: true;
+  readonly diagnostics: true;
+} = call('LSP_DEFAULTS');
 
 /**
  * An LSP server config resolved for this host. The kit never starts a language server: the host's
@@ -59,10 +64,6 @@ export interface LspResolution {
   readonly issues: readonly PluginIssue[];
 }
 
-/** Keeps a key out of the object when the declaration has no value for it. */
-const optional = <V>(key: string, value: V | undefined): Record<string, V> =>
-  value === undefined ? {} : { [key]: value };
-
 /**
  * Resolves one server of a plugin (plugins/manifest-reference.md, "Where each variable resolves"):
  * `command`, `args`, `env` and `workspaceFolder` are substituted, the process gets the three path
@@ -73,40 +74,8 @@ const optional = <V>(key: string, value: V | undefined): Record<string, V> =>
  * "substituted in ... LSP server config": its table of fields where `${...}` resolves is the finer
  * statement, and `initializationOptions` and `settings` are data for the server, not the kit's text.
  */
-export async function resolveLspServer(
+export const resolveLspServer = (
   name: string,
   server: LspServer,
   scope: SubstitutionScope,
-): Promise<LspResolution> {
-  const substitution = substituter(scope);
-  const run = fieldRunner(substitution, `lspServers.${name}`);
-  const [command, args, env, workspaceFolder, environment] = await Promise.all([
-    run.one('lsp', server.command, 'command'),
-    when(server.args, (each) => run.list('lsp', each, 'args')),
-    when(server.env, (each) => run.table('lsp', each, 'env')),
-    when(server.workspaceFolder, (each) => run.one('lsp', each, 'workspaceFolder')),
-    exportedEnvironment('lsp', scope, substitution),
-  ]);
-  return {
-    resolved: {
-      name,
-      pluginId: scope.pluginId,
-      command: command.value,
-      args: args?.value ?? [],
-      env: env?.value ?? {},
-      environment,
-      ...fieldOf(workspaceFolder, 'workspaceFolder'),
-      transport: 'stdio',
-      extensionToLanguage: server.extensionToLanguage,
-      ...optional('initializationOptions', server.initializationOptions),
-      ...optional('settings', server.settings),
-      ...optional('startupTimeoutMs', server.startupTimeout),
-      ...optional('shutdownTimeoutMs', server.shutdownTimeout),
-      requestTimeoutMs: server.requestTimeout ?? LSP_DEFAULTS.requestTimeoutMs,
-      restartOnCrash: server.restartOnCrash ?? LSP_DEFAULTS.restartOnCrash,
-      ...optional('maxRestarts', server.maxRestarts),
-      diagnostics: server.diagnostics ?? LSP_DEFAULTS.diagnostics,
-    },
-    issues: [command, args, env, workspaceFolder].flatMap((part) => part?.issues ?? []),
-  };
-}
+): Promise<LspResolution> => call.async('resolveLspServer', name, server, scope);

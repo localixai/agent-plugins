@@ -19,7 +19,7 @@ pub const PLUGIN_VARIABLES: [PluginVariable; 3] = [
 ];
 
 /// One of `PLUGIN_VARIABLES`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PluginVariable {
     /// `CLAUDE_PLUGIN_ROOT`.
@@ -40,14 +40,6 @@ impl PluginVariable {
             Self::ClaudeProjectDir => "CLAUDE_PROJECT_DIR",
         }
     }
-}
-
-/// Whether a name is one of the three.
-#[must_use]
-pub fn is_plugin_variable(name: &str) -> bool {
-    PLUGIN_VARIABLES
-        .iter()
-        .any(|variable| variable.as_str() == name)
 }
 
 /// What a variable's value is read from: the plugin and the host's locations
@@ -138,11 +130,7 @@ pub fn render_plugin_variable(
 crate::registry::exports! {
     "loading/resolve/variables" {
         "PLUGIN_VARIABLES" => ok || PLUGIN_VARIABLES;
-        "isPluginVariable" => ok |name: String| is_plugin_variable(&name);
         "pluginVariableValue" => async ok |variable: PluginVariable, scope: VariableScope<Port>|
             plugin_variable_value(variable, &scope).await;
-        "renderingNeedsValue" => ok |rendering: PathRendering| rendering_needs_value(rendering);
-        "renderPluginVariable" => ok |rendering: PathRendering, variable: String, value: String, windows: bool|
-            render_plugin_variable(rendering, &variable, &value, windows);
     }
 }

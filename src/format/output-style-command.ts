@@ -1,27 +1,24 @@
-import type { OutputStyle } from './output-style.ts';
-import {
-  BUILTIN_OUTPUT_STYLES,
-  findOutputStyle,
-  listOutputStyles,
-  type OutputStyleChoice,
-  type StyleSelection,
-} from './output-style-select.ts';
-
 /**
  * `/output-style` and `/config outputStyle=<style>` with the two refusals of spec §6.2 item 4
  * (errors.md, "Custom output styles can't be selected over Remote Control" and "Output styles are
  * saved to local settings which this session doesn't load"). Pure: the host says where the turn
  * came from and which setting sources the session loads, then shows the reply and, for
  * `selected`, writes `outputStyle` to the project's `.claude/settings.local.json`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/output_style_command.rs`,
+ * docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+import type { OutputStyle } from './output-style.ts';
+import type { OutputStyleChoice, StyleSelection } from './output-style-select.ts';
+
+const call = coreModule('format/output-style-command');
 
 /** The notice a turn over Remote Control or a relayed message gets beside a list or an unknown name. */
-export const CUSTOM_STYLES_NOT_SELECTABLE =
-  "Custom output styles can't be selected over Remote Control or from a relayed message. Select one in the session itself, or pick a built-in style here.";
+export const CUSTOM_STYLES_NOT_SELECTABLE: string = call('CUSTOM_STYLES_NOT_SELECTABLE');
 
 /** The refusal of a selection in a session that does not load the `local` setting source. */
-export const LOCAL_SETTINGS_NOT_LOADED =
-  "Output styles are saved to local settings (.claude/settings.local.json), which this session doesn't load, so the style can't be changed here.";
+export const LOCAL_SETTINGS_NOT_LOADED: string = call('LOCAL_SETTINGS_NOT_LOADED');
 
 export interface OutputStyleCommand {
   /** The argument of `/output-style <style>` or `/config outputStyle=<style>`; absent lists the styles. */
@@ -50,20 +47,6 @@ export interface OutputStyleReply {
   readonly notice?: string;
 }
 
-const BUILTIN_IDS = new Set(BUILTIN_OUTPUT_STYLES.map(({ id }) => id));
-
 /** The reply of `/output-style`, with or without an argument. */
-export function outputStyleCommand(command: OutputStyleCommand): OutputStyleReply {
-  const { argument, current, relayed = false } = command;
-  const styles = relayed ? [] : command.styles;
-  const notice = relayed ? { notice: CUSTOM_STYLES_NOT_SELECTABLE } : {};
-  if (argument === undefined) {
-    const choices = listOutputStyles(styles, current).filter(
-      (choice) => !relayed || BUILTIN_IDS.has(choice.id),
-    );
-    return { choices, ...notice };
-  }
-  if (command.loadsLocalSettings === false) return { refusal: LOCAL_SETTINGS_NOT_LOADED };
-  const selected = findOutputStyle(styles, argument);
-  return selected === undefined ? { unknown: argument, ...notice } : { selected };
-}
+export const outputStyleCommand = (command: OutputStyleCommand): OutputStyleReply =>
+  call('outputStyleCommand', command);

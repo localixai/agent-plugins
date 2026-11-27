@@ -7,6 +7,10 @@
   `resolveEnv` and `resolveSettingsEnv`, and the environment of a subprocess and of a command hook
   run on the core. The key table (`KEY_SPECS`, `SPECS`) has a core counterpart; the TypeScript
   table stays for the policy view.
+- `${...}` substitution runs on the core: one string (`runWith`), the surfaces and their
+  policies, a plugin's command hooks, monitors and LSP servers, Markdown content, the exported
+  and shell-parsed environments, and the deep walk of a JSON value. So do the LSP runtime
+  decisions and the `/output-style` command and system prompt.
 - The managed settings' repairs run on the core: the `sandbox` block and its credentials, the
   closed fields, the value and list repairs, the permissions merge and the permission flag, the
   MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the
