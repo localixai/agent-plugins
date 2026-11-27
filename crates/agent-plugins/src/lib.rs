@@ -25,6 +25,7 @@ pub mod protocol;
 pub mod registry;
 pub mod rules;
 pub mod semver;
+pub mod settings;
 pub mod skills;
 pub mod updates;
 mod yaml;

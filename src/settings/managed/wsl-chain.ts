@@ -1,5 +1,9 @@
-import { warning, type PluginIssue } from '../../format/issues.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/managed/wsl_chain.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../../format/issues.ts';
 import type { AdminDocument } from './admin-source.ts';
+
+const call = coreModule('settings/managed/wsl-chain');
 
 /**
  * `wslInheritsWindowsSettings` (settings-reference.md, `wslInheritsWindowsSettings`; managed-settings.md,
@@ -27,41 +31,6 @@ export interface WslChain {
   readonly issues: readonly PluginIssue[];
 }
 
-/** What a document says of the key: `on` is the chain, `set` whether it says anything, `invalid` an unreadable value. */
-interface Flag {
-  readonly set: boolean;
-  readonly on: boolean;
-  readonly invalid: boolean;
-}
-
-const UNSET: Flag = { set: false, on: false, invalid: false };
-
-/** "Claude Code reads `true` and `false` with or without quotes and reads `null` as removing the key." */
-const BOOLEAN_TEXT: ReadonlyMap<unknown, boolean> = new Map<unknown, boolean>([
-  [true, true],
-  [false, false],
-  ['true', true],
-  ['false', false],
-]);
-
-/** "Any other value counts as a present admin document with the chain turned on." */
-const INVALID: Flag = { set: true, on: true, invalid: true };
-
-function flagOf(document: AdminDocument | undefined): Flag {
-  const value = document?.raw.wslInheritsWindowsSettings;
-  if (value === undefined || value === null) return UNSET;
-  const read = BOOLEAN_TEXT.get(value);
-  return read === undefined ? INVALID : { set: true, on: read, invalid: false };
-}
-
-const isPresent = (document: AdminDocument | undefined): boolean =>
-  document !== undefined && (document.present || flagOf(document).invalid);
-
-/** The chain is on when the highest Windows admin document that sets the key turns it on. */
-function chainFlag(windows: readonly (AdminDocument | undefined)[]): Flag {
-  return windows.map(flagOf).find((flag) => flag.set) ?? UNSET;
-}
-
 /**
  * The documents a WSL session composes. "Claude Code honors it only when set in the HKLM registry
  * key or in a managed settings file or drop-in under `C:\Program Files\ClaudeCode\`". With the
@@ -70,29 +39,4 @@ function chainFlag(windows: readonly (AdminDocument | undefined)[]): Flag {
  * With it off, WSL reads `/etc/claude-code` alone; an `HKLM` value or Windows-folder file that
  * exists but cannot be read keeps `/etc/claude-code` from applying either way.
  */
-export function wslChain(documents: WslDocuments): WslChain {
-  const windows = [documents.hklm, documents.windowsFile];
-  const flag = chainFlag(windows);
-  const windowsPresent = windows.some(isPresent);
-  const windowsUnreadable = windows.some((document) => document?.unreadable !== undefined);
-  const etc = windowsUnreadable || (flag.on && windowsPresent) ? undefined : documents.etcFile;
-  const hkcuJoins = flag.on && flagOf(documents.hkcu).on;
-  const composed = flag.on
-    ? [documents.hklm, documents.windowsFile, etc, hkcuJoins ? documents.hkcu : undefined]
-    : [etc];
-  const issues = flag.invalid
-    ? [
-        warning(
-          'managed:wslInheritsWindowsSettings',
-          '"wslInheritsWindowsSettings" must be true or false; the Windows policy chain is treated as on',
-        ),
-      ]
-    : [];
-  return {
-    documents: composed
-      .filter((document): document is AdminDocument => document !== undefined)
-      .map((document) => (isPresent(document) ? { ...document, present: true } : document)),
-    chainOn: flag.on,
-    issues,
-  };
-}
+export const wslChain = (documents: WslDocuments): WslChain => call('wslChain', documents);

@@ -1,20 +1,14 @@
-import { isWithin } from '../../format/path-text.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/permissions/sandbox_read_block.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/permissions/sandbox-read-block');
+
 /**
  * What `permissions.blockReadsOutsideWorkingDirectories` does to sandboxed commands (settings-reference.md,
  * "Sandboxed commands under the block"). Pure over the facts the host reads; the sandbox is the host's.
  */
-
 /** "Your home directory and ... the other roots that hold user files." */
-export const BLOCKED_USER_ROOTS: readonly string[] = [
-  '/Users',
-  '/home',
-  '/root',
-  '/Volumes',
-  '/mnt',
-  '/media',
-  '/run/media',
-  '/srv',
-];
+export const BLOCKED_USER_ROOTS: readonly string[] = call('BLOCKED_USER_ROOTS');
 
 export interface SandboxBlockInput {
   /** The block key is `true` in some file. */
@@ -58,36 +52,12 @@ export interface SandboxBlock {
   readonly repositoryAllowEntriesCount: boolean;
 }
 
-const OFF: SandboxBlock = {
-  reachesSandbox: false,
-  denyRead: [],
-  reopened: [],
-  readWrite: [],
-  denyWrite: [],
-  repositoryAllowEntriesCount: true,
-};
-
 /** The block's effect on sandboxed commands: it reaches them unless one of the three cases the docs list holds. */
-export function sandboxReadBlock(input: SandboxBlockInput): SandboxBlock {
-  const exempt =
-    !input.blockReads ||
-    input.filesystemDisabled ||
-    input.managedReadPathsOnly ||
-    /[*?[]/.test(input.startDirectory);
-  if (exempt) return OFF;
-  const commonGit = input.worktreeCommonGitDir === undefined ? [] : [input.worktreeCommonGitDir];
-  return {
-    reachesSandbox: true,
-    denyRead: [input.home, ...BLOCKED_USER_ROOTS],
-    reopened: [...(input.reopened ?? []), ...commonGit],
-    readWrite: commonGit,
-    denyWrite: commonGit.flatMap((git) => [`${git}/hooks`, `${git}/config`]),
-    repositoryAllowEntriesCount: false,
-  };
-}
+export const sandboxReadBlock = (input: SandboxBlockInput): SandboxBlock =>
+  call('sandboxReadBlock', input);
 
 /** "Under the block, Claude Code re-opens your global git configuration files": the paths it names. */
-export function gitConfigReopened(input: {
+export const gitConfigReopened = (input: {
   readonly home: string;
   readonly xdgConfigHome?: string;
   readonly included: readonly string[];
@@ -95,16 +65,4 @@ export function gitConfigReopened(input: {
   readonly writable: ReadonlySet<string>;
   /** `sandbox.filesystem.denyRead` entries: they "always take precedence over this re-open". */
   readonly denyRead: readonly string[];
-}): readonly string[] {
-  const xdg = input.xdgConfigHome ?? `${input.home}/.config`;
-  const candidates = [
-    `${input.home}/.gitconfig`,
-    `${xdg}/git/config`,
-    `${xdg}/git/ignore`,
-    `${xdg}/git/attributes`,
-    ...input.included,
-  ];
-  return candidates.filter(
-    (file) => !input.writable.has(file) && !input.denyRead.some((entry) => isWithin(entry, file)),
-  );
-}
+}): readonly string[] => call('gitConfigReopened', input);
