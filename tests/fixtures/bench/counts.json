@@ -465,9 +465,6 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.JSON.parse": 4,
-          "cpu.RegExp": 4,
-          "cpu.RegExp.exec": 96,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -475,9 +472,6 @@
       },
       "8": {
         "first": {
-          "cpu.JSON.parse": 8,
-          "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 192,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -485,9 +479,6 @@
       },
       "16": {
         "first": {
-          "cpu.JSON.parse": 16,
-          "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 384,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -500,9 +491,6 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.JSON.parse": 8,
-          "cpu.RegExp": 8,
-          "cpu.RegExp.exec": 212,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -510,9 +498,6 @@
       },
       "8": {
         "first": {
-          "cpu.JSON.parse": 16,
-          "cpu.RegExp": 16,
-          "cpu.RegExp.exec": 424,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
@@ -520,9 +505,6 @@
       },
       "16": {
         "first": {
-          "cpu.JSON.parse": 32,
-          "cpu.RegExp": 32,
-          "cpu.RegExp.exec": 848,
           "environment.snapshot": 1,
           "locations.homeDir": 1
         },
