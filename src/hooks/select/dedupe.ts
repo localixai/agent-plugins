@@ -1,21 +1,15 @@
+/**
+ * A settings handler written in several settings files runs once (hooks.md, "Hook handler fields").
+ * Judgment (spec/judgments.md): identical means the same event, matcher text and handler fields.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/select/dedupe.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { RegisteredHandler } from '../contracts.ts';
-import { SOURCE_POLICY } from '../source-kind.ts';
-import { canonicalJson } from '../../format/canonical-json.ts';
 
-/** Judgment (spec/judgments.md): identical means the same event, matcher text and handler fields. */
-const identity = (entry: RegisteredHandler): string =>
-  canonicalJson([entry.event, entry.matcher ?? '', entry.handler]);
+const call = coreModule('hooks/select/dedupe');
 
 /** The entries with each settings handler kept once, the first in registry order. */
-export function dedupeSettingsHandlers(
+export const dedupeSettingsHandlers = (
   entries: readonly RegisteredHandler[],
-): readonly RegisteredHandler[] {
-  const seen = new Set<string>();
-  return entries.filter((entry) => {
-    if (!SOURCE_POLICY[entry.source.kind].mergesCopies) return true;
-    const key = identity(entry);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
+): readonly RegisteredHandler[] => call('dedupeSettingsHandlers', entries);

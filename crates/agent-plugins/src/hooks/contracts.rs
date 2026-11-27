@@ -141,6 +141,28 @@ pub struct HookSession {
     pub plugin_only_hooks: Option<bool>,
 }
 
+/// A tool call as a hook's `if` reads it. The name is kept as the facts hold it: a facts value that
+/// fails its schema may hold no string there.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolCallView {
+    /// The tool's name.
+    pub tool_name: crate::js::JsValue,
+    /// What the tool is called with.
+    #[serde(default)]
+    pub tool_input: crate::js::JsValue,
+}
+
+/// How a Monitor call reached a hook (hooks.md, "Match Monitor commands").
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorTreatment {
+    /// Matched only because the matcher is a `Bash` matcher: the hook gets a Bash call.
+    pub as_bash: bool,
+    /// The hook's `allow` and `updatedInput` apply to the Monitor call.
+    pub effects_apply: bool,
+}
+
 /// The canonical name of a model (hooks.md, "PreModelSwitch"); the host knows its models.
 pub trait ModelCatalog: Send + Sync {
     /// `None` when the id has no canonical name, as a custom id only a gateway knows.

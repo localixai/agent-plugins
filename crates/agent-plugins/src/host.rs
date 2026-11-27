@@ -2,6 +2,8 @@
 //! core are declared.
 
 pub mod core_skills;
+pub mod permission_rules;
+pub mod permission_session;
 pub mod saved_approval;
 pub mod sdk_output;
 pub mod session_directories;

@@ -1,4 +1,4 @@
-//! Port of `src/hooks/select/gates.ts`, switched.
+//! Ported from `src/hooks/select/gates.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What keeps a registered handler from running whatever the event says: `disableAllHooks`, workspace
 //! trust, a plugin that is not enabled and the two managed locks (`lock-gates.ts`). Each is the docs'
@@ -64,10 +64,4 @@ pub fn passes_gates(entry: &RegisteredHandler, session: &HookSession) -> bool {
     hooks_enabled(&entry.source, session)
         && source_gate(&entry.source, session)
         && passes_locks(entry, session)
-}
-
-crate::registry::exports! {
-    "hooks/select/gates" {
-        "passesGates" => ok |entry: RegisteredHandler, session: HookSession| passes_gates(&entry, &session);
-    }
 }

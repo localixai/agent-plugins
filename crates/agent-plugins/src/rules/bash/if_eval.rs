@@ -1,6 +1,6 @@
 //! Port of `src/rules/bash/if-eval.ts`, switched.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::dialect::{BASH_DIALECT, POWERSHELL_DIALECT, ShellDialect};
 use super::shell::command_of;
@@ -19,7 +19,7 @@ use crate::rules::types::{
 };
 
 /// Whether a hook's `if` lets its handler run, with what the kit found wrong in the rule.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IfResult {
     /// Whether the handler runs.
     pub runs: bool,
