@@ -1,6 +1,14 @@
-import { approvalMemory, type ApprovalMemory } from '../rules/index.ts';
-import { settingsLocations, type SettingsLocationsInput } from '../settings/index.ts';
+/**
+ * What "Yes, and don't ask again" does for one tool in a session, and where it is saved.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/saved_approval.rs`, docs/RUST.md).
+ */
+import type { ApprovalMemory } from '../rules/index.ts';
+import type { SettingsLocationsInput } from '../settings/index.ts';
 import type { PermissionsPolicy } from '../settings/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('host/saved-approval');
 
 /** What "Yes, and don't ask again" does for one tool in a session, and where it is saved. */
 export interface SavedApproval {
@@ -18,14 +26,9 @@ export interface SavedApproval {
  * The effect of "Yes, and don't ask again" for `toolName` under the policy (`allowManagedPermissionRulesOnly`
  * stops saving new rules) and the host's paths; `undefined` for a tool the table does not list.
  */
-export function savedApproval(
+export const savedApproval = (
   toolName: string,
   policy: Pick<PermissionsPolicy, 'managedRulesOnly'>,
   locations: SettingsLocationsInput,
-): SavedApproval | undefined {
-  const memory = approvalMemory(toolName, { rulesLocked: policy.managedRulesOnly });
-  if (memory === undefined) return undefined;
-  return memory.lifetime === 'repository'
-    ? { memory, ruleFile: settingsLocations(locations).local }
-    : { memory };
-}
+): SavedApproval | undefined =>
+  call('savedApproval', toolName, { managedRulesOnly: policy.managedRulesOnly }, locations);

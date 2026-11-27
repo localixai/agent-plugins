@@ -4,9 +4,12 @@
 pub mod agent_keys;
 pub mod claude_json;
 pub mod edit_effect;
+pub mod exceptions;
+pub mod file_locations;
 pub mod global_config;
 pub mod keys;
 pub mod look_and_feel;
+pub mod permission_rules;
 pub mod plugin_defaults;
 pub mod process_wrapper;
 pub mod reach;

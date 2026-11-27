@@ -1,13 +1,16 @@
-import { configDirectoryOf } from '../../format/config-directory.ts';
-import type { FileScope } from './reach.ts';
-import { SETTINGS_FILE } from '../../format/settings-files.ts';
-
 /**
  * Where the settings files are and who makes them (settings.md, "Settings files and who they
  * affect", "Find or create your settings files", "Keep personal settings out of a repository" and
  * "Where Claude Code keeps the local file in a git repository"). Pure data and decisions: the host
  * reads the folders, owns the paths' spelling (`joinPath`) and writes the files.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/general/file_locations.rs`,
+ * docs/RUST.md).
  */
+import type { FileScope } from './reach.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/general/file-locations');
 
 /** Who makes a file when it is absent: the docs' "create them yourself, or let Claude Code create them". */
 export type FileMaker = 'organization' | 'you' | 'claude-code';
@@ -21,29 +24,7 @@ export interface FileOrigin {
 }
 
 /** `managed-settings.json` and the other managed sources have no one path (managed-settings.md, "Delivery mechanisms"). */
-export const FILE_ORIGINS: { readonly [S in FileScope]: FileOrigin } = {
-  user: {
-    documentedPath: SETTINGS_FILE.user,
-    madeBy: ['you', 'claude-code'],
-    youEdit: true,
-  },
-  project: {
-    documentedPath: SETTINGS_FILE.project,
-    // "a project that already uses Claude Code may have one committed. If not, create it"
-    madeBy: ['you'],
-    youEdit: true,
-  },
-  local: {
-    documentedPath: SETTINGS_FILE.local,
-    madeBy: ['you', 'claude-code'],
-    youEdit: true,
-  },
-  managed: {
-    documentedPath: 'managed-settings.json',
-    madeBy: ['organization'],
-    youEdit: false,
-  },
-};
+export const FILE_ORIGINS: { readonly [S in FileScope]: FileOrigin } = call('FILE_ORIGINS');
 
 /**
  * What makes Claude Code write a settings file, and which one (settings.md, "Find or create your
@@ -53,12 +34,12 @@ export const FILE_ORIGINS: { readonly [S in FileScope]: FileOrigin } = {
  * "the first time you give a standing approval on a permission prompt". The `/config` options that
  * are global config keys go to `~/.claude.json`, which is no settings file.
  */
-export const WRITE_TRIGGERS = [
+export const WRITE_TRIGGERS: readonly [
   'config-option',
   'config-option-kept-local',
   'permission-standing-approval',
   'model-default',
-] as const;
+] = call('WRITE_TRIGGERS');
 export type WriteTrigger = (typeof WRITE_TRIGGERS)[number];
 
 /**
@@ -67,14 +48,7 @@ export type WriteTrigger = (typeof WRITE_TRIGGERS)[number];
  */
 export type WrittenScope = Extract<FileScope, 'user' | 'local'>;
 
-export const WRITE_TARGET: { readonly [T in WriteTrigger]: WrittenScope } = {
-  'config-option': 'user',
-  // "A few options, such as Show tips: .claude/settings.local.json"
-  'config-option-kept-local': 'local',
-  'permission-standing-approval': 'local',
-  // "`/model` saves your choice as the default for new sessions by writing the `model` field in your user settings"
-  'model-default': 'user',
-};
+export const WRITE_TARGET: { readonly [T in WriteTrigger]: WrittenScope } = call('WRITE_TARGET');
 
 /** The host's facts for the files it joins paths for. */
 export interface FileFacts {
@@ -89,16 +63,13 @@ export interface FileFacts {
  * The folder holding the home-directory files: `CLAUDE_CONFIG_DIR` when set, else `~/.claude`
  * ("Claude Code then stores your settings, session history, and plugins there instead").
  */
-export const configDirOf = (facts: FileFacts): string =>
-  configDirectoryOf(facts.homeDir, facts.configDirEnv, facts.joinPath);
+export const configDirOf = (facts: FileFacts): string => call('configDirOf', facts);
 
 /** The user file, `~/.claude/settings.json` or the one under `CLAUDE_CONFIG_DIR`. */
-export const userSettingsFile = (facts: FileFacts): string =>
-  facts.joinPath(configDirOf(facts), SETTINGS_FILE.userName);
+export const userSettingsFile = (facts: FileFacts): string => call('userSettingsFile', facts);
 
 /** The shared project file, in the project folder (the session's primary working directory). */
-export const projectSettingsFile = (facts: FileFacts): string =>
-  facts.joinPath(facts.projectDir, SETTINGS_FILE.project);
+export const projectSettingsFile = (facts: FileFacts): string => call('projectSettingsFile', facts);
 
 /** What the host found about the git repository the session starts in. */
 export interface RepositoryFacts {
@@ -121,11 +92,8 @@ export interface LocalPlacementFacts {
  * repository root is your home directory, on Windows, or when the repository root or its `.git` or
  * `.claude` entry isn't owned by your user".
  */
-export function localSettingsRoot(facts: LocalPlacementFacts): string | undefined {
-  const { repository } = facts;
-  if (repository === undefined || facts.windows || !repository.ownedByUser) return undefined;
-  return repository.root === facts.homeDir ? undefined : repository.root;
-}
+export const localSettingsRoot = (facts: LocalPlacementFacts): string | undefined =>
+  call('localSettingsRoot', facts);
 
 /**
  * The local files to read, the one that applies first first. Before v2.1.211 the file was kept in
@@ -133,17 +101,12 @@ export function localSettingsRoot(facts: LocalPlacementFacts): string | undefine
  * alongside the root file; where both set the same key, the root's value applies, and permission
  * rules from both files apply".
  */
-export function localSettingsFiles(
+export const localSettingsFiles = (
   facts: LocalPlacementFacts & Pick<FileFacts, 'projectDir' | 'joinPath'>,
-): readonly string[] {
-  const root = localSettingsRoot(facts);
-  const own = facts.joinPath(facts.projectDir, SETTINGS_FILE.local);
-  if (root === undefined || root === facts.projectDir) return [own];
-  return [facts.joinPath(root, SETTINGS_FILE.local), own];
-}
+): readonly string[] => call('localSettingsFiles', facts);
 
 /** The line Claude Code adds to the global git excludes (settings.md, "Keep personal settings out of a repository"). */
-export const LOCAL_FILE_IGNORE_ENTRY = `**/${SETTINGS_FILE.local}`;
+export const LOCAL_FILE_IGNORE_ENTRY: string = call('LOCAL_FILE_IGNORE_ENTRY');
 
 export interface GitExcludeFacts {
   /** Git's `core.excludesFile` from the global config, as written; `undefined` when unset. */
@@ -153,22 +116,13 @@ export interface GitExcludeFacts {
   readonly joinPath: (base: string, relativePath: string) => string;
 }
 
-const isAbsolute = (path: string): boolean => path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path);
-
 /**
  * The global git excludes file: `core.excludesFile` "when your global git config sets it to an
  * absolute or `~`-prefixed path; otherwise it's `$XDG_CONFIG_HOME/git/ignore`, or
  * `~/.config/git/ignore` when `XDG_CONFIG_HOME` is unset".
  */
-export function globalGitExcludesFile(facts: GitExcludeFacts): string {
-  const configured = facts.coreExcludesFile;
-  if (configured !== undefined && isAbsolute(configured)) return configured;
-  if (configured?.startsWith('~/')) return facts.joinPath(facts.homeDir, configured.slice(2));
-  const xdg = facts.xdgConfigHome;
-  return xdg === undefined || xdg === ''
-    ? facts.joinPath(facts.homeDir, '.config/git/ignore')
-    : facts.joinPath(xdg, 'git/ignore');
-}
+export const globalGitExcludesFile = (facts: GitExcludeFacts): string =>
+  call('globalGitExcludesFile', facts);
 
 export interface FirstWriteFacts {
   readonly inGitRepository: boolean;
@@ -184,4 +138,4 @@ export interface FirstWriteFacts {
  * has not written is yours to ignore.
  */
 export const shouldAddGitExclude = (facts: FirstWriteFacts): boolean =>
-  facts.claudeCodeWrites && facts.inGitRepository && !facts.alreadyIgnored;
+  call('shouldAddGitExclude', facts);

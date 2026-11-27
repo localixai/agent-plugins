@@ -1,4 +1,4 @@
-//! Port of `src/format/settings-files.ts`, switched.
+//! Ported from `src/format/settings-files.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Where the three settings files a person edits live, as settings.md writes them ("Settings files"):
 //! the user file under the configuration folder, the project and local files under `.claude/` of the

@@ -439,6 +439,20 @@ pub fn is_truthy(value: &JsValue) -> bool {
     }
 }
 
+/// `a === b`: primitives by value (`NaN` equals nothing, `0` equals `-0`); an array or object only
+/// itself, which two values that crossed the boundary never are, so it answers `false` for them
+/// (`indexOf` and `includes` over a list of primitives).
+#[must_use]
+pub fn strict_equals(a: &JsValue, b: &JsValue) -> bool {
+    match (a, b) {
+        (JsValue::Undefined, JsValue::Undefined) | (JsValue::Null, JsValue::Null) => true,
+        (JsValue::Bool(a), JsValue::Bool(b)) => a == b,
+        (JsValue::Number(a), JsValue::Number(b)) => a == b,
+        (JsValue::String(a), JsValue::String(b)) => a == b,
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,6 +477,18 @@ mod tests {
     fn integers_follow_javascript() {
         let answers = [1.0, -0.0, 1e300, 1.5, f64::NAN, f64::INFINITY].map(is_integer);
         assert_eq!(answers, [true, true, true, false, false, false]);
+    }
+
+    // bun -e 'console.log(NaN === NaN, 0 === -0, null === undefined, "1" === 1)' prints
+    // false true false false
+    #[test]
+    fn strict_equality_follows_javascript() {
+        let nan = JsValue::Number(f64::NAN);
+        assert!(!strict_equals(&nan, &nan));
+        assert!(strict_equals(&JsValue::Number(0.0), &JsValue::Number(-0.0)));
+        assert!(!strict_equals(&JsValue::Null, &JsValue::Undefined));
+        assert!(!strict_equals(&JsValue::from("1"), &JsValue::Number(1.0)));
+        assert!(strict_equals(&JsValue::from("a"), &JsValue::from("a")));
     }
 
     // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{}].map(Boolean))' prints

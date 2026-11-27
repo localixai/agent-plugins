@@ -16,6 +16,7 @@ pub mod plugin_debug;
 pub mod plugin_folder;
 pub mod plugin_scaffold;
 pub mod ports;
+pub mod readers_assets;
 pub mod readers_text;
 pub mod repository_messages;
 pub mod repository_trust;

@@ -8,6 +8,11 @@
   `--plugin-url` plugins, the orphaned-version cleanup and the uninstall's record selection run on
   the core. The install's record plan stays TypeScript: its callers get the records they passed
   back as the same objects.
+- The saved workflows' scan, the theme and workflow readers of a plugin folder, the
+  `strictPluginOnlyCustomization` locks, the permission rule lists, the `command` source's
+  re-runs, the settings files' locations and who makes them, the global git excludes file, the
+  managed exceptions to precedence and "Yes, and don't ask again"'s saved rule file run on the
+  core.
 - `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
   `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
   preparation and the specifier matchers run on the core.
@@ -2088,7 +2093,7 @@ once, in Changed or Removed.
 #### repository
 
 - One definition per repeated text: the three settings file paths are `SETTINGS_FILE`
-  (`src/format/settings-files.ts`), read by the install scopes, the enablement notes, the settings
+  (`crates/agent-plugins/src/format/settings_files.rs`), read by the install scopes, the enablement notes, the settings
   file locations, the session's settings locations and the wildcard warning; the two load failures
   of a marketplace source are `SOURCE_FAILURE` (`src/format/marketplace/source-failures.ts`), read by
   the load status, the policy-list notice and the fetch plan; a marketplace value of the wrong type

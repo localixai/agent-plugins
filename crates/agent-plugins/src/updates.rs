@@ -2,6 +2,7 @@
 //! package).
 
 pub mod auto_update_skips;
+pub mod command_source_rerun;
 pub mod env_flags;
 pub mod private_marketplace;
 pub mod refresh_before_install;

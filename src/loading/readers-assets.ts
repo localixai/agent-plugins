@@ -1,11 +1,3 @@
-import type { PluginIssue } from '../format/issues.ts';
-import { missingPath } from '../format/messages.ts';
-import { readTheme } from '../format/theme.ts';
-import { inspectWorkflowScript } from '../format/workflow-script.ts';
-import type { DiscoveredFile } from './discovered.ts';
-import type { PluginTheme, PluginWorkflow } from './plugin-model.ts';
-import type { ComponentRead, ReaderContext, ReadKind } from './reader-types.ts';
-
 /**
  * Themes and workflows (plugins/components.md, "Themes and output styles"; workflows.md, "Distribute
  * a workflow in a plugin"): each file is read once, the theme through `readTheme` and the workflow's
@@ -13,76 +5,19 @@ import type { ComponentRead, ReaderContext, ReadKind } from './reader-types.ts';
  * back as issues at the file's path; the component stays in the plugin either way, so a host sees the
  * file and the reason (a theme that is not a JSON object has no `theme`; a script without a readable
  * `meta` has no `meta` and no qualified name).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/readers_assets.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginTheme, PluginWorkflow } from './plugin-model.ts';
+import type { ComponentRead, ReaderContext } from './reader-types.ts';
 
-interface Source {
-  readonly file: DiscoveredFile & { readonly path: string };
-  readonly text: string | undefined;
-}
+const call = coreModule('loading/readers-assets');
 
-async function sourcesOf(
+export const readThemes = (
   context: ReaderContext,
-  found: readonly DiscoveredFile[],
-): Promise<Source[]> {
-  return Promise.all(
-    found.flatMap((file) =>
-      file.path === undefined
-        ? []
-        : [
-            context.files
-              .readText(file.path, context.signal)
-              .then((text) => ({ file: { ...file, path: file.path ?? '' }, text })),
-          ],
-    ),
-  );
-}
+): Promise<ComponentRead<readonly PluginTheme[]>> => call.async('readThemes', context);
 
-const where = (path: string, issues: readonly PluginIssue[]): PluginIssue[] =>
-  issues.map((issue) => ({ ...issue, path }));
-
-function missing(kind: ReadKind, path: string): PluginIssue {
-  return missingPath(kind, path);
-}
-
-export async function readThemes(
+export const readWorkflows = (
   context: ReaderContext,
-): Promise<ComponentRead<readonly PluginTheme[]>> {
-  const sources = await sourcesOf(context, context.discovered.themes);
-  const value: PluginTheme[] = [];
-  const issues: PluginIssue[] = [];
-  for (const { file, text } of sources) {
-    if (text === undefined) {
-      issues.push(missing('themes', file.path));
-      continue;
-    }
-    const read = readTheme(file.name, text);
-    issues.push(...where(file.path, read.issues));
-    value.push({
-      path: file.path,
-      name: file.name,
-      plugin: context.pluginName,
-      theme: read.theme,
-    });
-  }
-  return { value, issues };
-}
-
-export async function readWorkflows(
-  context: ReaderContext,
-): Promise<ComponentRead<readonly PluginWorkflow[]>> {
-  const sources = await sourcesOf(context, context.discovered.workflows);
-  const value: PluginWorkflow[] = [];
-  const issues: PluginIssue[] = [];
-  for (const { file, text } of sources) {
-    if (text === undefined) {
-      issues.push(missing('workflows', file.path));
-      continue;
-    }
-    const report = inspectWorkflowScript(text);
-    issues.push(...where(file.path, report.issues));
-    const qualifiedName =
-      report.meta === undefined ? undefined : `${context.pluginName}:${report.meta.name}`;
-    value.push({ path: file.path, name: file.name, qualifiedName, meta: report.meta });
-  }
-  return { value, issues };
-}
+): Promise<ComponentRead<readonly PluginWorkflow[]>> => call.async('readWorkflows', context);

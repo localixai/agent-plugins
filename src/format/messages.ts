@@ -7,18 +7,9 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/format/messages.rs`, docs/RUST.md).
  */
 import { coreModule } from '../wasm/bridge.ts';
-import type { PluginIssue } from './issues.ts';
 
 const call = coreModule('format/messages');
 
 /** `<component> path not found: <path>`. */
 export const pathNotFound = (component: string, path: string): string =>
   call('pathNotFound', component, path);
-
-/**
- * The load error of a declared component path that points at nothing, with its guidance: the docs
- * name `commands`, `skills`, `agents` and `hooks`; the kit gives it every component path the
- * loader checks (judgment, spec/judgments.md). `mcpServers` keeps its own reader's issue.
- */
-export const missingPath = (component: string, path: string): PluginIssue =>
-  call('missingPath', component, path);
