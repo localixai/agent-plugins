@@ -10,9 +10,6 @@ import type { AgentRecord } from './agent-record.ts';
 
 const call = coreModule('format/agent-name');
 
-/** sub-agents.md, "Frontmatter reference": a name is "at most 256 characters". */
-export const MAX_AGENT_NAME: 256 = call('MAX_AGENT_NAME');
-
 /**
  * Why a name cannot be used by a project, user, managed or `--add-dir` agent, or undefined when it
  * can (sub-agents.md, "Subagent files Claude Code skips": a name that "starts with `-`, contains

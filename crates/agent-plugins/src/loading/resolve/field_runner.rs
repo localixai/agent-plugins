@@ -1,7 +1,4 @@
-//! The core's counterpart of `src/loading/resolve/field-runner.ts` at sha256:2e27e43aee6e, which stays TypeScript: its
-//! `fieldRunner` returns closures over the host's substituter, and its `when` calls a host
-//! function whose answer may be a promise, which no synchronous export can take; it only looks at
-//! the outside of the value (`undefined` or not). The core's resolvers use this copy.
+//! Ported from `src/loading/resolve/field-runner.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Substitutes the strings of one component config, each with the policy of the surface it
 //! belongs to. One substituter serves all fields, so the data folder is asked for once.

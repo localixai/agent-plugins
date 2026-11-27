@@ -1,8 +1,10 @@
 //! Layer 2: pure readers and validators of plugin files and the small shared owners they use
 //! (`src/format/` in the npm package).
 
+pub mod agent;
 pub mod agent_field_read;
 pub mod agent_fields;
+pub mod agent_flag;
 pub mod agent_hooks_field;
 pub mod agent_name;
 pub mod agent_record;

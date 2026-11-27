@@ -335,6 +335,9 @@ module's doc comment, never a silent difference:
   too deep to scan (Maximum call stack size exceeded.)`, `… to read (…)`), where Bun's stack lets
   the package go thousands of levels deeper (`format/js_tokens.rs`, `format/js_literal.rs`,
   `MAX_NESTING`). No script comes near it.
+- **Brace groups nested past 128 in a `paths` pattern** (`{a}{b}…` or `{a,{b,…}}`) are the
+  package's own error for its stack running out (`Maximum call stack size exceeded.`), where Bun's
+  stack lets the expansion go deeper (`skills/path_gate.rs`, `MAX_NESTING`). No pattern comes near it.
 - **YAML beyond the core schema**: the frontmatter reads the YAML 1.2 core schema, and so does the
   core, always. The package also knows `!!binary`, `!!set`, `!!omap`, `!!pairs` and
   `!!timestamp` (a `Uint8Array`, a `Set`, a `Map`, a `Date`), and reads a `%YAML 1.1` document

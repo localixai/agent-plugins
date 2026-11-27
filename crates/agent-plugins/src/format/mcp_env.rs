@@ -231,7 +231,6 @@ crate::registry::exports! {
         "BRACED_REFERENCE" => ok braced_reference_regexp;
         "isVariableName" => ok |text: String| is_variable_name(&text);
         "splitDefault" => ok |inner: String| split_default(&inner);
-        "missingVariableMessage" => ok |name: String| missing_variable_message(&name);
         "resolveEnvReference" => async ok |reference: EnvReference, lookup: Callback, reads_as_empty: Option<Callback>|
             resolve_env_reference(&reference, &lookup, reads_as_empty.as_ref().map(|f| f as &dyn ReadsAsEmpty)).await;
         "expandEnvText" => async ok |text: String, lookup: Callback, reads_as_empty: Option<Callback>|

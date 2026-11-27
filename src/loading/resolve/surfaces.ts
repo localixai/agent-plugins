@@ -56,15 +56,6 @@ export const SURFACE_COMPONENT: { readonly [S in SubstitutionSurface]: VariableC
 export const SURFACE_POLICY: { readonly [S in SubstitutionSurface]: FieldPolicy } =
   call('SURFACE_POLICY');
 
-/**
- * The policy of a surface in this scope: `SURFACE_POLICY`, with a shell-parsed surface's paths as
- * the scope's `shellPaths` make them. Every resolver asks this, so the choice is made once.
- */
-export const surfacePolicy = (
-  surface: SubstitutionSurface,
-  scope: Pick<SubstitutionScope, 'shellPaths'>,
-): FieldPolicy => call('surfacePolicy', surface, scope);
-
 /** `substituteTemplate` with the policy of a surface in this scope. */
 export const substituteSurface = (
   surface: SubstitutionSurface,

@@ -11,6 +11,10 @@
   policies, a plugin's command hooks, monitors and LSP servers, Markdown content, the exported
   and shell-parsed environments, and the deep walk of a JSON value. So do the LSP runtime
   decisions and the `/output-style` command and system prompt.
+- Agent files and the `--agents` flag are read on the core (`readAgent`, `readFlagAgents`), and so
+  are a skill's `paths` gate and a memory rule's, a skill's `${CLAUDE_*}` variables and argument
+  substitution, the binding of a `!` command's arguments and the text its shell receives, and the
+  resolution of a plugin's MCP server (`resolveMcpServer`).
 - The managed settings' repairs run on the core: the `sandbox` block and its credentials, the
   closed fields, the value and list repairs, the permissions merge and the permission flag, the
   MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the

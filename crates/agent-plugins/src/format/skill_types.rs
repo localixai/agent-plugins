@@ -6,7 +6,7 @@
 //! `InvocableFrontmatter`. The core holds the two constants; the types stay in the TypeScript.
 
 use indexmap::IndexMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// The shells `shell` accepts (skills.md, frontmatter reference: "`bash` (default) or `powershell`").
 pub const SKILL_SHELLS: &[&str] = &["bash", "powershell"];
@@ -38,6 +38,16 @@ pub struct OriginTraits {
     /// does for a local skill" (skills.md, "How Claude Code handles the body of a synced skill"); an
     /// isolated session (cloud, Cowork) keeps the local behaviour, as for `runs_shell`.
     pub attaches_file_references: bool,
+}
+
+/// The shell of a `!` command (`shell` of the frontmatter).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SkillShell {
+    /// Bash.
+    Bash,
+    /// PowerShell.
+    Powershell,
 }
 
 /// What each origin may do with a skill's text, by the origin's kind.

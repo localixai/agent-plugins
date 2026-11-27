@@ -62,10 +62,6 @@ export const runWith = (
   base: { scope: SubstitutionScope; answers: Answers },
 ): Substituted => call('runWith', template, policy, path, base);
 
-/** The environment variables among `referenced`, each once, in order. */
-export const environmentNames = (referenced: readonly TokenReference[]): string[] =>
-  call('environmentNames', referenced);
-
 /** The path variables whose value the template writes, under the policy's rendering. */
 export const neededVariables = (
   template: string,

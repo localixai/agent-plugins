@@ -157,7 +157,8 @@ pub struct AgentRecord {
     /// What the official shape has no key for.
     pub extras: AgentExtras,
     /// The frontmatter `hooks`, in the settings' shape (`HooksSettings`); never set for a plugin agent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Absent, it is the package's `hooks: undefined`, a member its readers test for.
+    #[serde(default, serialize_with = "crate::js::value::serialize_or_undefined")]
     pub hooks: Option<JsValue>,
     /// Fields in the file that Claude Code does not apply for this source.
     pub ignored: Vec<String>,
@@ -190,6 +191,9 @@ pub enum AgentReadResult {
     Skipped {
         /// Why.
         reason: SkipReason,
+        /// Always `undefined`: the package's `agent: undefined`, a member its readers test for.
+        #[serde(default)]
+        agent: JsValue,
         /// What was found on the way.
         issues: Vec<PluginIssue>,
     },
