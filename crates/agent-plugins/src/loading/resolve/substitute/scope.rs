@@ -16,7 +16,7 @@ use crate::registry::{Callback, Function, Port};
 /// `Locations` for paths (and so for the data folder, only when referenced) and `Environment` for
 /// `${VAR}`; it knows no machine. Its own members hold no function, so it crosses as data whose
 /// `locations` and `environment` are ports (`{"$port": n}`).
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SubstitutionScope<L = Port, E = Port> {
     /// The plugin identifier the host uses (`name@marketplace`, or the bare name).
@@ -36,11 +36,11 @@ pub struct SubstitutionScope<L = Port, E = Port> {
     /// Variables another layer owns, substituted in the same single pass: skills pass
     /// `CLAUDE_SKILL_DIR`, `CLAUDE_SESSION_ID`, `CLAUDE_EFFORT`. They win over `${VAR}` of the
     /// environment.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra: Option<IndexMap<String, String>>,
     /// The names of `extra` whose value is a path (`CLAUDE_SKILL_DIR`): a surface writes them as it
     /// writes the three path variables, so a shell-parsed one gets the reference, not the path.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra_paths: Option<Vec<String>>,
     /// How a string a shell parses (a monitor `command`, an MCP `headersHelper`, a skill's `!`
     /// command; never a bash shell-form hook, which always keeps the reference) writes the path
@@ -50,10 +50,10 @@ pub struct SubstitutionScope<L = Port, E = Port> {
     /// spec/judgments.md, as Claude Code does for PowerShell hooks, hooks.md). `pasted` writes the
     /// path itself, the docs' text: the default for a monitor `command`, whose path variables are
     /// never exported (Agent Plugins Extended §9.2.4, J9.17).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shell_paths: Option<ShellPaths>,
     /// Cancels the work.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signal: Option<Signal>,
 }
 

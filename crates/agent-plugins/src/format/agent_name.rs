@@ -108,7 +108,6 @@ pub fn hook_agent_type(agent: &HookAgent) -> String {
 
 crate::registry::exports! {
     "format/agent-name" {
-        "MAX_AGENT_NAME" => ok || MAX_AGENT_NAME;
         "agentNameProblem" => ok |name: String| agent_name_problem(&name);
         "validAgentName" => ok |name: String| valid_agent_name(&name);
         "agentFileName" => ok |path: String| agent_file_name(&path);

@@ -29,10 +29,6 @@ export const isVariableName = (text: string): boolean => call('isVariableName', 
 export const splitDefault = (inner: string): { name: string; fallback: string | undefined } =>
   call('splitDefault', inner);
 
-/** The warning text for a reference that stayed as written (mcp.md, "Unset variables without a default"). */
-export const missingVariableMessage = (name: string): string =>
-  call('missingVariableMessage', name);
-
 export interface EnvReferenceResolution {
   readonly text: string;
   /** True when the variable is unset with no default: `text` is the `${VAR}` as written. */

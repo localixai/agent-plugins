@@ -1,4 +1,4 @@
-//! Port of `src/format/agent-unrecognized.ts`, switched.
+//! Ported from `src/format/agent-unrecognized.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The top-level fields of an agent file that Claude Code does not recognize (sub-agents.md,
 //! "Frontmatter reference"), each with the supported field it most likely means.
@@ -60,10 +60,4 @@ pub fn unrecognized_fields(fields: &JsObject) -> Vec<UnrecognizedField> {
             suggestion: closest(field).map(str::to_owned),
         })
         .collect()
-}
-
-crate::registry::exports! {
-    "format/agent-unrecognized" {
-        "unrecognizedFields" => ok |fields: JsObject| unrecognized_fields(&fields);
-    }
 }

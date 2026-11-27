@@ -1,4 +1,4 @@
-//! Port of `src/format/agent-field-read.ts`, switched.
+//! Ported from `src/format/agent-field-read.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Every field of the agent registry beyond `name` and `description`, read from a frontmatter
 //! table: `readAgent` reads those two itself, as their problems decide if the file loads.
@@ -55,10 +55,4 @@ pub fn read_agent_fields(fields: &JsObject, options: &AgentFieldsOptions) -> Age
         read.issues.extend(field.issues);
     }
     read
-}
-
-crate::registry::exports! {
-    "format/agent-field-read" {
-        "readAgentFields" => ok |fields: JsObject, options: AgentFieldsOptions| read_agent_fields(&fields, &options);
-    }
 }

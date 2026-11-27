@@ -13,21 +13,6 @@ const call = coreModule('rules/path/posix');
 export type Platform = PathContext['platform'];
 
 /**
- * `C:\Users\alice` becomes `/c/Users/alice`: "On Windows, paths are normalized to POSIX form before
- * matching" (permissions.md). A UNC path `\\server\share` keeps its two leading slashes' meaning
- * through the later folding to `/server/share`; networks are told apart on the raw spelling
- * (`network.ts`).
- */
-export const toPosixPath = (path: string, platform: Platform): string =>
-  call('toPosixPath', path, platform);
-
-/** Folds `.`, `..` and repeated slashes of a POSIX path; the result is absolute. */
-export const normalizeAbsolute = (path: string): string => call('normalizeAbsolute', path);
-
-/** `path` against `base` (a normalised absolute path), normalised; an absolute `path` ignores `base`. */
-export const resolvePath = (base: string, path: string): string => call('resolvePath', base, path);
-
-/**
  * A host path in POSIX form, `~` expanded and resolved against the session's current directory:
  * the one reading of a path the rules, the working directories and the modes share.
  */
@@ -35,13 +20,3 @@ export const absolutePath = (
   path: string,
   paths: Pick<PathContext, 'cwd' | 'home' | 'platform'>,
 ): string => call('absolutePath', path, paths);
-
-/**
- * The text of `path` below `root` (`''` for the root itself), or `undefined` when it is not below;
- * on Windows both are folded first (`foldPath`), and so is the text returned.
- */
-export const relativeWithin = (
-  root: string,
-  path: string,
-  platform: Platform = 'posix',
-): string | undefined => call('relativeWithin', root, path, platform);

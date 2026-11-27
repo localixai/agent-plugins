@@ -223,7 +223,6 @@ crate::registry::exports! {
         "SENSITIVE_PLACEHOLDER" => ok |key: String| sensitive_placeholder(&key);
         "runWith" => async ok |template: String, policy: PolicyArg, path: String, base: Base|
             run_with_base(template, policy, path, base).await;
-        "environmentNames" => ok |referenced: Vec<TokenReference>| environment_names(&referenced);
         "neededVariables" => async ok |template: String, scope: SubstitutionScope, policy: PolicyArg|
             needed_variables_of(template, scope, policy).await;
     }

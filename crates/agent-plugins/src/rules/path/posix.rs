@@ -180,11 +180,7 @@ pub fn has_glob_syntax(segment: &str) -> bool {
 
 crate::registry::exports! {
     "rules/path/posix" {
-        "toPosixPath" => ok |path: String, platform: Platform| to_posix_path(&path, platform);
-        "normalizeAbsolute" => ok |path: String| normalize_absolute(&path);
-        "resolvePath" => ok |base: String, path: String| resolve_path(&base, &path);
         "absolutePath" => ok |path: String, paths: HostPaths| absolute_path(&path, &paths);
-        "relativeWithin" => ok |root: String, path: String, platform: Option<Platform>| relative_within(&root, &path, platform);
     }
 }
 

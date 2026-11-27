@@ -1,4 +1,4 @@
-//! Port of `src/rules/path/glob.ts`, switched.
+//! Ported from `src/rules/path/glob.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The gitignore engine of the path rules: "Read and Edit rules both use gitignore pattern syntax"
 //! (permissions.md, "How path patterns match"), here the core's port of the `ignore` package
@@ -159,14 +159,6 @@ pub fn gitignore_matches(globs: &Globs, relative: &str, directory: bool) -> Resu
             && globs
                 .engine
                 .ignores(&format!("{relative}/{DIRECTORY_PROBE}"))?))
-}
-
-crate::registry::exports! {
-    "rules/path/glob" {
-        "isUsablePattern" => ok |pattern: String| is_usable_pattern(&pattern);
-        "compileGlobs" => ok |entries: Vec<GlobEntry>, platform: Platform| compile_globs(&entries, platform);
-        "gitignoreMatches" => fallible |globs: Globs, relative: String, directory: bool| gitignore_matches(&globs, &relative, directory);
-    }
 }
 
 #[cfg(test)]

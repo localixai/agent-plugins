@@ -15,7 +15,7 @@ use crate::js::{code_unit_length, encode_uri_component, in_key_order, key_order}
 use crate::registry::Port;
 
 /// The server a helper belongs to: the name Claude Code shows, its URL as expanded, and the command.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelperServer {
     /// The name Claude Code shows.
@@ -27,13 +27,13 @@ pub struct HelperServer {
     /// receives; a value that merely occurs in the URL is not.
     pub expanded_variables: Vec<String>,
     /// The command.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers_helper: Option<String>,
     /// The path variables `headersHelper` references, for the helper's environment: with the default
     /// `SubstitutionScope.shellPaths` the command holds `${CLAUDE_PLUGIN_DATA}` and the like rather than
     /// the path, so these give the references a value (judgment, spec/judgments.md). Absent or empty
     /// for a pasted command and for a server no plugin supplies.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paths: Option<IndexMap<String, String>>,
 }
 

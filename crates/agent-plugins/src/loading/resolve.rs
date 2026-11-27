@@ -16,6 +16,7 @@ pub mod hook_space_path;
 pub mod lsp;
 pub mod lsp_runtime;
 pub mod lsp_startup;
+pub mod mcp;
 pub mod monitor;
 pub mod monitor_trigger;
 pub mod powershell_no_program;

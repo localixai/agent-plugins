@@ -1,4 +1,4 @@
-//! Port of `src/loading/resolve/shell-exports.ts`, switched.
+//! Ported from `src/loading/resolve/shell-exports.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a string a shell parses needs in its process environment for the references
 //! `SubstitutionScope.shellPaths` left in it.
@@ -12,7 +12,6 @@ use super::surfaces::{ShellPathsScope, SubstitutionSurface, shell_paths_of};
 use super::variables::PLUGIN_VARIABLES;
 use crate::js::promise_all;
 use crate::ports::BoxFuture;
-use crate::registry::Callback;
 
 /// What the exports read from the scope: its `shellPaths` and the paths another layer owns.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -100,12 +99,5 @@ pub async fn shell_exports(
         // A pasted path needs no environment; a reference needs the value it names.
         ShellPaths::Pasted => IndexMap::new(),
         ShellPaths::EnvironmentReference => referenced_paths(referenced, scope, ask).await,
-    }
-}
-
-crate::registry::exports! {
-    "loading/resolve/shell-exports" {
-        "shellExports" => async ok |surface: SubstitutionSurface, referenced: Vec<TokenReference>, scope: ExportScope, ask: Callback|
-            shell_exports(surface, &referenced, &scope, &ask).await;
     }
 }

@@ -20,9 +20,9 @@ Claude Code 2.1.322, the docs being those of 2.1.321.
 
 All three cases below are governed by one host option, `PluginHostOptions.shellPaths`
 (`SubstitutionScope.shellPaths` for a resolver called directly), read by one function,
-`surfacePolicy` in `src/loading/resolve/surfaces.ts`. Hooks are not among them: Claude Code pastes
+`surface_policy` in `crates/agent-plugins/src/loading/resolve/surfaces.rs`. Hooks are not among them: Claude Code pastes
 into no hook, so the option does not apply to one (next section). The values go into the process environment through one
-function, `shellExports` in `src/loading/resolve/shell-exports.ts`.
+function, `shell_exports` in `crates/agent-plugins/src/loading/resolve/shell_exports.rs`.
 
 - `'environment-reference'` (the default for a `!` block and a `headersHelper`; for a monitor an
   explicit opt-in, see below) writes `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`,

@@ -285,8 +285,6 @@ crate::registry::exports! {
         "SUBSTITUTION_SURFACES" => ok || SUBSTITUTION_SURFACES;
         "SURFACE_COMPONENT" => ok surface_component_table;
         "SURFACE_POLICY" => ok surface_policy_table;
-        "surfacePolicy" => ok |surface: SubstitutionSurface, scope: ShellPathsScope|
-            surface_policy(surface, scope);
         "substituteSurface" => async ok |surface: SubstitutionSurface, template: String, scope: SubstitutionScope, path: Option<String>|
             substitute_surface(surface, &template, &scope, &path.unwrap_or_default()).await;
     }
