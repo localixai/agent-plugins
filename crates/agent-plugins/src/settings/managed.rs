@@ -2,6 +2,8 @@
 //! (`src/settings/managed/` in the npm package).
 
 pub mod approval;
+pub mod combine;
+pub mod cross_source;
 pub mod delivery;
 pub mod limits;
 pub mod login_keys;

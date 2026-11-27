@@ -14,6 +14,7 @@ pub mod permission_rules;
 pub mod plugin_defaults;
 pub mod process_wrapper;
 pub mod reach;
+pub mod rows;
 pub mod sandbox_check;
 pub mod sandbox_credentials;
 pub mod sandbox_fields;

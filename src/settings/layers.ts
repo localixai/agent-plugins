@@ -1,6 +1,13 @@
+/**
+ * Where a settings object comes from, the layers in precedence order, and the layers that set a key.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/layers.rs`, docs/RUST.md).
+ */
 import type { Settings } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { SettingsKey, ValueOf } from './general/keys.ts';
-import { SPECS, admits } from './key-spec.ts';
+
+const call = coreModule('settings/layers');
 
 /**
  * Where a settings object comes from, highest precedence first (settings.md, "Settings
@@ -10,7 +17,7 @@ import { SPECS, admits } from './key-spec.ts';
  * which carries two keys only. The docs rank `parent` nowhere (spec/judgments.md); they rank `addDir`
  * lowest of the sources of `enabledPlugins` (plugins/loading.md, "Find where a plugin is enabled").
  */
-export const POLICY_SCOPES = [
+export const POLICY_SCOPES: readonly [
   'managed',
   'parent',
   'flag',
@@ -18,19 +25,11 @@ export const POLICY_SCOPES = [
   'project',
   'user',
   'addDir',
-] as const;
+] = call('POLICY_SCOPES');
 export type PolicyScope = (typeof POLICY_SCOPES)[number];
 
 /** A higher number wins. */
-export const SCOPE_RANK: { readonly [S in PolicyScope]: number } = {
-  managed: 7,
-  parent: 6,
-  flag: 5,
-  local: 4,
-  project: 3,
-  user: 2,
-  addDir: 1,
-};
+export const SCOPE_RANK: { readonly [S in PolicyScope]: number } = call('SCOPE_RANK');
 
 export interface PolicyLayer {
   readonly scope: PolicyScope;
@@ -46,7 +45,7 @@ export interface PolicyLayer {
 
 /** The layers, highest precedence first; two layers of one scope keep the order they were given. */
 export const orderedLayers = (layers: readonly PolicyLayer[]): readonly PolicyLayer[] =>
-  layers.toSorted((a, b) => SCOPE_RANK[b.scope] - SCOPE_RANK[a.scope]);
+  call('orderedLayers', layers);
 
 /** One layer's value of a key, with the layer it came from. */
 export interface KeyHolder<K extends SettingsKey> {
@@ -57,28 +56,11 @@ export interface KeyHolder<K extends SettingsKey> {
 }
 
 /**
- * The key's value in one settings object: where its row reads it (a key inside a block), else the
- * key's own name. A row is typed over its key's value, so what it reads has that type.
- */
-function valueIn<K extends SettingsKey>(settings: Settings, key: K): ValueOf<K> | undefined {
-  const { read } = SPECS[key];
-  // A top-level key has the type its `Settings` entry declares; TypeScript cannot relate the
-  // generic key to that entry through the open index signature, so the type is asserted here once.
-  return read ? read(settings) : (settings[key] as ValueOf<K> | undefined);
-}
-
-/**
  * Every layer of `ordered` (highest precedence first, as `orderedLayers` gives them) that sets `key`
  * to a value its scope admits. A layer that does not carry the key (the key's scope line, or the
  * `--add-dir` rule) is skipped even when the layer was built by hand rather than read.
  */
-export function holdersOf<K extends SettingsKey>(
+export const holdersOf = <K extends SettingsKey>(
   ordered: readonly PolicyLayer[],
   key: K,
-): readonly KeyHolder<K>[] {
-  return ordered.flatMap((layer, position) => {
-    const value = valueIn(layer.settings, key);
-    if (value === undefined || value === null || !admits(key, layer.scope, value)) return [];
-    return [{ scope: layer.scope, position, value }];
-  });
-}
+): readonly KeyHolder<K>[] => call('holdersOf', ordered, key);

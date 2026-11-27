@@ -1,12 +1,15 @@
-import { REPOSITORY_FILES } from '../key-spec.ts';
-import type { PolicyLayer } from '../layers.ts';
-import { resolveEnvBlocks, type NotAppliedVariable, type Variables } from './resolve-env.ts';
-
 /**
  * The `env` block of the settings files for a host that knows its folders' trust per file (env-vars.md,
  * "Set variables in settings files" and "Precedence"; settings-reference.md, `env`). The same rules as
  * `resolveEnv`, in the shape a host applies directly: the values to write over its environment.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/env/settings_env.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PolicyLayer } from '../layers.ts';
+import type { NotAppliedVariable, Variables } from './resolve-env.ts';
+
+const call = coreModule('settings/env/settings-env');
 
 /** What `resolveSettingsEnv` asks the host about its machine. */
 export interface SettingsEnvContext {
@@ -30,25 +33,11 @@ export interface SettingsEnv {
   readonly ignored: readonly NotAppliedVariable[];
 }
 
-const isRepositoryScope = (scope: string): scope is 'project' | 'local' =>
-  REPOSITORY_FILES.some((one) => one === scope);
-
 /** The variables of the layers' `env` blocks that reach the environment. */
-export function resolveSettingsEnv(
+export const resolveSettingsEnv = (
   layers: readonly PolicyLayer[],
   context: SettingsEnvContext,
-): SettingsEnv {
-  const shell = context.environment ?? {};
-  const { settings, notApplied } = resolveEnvBlocks(layers, {
-    startsNow: (scope) => !isRepositoryScope(scope) || context.isFolderTrusted(scope),
-    input: {
-      shell,
-      ...(context.launchOwnsEnvironment === true ? { launchEnvironment: shell } : {}),
-      windows: context.windows ?? false,
-    },
-  });
-  return { values: settings, ignored: notApplied };
-}
+): SettingsEnv => call('resolveSettingsEnv', layers, context);
 
 /**
  * The environment after the settings' variables are written into it: "Claude Code writes each `env`
@@ -56,13 +45,8 @@ export function resolveSettingsEnv(
  * removed: "In a settings file you can set a variable but you can't remove one". On Windows a name
  * replaces the inherited one whatever its case.
  */
-export function applySettingsEnv(
+export const applySettingsEnv = (
   inherited: Readonly<Record<string, string>>,
   settings: Readonly<Record<string, string>>,
   windows: boolean,
-): Record<string, string> {
-  const fold = (name: string): string => (windows ? name.toUpperCase() : name);
-  const replaced = new Set(Object.keys(settings).map(fold));
-  const kept = Object.entries(inherited).filter(([name]) => !replaced.has(fold(name)));
-  return { ...Object.fromEntries(kept), ...settings };
-}
+): Record<string, string> => call('applySettingsEnv', inherited, settings, windows);

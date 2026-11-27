@@ -1,4 +1,4 @@
-//! Port of `src/settings/permissions/merge.ts`, switched.
+//! Ported from `src/settings/permissions/merge.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! How the permission keys of several files combine. Every function takes the value of each file
 //! that sets the key, highest precedence first (`KeyHolder` order), and returns one value.
@@ -127,13 +127,6 @@ pub fn merge_auto_mode_blocks(blocks: &[JsValue]) -> JsValue {
     auto_mode_lists(blocks, &mut members);
     set(&mut members, "classifyAllShell", classify_all_shell);
     JsValue::Object(members)
-}
-
-crate::registry::exports! {
-    "settings/permissions/merge" {
-        "mergePermissionBlocks" => ok |blocks: Vec<JsValue>| merge_permission_blocks(&blocks);
-        "mergeAutoModeBlocks" => ok |blocks: Vec<JsValue>| merge_auto_mode_blocks(&blocks);
-    }
 }
 
 #[cfg(test)]
