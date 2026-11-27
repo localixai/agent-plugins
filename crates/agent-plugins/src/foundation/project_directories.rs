@@ -1,4 +1,5 @@
-//! Port of `src/foundation/project-directories.ts`, switched.
+//! Ported from `src/foundation/project-directories.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The project directories whose `.claude` folder is read: the working directory and every parent up
 //! to the repository root, nearest first. In a linked worktree whose top has no `.claude/skills`, the
@@ -9,7 +10,6 @@
 
 use crate::ports::folder_scan::FolderScan;
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 /// The project directories whose `.claude` folder is read, nearest first.
 pub fn project_directories<'a>(
@@ -18,13 +18,13 @@ pub fn project_directories<'a>(
     signal: Option<&'a Signal>,
 ) -> BoxFuture<'a, Vec<String>> {
     Box::pin(async move {
-        let chain = folders.repository(cwd).await;
+        let chain = folders.repository(cwd, signal).await;
         let (Some(main_checkout), Some(top)) =
             (chain.main_checkout.as_deref(), chain.directories.last())
         else {
             return chain.directories;
         };
-        let has = match folders.open(top).await {
+        let has = match folders.open(top, signal).await {
             Some(folder) => folder.files().await.exists(".claude/skills", signal).await,
             None => false,
         };
@@ -35,11 +35,4 @@ pub fn project_directories<'a>(
         directories.push(main_checkout.to_owned());
         directories
     })
-}
-
-crate::registry::exports! {
-    "foundation/project-directories" {
-        "projectDirectories" => async ok |folders: Port, cwd: String, signal: Option<Signal>|
-            project_directories(&folders, &cwd, signal.as_ref()).await;
-    }
 }

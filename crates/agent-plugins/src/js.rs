@@ -8,6 +8,7 @@
 //! holds these to.
 
 pub mod array_join;
+pub mod identifier;
 pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;

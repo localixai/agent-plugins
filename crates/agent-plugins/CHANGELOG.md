@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `FolderScan::open` and `repository` take the scan's signal, as the TypeScript port's do.
+  `js::identifier` is `\p{ID_Start}` and `\p{ID_Continue}`.
 - `registry::Port` implements every port trait (`registry/remote/`). The methods the TypeScript
   ports answer at once (`Clock::now`, `Environment::get` and `snapshot`, `Locations::home_dir`,
   `project_dir`, `plugin_root` and `join_path`, `FolderScan::managed_directory`, and

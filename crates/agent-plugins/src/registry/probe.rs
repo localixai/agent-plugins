@@ -67,7 +67,7 @@ async fn located(locations: Port, plugin: String) -> Vec<String> {
 
 /// The `dir` property of the folder the host opens, a port its answer hands over.
 async fn opened(scan: Port, dir: String) -> Option<String> {
-    let folder = scan.open(&dir).await?;
+    let folder = scan.open(&dir, None).await?;
     Some(folder.dir().await)
 }
 
