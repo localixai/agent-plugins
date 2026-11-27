@@ -122,7 +122,6 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp.exec": 20,
           "locations.joinPath": 20,
           "locations.pluginRoot": 4
         },
@@ -132,7 +131,6 @@
       },
       "8": {
         "first": {
-          "cpu.RegExp.exec": 40,
           "locations.joinPath": 40,
           "locations.pluginRoot": 8
         },
@@ -142,7 +140,6 @@
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 80,
           "locations.joinPath": 80,
           "locations.pluginRoot": 16
         },
@@ -157,7 +154,6 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -165,7 +161,6 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -175,7 +170,6 @@
       },
       "8": {
         "first": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -183,7 +177,6 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -193,7 +186,6 @@
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -201,7 +193,6 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -272,7 +263,6 @@
           "cpu.RegExp.exec": 1
         },
         "skills": {
-          "cpu.RegExp.exec": 22,
           "locations.joinPath": 22,
           "locations.pluginRoot": 4
         },
@@ -286,7 +276,6 @@
           "cpu.RegExp.exec": 1
         },
         "skills": {
-          "cpu.RegExp.exec": 42,
           "locations.joinPath": 42,
           "locations.pluginRoot": 8
         },
@@ -300,7 +289,6 @@
           "cpu.RegExp.exec": 1
         },
         "skills": {
-          "cpu.RegExp.exec": 82,
           "locations.joinPath": 82,
           "locations.pluginRoot": 16
         },
@@ -529,19 +517,19 @@
       "4": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 64
+          "cpu.RegExp.exec": 48
         }
       },
       "8": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 128
+          "cpu.RegExp.exec": 96
         }
       },
       "16": {
         "resolve": {
           "cpu.JSON.parse": 4,
-          "cpu.RegExp.exec": 256
+          "cpu.RegExp.exec": 192
         }
       }
     }
@@ -566,7 +554,6 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -576,7 +563,6 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -603,7 +589,6 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -613,7 +598,6 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -640,7 +624,6 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -650,7 +633,6 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
