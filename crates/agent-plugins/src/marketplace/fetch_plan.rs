@@ -355,7 +355,7 @@ struct KindOnly {
 /// refused with the message the docs print, "Update Claude Code and try again" (plugins/
 /// troubleshooting.md, "This plugin uses a source type your Claude Code version does not
 /// support"), instead of failing in the planner lookup.
-fn plan_given(source: &JsValue, context: &FetchPlanContext) -> Result<Planned, String> {
+pub(crate) fn plan_given(source: &JsValue, context: &FetchPlanContext) -> Result<Planned, String> {
     let kind = KindOnly::deserialize(source.clone()).map(|only| only.kind);
     if !kind.is_ok_and(|kind| PLUGIN_SOURCE_KINDS.contains(&kind)) {
         return Ok(refused(vec![error("source", UNSUPPORTED_SOURCE_TYPE)]));

@@ -45,7 +45,7 @@ pub enum VersionOrigin {
 }
 
 /// A version and where it came from.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PluginVersion {
     /// The version.
     pub version: String,

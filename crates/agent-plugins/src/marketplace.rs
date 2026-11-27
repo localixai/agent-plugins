@@ -34,6 +34,7 @@ pub mod install_failures;
 pub mod install_hosts;
 pub mod install_messages;
 pub mod install_mode;
+pub mod install_plan;
 pub mod install_plans;
 pub mod install_records_at;
 pub mod install_scopes;

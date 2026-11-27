@@ -8,7 +8,7 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::types::SubmoduleRule;
 use crate::format::path_text::{is_within, without_trailing_slashes};
@@ -16,7 +16,7 @@ use crate::js::{Pattern, SPACE_CLASS, split_line_breaks};
 
 /// How a marketplace was added (`src/format/marketplace/types.ts`, which is not ported yet and
 /// owns this type).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketplaceSourceKind {
     /// `github`.
     #[serde(rename = "github")]

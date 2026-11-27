@@ -374,6 +374,7 @@ pub const MODULES: &[Module] = &[
     crate::marketplace::install_hosts::EXPORTS,
     crate::marketplace::install_messages::EXPORTS,
     crate::marketplace::install_mode::EXPORTS,
+    crate::marketplace::install_plan::EXPORTS,
     crate::marketplace::install_plans::EXPORTS,
     crate::marketplace::install_records_at::EXPORTS,
     crate::marketplace::install_scopes::EXPORTS,
