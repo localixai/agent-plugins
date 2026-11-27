@@ -47,7 +47,7 @@ mod wire_json;
 pub use catch::{Thrown, catch_host};
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
-pub use handle::{Function, Handle, Methods, release};
+pub use handle::{Function, Handle, Methods, Own, release};
 pub use promise::{CorePromise, HostPromise};
 pub use remote::{Callback, Port};
 #[doc(hidden)]
@@ -322,7 +322,6 @@ pub const MODULES: &[Module] = &[
     crate::hooks::select::dedupe::EXPORTS,
     crate::hooks::select::event_catalog::EXPORTS,
     crate::hooks::select::if_guard::EXPORTS,
-    crate::hooks::select::lock_gates::EXPORTS,
     crate::hooks::select::matcher_values::EXPORTS,
     crate::hooks::select::model_switch::EXPORTS,
     crate::hooks::select::select::EXPORTS,
@@ -334,14 +333,17 @@ pub const MODULES: &[Module] = &[
     crate::hooks::verdict::model_switch::EXPORTS,
     crate::hooks::verdict::stdout_kind::EXPORTS,
     crate::hooks::verdict::stop_block_cap::EXPORTS,
+    crate::host::background_queue::EXPORTS,
     crate::host::core_skills::EXPORTS,
     crate::host::permission_rules::EXPORTS,
     crate::host::permission_session::EXPORTS,
     crate::host::saved_approval::EXPORTS,
     crate::host::sdk_output::EXPORTS,
+    crate::host::session_core::EXPORTS,
     crate::host::session_directories::EXPORTS,
+    crate::host::session_hook_scope::EXPORTS,
     crate::host::session_permission_updates::EXPORTS,
-    crate::host::session_start_repeats::EXPORTS,
+    crate::host::session_registry::EXPORTS,
     crate::loading::background_trust::EXPORTS,
     crate::loading::bin::EXPORTS,
     crate::loading::channels::EXPORTS,

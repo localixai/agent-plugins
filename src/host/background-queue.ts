@@ -1,9 +1,5 @@
-import {
-  groupDeliveries,
-  type BackgroundDelivery,
-  type BackgroundOutcome,
-  type SettledDeliveries,
-} from '../hooks/index.ts';
+import type { BackgroundDelivery, BackgroundOutcome, SettledDeliveries } from '../hooks/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /** Which run of which session a background delivery came from, and how that run ended. */
 export interface BackgroundSource {
@@ -31,6 +27,9 @@ type DeliveryListener = (delivered: SettledDeliveries, delivery: BackgroundDeliv
  * that never takes them keeps them all; it is the host's to drain. The repeat of an async
  * `SessionStart` hook reaches it emptied (`session-start-repeats.ts`); `HookOutcome.background`
  * read directly hands over every delivery.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/background_queue.rs`, docs/RUST.md):
+ * the deliveries are the core's; the host's promises and listeners stay here, at the edge.
  */
 export interface BackgroundQueue {
   add(background: readonly Promise<BackgroundDelivery>[]): void;
@@ -38,16 +37,19 @@ export interface BackgroundQueue {
   listen(listener: DeliveryListener): () => void;
 }
 
-const carriesSomething = (delivered: SettledDeliveries): boolean =>
-  delivered.additionalContext.length + delivered.systemMessages.length > 0 ||
-  delivered.wake !== undefined;
+const call = coreModule('host/background-queue');
+
+/** The core's half: the deliveries kept until taken. */
+interface Settled {
+  /** Keeps one delivery; what the listeners hear of it, `null` when it carries nothing. */
+  settle(delivery: BackgroundDelivery): SettledDeliveries | null;
+  take(): SettledDeliveries;
+}
 
 export function createBackgroundQueue(): BackgroundQueue {
-  let settled: BackgroundDelivery[] = [];
+  const settled: Settled = call('createBackgroundQueue');
   const listeners = new Set<DeliveryListener>();
-  const announce = (delivery: BackgroundDelivery): void => {
-    const delivered = groupDeliveries([delivery]);
-    if (!carriesSomething(delivered)) return;
+  const announce = (delivered: SettledDeliveries, delivery: BackgroundDelivery): void => {
     for (const listener of listeners) {
       try {
         listener(delivered, delivery);
@@ -61,19 +63,15 @@ export function createBackgroundQueue(): BackgroundQueue {
       for (const promise of background) {
         promise.then(
           (delivery) => {
-            settled.push(delivery);
-            announce(delivery);
+            const delivered = settled.settle(delivery);
+            if (delivered !== null) announce(delivered, delivery);
           },
           // A process the runner lost delivers nothing (spec/judgments.md); the queue stays usable.
           () => undefined,
         );
       }
     },
-    take() {
-      const taken = groupDeliveries(settled);
-      settled = [];
-      return taken;
-    },
+    take: () => settled.take(),
     listen(listener) {
       listeners.add(listener);
       return () => {

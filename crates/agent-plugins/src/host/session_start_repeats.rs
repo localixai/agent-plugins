@@ -1,4 +1,4 @@
-//! Port of `src/host/session-start-repeats.ts`, switched.
+//! Ported from `src/host/session-start-repeats.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The repeat check of async `SessionStart` hooks (hooks.md, "Limitations"; Agent Plugins Extended
 //! §7.3.3 item 7): the hook runs every time the event fires, and its output is skipped when its
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::js::json_stringify::json_stringify;
 use crate::js::{JsObject, JsValue};
-use crate::registry::{CorePromise, Handle, HostPromise};
+use crate::registry::{CorePromise, HostPromise};
 
 /// The `SessionStart` sources after which every hook delivers again.
 const FORGETS: [&str; 2] = ["compact", "clear"];
@@ -143,23 +143,5 @@ impl SessionStartRepeats {
                 Watched::Passed(CorePromise::new(async move { pass(&state, promise.await) }))
             })
             .collect()
-    }
-}
-
-/// A check of its own.
-#[must_use]
-pub fn create_session_start_repeats() -> SessionStartRepeats {
-    SessionStartRepeats::default()
-}
-
-crate::registry::methods! {
-    SessionStartRepeats {
-        "watch" => ok |this, outcome: WatchedOutcome, source: JsValue| this.watch(outcome, &source);
-    }
-}
-
-crate::registry::exports! {
-    "host/session-start-repeats" {
-        "createSessionStartRepeats" => ok || Handle::new(create_session_start_repeats());
     }
 }

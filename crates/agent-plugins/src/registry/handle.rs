@@ -7,11 +7,17 @@
 //! with the same kinds.
 //!
 //! A type declares its methods with `methods!` (below), the way a module declares its exports.
+//!
+//! A handle made with [`Handle::own`] crosses as `{"$own": h, …}`; given back (an argument of an
+//! export or a method) it crosses as `{"$handle": h}` and is the core's own object again, an [`Own`]: so a module whose TypeScript took an object it
+//! made earlier (a session's core) takes it by its number, and nothing is copied or asked.
 
+use std::any::Any;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use serde::Serialize;
+use serde::de::{self, Deserialize, Deserializer};
 use serde::ser::{SerializeMap, Serializer};
 
 use super::task::Started;
@@ -25,17 +31,26 @@ pub trait Methods: Send + Sync + 'static {
     fn async_methods(&self) -> &'static [&'static str];
     /// Starts `method` with `args`, or `None` for a name it does not have.
     fn start(self: Arc<Self>, method: &str, args: &[JsValue]) -> Option<Started>;
+    /// The object as `Any`, for an [`Own`] to find its type again.
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 }
 
 /// A result the host holds by a handle: it serializes as `{"$handle": h, …}` and the core keeps
 /// the object under `h` until the host releases it.
 #[derive(Clone)]
-pub struct Handle(Arc<dyn Methods>);
+pub struct Handle(Arc<dyn Methods>, bool);
 
 impl Handle {
     /// The object as a result.
     pub fn new(object: impl Methods) -> Self {
-        Self(Arc::new(object))
+        Self(Arc::new(object), false)
+    }
+
+    /// The object as a result the host may give back, as an [`Own`]: it crosses as `{"$own": h,
+    /// …}`, so the host remembers its object as the core's. Any other handle given back is the
+    /// host's value (a port), as the core reads it where a port is expected.
+    pub fn own(object: impl Methods) -> Self {
+        Self(Arc::new(object), true)
     }
 }
 
@@ -106,7 +121,7 @@ impl Serialize for Handle {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let number = keep(&self.0);
         let mut map = serializer.serialize_map(Some(3))?;
-        map.serialize_entry("$handle", &number)?;
+        map.serialize_entry(if self.1 { "$own" } else { "$handle" }, &number)?;
         map.serialize_entry("sync", self.0.sync_methods())?;
         map.serialize_entry("async", self.0.async_methods())?;
         map.end()
@@ -124,6 +139,45 @@ pub(crate) fn start(handle: u32, method: &str, args: &[JsValue]) -> Option<Start
 /// it until it ends); whether there was one.
 pub fn release(handle: u32) -> bool {
     with_handles(|handles| handles.held.remove(&handle).is_some())
+}
+
+/// A handle of the core's the host gave back, `{"$handle": h}`: the object held under `h`, of type
+/// `T`. Reading it fails when no object is held under `h` or the one held is another type.
+pub struct Own<T>(pub Arc<T>);
+
+impl<T> std::ops::Deref for Own<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> std::fmt::Debug for Own<T> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Own")
+    }
+}
+
+/// The tag a handle given back crosses as.
+#[derive(serde::Deserialize)]
+struct OwnTag {
+    #[serde(rename = "$handle")]
+    handle: u32,
+}
+
+impl<'de, T: Methods> Deserialize<'de> for Own<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let OwnTag { handle } = OwnTag::deserialize(deserializer)?;
+        let held = with_handles(|handles| handles.held.get(&handle).cloned());
+        held.and_then(|object| object.as_any().downcast::<T>().ok())
+            .map(Own)
+            .ok_or_else(|| {
+                de::Error::custom(format!(
+                    "handle {handle} is not a {} the core holds",
+                    std::any::type_name::<T>()
+                ))
+            })
+    }
 }
 
 /// How many objects are held, for the tests.
@@ -167,6 +221,8 @@ macro_rules! methods {
                 method: &str,
                 args: &[$crate::js::JsValue],
             ) -> Option<$crate::registry::Started> {
+                // A type with no methods (a session's core, only given back) reads no argument.
+                let _: &[$crate::js::JsValue] = args;
                 match method {
                     $($name => {
                         let $this = self;
@@ -174,6 +230,12 @@ macro_rules! methods {
                     })*
                     _ => None,
                 }
+            }
+
+            fn as_any(
+                self: ::std::sync::Arc<Self>,
+            ) -> ::std::sync::Arc<dyn ::std::any::Any + Send + Sync> {
+                self
             }
         }
     };

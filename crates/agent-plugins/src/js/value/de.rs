@@ -11,8 +11,8 @@ use super::{JsObject, JsValue};
 use crate::js::is_safe_integer;
 
 /// The one-member objects the boundary uses for a value the host keeps on its side
-/// (`src/wasm/wire.ts`): a port, a function, a promise.
-const HOST_HANDLES: [&str; 3] = ["$port", "$fn", "$promise"];
+/// (`src/wasm/wire.ts`): a port, a function, a promise; and a handle of the core's given back.
+const HOST_HANDLES: [&str; 4] = ["$port", "$fn", "$promise", "$handle"];
 
 impl<'de> Deserialize<'de> for JsValue {
     /// Any self-describing value: a unit is `null`, a none `undefined`, and a map that is a wire

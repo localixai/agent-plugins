@@ -130,7 +130,8 @@ export function createHookPart(
   return {
     skills: {
       registerSkillHooks(prefix, entries) {
-        registerEntries(core, currentOf(core), prefix, entries);
+        currentOf(core);
+        registerEntries(core, prefix, entries);
       },
     },
     part: {

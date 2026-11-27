@@ -15,6 +15,13 @@
   `plugin.json` merge, `claude plugin tag` and each general settings key's check. No TypeScript
   module builds a manifest schema any more; `PluginManifest`, `UserConfigOption`, `CommandEntry`,
   `PluginDependency` and `PluginChannel` are written out as the types they were inferred as.
+- A session's hooks are kept by the core: the registry, each prefix's registrations, the
+  `FileChanged` watch list, the background deliveries and the repeat check of an async
+  `SessionStart` are one core handle per session, told apart by serials instead of object
+  identity, so `addHooks`, `removeHooks`, `hasHooks`, `hookEntries`, `fileChangedWatchList` and
+  an update cost one call each and an unchanged registry is not copied again. A handle the core
+  marks as given back crosses as `{"$handle": h}` and is the core's own object again
+  (`registry::Own`).
 - Hook selection runs on the core in one call per event (`selectHandlers`): the gates, the
   settings dedupe, each handler's type, matcher and Monitor treatment, the MCP client check and
   its `if`; the host gets its own entries back. `ifEvaluatorFor` is the core's evaluator. So do a
