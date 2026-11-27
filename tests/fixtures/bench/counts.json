@@ -157,7 +157,7 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -165,7 +165,7 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -175,7 +175,7 @@
       },
       "8": {
         "first": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -183,7 +183,7 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -193,7 +193,7 @@
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -201,7 +201,7 @@
           "locations.pluginRoot": 1
         },
         "second": {
-          "cpu.RegExp.exec": 15,
+          "cpu.RegExp.exec": 9,
           "environment.get": 3,
           "environment.snapshot": 4,
           "locations.homeDir": 1,
@@ -216,7 +216,6 @@
     "counts": {
       "4": {
         "first": {
-          "cpu.RegExp.exec": 48,
           "environment.get": 4,
           "environment.snapshot": 4,
           "locations.pluginData": 4,
@@ -224,7 +223,6 @@
           "locations.projectDir": 4
         },
         "second": {
-          "cpu.RegExp.exec": 48,
           "environment.get": 4,
           "environment.snapshot": 4,
           "locations.pluginData": 4,
@@ -234,7 +232,6 @@
       },
       "8": {
         "first": {
-          "cpu.RegExp.exec": 96,
           "environment.get": 8,
           "environment.snapshot": 8,
           "locations.pluginData": 8,
@@ -242,7 +239,6 @@
           "locations.projectDir": 8
         },
         "second": {
-          "cpu.RegExp.exec": 96,
           "environment.get": 8,
           "environment.snapshot": 8,
           "locations.pluginData": 8,
@@ -252,7 +248,6 @@
       },
       "16": {
         "first": {
-          "cpu.RegExp.exec": 192,
           "environment.get": 16,
           "environment.snapshot": 16,
           "locations.pluginData": 16,
@@ -260,7 +255,6 @@
           "locations.projectDir": 16
         },
         "second": {
-          "cpu.RegExp.exec": 192,
           "environment.get": 16,
           "environment.snapshot": 16,
           "locations.pluginData": 16,
@@ -572,7 +566,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -582,7 +576,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -609,7 +603,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -619,7 +613,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -646,7 +640,7 @@
         },
         "skills": {},
         "expand": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
@@ -656,7 +650,7 @@
           "locations.joinPath": 1
         },
         "again": {
-          "cpu.RegExp.exec": 27,
+          "cpu.RegExp.exec": 24,
           "environment.get": 3,
           "environment.snapshot": 4,
           "files.bytes": 44,
