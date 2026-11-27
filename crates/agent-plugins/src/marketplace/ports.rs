@@ -48,3 +48,18 @@ impl StagedDirectory for Port {
         Box::pin(self.method::<Option<CommitFailure>>("commit", vec![request, signal]))
     }
 }
+
+/// Opens a directory a source named (`PluginDirectories`): read-only plugin files rooted there,
+/// so the kit can judge what is inside without reading outside it. `None` when the path is not an
+/// existing directory.
+pub trait PluginDirectories: Send + Sync {
+    /// The files under `path`.
+    fn open<'a>(&'a self, path: &'a str, signal: &'a Signal) -> BoxFuture<'a, Option<Port>>;
+}
+
+impl PluginDirectories for Port {
+    fn open<'a>(&'a self, path: &'a str, signal: &'a Signal) -> BoxFuture<'a, Option<Port>> {
+        let signal = crate::js::value::to_js_value(signal).unwrap_or(JsValue::Undefined);
+        Box::pin(self.method::<Option<Port>>("open", vec![JsValue::from(path), signal]))
+    }
+}

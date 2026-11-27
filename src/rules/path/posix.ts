@@ -45,8 +45,3 @@ export const relativeWithin = (
   path: string,
   platform: Platform = 'posix',
 ): string | undefined => call('relativeWithin', root, path, platform);
-
-export const dirnameOf = (path: string): string => call('dirnameOf', path);
-
-/** Whether a segment holds a gitignore wildcard (or an escape), so a literal prefix ends before it. */
-export const hasGlobSyntax = (segment: string): boolean => call('hasGlobSyntax', segment);

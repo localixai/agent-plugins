@@ -1,36 +1,34 @@
-import { error, type PluginIssue } from '../format/issues.ts';
-import { checkInstalledDependency, type DependencyIssue } from './dependencies.ts';
-import {
-  declaredOf,
-  notListed,
-  walkFrom,
-  type LeftOut,
-  type Node,
-  type Walk,
-} from './dependency-install-walk.ts';
-import {
-  combineRanges,
-  resolveDependencyVersion,
-  resolvedVersionLabel,
-  type ResolvedVersion,
-} from './dependency-tags.ts';
-import {
-  constraintsOn,
-  isEnabled,
-  recordAt,
-  type CatalogPlugin,
-  type GraphFacts,
-} from './dependency-graph.ts';
-import type { InstallScope } from './install-scopes.ts';
-import { satisfiesRange } from './semver.ts';
-import type { NormalizedDependency } from './types.ts';
-
 /**
  * The transitive install plan of a plugin's dependencies (plugins/install.md, "Plugins with
  * dependencies": "Claude Code also installs and enables the plugin's declared dependencies at the
  * same scope"; plugins/dependencies.md). Pure over `GraphFacts`: the plan says what to install, in
  * which order and at which version, or why nothing is installed; the host does it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/dependency_install_plan.rs`, docs/RUST.md).
  */
+import type { PluginIssue } from '../format/issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { DependencyIssue } from './dependencies.ts';
+import type { GraphFacts } from './dependency-graph.ts';
+import type { ResolvedVersion } from './dependency-tags.ts';
+import type { InstallScope } from './install-scopes.ts';
+
+const call = coreModule('marketplace/dependency-install-plan');
+
+/** Why Claude Code does not install a dependency itself. */
+export type LeftOutReason = 'command-source' | 'headers-helper' | 'cross-marketplace';
+
+/**
+ * A dependency the install leaves out. A `command` or `headersHelper` one also refuses the install
+ * until the user installs it by itself (§16.24); a cross-marketplace `plugin.json` one does not.
+ */
+export interface LeftOut {
+  readonly id: string;
+  readonly reason: LeftOutReason;
+  readonly message: string;
+  /** What the user runs first, when there is something. */
+  readonly command?: string;
+}
 
 /**
  * The operations that install any missing declared dependency (plugins/dependencies.md, "Constrain
@@ -39,13 +37,13 @@ import type { NormalizedDependency } from './types.ts';
  * `claude plugin marketplace add`. The docs give the five one behaviour, so the plan does not depend
  * on which runs (judgment, spec/judgments.md); the plan only names it, for the host's report.
  */
-export const DEPENDENCY_INSTALL_OPERATIONS = [
+export const DEPENDENCY_INSTALL_OPERATIONS: readonly [
   'install',
   'reload-plugins',
   'auto-update',
   'reinstall',
   'marketplace-add',
-] as const;
+] = call('DEPENDENCY_INSTALL_OPERATIONS');
 export type DependencyInstallOperation = (typeof DEPENDENCY_INSTALL_OPERATIONS)[number];
 
 export interface InstallRequest {
@@ -94,134 +92,6 @@ export interface InstallPlan {
 }
 
 /**
- * Every range on a dependency: this plan's plugins' and the installed ones'. A plugin the walk read
- * from the catalog (the root above all) speaks with its new declaration only: its installed range
- * is replaced, not combined ("publish a new version of your plugin with a wider constraint").
- */
-const rangesFor = (id: string, node: Node, walk: Walk): readonly string[] => [
-  ...new Set([
-    ...node.ranges,
-    ...constraintsOn(id, walk.facts)
-      .filter((one) => !walk.walked.has(one.by))
-      .map((one) => one.range),
-  ]),
-];
-
-function actionFor(
-  id: string,
-  ranges: readonly string[],
-  walk: Walk,
-): { readonly action: StepAction } | undefined {
-  const record = recordAt(id, walk.scope, walk.facts);
-  if (record === undefined) return { action: 'install' };
-  const fits = ranges.every(
-    (range) => record.version !== undefined && satisfiesRange(record.version, range),
-  );
-  if (!fits) return { action: 'update' };
-  return isEnabled(id, walk.facts) ? undefined : { action: 'enable' };
-}
-
-const loadIssues = (
-  dep: NormalizedDependency,
-  resolution: ResolvedVersion,
-  ranges: readonly string[],
-): readonly DependencyIssue[] =>
-  ranges.flatMap((range) => {
-    const found = checkInstalledDependency(
-      { ...dep, range },
-      {
-        enabled: true,
-        ...(resolution.version === undefined ? {} : { version: resolution.version }),
-      },
-    );
-    return found === undefined ? [] : [found];
-  });
-
-/** Whether a step changes the plugin's files: only `enable` does not, so it has nothing to resolve. */
-const FETCHES: { readonly [A in StepAction]: boolean } = {
-  install: true,
-  enable: false,
-  update: true,
-};
-
-interface Asked {
-  readonly id: string;
-  readonly action: StepAction;
-  readonly node: Node;
-  readonly ranges: readonly string[];
-  readonly entry: CatalogPlugin;
-}
-
-/** The fetched step: what the ranges resolve against, the version it shows, and what will fail at load. */
-function fetchStep(asked: Asked): InstallStep | PluginIssue {
-  const { id, action, node, ranges, entry } = asked;
-  const resolution = resolveDependencyVersion({
-    dep: node.dep,
-    ranges,
-    source: entry.source,
-    tags: entry.tags ?? [],
-    ...(entry.currentCopyVersion === undefined
-      ? {}
-      : { currentCopyVersion: entry.currentCopyVersion }),
-  });
-  if ('severity' in resolution) return resolution;
-  const commit = resolution.tag === undefined ? undefined : entry.tagCommits?.[resolution.tag];
-  const version = resolvedVersionLabel(resolution, commit);
-  return {
-    id,
-    action,
-    requiredBy: [...new Set(node.requiredBy)],
-    ranges,
-    resolution,
-    ...(version === undefined ? {} : { version }),
-    loadIssues: loadIssues(node.dep, resolution, ranges),
-  };
-}
-
-/** One step of the plan, or the issue that refuses the install, or nothing for a dependency already met. */
-function stepFor(id: string, walk: Walk): InstallStep | PluginIssue | undefined {
-  const node = walk.nodes.get(id);
-  if (node === undefined) return undefined;
-  const ranges = rangesFor(id, node, walk);
-  const entry = walk.facts.catalog[id];
-  const conflict =
-    ranges.length > 1 ? combineRanges(ranges, entry?.tags ?? [], node.dep) : undefined;
-  if (conflict !== undefined && 'severity' in conflict) return conflict;
-  const planned = actionFor(id, ranges, walk);
-  if (planned === undefined) return undefined;
-  if (!FETCHES[planned.action]) {
-    return { id, ...planned, requiredBy: [...new Set(node.requiredBy)], ranges, loadIssues: [] };
-  }
-  return entry === undefined ? notListed(id) : fetchStep({ id, ...planned, node, ranges, entry });
-}
-
-const isIssue = (value: InstallStep | PluginIssue | undefined): value is PluginIssue =>
-  value !== undefined && 'severity' in value;
-
-const isStep = (value: InstallStep | PluginIssue | undefined): value is InstallStep =>
-  value !== undefined && !('severity' in value);
-
-const idParts = (id: string): { readonly name: string; readonly marketplace: string } => {
-  const at = id.indexOf('@');
-  return at < 0
-    ? { name: id, marketplace: '' }
-    : { name: id.slice(0, at), marketplace: id.slice(at + 1) };
-};
-
-const refused = (
-  request: InstallRequest,
-  issues: readonly PluginIssue[],
-  walk?: Pick<Walk, 'leftOut' | 'needs'>,
-): InstallPlan => ({
-  operation: request.operation,
-  steps: [],
-  leftOut: walk?.leftOut ?? [],
-  issues,
-  needs: walk?.needs ?? [],
-  ok: false,
-});
-
-/**
  * The plan that installs, enables or updates the dependencies of `request.root`, transitively and
  * dependencies first. Per dependency: one already installed, enabled and inside every range is met
  * and needs no step, though its own declared dependencies are still planned; installed and disabled is enabled; installed outside the combined ranges is
@@ -242,41 +112,5 @@ const refused = (
  * nothing is needed. Each round reads more facts and no fewer, and a plugin is needed once, so the
  * rounds end; a plan with `needs` is not final either way (a refusal may yet change).
  */
-export function installClosure(request: InstallRequest, facts: GraphFacts): InstallPlan {
-  const declared = declaredOf(request.root, facts);
-  if (declared === undefined) {
-    return refused(request, [
-      error(
-        `dependencies.${request.root}`,
-        `Plugin "${request.root}" is not in the marketplace catalog`,
-      ),
-    ]);
-  }
-  const parts = idParts(request.root);
-  const walk: Walk = {
-    facts,
-    scope: request.scope,
-    root: request.root,
-    rootMarketplace: facts.catalog[request.root]?.marketplace ?? parts.marketplace,
-    ...(request.hostVersion === undefined ? {} : { hostVersion: request.hostVersion }),
-    walked: new Set(),
-    nodes: new Map(),
-    order: [],
-    leftOut: [],
-    issues: [],
-    needs: [],
-  };
-  walkFrom({ id: request.root, ...parts }, declared, walk);
-  const results = walk.order.map((id) => stepFor(id, walk));
-  const failures = [...walk.issues, ...results.filter(isIssue)];
-  if (failures.length > 0) return refused(request, failures, walk);
-  const steps = results.filter(isStep);
-  return {
-    operation: request.operation,
-    steps,
-    leftOut: walk.leftOut,
-    issues: [],
-    needs: walk.needs,
-    ok: walk.needs.length === 0,
-  };
-}
+export const installClosure = (request: InstallRequest, facts: GraphFacts): InstallPlan =>
+  call('installClosure', request, facts);

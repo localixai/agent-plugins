@@ -55,7 +55,5 @@ pub fn check_tool_output(tool_name: &str, value: &JsValue) -> ToolOutputCheck {
 crate::registry::exports! {
     "hooks/output/tool-output" {
         "CHECKED_TOOL_OUTPUTS" => ok checked_tool_outputs;
-        "isMcpToolName" => ok |name: String| is_mcp_tool_name(&name);
-        "checkToolOutput" => ok |tool_name: String, value: JsValue| check_tool_output(&tool_name, &value);
     }
 }

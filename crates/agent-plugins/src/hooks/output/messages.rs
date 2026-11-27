@@ -1,4 +1,4 @@
-//! Port of `src/hooks/output/messages.ts`, switched.
+//! Ported from `src/hooks/output/messages.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Where a hook's `systemMessage` goes (hooks.md, "JSON output": "Warning message shown to the
 //! user"). `DirectoryAdded` is the one event that routes it by source: "`slash_command`: Claude Code
@@ -84,12 +84,5 @@ pub fn route_messages(event: &str, reads: &[MessageRead], facts: &JsValue) -> Ro
         } else {
             vec![]
         },
-    }
-}
-
-crate::registry::exports! {
-    "hooks/output/messages" {
-        "routeMessages" => ok |event: String, reads: Vec<MessageRead>, facts: JsValue|
-            route_messages(&event, &reads, &facts);
     }
 }

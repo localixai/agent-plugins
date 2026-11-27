@@ -9,6 +9,12 @@
   `hooks::handlers::remote::prompt_response` are its first users, both switched.
 - `FolderScan::open` and `repository` take the scan's signal, as the TypeScript port's do.
   `js::identifier` is `\p{ID_Start}` and `\p{ID_Continue}`.
+- `ignore` is npm's `ignore` 7.0.14 as the path rules use it (`add` and `ignores`), its chain of
+  replacers mirrored and run as JavaScript's `RegExp`, held to Bun's answers on 34,580 cases
+  (`scripts/rust/js-oracle/ignore.ts`). `js::regexp::RegExp::new` refuses a pattern longer than
+  JavaScriptCore compiles (2^20 code units, "regular expression too large"), and `test_shared`
+  tests a shared pattern without writing its `lastIndex`. `PathResolver::realpath` takes the
+  signal its TypeScript namesake takes.
 - `registry::Port` implements every port trait (`registry/remote/`). The methods the TypeScript
   ports answer at once (`Clock::now`, `Environment::get` and `snapshot`, `Locations::home_dir`,
   `project_dir`, `plugin_root` and `join_path`, `FolderScan::managed_directory`, and

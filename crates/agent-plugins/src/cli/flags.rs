@@ -2,6 +2,7 @@
 
 pub mod channels;
 pub mod customizations;
+pub mod modes;
 pub mod session;
 pub mod subagent_prompt;
 pub mod types;

@@ -11,9 +11,6 @@ import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('marketplace/semver');
 
-/** Whether `range` is a valid node-semver range. */
-export const isValidRange = (range: string): boolean => call('isValidRange', range);
-
 /** The version `text` names, spelled one way (`v2.1.100` is `2.1.100`), or `undefined` when it is no version. */
 export const normalizedVersion = (text: string): string | undefined =>
   call('normalizedVersion', text);

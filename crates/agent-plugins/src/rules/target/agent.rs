@@ -1,4 +1,4 @@
-//! Port of `src/rules/target/agent.ts`, switched.
+//! Ported from `src/rules/target/agent.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `Agent(AgentName)` (permissions.md, "Agent (subagents)"): the rule's text is the subagent's
 //! name and is compared with the call's `subagent_type`. The comparison is exact and
@@ -9,7 +9,7 @@
 
 use super::input::input_string;
 use crate::rules::specifier_guards::is_text_specifier;
-use crate::rules::types::{MatchContext, PermissionBehavior, PermissionRule, PreparedCall};
+use crate::rules::types::{PermissionBehavior, PermissionRule, PreparedCall};
 
 /// The subagent a call without `subagent_type` falls back to (sub-agents.md, "Built-in
 /// subagents").
@@ -35,10 +35,4 @@ pub fn match_agent_rule(rule: &PermissionRule, call: &PreparedCall) -> bool {
     input_string(&call.call.input, "subagent_type")
         .or_else(|| name_when_omitted(rule.behavior))
         .is_some_and(|name| name == pattern)
-}
-
-crate::registry::exports! {
-    "rules/target/agent" {
-        "matchAgentRule" => ok |rule: PermissionRule, call: PreparedCall, _ctx: Option<MatchContext>| match_agent_rule(&rule, &call);
-    }
 }

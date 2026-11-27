@@ -5,6 +5,15 @@
 - Plugin default settings (`readPluginSettings`) and the reply of a `prompt` or `agent` hook
   (`parseVerdict`, `responseInstruction`) run on the core, their zod schemas checked by the core's
   own zod (docs/RUST.md).
+- `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
+  `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
+  preparation and the specifier matchers run on the core.
+- The settings' area decisions run on the core over the host's `PolicyView`: the channel gate
+  and allowlist, permission relay text, the agent, theme, teammate, output style, launcher and
+  `worktree` keys, plugin defaults, the subagent status line and its run, the hooks merge, the
+  sideload verdicts, the running mode after a settings change, `enabledPlugins`, the claude.ai
+  sync, the trust warning, bundled skills and inline shell, workflow enablement and size, and the
+  host-wide environment switches.
 - A skill's injected commands run on the core (permission answer, refusal, the run, the output
   window, the move to the background), and so do stacked skills in one message, the
   `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,
@@ -18,6 +27,14 @@
   its run context does, and so does `bypassAvailable` for `permissionUpdatesInEffect`: such a
   context crossed into the core as a handle, and read as data it had none of its fields. The core
   now refuses a handle where it reads data, so the mistake cannot pass silently.
+- Reading a hook's run, merging every hook's output on an event, assembling the outcome, the core
+  occurrence and combining its results, the classifier note, the session's directories and the
+  repeats of `SessionStart` run on the core.
+- A `command` source's run, release channels, the store layout, update detection, the install
+  commands, the tree copy plan, the lockfile read, the dependency install plan, the source checks
+  made before a fetch, the `--bare`, `--safe-mode`, `--restricted` and `--disable-slash-commands`
+  contributions, the install-record messages, the dependency plan's types, the marketplace fetch
+  plan and the `archive` fetch run on the core.
 - The SDK hook answer, `watchPaths` resolution and the `FileChanged` watch list, the runnable
   handlers a host lists, the Stop block cap, block routing and the original prompt of a blocked
   prompt, the effects a block leaves, `systemMessage` routing, the MCP client skip, the observer's
@@ -1196,7 +1213,7 @@ once, in Changed or Removed.
     catalog.
   - `MarketplaceMetadata.extra` keeps unknown `metadata` keys.
   - The archive download and the marketplace file download now share one redirect loop
-    (`src/marketplace/http-download.ts`).
+    (`crates/agent-plugins/src/marketplace/http_download.rs`).
   - The `headersHelper` runner doc now says the configuration directory must exist first (oracle
     2.1.322).
 - `usableVersion`, `winningScope`, `effectiveEnabled`, `isEnabled` and `UpdateVerdict`

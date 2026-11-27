@@ -15,14 +15,3 @@ const call = coreModule('hooks/output/tool-output');
 
 /** The tools whose output shape the kit checks: every built-in tool the SDK gives an output type. */
 export const CHECKED_TOOL_OUTPUTS: readonly string[] = call('CHECKED_TOOL_OUTPUTS');
-
-/** `mcp__<server>__<tool>`: "MCP tool output is passed through without schema validation". */
-export const isMcpToolName = (name: string): boolean => call('isMcpToolName', name);
-
-export type ToolOutputCheck =
-  | { readonly accepted: true }
-  | { readonly accepted: false; readonly message: string };
-
-/** Whether `value` may replace the output of the built-in tool `toolName`. */
-export const checkToolOutput = (toolName: string, value: unknown): ToolOutputCheck =>
-  call('checkToolOutput', toolName, value);

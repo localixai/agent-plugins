@@ -1,58 +1,79 @@
-//! Port of `src/hooks/verdict/debug-lines.ts`, switched.
+//! Ported from `src/hooks/verdict/debug-lines.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The debug-log lines the docs quote for how a hook's output was read, as warnings of the run: the
 //! kit writes no log, the host does (judgment, spec/judgments.md; Agent Plugins Extended §7.4.12).
 //!
-//! `Subject` (`src/hooks/verdict/subject.ts`, types only) is declared here, where the TypeScript
-//! first needs it: it holds the output parser, a function, so it crosses as the host's object and
-//! its members are read as they are needed.
+//! `Subject`, what every verdict reader is given, is declared here, where the readers first need
+//! it. The core builds it (`interpretRun`), so it is never the host's value: its output parser is
+//! the host's function.
 
 use serde::Deserialize;
 
+use super::types::ParseResult;
 use crate::format::issues::{PluginIssue, warning};
+use crate::hooks::contracts::HookSource;
 use crate::js::value::to_js_value;
 use crate::js::{JsObject, JsValue};
-use crate::registry::Port;
+use crate::registry::Callback;
 
-/// The part of a registered handler a subject's readers name.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct SubjectEntry {
-    /// The handler's id.
-    #[serde(default)]
-    pub id: String,
-}
-
-/// The members of a subject read as data.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct SubjectData {
-    /// The handler that ran.
-    #[serde(default)]
-    pub entry: SubjectEntry,
+/// What reading one run needs to know about the call it belongs to.
+#[derive(Clone, Debug)]
+pub struct Subject {
+    /// The registered handler, as the host gave it.
+    pub entry: JsValue,
     /// The event.
-    #[serde(default)]
     pub event: String,
-}
-
-/// What a run is read against (`Subject`): the host's object, or plain data.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum Subject {
-    /// The subject holds a function (the output parser).
-    Host(Port),
-    /// The subject is data.
-    Data(SubjectData),
+    /// The facts the event fired with (`source` of `ConfigChange`).
+    pub facts: JsValue,
+    /// `Bash` of a `PreToolUse:Bash` hook; absent on an event with no tool.
+    pub tool_name: Option<String>,
+    /// The output stage's reading of a JSON value (the host's `ParseOutput`).
+    pub parse: Callback,
+    /// A Monitor call reached the hook through a `Bash` matcher ("allow and updatedInput have no
+    /// effect").
+    pub effects_ignored: bool,
+    /// The limit the run was given in milliseconds, for the notice of a timeout; absent for none.
+    pub timeout_ms: Option<f64>,
+    /// Windows without Git Bash: a shell-form `PreToolUse` or `PermissionRequest` hook is a gate
+    /// (hooks.md, "Failed hooks on Windows without Git Bash").
+    pub git_bash_missing: bool,
+    /// `TaskCompleted` fired because a teammate finished its turn, not because the `TaskUpdate`
+    /// tool completed a task.
+    pub teammate_stopped: bool,
 }
 
 impl Subject {
-    /// The handler's id and the event.
-    pub async fn named(&self) -> SubjectData {
-        match self {
-            Self::Data(data) => data.clone(),
-            Self::Host(port) => SubjectData {
-                entry: port.member::<SubjectEntry>("entry").await,
-                event: port.member::<String>("event").await,
-            },
-        }
+    /// The handler's id.
+    #[must_use]
+    pub fn entry_id(&self) -> String {
+        self.entry
+            .get("id")
+            .and_then(JsValue::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    }
+
+    /// The handler's configuration (`entry.handler`).
+    #[must_use]
+    pub fn handler(&self) -> JsObject {
+        self.entry
+            .get("handler")
+            .and_then(JsValue::as_object)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Where the handler was declared.
+    #[must_use]
+    pub fn source(&self) -> Option<HookSource> {
+        HookSource::deserialize(self.entry.get("source")?.clone()).ok()
+    }
+
+    /// `subject.parse(event, json)`: the output stage's reading of `json`.
+    pub async fn parse(&self, event: &str, json: JsValue) -> ParseResult {
+        self.parse
+            .call::<ParseResult>(vec![JsValue::from(event), json])
+            .await
     }
 }
 
@@ -62,27 +83,26 @@ const PLAIN_TEXT_LINE: &str = "Hook output does not start with {, treating as pl
 /// hooks-guide.md, "Fields at the wrong level" (§7.4.5.1 item 1, Judgment J7.30).
 const UNRECOGNIZED_KEYS_LINE: &str = "Hook JSON output had unrecognized keys";
 
-async fn path_of(subject: &Subject) -> String {
-    let named = subject.named().await;
-    format!("hooks.{}.{}", named.event, named.entry.id)
+fn path_of(subject: &Subject) -> String {
+    format!("hooks.{}.{}", subject.event, subject.entry_id())
 }
 
-/// The line for stdout read as plain text because it does not start with `{`; none for empty stdout.
-pub async fn plain_text_note(subject: &Subject, text: &str) -> Vec<PluginIssue> {
+/// The line for stdout read as plain text because it does not start with `{`; none for empty
+/// stdout.
+#[must_use]
+pub fn plain_text_note(subject: &Subject, text: &str) -> Vec<PluginIssue> {
     if text.is_empty() || text.starts_with('{') {
         return vec![];
     }
-    vec![warning(&path_of(subject).await, PLAIN_TEXT_LINE)]
+    vec![warning(&path_of(subject), PLAIN_TEXT_LINE)]
 }
 
 /// The line for the keys a valid output had that the schema does not name, the keys after it.
-pub async fn unrecognized_keys_note(
-    subject: &Subject,
-    keys: Option<&[String]>,
-) -> Vec<PluginIssue> {
+#[must_use]
+pub fn unrecognized_keys_note(subject: &Subject, keys: Option<&[String]>) -> Vec<PluginIssue> {
     match keys {
         Some(keys) if !keys.is_empty() => vec![warning(
-            &path_of(subject).await,
+            &path_of(subject),
             &format!("{UNRECOGNIZED_KEYS_LINE}: {}", keys.join(", ")),
         )],
         _ => vec![],
@@ -107,14 +127,4 @@ pub fn with_notes(mut verdict: JsObject, notes: &[PluginIssue]) -> JsObject {
     );
     verdict.insert("issues".to_owned(), JsValue::Array(issues));
     verdict
-}
-
-crate::registry::exports! {
-    "hooks/verdict/debug-lines" {
-        "plainTextNote" => async ok |subject: Subject, text: String|
-            plain_text_note(&subject, &text).await;
-        "unrecognizedKeysNote" => async ok |subject: Subject, keys: Option<Vec<String>>|
-            unrecognized_keys_note(&subject, keys.as_deref()).await;
-        "withNotes" => ok |verdict: JsObject, notes: Vec<PluginIssue>| with_notes(verdict, &notes);
-    }
 }

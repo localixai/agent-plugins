@@ -1,4 +1,3 @@
-import { configDirectoryOf } from '../format/config-directory.ts';
 /**
  * Where Claude Code keeps plugin files and state records (plugins/loading.md, "Find plugins on
  * disk"; env-vars.md, `CLAUDE_CODE_PLUGIN_CACHE_DIR`): one plugins root, and under it the version
@@ -7,13 +6,15 @@ import { configDirectoryOf } from '../format/config-directory.ts';
  *
  * Pure path builders over a host-supplied `join` (the host's own separator, as `Locations.joinPath`):
  * the kit never concatenates a path with its own separator and uses no `node:path` (L3).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/store_layout.rs`, docs/RUST.md).
  */
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('marketplace/store-layout');
 
 /** `base` and a `/`-separated relative path joined the way the host writes paths (`Locations.joinPath`). */
 export type PathJoin = (base: string, relativePath: string) => string;
-
-/** The plugins root of a default install, relative to the home directory. */
-const PLUGINS_FOLDER = 'plugins';
 
 /**
  * The plugins root: `CLAUDE_CODE_PLUGIN_CACHE_DIR` when set, else `plugins` under the configuration
@@ -23,33 +24,26 @@ const PLUGINS_FOLDER = 'plugins';
  * variables are set, so the one that names the plugins root itself wins over the configuration
  * directory; an empty value is no override, as for an unset variable.
  */
-export function resolvePluginsRoot(options: {
+export const resolvePluginsRoot = (options: {
   readonly home: string;
   readonly override?: string;
   /** `CLAUDE_CONFIG_DIR`: the directory every `~/.claude` path lives under when it is set. */
   readonly configDir?: string;
   readonly join: PathJoin;
-}): string {
-  const { override, configDir, home, join } = options;
-  if (override !== undefined && override !== '') return override;
-  return join(configDirectoryOf(home, configDir, join), PLUGINS_FOLDER);
-}
+}): string => call('resolvePluginsRoot', options);
 
 /** The names the table of "Find plugins on disk" gives; each is directly under the root. */
-export const STORE_NAMES = {
-  cache: 'cache',
-  data: 'data',
-  marketplaces: 'marketplaces',
-  synced: 'synced',
-  trash: '.trash',
-  installedPlugins: 'installed_plugins.json',
-  knownMarketplaces: 'known_marketplaces.json',
-  knownMarketplacesClaudeAi: 'known_marketplaces_claudeai.json',
-  flaggedPlugins: 'flagged-plugins.json',
-} as const;
-
-const SET_ASIDE_PREFIX = 'installed_plugins.set-aside.';
-const UNREADABLE_PREFIX = 'installed_plugins.unreadable.';
+export const STORE_NAMES: {
+  readonly cache: 'cache';
+  readonly data: 'data';
+  readonly marketplaces: 'marketplaces';
+  readonly synced: 'synced';
+  readonly trash: '.trash';
+  readonly installedPlugins: 'installed_plugins.json';
+  readonly knownMarketplaces: 'known_marketplaces.json';
+  readonly knownMarketplacesClaudeAi: 'known_marketplaces_claudeai.json';
+  readonly flaggedPlugins: 'flagged-plugins.json';
+} = call('STORE_NAMES');
 
 export interface StoreLayout {
   readonly root: string;
@@ -78,27 +72,12 @@ export interface StoreLayout {
 /**
  * The layout under `root`. Judgment (spec/judgments.md): `<date>` and `<hash>` of the dated copies
  * are the caller's text (the docs give the shape, not the date format or the hash input).
+ * The core's handle has methods only, so `root` is set on the object it becomes.
  */
-export function createStoreLayout(root: string, join: PathJoin): StoreLayout {
-  const under = (...parts: readonly string[]): string => join(root, parts.join('/'));
-  return {
-    root,
-    file: (name) => under(name),
-    cache: () => under(STORE_NAMES.cache),
-    versionDir: (marketplace, plugin, version) =>
-      under(STORE_NAMES.cache, marketplace, plugin, version),
-    pluginData: (dataId) => under(STORE_NAMES.data, dataId),
-    marketplace: (name) => under(STORE_NAMES.marketplaces, name),
-    synced: () => under(STORE_NAMES.synced),
-    trash: () => under(STORE_NAMES.trash),
-    installedPlugins: () => under(STORE_NAMES.installedPlugins),
-    knownMarketplaces: () => under(STORE_NAMES.knownMarketplaces),
-    knownMarketplacesClaudeAi: () => under(STORE_NAMES.knownMarketplacesClaudeAi),
-    flaggedPlugins: () => under(STORE_NAMES.flaggedPlugins),
-    setAsideCopy: (date, hash) => under(`${SET_ASIDE_PREFIX}${date}.${hash}.json`),
-    unreadableCopy: (date, hash) => under(`${UNREADABLE_PREFIX}${date}.${hash}.kept`),
-  };
-}
+export const createStoreLayout = (root: string, join: PathJoin): StoreLayout => {
+  const methods: Omit<StoreLayout, 'root'> = call('createStoreLayout', root, join);
+  return Object.assign(methods, { root });
+};
 
 /** What a name directly under the plugins root is, as the table of "Find plugins on disk" lists them. */
 export type StoreEntry =
@@ -115,23 +94,4 @@ export type StoreEntry =
   | 'unreadable-copy'
   | 'unknown';
 
-const SET_ASIDE_NAME = /^installed_plugins\.set-aside\.[^./]+\.[^./]+\.json$/;
-const UNREADABLE_NAME = /^installed_plugins\.unreadable\.[^./]+\.[^./]+\.kept$/;
-
-const EXACT: Readonly<Record<string, StoreEntry>> = {
-  [STORE_NAMES.cache]: 'cache',
-  [STORE_NAMES.data]: 'data',
-  [STORE_NAMES.marketplaces]: 'marketplaces',
-  [STORE_NAMES.synced]: 'synced',
-  [STORE_NAMES.trash]: 'trash',
-  [STORE_NAMES.installedPlugins]: 'installed-plugins',
-  [STORE_NAMES.knownMarketplaces]: 'known-marketplaces',
-  [STORE_NAMES.knownMarketplacesClaudeAi]: 'known-marketplaces-claudeai',
-  [STORE_NAMES.flaggedPlugins]: 'flagged-plugins',
-};
-
-export function classifyStoreEntry(name: string): StoreEntry {
-  if (Object.hasOwn(EXACT, name)) return EXACT[name] ?? 'unknown';
-  if (SET_ASIDE_NAME.test(name)) return 'set-aside-copy';
-  return UNREADABLE_NAME.test(name) ? 'unreadable-copy' : 'unknown';
-}
+export const classifyStoreEntry = (name: string): StoreEntry => call('classifyStoreEntry', name);

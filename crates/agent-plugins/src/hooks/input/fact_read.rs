@@ -1,4 +1,4 @@
-//! The core's counterpart of `src/hooks/input/fact-read.ts` at sha256:069efd08544f, which stays TypeScript:
+//! The core's counterpart of `src/hooks/input/fact-read.ts` at sha256:c16cae7ba324, which stays TypeScript:
 //! a guard over a host value, which crossing the boundary would copy whole (docs/RUST.md, "What
 //! stays TypeScript").
 //!

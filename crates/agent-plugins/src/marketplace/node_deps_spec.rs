@@ -380,17 +380,12 @@ pub fn specifier_refusals(package_json: &PackageJson) -> Vec<SpecifierRefusal> {
 crate::registry::exports! {
     "marketplace/node-deps-spec" {
         "classifySpecifier" => ok |value: String| classify_specifier(&value);
-        "isDefaultRegistry" => ok |registry: String, default_registry: Option<String>|
-            is_default_registry(&registry, default_registry.as_deref());
         "downloadLinkRefusal" => ok |link: String, default_registry: Option<String>|
             download_link_refusal(&link, default_registry.as_deref());
-        "packageValueRefusal" => ok |value: String, default_registry: Option<String>|
-            package_value_refusal(&value, default_registry.as_deref());
         "dependencyRefusal" => ok |specifier: String| dependency_refusal(&specifier);
         "isRegistryOrigin" => ok |resolved: String| is_registry_origin(&resolved);
         "isRegistryId" => ok |specifier: String| is_registry_id(&specifier);
         "DEPENDENCY_SECTIONS" => ok || DEPENDENCY_SECTIONS;
-        "readDependencyMap" => ok |value: JsValue| read_dependency_map(&value);
         "readPackageJson" => ok |value: JsValue| read_package_json(&value);
         "specifierRefusals" => ok |package_json: PackageJson| specifier_refusals(&package_json);
     }

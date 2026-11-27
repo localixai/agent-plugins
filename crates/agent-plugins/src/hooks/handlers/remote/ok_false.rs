@@ -190,7 +190,8 @@ pub fn is_prompt_event(event: &str) -> bool {
     parse_event(event).is_some()
 }
 
-fn parse_event(event: &str) -> Option<PromptEvent> {
+/// The event of `OK_FALSE_RULES` named `event`.
+pub fn parse_event(event: &str) -> Option<PromptEvent> {
     PROMPT_EVENTS
         .iter()
         .copied()

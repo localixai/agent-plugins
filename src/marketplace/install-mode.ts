@@ -60,10 +60,6 @@ export interface ModeInput {
   readonly printed?: PrintedDirectory;
 }
 
-/** The refusal when the printed directory is the session's own directory or one of its parents. */
-export const sessionDirectoryIssue = (printed: string): PluginIssue =>
-  call('sessionDirectoryIssue', printed);
-
 /**
  * How the plugin is installed, or why it may not be: "Claude Code refuses to install a link-mode
  * plugin on Windows", and a printed directory that is a UNC path on Windows or "the one Claude Code

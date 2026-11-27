@@ -1,4 +1,4 @@
-//! Port of `src/hooks/verdict/plain-stdout.ts`, switched.
+//! Ported from `src/hooks/verdict/plain-stdout.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Plain stdout on exit 0 that reaches Claude (hooks.md, "Exit code 0"): "`UserPromptSubmit`,
 //! `UserPromptExpansion`, `SessionStart`, and `PostModelSwitch`: Claude Code adds plain-text stdout
@@ -18,10 +18,4 @@ pub fn plain_stdout() -> IndexMap<&'static str, &'static str> {
         ("PostModelSwitch", "context"),
         ("PreCompact", "compaction-instructions"),
     ])
-}
-
-crate::registry::exports! {
-    "hooks/verdict/plain-stdout" {
-        "PLAIN_STDOUT" => ok plain_stdout;
-    }
 }

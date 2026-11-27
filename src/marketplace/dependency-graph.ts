@@ -89,12 +89,6 @@ export interface GraphFacts {
   readonly localCopies?: readonly LocalCopy[];
 }
 
-export const recordAt = (
-  id: string,
-  scope: InstallScope,
-  facts: GraphFacts,
-): InstalledRecord | undefined => call('recordAt', id, scope, facts);
-
 /** The highest-precedence scope whose `enabledPlugins` lists `id`, if any does. */
 export const winningScope = (id: string, facts: GraphFacts): InstallScope | undefined =>
   call('winningScope', id, facts);
@@ -109,10 +103,6 @@ export const effectiveEnabled = (id: string, facts: GraphFacts): boolean | undef
  * `enabledPlugins`", marketplace-reference.md). A plugin with no install record is not on.
  */
 export const isEnabled = (id: string, facts: GraphFacts): boolean => call('isEnabled', id, facts);
-
-/** The dependencies a plugin declares, from any of its installed records (the manifest does not differ per scope). */
-export const dependenciesOf = (id: string, facts: GraphFacts): readonly NormalizedDependency[] =>
-  call('dependenciesOf', id, facts);
 
 /** An installed plugin that constrains `dependency` with a range. */
 export interface Constraint {
@@ -136,12 +126,6 @@ export interface CopyLookup {
   /** The entry names a marketplace itself (`namesMarketplace(item)`), not merely resolves to its plugin's. */
   readonly namesMarketplace?: boolean;
 }
-
-export const localCopyOf = (
-  dep: NormalizedDependency,
-  facts: GraphFacts,
-  lookup: CopyLookup = {},
-): InstalledDependency | undefined => call('localCopyOf', dep, facts, lookup);
 
 /**
  * The copy that meets a dependency entry (plugins/dependencies.md, "Test a plugin and its

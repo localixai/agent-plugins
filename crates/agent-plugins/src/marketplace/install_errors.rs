@@ -429,8 +429,6 @@ crate::registry::exports! {
         "alreadyInstalledGlobally" => ok |plugin: String, with_marketplace: bool| already_installed_globally(&plugin, with_marketplace);
         "alreadyInstalledAtScope" => ok |id: String, scope: InstallScope| already_installed_at_scope(&id, scope);
         "failedToInstall" => ok |failures: Vec<InstallFailure>| failed_to_install(&failures);
-        "RELOAD_TO_APPLY" => ok || RELOAD_TO_APPLY;
-        "PLUGIN_ACTIVE" => ok || PLUGIN_ACTIVE;
         "PLUGINS_CHANGED" => ok || PLUGINS_CHANGED;
         "installActivation" => ok |facts: InstallActivationFacts| install_activation(facts);
         "notCached" => ok |name: String, path: String| not_cached(&name, &path);

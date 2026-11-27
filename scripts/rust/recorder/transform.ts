@@ -87,7 +87,7 @@ function applyEdits(source: string, edits: readonly Edit[]): string {
 }
 
 /** A module switched to the Rust core (docs/RUST.md): its calls are the core's, never recorded. */
-const SWITCHED = /\bcallCore\b/u;
+const SWITCHED = /\b(coreModule|callCore)\b/u;
 
 export function wrapExports(source: string, module: string, recorder: string): string {
   if (SWITCHED.test(source)) return source;

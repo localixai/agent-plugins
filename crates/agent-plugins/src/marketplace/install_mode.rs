@@ -237,7 +237,6 @@ pub fn linked_plugin_loads(
 
 crate::registry::exports! {
     "marketplace/install-mode" {
-        "sessionDirectoryIssue" => ok |printed: String| session_directory_issue(&printed);
         "decideInstallMode" => ok |input: ModeInput| decide_install_mode(&input);
         "linkedPluginLoads" => ok |decided: InstallDecision, printed: PrintedDirectory, platform: PathPlatform|
             linked_plugin_loads(&decided, &printed, platform);

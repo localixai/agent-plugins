@@ -1,4 +1,4 @@
-//! Port of `src/rules/target/skill.ts`, switched.
+//! Ported from `src/rules/target/skill.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `Skill(name)` and `Skill(name *)` (skills.md, "Restrict Claude's skill access"): `Skill(name)`
 //! is an exact match and `Skill(name *)` a prefix match with any arguments. The prefix is a whole
@@ -8,7 +8,7 @@
 
 use super::input::input_string;
 use crate::rules::specifier_guards::is_text_specifier;
-use crate::rules::types::{MatchContext, PermissionBehavior, PermissionRule, PreparedCall};
+use crate::rules::types::{PermissionBehavior, PermissionRule, PreparedCall};
 
 const ANY_ARGUMENTS: &str = " *";
 const NAMESPACE_SEPARATOR: &str = ":";
@@ -55,10 +55,4 @@ pub fn match_skill_rule(rule: &PermissionRule, call: &PreparedCall) -> bool {
     names_of(rule.behavior, call)
         .iter()
         .any(|name| skill_covers(pattern, name))
-}
-
-crate::registry::exports! {
-    "rules/target/skill" {
-        "matchSkillRule" => ok |rule: PermissionRule, call: PreparedCall, _ctx: Option<MatchContext>| match_skill_rule(&rule, &call);
-    }
 }

@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/command-directory.ts`, switched.
+//! Ported from `src/marketplace/command-directory.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a `command` source's printed directory must hold and stay within (plugins/marketplace-
 //! reference.md, "Output that fails the install or update", "Copy mode and link mode"), judged
@@ -11,13 +11,22 @@ use crate::format::path_text::{PathPlatform, leaves_folder};
 use crate::js::number_to_string;
 use crate::ports::Signal;
 use crate::ports::files::PluginFiles;
-use crate::registry::Port;
 
 const MIB: u64 = 1024 * 1024;
 
 /// "In copy mode, the directory is larger than 256 MiB or has more than 20,000 entries."
 const MAX_BYTES: u64 = 256 * MIB;
 const MAX_ENTRIES: u64 = 20_000;
+
+/// The limits of a copy (`CopyLimits`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CopyLimits {
+    /// The most bytes.
+    pub max_bytes: f64,
+    /// The most entries.
+    pub max_entries: f64,
+}
 
 /// The two ways a directory is too large to copy: the verdict, once a limit is broken.
 #[must_use]
@@ -170,14 +179,4 @@ pub async fn link_issue(files: &dyn PluginFiles, signal: &Signal) -> Option<Plug
         }
     }
     None
-}
-
-crate::registry::exports! {
-    "marketplace/command-directory" {
-        "tooManyEntries" => ok |max_entries: f64| too_many_entries(max_entries);
-        "tooLarge" => ok |max_bytes: f64| too_large(max_bytes);
-        "contentIssue" => async ok |files: Port, signal: Signal| content_issue(&files, &signal).await;
-        "copyLimitIssue" => async ok |files: Port, signal: Signal| copy_limit_issue(&files, &signal).await;
-        "linkIssue" => async ok |files: Port, signal: Signal| link_issue(&files, &signal).await;
-    }
 }

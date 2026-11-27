@@ -213,7 +213,6 @@
   },
   "dependencies": {
     "acorn": "8.19.0",
-    "ignore": "7.0.14",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -224,6 +223,7 @@
     "@types/bun": "1.4.4",
     "@types/semver": "7.8.0",
     "eslint-plugin-sonarjs": "4.2.2",
+    "ignore": "7.0.14",
     "knip": "6.44.1",
     "lefthook": "2.2.2",
     "oxc-parser": "0.155.0",

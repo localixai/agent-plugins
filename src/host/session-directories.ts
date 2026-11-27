@@ -1,3 +1,4 @@
+import { coreModule } from '../wasm/bridge.ts';
 import type { SessionOptions } from './session-types.ts';
 
 /**
@@ -5,6 +6,8 @@ import type { SessionOptions } from './session-types.ts';
  * `/add-dir`. `SessionOptions` gives the first values; `/cd` (permissions.md, "Move the session to
  * another directory") and `/add-dir` change them while the session, its hooks and its `once` keys go
  * on. Every part of the session reads them through here, never from the options.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_directories.rs`, docs/RUST.md).
  */
 export interface SessionDirectories {
   cwd(): string;
@@ -16,19 +19,7 @@ export interface SessionDirectories {
   moveTo(cwd: string): void;
 }
 
-export function createSessionDirectories(options: SessionOptions): SessionDirectories {
-  let cwd = options.cwd;
-  let added: readonly string[] = options.addedDirectories ?? [];
-  return {
-    cwd: () => cwd,
-    added: () => added,
-    add(path) {
-      if (path === cwd || added.includes(path)) return false;
-      added = [...added, path];
-      return true;
-    },
-    moveTo(next) {
-      cwd = next;
-    },
-  };
-}
+const call = coreModule('host/session-directories');
+
+export const createSessionDirectories = (options: SessionOptions): SessionDirectories =>
+  call('createSessionDirectories', options);
