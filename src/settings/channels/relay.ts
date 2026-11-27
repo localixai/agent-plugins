@@ -1,14 +1,13 @@
-import { inputPreview, relayDescription } from './sanitize.ts';
-
 /**
  * Permission relay's request side (channels-reference.md, "Relay permission prompts"): the IDs Claude Code
  * issues, the four fields of a request, and the rule that applies a verdict only when its ID matches an
  * open request.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/channels/relay.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
 
-/** "Five lowercase letters drawn from `a`-`z` without `l`." */
-const REQUEST_ID_ALPHABET = 'abcdefghijkmnopqrstuvwxyz';
-const REQUEST_ID_LENGTH = 5;
+const call = coreModule('settings/channels/relay');
 
 /** The `notifications/claude/channel/permission_request` params. */
 export interface PermissionRequestParams {
@@ -44,37 +43,5 @@ export interface PermissionRelay {
 }
 
 /** `random` returns a number in [0, 1), the host's source of randomness (L3). */
-export function createPermissionRelay(random: () => number): PermissionRelay {
-  const open = new Set<string>();
-  const issued = new Set<string>();
-  const repeated = new Set<string>();
-  const newId = (): string =>
-    Array.from(
-      { length: REQUEST_ID_LENGTH },
-      () => REQUEST_ID_ALPHABET[Math.floor(random() * REQUEST_ID_ALPHABET.length)],
-    ).join('');
-  return {
-    open(call) {
-      const id = newId();
-      // "Once an ID repeats, Claude Code drops any channel verdict carrying it."
-      if (issued.has(id)) repeated.add(id);
-      issued.add(id);
-      open.add(id);
-      return {
-        request_id: id,
-        tool_name: call.toolName,
-        description: relayDescription(call.description),
-        input_preview: inputPreview(call.input),
-      };
-    },
-    verdict(params) {
-      const id = params.request_id;
-      if (!open.has(id) || repeated.has(id)) return { applied: false };
-      open.delete(id);
-      return { applied: true, behavior: params.behavior };
-    },
-    answerLocally(requestId) {
-      open.delete(requestId);
-    },
-  };
-}
+export const createPermissionRelay = (random: () => number): PermissionRelay =>
+  call('createPermissionRelay', random);

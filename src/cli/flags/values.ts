@@ -14,6 +14,3 @@ export type Parsed = { readonly value: unknown } | { readonly problem: string };
 
 /** The parsed JSON, or the parser's own message: the kit's one JSON reader. */
 export const parseJson = (text: string): Parsed => call('parseJson', text);
-
-/** The entries of one value, split on whitespace; blanks are dropped. */
-export const wordsOf = (value: string): readonly string[] => call('wordsOf', value);

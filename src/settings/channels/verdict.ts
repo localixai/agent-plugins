@@ -1,10 +1,18 @@
+/**
+ * Whether a channel plugin a user passed for the session may register: the gate first, then the
+ * rule of the flag the entry came from.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/channels/verdict.rs`, docs/RUST.md).
+ */
 import type { ChannelPluginRef } from '../../protocol/official.ts';
 import type { ChannelAllowlist } from './allowlist.ts';
-import { isListed } from './allowlist.ts';
 import type { ChannelGate } from './channel-gate.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/channels/verdict');
 
 /** Why a channel plugin may or may not register. */
-export const CHANNEL_REASONS = [
+export const CHANNEL_REASONS: readonly [
   'organizationAllowlist',
   'defaultAllowlist',
   'developmentFlag',
@@ -12,19 +20,8 @@ export const CHANNEL_REASONS = [
   'notOnOrganizationList',
   'notOnDefaultList',
   'developmentFlagNeedsInteractive',
-] as const;
+] = call('CHANNEL_REASONS');
 export type ChannelReason = (typeof CHANNEL_REASONS)[number];
-
-/** Which reasons let the channel register. */
-const ADMITTED: { readonly [R in ChannelReason]: boolean } = {
-  organizationAllowlist: true,
-  defaultAllowlist: true,
-  developmentFlag: true,
-  channelsNotEnabled: false,
-  notOnOrganizationList: false,
-  notOnDefaultList: false,
-  developmentFlagNeedsInteractive: false,
-};
 
 export interface ChannelVerdict {
   readonly allowed: boolean;
@@ -32,7 +29,7 @@ export interface ChannelVerdict {
 }
 
 /** The two flags that carry a channel into a session. */
-export const CHANNEL_ORIGINS = ['channels', 'development'] as const;
+export const CHANNEL_ORIGINS: readonly ['channels', 'development'] = call('CHANNEL_ORIGINS');
 export type ChannelOrigin = (typeof CHANNEL_ORIGINS)[number];
 
 /** What each flag's entry tells the verdict, beyond the flag it came from. */
@@ -57,41 +54,9 @@ export type ChannelEntry = {
   readonly [O in ChannelOrigin]: { readonly origin: O } & EntryByOrigin[O];
 }[ChannelOrigin];
 
-type OriginRule<O extends ChannelOrigin> = (
-  entry: EntryByOrigin[O],
-  allowlist: ChannelAllowlist,
-) => ChannelReason;
-
-const ORIGIN_RULES: { readonly [O in ChannelOrigin]: OriginRule<O> } = {
-  channels: (entry, allowlist) => {
-    const [listed, missing] = LISTED_REASON[allowlist.source];
-    return isListed(allowlist.entries, entry.plugin) ? listed : missing;
-  },
-  // Run in an interactive session, where Claude Code can show the confirmation prompt; elsewhere it
-  // "ignores the flag and the channel doesn't register".
-  development: (entry) =>
-    entry.interactive ? 'developmentFlag' : 'developmentFlagNeedsInteractive',
-};
-
-const LISTED_REASON: {
-  readonly [S in ChannelAllowlist['source']]: readonly [ChannelReason, ChannelReason];
-} = {
-  organization: ['organizationAllowlist', 'notOnOrganizationList'],
-  default: ['defaultAllowlist', 'notOnDefaultList'],
-};
-
-const verdict = (reason: ChannelReason): ChannelVerdict => ({ allowed: ADMITTED[reason], reason });
-
-const reasonFor = <O extends ChannelOrigin>(
-  entry: { readonly origin: O } & EntryByOrigin[O],
-  allowlist: ChannelAllowlist,
-): ChannelReason => ORIGIN_RULES[entry.origin](entry, allowlist);
-
 /** The gate first (it blocks the development flag too), then the entry's own flag rule. */
-export function channelVerdict(
+export const channelVerdict = (
   gate: ChannelGate,
   allowlist: ChannelAllowlist,
   entry: ChannelEntry,
-): ChannelVerdict {
-  return verdict(gate.open ? reasonFor(entry, allowlist) : 'channelsNotEnabled');
-}
+): ChannelVerdict => call('channelVerdict', gate, allowlist, entry);

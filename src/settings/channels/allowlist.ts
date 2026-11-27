@@ -42,7 +42,3 @@ export const effectiveChannelAllowlist = (
     hasManagedSettings: context.hasManagedSettings,
     defaultChannelAllowlist: context.defaultChannelAllowlist,
   });
-
-/** Whether the list names this plugin from this marketplace: both names exactly, case included. */
-export const isListed = (list: readonly ChannelPluginRef[], ref: ChannelPluginRef): boolean =>
-  call('isListed', list, ref);

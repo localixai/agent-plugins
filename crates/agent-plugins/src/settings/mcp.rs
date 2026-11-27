@@ -2,5 +2,6 @@
 //! (`src/settings/mcp/` in the npm package).
 
 pub mod command_match;
+pub mod entries;
 pub mod managed;
 pub mod managed_timing;

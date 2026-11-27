@@ -18,9 +18,6 @@ export interface RepairAt {
   readonly closed: boolean;
 }
 
-/** The value comes from the SDK's `managedSettings`, which the host passes as parent settings. */
-export const isParent = (at: RepairAt): boolean => call('isParent', at);
-
 /** The repaired value (`undefined`: the key does not apply) and what was said about it. */
 export interface Repaired {
   readonly value: unknown;
@@ -53,27 +50,6 @@ export const mustBe = (at: RepairAt, expected: string): Repaired => call('mustBe
 /** `"<key>" was present but invalid; <effect>`: the report of a value that fails closed (managed-settings.md). */
 export const presentButInvalid = (at: RepairAt, effect: string, field = ''): PluginIssue =>
   call('presentButInvalid', at, effect, field);
-
-/**
- * An unreadable value of a restrictive key reads as `effect` until fixed; the report says the key
- * "was present but invalid" and names the value it is treated as (managed-settings.md).
- */
-export const failedClosed = (at: RepairAt, value: unknown, effect: string): Repaired =>
-  call('failedClosed', at, value, effect);
-
-/**
- * An unreadable value whose restrictive effect no value expresses: no value is kept, the layer
- * records the key as invalid and the report names what Claude Code does until it is fixed.
- */
-export const failedClosedNoValue = (at: RepairAt, effect: string): Repaired =>
-  call('failedClosedNoValue', at, effect);
-
-/**
- * An entry of a list or a map skipped on its own: "Claude Code skips those values and keeps the rest
- * of the file in effect" (settings.md, "Fix a broken settings file").
- */
-export const entryDropped = (at: RepairAt, index: number | string, reason: string): PluginIssue =>
-  call('entryDropped', at, index, reason);
 
 /** Splits a list into the entries `valid` accepts and a warning for each other one. */
 export const stripInvalid = <T>(

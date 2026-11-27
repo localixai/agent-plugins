@@ -44,7 +44,7 @@ pub struct ChannelsContext {
 }
 
 /// What opened the gate.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ChannelGateBy {
     /// An account without an organization.
@@ -56,7 +56,7 @@ pub enum ChannelGateBy {
 }
 
 /// The warning a closed gate asks the host to show.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StartupWarning {
     /// "A startup warning tells the user to have an admin enable the setting" (channels.md).
@@ -64,18 +64,18 @@ pub enum StartupWarning {
 }
 
 /// Whether channels may deliver messages, and why.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelGate {
     /// Whether the gate is open.
     pub open: bool,
     /// Why the gate is open; `undefined` while it is closed.
-    #[serde(serialize_with = "undefined_if_none")]
+    #[serde(default, serialize_with = "undefined_if_none")]
     pub by: Option<ChannelGateBy>,
     /// "A startup warning tells the user to have an admin enable the setting" (channels.md,
     /// "Enable channels for your organization"). The wording belongs to the host; this names the
     /// warning.
-    #[serde(serialize_with = "undefined_if_none")]
+    #[serde(default, serialize_with = "undefined_if_none")]
     pub startup_warning: Option<StartupWarning>,
     /// Always `true`: a closed gate stops channel messages only. "The MCP server still connects and
     /// its tools work, but channel messages won't arrive" (channels.md, "Enable channels for your

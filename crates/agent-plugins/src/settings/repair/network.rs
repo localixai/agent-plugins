@@ -1,4 +1,4 @@
-//! Port of `src/settings/repair/network.ts`, switched.
+//! Ported from `src/settings/repair/network.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `gatewayInternalNetworks` (settings-reference.md, `gatewayInternalNetworks`; claude-apps-gateway.md,
 //! "Allow a gateway on public address space you own"): an array of strings, at most four IPv4 CIDR
@@ -116,10 +116,4 @@ pub fn gateway_networks_fault(value: &JsValue) -> Option<String> {
             .any(|other| overlap(*block, *other))
     });
     crossing.then(|| "two blocks overlap".to_owned())
-}
-
-crate::registry::exports! {
-    "settings/repair/network" {
-        "gatewayNetworksFault" => ok |value: JsValue| gateway_networks_fault(&value);
-    }
 }

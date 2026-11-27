@@ -15,10 +15,6 @@ const call = coreModule('marketplace/semver');
 export const normalizedVersion = (text: string): string | undefined =>
   call('normalizedVersion', text);
 
-/** Whether `version` satisfies `range`; a version that is not semver satisfies nothing. */
-export const satisfiesRange = (version: string, range: string): boolean =>
-  call('satisfiesRange', version, range);
-
 /**
  * Whether some version satisfies all of `ranges` (each valid), or `undefined` when there are too
  * many `||` alternatives to decide ("has version requirements too complex to intersect"). The
