@@ -1,14 +1,18 @@
-//! Port of `src/settings/plugins/sync-plugins.ts` at sha256:baad1fbdf38f.
+//! Port of `src/settings/plugins/sync-plugins.ts`, switched.
 //!
-//! It takes the host's `PolicyView`, so it stays
-//! TypeScript in the package: nothing of it is exported.
+//! Whether the plugins and skills of the claude.ai account sync, read through the host's
+//! `PolicyView`.
+
+use serde::{Deserialize, Serialize};
 
 use crate::js::is_truthy;
+use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::view::PolicyView;
 
 /// What `syncClaudeAiPlugins` asks the host to do; the host does the I/O.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncDecision {
     /// `false`: do not download the plugins enabled on the claude.ai account.
     pub download: bool,
@@ -19,11 +23,13 @@ pub struct SyncDecision {
 }
 
 /// The two keys that stop the claude.ai sync; they read the same way (settings.md, "Exceptions").
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 pub enum SyncKey {
     /// `syncClaudeAiPlugins`.
+    #[serde(rename = "syncClaudeAiPlugins")]
     Plugins,
     /// `syncClaudeAiSkills`.
+    #[serde(rename = "syncClaudeAiSkills")]
     Skills,
 }
 
@@ -49,18 +55,17 @@ const MOVES: [PolicyScope; 2] = [PolicyScope::User, PolicyScope::Managed];
 ///
 /// Judgment (spec/judgments.md): one `false` in a user or managed file moves the plugins, even when
 /// a higher file only stops the sync.
-#[must_use]
-pub fn sync_decision(view: &dyn PolicyView) -> SyncDecision {
-    sync_decision_of(view, SyncKey::Plugins)
+pub async fn sync_decision(view: &dyn PolicyView) -> SyncDecision {
+    sync_decision_of(view, SyncKey::Plugins).await
 }
 
 /// The reading both sync keys share: `syncClaudeAiSkills` has the same scope line, the same
 /// honored-only-`false` rule and the same move to the trash (settings-reference.md, skills.md "How
 /// synced skills behave"), only into `~/.claude/skills/.trash/`.
-#[must_use]
-pub fn sync_decision_of(view: &dyn PolicyView, key: SyncKey) -> SyncDecision {
+pub async fn sync_decision_of(view: &dyn PolicyView, key: SyncKey) -> SyncDecision {
     let off: Vec<_> = view
         .each_from_highest(key.name())
+        .await
         .into_iter()
         .filter(|holder| !is_truthy(&holder.value))
         .collect();
@@ -75,5 +80,12 @@ pub fn sync_decision_of(view: &dyn PolicyView, key: SyncKey) -> SyncDecision {
         download: false,
         load_synced: false,
         move_to_trash: off.iter().any(|holder| MOVES.contains(&holder.scope)),
+    }
+}
+
+crate::registry::exports! {
+    "settings/plugins/sync-plugins" {
+        "syncDecision" => async ok |view: Port| sync_decision(&view).await;
+        "syncDecisionOf" => async ok |view: Port, key: SyncKey| sync_decision_of(&view, key).await;
     }
 }

@@ -1,11 +1,13 @@
-//! Port of `src/settings/skills/shell.ts` at sha256:7951e8e3dac9.
+//! Port of `src/settings/skills/shell.ts`, switched.
 //!
-//! It takes the host's `PolicyView`, so it stays
-//! TypeScript in the package: only its data names are exported.
+//! Whether the inline shell of a skill runs: `disableSkillShellExecution`, read through the host's
+//! `PolicyView`.
 
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::js::is_truthy;
+use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::view::PolicyView;
 
@@ -49,6 +51,25 @@ pub enum ShellVerdict {
     Replaced,
 }
 
+/// Written as the package writes it: `{ run: true }` or `{ run: false, replacement }`.
+impl Serialize for ShellVerdict {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Run => {
+                let mut verdict = serializer.serialize_struct("ShellVerdict", 1)?;
+                verdict.serialize_field("run", &true)?;
+                verdict.end()
+            }
+            Self::Replaced => {
+                let mut verdict = serializer.serialize_struct("ShellVerdict", 2)?;
+                verdict.serialize_field("run", &false)?;
+                verdict.serialize_field("replacement", SHELL_DISABLED_MARKER)?;
+                verdict.end()
+            }
+        }
+    }
+}
+
 /// Whether the setting reaches an origin: "skills and custom commands from user, project, plugin, or
 /// additional-directory sources"; "Bundled skills and skills deployed through managed settings are
 /// unaffected".
@@ -63,8 +84,8 @@ const fn reached(origin: ShellOrigin) -> bool {
 
 /// `disableSkillShellExecution` after precedence: a `true` in managed settings "can't be overridden by
 /// `false` elsewhere"; otherwise the highest file that sets it decides. Unset means inline shell runs.
-fn shell_disabled(view: &dyn PolicyView) -> bool {
-    let holders = view.each_from_highest("disableSkillShellExecution");
+async fn shell_disabled(view: &dyn PolicyView) -> bool {
+    let holders = view.each_from_highest("disableSkillShellExecution").await;
     if holders
         .iter()
         .any(|holder| holder.scope == PolicyScope::Managed && is_truthy(&holder.value))
@@ -78,9 +99,8 @@ fn shell_disabled(view: &dyn PolicyView) -> bool {
 
 /// What the skills expansion does with the `` !`cmd` `` and ` ```! ` blocks of a skill from `origin`.
 /// Replacing the blocks themselves is the skills expansion's; this is its verdict.
-#[must_use]
-pub fn shell_verdict(view: &dyn PolicyView, origin: ShellOrigin) -> ShellVerdict {
-    if reached(origin) && shell_disabled(view) {
+pub async fn shell_verdict(view: &dyn PolicyView, origin: ShellOrigin) -> ShellVerdict {
+    if reached(origin) && shell_disabled(view).await {
         ShellVerdict::Replaced
     } else {
         ShellVerdict::Run
@@ -91,5 +111,6 @@ crate::registry::exports! {
     "settings/skills/shell" {
         "SHELL_ORIGINS" => ok || SHELL_ORIGINS;
         "SHELL_DISABLED_MARKER" => ok || SHELL_DISABLED_MARKER;
+        "shellVerdict" => async ok |view: Port, origin: ShellOrigin| shell_verdict(&view, origin).await;
     }
 }

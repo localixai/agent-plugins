@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- The settings' area decisions run on the core over the host's `PolicyView`: the channel gate
+  and allowlist, permission relay text, the agent, theme, teammate, output style, launcher and
+  `worktree` keys, plugin defaults, the subagent status line and its run, the hooks merge, the
+  sideload verdicts, the running mode after a settings change, `enabledPlugins`, the claude.ai
+  sync, the trust warning, bundled skills and inline shell, workflow enablement and size, and the
+  host-wide environment switches.
 - A skill's injected commands run on the core (permission answer, refusal, the run, the output
   window, the move to the background), and so do stacked skills in one message, the
   `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,

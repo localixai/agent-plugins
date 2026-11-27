@@ -1,17 +1,16 @@
-//! Port of `src/settings/general/process-wrapper.ts` at sha256:bc2a6eef7c93.
+//! Port of `src/settings/general/process-wrapper.ts`, switched.
 //!
 //! The launcher of `processWrapper` and `CLAUDE_CODE_PROCESS_WRAPPER` (settings-reference.md,
 //! `processWrapper`; corporate-launcher.md, "Format of the launcher value"). Both take the same
-//! format: "Claude Code parses the value as an argument list, not a shell command". Takes the
-//! host's `PolicyView`: stays TypeScript in the package (the module comment of `crate::settings`),
-//! so it exports nothing.
+//! format: "Claude Code parses the value as an argument list, not a shell command".
 
 use indexmap::IndexMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
 use crate::js::json_parse::json_parse;
 use crate::js::{is_whitespace, trim};
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 const PROCESS_WRAPPER_ENV: &str = "CLAUDE_CODE_PROCESS_WRAPPER";
@@ -150,21 +149,36 @@ fn parse_launcher(value: &str) -> LauncherRead {
     }
 }
 
+/// What `read_process_wrapper` reads besides the view.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ProcessWrapperOptions {
+    /// The process environment.
+    pub env: IndexMap<String, Option<String>>,
+    /// Whether the host runs on Windows.
+    pub windows: bool,
+}
+
 /// The per-session launcher, ignored on Windows.
-#[must_use]
-pub fn read_process_wrapper(
+pub async fn read_process_wrapper(
     view: &dyn PolicyView,
-    env: &IndexMap<String, String>,
-    windows: bool,
+    options: &ProcessWrapperOptions,
 ) -> Option<LauncherRead> {
-    if windows {
+    if options.windows {
         return None;
     }
-    let value = match env.get(PROCESS_WRAPPER_ENV) {
-        Some(value) => Some(value.clone()),
+    let value = match options.env.get(PROCESS_WRAPPER_ENV).cloned().flatten() {
+        Some(value) => Some(value),
         None => view
             .get("processWrapper")
+            .await
             .and_then(|set| JsValue::as_str(&set).map(str::to_owned)),
     };
     value.as_deref().map(parse_launcher)
+}
+
+crate::registry::exports! {
+    "settings/general/process-wrapper" {
+        "readProcessWrapper" => async ok |view: Port, options: ProcessWrapperOptions|
+            read_process_wrapper(&view, &options).await;
+    }
 }

@@ -1,13 +1,17 @@
-//! Port of `src/settings/workflows/size.ts` at sha256:604f8bb6196f.
+//! Port of `src/settings/workflows/size.ts`, switched.
 //!
-//! It takes the host's `PolicyView`, so it stays
-//! TypeScript in the package: nothing of it is exported.
+//! The workflow size guideline in force, read through the host's `PolicyView`.
 
+use serde::{Deserialize, Serialize};
+
+use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
+use crate::settings::undefined_if_none;
 use crate::settings::view::PolicyView;
 
 /// A size of the `workflowSizeGuideline` setting.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum WorkflowSize {
     /// No guideline.
     Unrestricted,
@@ -33,20 +37,31 @@ impl WorkflowSize {
 }
 
 /// What the host tells the size guideline besides the layers.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkflowSizeContext {
     /// Pro signed in: the default is `small` there (settings-reference.md, `workflowSizeGuideline`).
-    pub pro: bool,
+    pub plan: WorkflowSizePlan,
     /// The Dynamic workflow size choice of `/config`, which Claude Code keeps in `~/.claude.json`: a file
     /// the kit never reads, so the host hands the value over.
+    #[serde(default)]
     pub config_choice: Option<WorkflowSize>,
     /// The session has ultracode on (`/effort ultracode`, or the `ultracode` setting): a session state the
     /// host holds. The `Large workflow` warning does not show then (workflows.md, "Cost").
+    #[serde(default)]
     pub ultracode: Option<bool>,
 }
 
+/// The signed-in plan, as the size guideline reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+pub struct WorkflowSizePlan {
+    /// The Pro plan.
+    pub pro: bool,
+}
+
 /// Where the size in force comes from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum WorkflowSizeSource {
     /// A settings file.
     Settings,
@@ -57,15 +72,18 @@ pub enum WorkflowSizeSource {
 }
 
 /// The size guideline in force.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkflowSizeDecision {
     /// The size.
     pub size: WorkflowSize,
     /// Where it comes from.
     pub source: WorkflowSizeSource,
     /// The file that set it, when `source` is `settings`.
+    #[serde(serialize_with = "undefined_if_none")]
     pub settings_scope: Option<PolicyScope>,
     /// Claude aims for fewer agents than this; none for `unrestricted`.
+    #[serde(serialize_with = "undefined_if_none")]
     pub agents_below: Option<u32>,
     /// Advice sent to Claude, "not an enforced cap".
     pub enforced: bool,
@@ -73,10 +91,12 @@ pub struct WorkflowSizeDecision {
     pub config_row_visible: bool,
     /// The agent count above which the progress line shows `Large workflow` (workflows.md, "Cost");
     /// `None` while ultracode is on, which shows no warning.
+    #[serde(serialize_with = "undefined_if_none")]
     pub large_workflow_threshold: Option<u32>,
     /// The projected token total above which the progress line shows `Large workflow` (1.5 million);
     /// `None` while ultracode is on. The host compares it with its run's projection: the kit holds
     /// no run data (spec/judgments.md).
+    #[serde(serialize_with = "undefined_if_none")]
     pub large_workflow_tokens: Option<u32>,
 }
 
@@ -117,14 +137,16 @@ fn agent_threshold(chosen: Option<WorkflowSize>, below: Option<u32>) -> u32 {
 /// reaches here. A size the user chose replaces the 25-agent threshold with its own agent count;
 /// `unrestricted` has none, so it leaves 25 (spec/judgments.md). With ultracode on there is no warning,
 /// so neither threshold is returned.
-#[must_use]
-pub fn workflow_size(view: &dyn PolicyView, context: &WorkflowSizeContext) -> WorkflowSizeDecision {
-    let holder = view.winner("workflowSizeGuideline");
+pub async fn workflow_size(
+    view: &dyn PolicyView,
+    context: &WorkflowSizeContext,
+) -> WorkflowSizeDecision {
+    let holder = view.winner("workflowSizeGuideline").await;
     let chosen = holder
         .as_ref()
         .and_then(|holder| holder.value.as_str().and_then(WorkflowSize::named))
         .or(context.config_choice);
-    let size = chosen.unwrap_or_else(|| default_size(context.pro));
+    let size = chosen.unwrap_or_else(|| default_size(context.plan.pro));
     let source = if holder.is_some() {
         WorkflowSizeSource::Settings
     } else if chosen.is_some() {
@@ -143,5 +165,12 @@ pub fn workflow_size(view: &dyn PolicyView, context: &WorkflowSizeContext) -> Wo
         config_row_visible: holder.is_none(),
         large_workflow_threshold: warns.then(|| agent_threshold(chosen, below)),
         large_workflow_tokens: warns.then_some(TOKEN_THRESHOLD),
+    }
+}
+
+crate::registry::exports! {
+    "settings/workflows/size" {
+        "workflowSize" => async ok |view: Port, context: WorkflowSizeContext|
+            workflow_size(&view, &context).await;
     }
 }

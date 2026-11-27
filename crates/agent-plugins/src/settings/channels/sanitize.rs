@@ -1,4 +1,4 @@
-//! Port of `src/settings/channels/sanitize.ts` at sha256:a4e396913ba1.
+//! Port of `src/settings/channels/sanitize.ts`, switched.
 //!
 //! How Claude Code prepares `description` and `input_preview` before relaying a permission request
 //! (channels-reference.md, "Permission request fields"). Pure text rules.
@@ -7,6 +7,10 @@
 //! are split evenly, the start and the end 1,750 each, around the marker; an array of more than
 //! 10,000 items counts as "extremely large"; the credential patterns are the common provider
 //! prefixes.
+//!
+//! `inputPreview` serializes the host's tool input, which may hold a cycle or a `bigint` no
+//! boundary can copy, so the package keeps it in TypeScript over these text rules (docs/RUST.md,
+//! "What stays TypeScript"); it is here for a Rust host and is not an export.
 
 use crate::js::value::write_json_string;
 use crate::js::{JsObject, JsValue, is_whitespace, json_stringify, property_order, trim};
@@ -336,7 +340,6 @@ crate::registry::exports! {
         "maskCredentials" => ok |text: String| mask_credentials(&text);
         "elide" => ok |text: String| elide(&text);
         "sanitizeRelayText" => ok |text: String| sanitize_relay_text(&text);
-        "inputPreview" => ok |input: JsObject| input_preview(&input);
         "relayDescription" => ok |description: Option<String>| relay_description(description.as_deref());
     }
 }

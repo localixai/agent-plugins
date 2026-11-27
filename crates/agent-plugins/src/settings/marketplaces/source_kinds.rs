@@ -1,9 +1,9 @@
-//! Port of `src/settings/marketplaces/source-kinds.ts` at sha256:6191a10845c0.
+//! The core's counterpart of `src/settings/marketplaces/source-kinds.ts` at sha256:6191a10845c0, which stays TypeScript:
+//! its two functions only route a member to the host's own function for its kind, a look at the
+//! outside of host values (docs/RUST.md, "What stays TypeScript").
 //!
 //! The kinds of marketplace source an allow or block entry names (the official union's `source`),
-//! and the helpers that ask a registry of per-kind functions about one member. Its two functions
-//! take a registry of functions (callbacks the boundary does not carry), so they stay TypeScript in
-//! the package; nothing of it is exported.
+//! and the helpers that ask a registry of per-kind functions about one member.
 
 use crate::js::JsValue;
 

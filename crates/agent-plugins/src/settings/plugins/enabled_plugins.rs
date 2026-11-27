@@ -1,9 +1,11 @@
-//! Port of `src/settings/plugins/enabled-plugins.ts` at sha256:df9a1dff0633.
+//! Port of `src/settings/plugins/enabled-plugins.ts`, switched.
 //!
-//! It takes the host's `PolicyView`, so it stays
-//! TypeScript in the package: nothing of it is exported.
+//! Whether a plugin is on, read from `enabledPlugins` through the host's `PolicyView`.
+
+use serde::{Serialize, Serializer};
 
 use crate::js::JsValue;
+use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::view::{KeyHolder, PolicyView};
 
@@ -16,8 +18,19 @@ pub enum DecidedBy {
     DefaultEnabled,
 }
 
+/// Written as the package writes it: the scope's name, or `defaultEnabled`.
+impl Serialize for DecidedBy {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(match self {
+            Self::Scope(scope) => scope.name(),
+            Self::DefaultEnabled => "defaultEnabled",
+        })
+    }
+}
+
 /// Whether a plugin is on, and what decided it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EnabledDecision {
     /// Whether the plugin is on.
     pub on: bool,
@@ -51,14 +64,14 @@ fn decides(holder: &KeyHolder, id: &str) -> bool {
 ///
 /// Judgment (spec/judgments.md): the SDK also types a list or an object as an entry, which the
 /// settings docs do not describe; only `false` turns a plugin off, so those read as enabled.
-#[must_use]
-pub fn enabled_plugin(
+pub async fn enabled_plugin(
     view: &dyn PolicyView,
     id: &str,
     manifest_default_enabled: bool,
 ) -> EnabledDecision {
     let holder = view
         .each_from_highest(KEY)
+        .await
         .into_iter()
         .find(|each| decides(each, id));
     let Some(holder) = holder else {
@@ -81,8 +94,16 @@ pub fn enabled_plugin(
 
 /// Whether managed settings force-enable the plugin. The id is matched whole, so a plugin of the
 /// same name from another marketplace is not matched (settings-reference.md, `allowManagedHooksOnly`).
-#[must_use]
-pub fn force_enabled_by_managed(view: &dyn PolicyView, id: &str) -> bool {
-    let decision = enabled_plugin(view, id, true);
+pub async fn force_enabled_by_managed(view: &dyn PolicyView, id: &str) -> bool {
+    let decision = enabled_plugin(view, id, true).await;
     decision.decided_by == DecidedBy::Scope(PolicyScope::Managed) && decision.on
+}
+
+crate::registry::exports! {
+    "settings/plugins/enabled-plugins" {
+        "enabledPlugin" => async ok |view: Port, id: String, manifest_default_enabled: Option<bool>|
+            enabled_plugin(&view, &id, manifest_default_enabled.unwrap_or(true)).await;
+        "forceEnabledByManaged" => async ok |view: Port, id: String|
+            force_enabled_by_managed(&view, &id).await;
+    }
 }

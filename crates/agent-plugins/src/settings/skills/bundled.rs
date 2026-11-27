@@ -1,16 +1,19 @@
-//! Port of `src/settings/skills/bundled.ts` at sha256:e6d88245c556.
+//! Port of `src/settings/skills/bundled.ts`, switched.
 //!
-//! It takes the host's `PolicyView`, so it stays
-//! TypeScript in the package: only its data name is exported.
+//! Whether the bundled skills are off: `disableBundledSkills`, read through the host's
+//! `PolicyView`, and its variable.
 
-use std::collections::HashMap;
+use indexmap::IndexMap;
+use serde::Serialize;
 
 use crate::format::env_flag::is_truthy_env;
 use crate::js::JsValue;
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 /// What turned the bundled skills off.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum BundledOffBy {
     /// `disableBundledSkills`.
     Setting,
@@ -19,7 +22,8 @@ pub enum BundledOffBy {
 }
 
 /// Whether the bundled skills are off, and what turned them off.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BundledSkillsDecision {
     /// Bundled skills and workflows are removed entirely.
     pub disabled: bool,
@@ -38,17 +42,16 @@ pub const BUNDLED_SKILLS_ENV: &str = "CLAUDE_CODE_DISABLE_BUNDLED_SKILLS";
 /// `disableBundledSkills` and `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` (settings-reference.md,
 /// `disableBundledSkills`: "whichever of the two turns them off, the other can't turn them back
 /// on"). The setting is the one the files combine to; `env` is the host's environment as data.
-#[must_use]
-pub fn bundled_skills(
+pub async fn bundled_skills(
     view: &dyn PolicyView,
-    env: &HashMap<String, String>,
+    env: &IndexMap<String, Option<String>>,
 ) -> BundledSkillsDecision {
     let mut decided_by = Vec::new();
-    if view.get("disableBundledSkills") == Some(JsValue::Bool(true)) {
+    if view.get("disableBundledSkills").await == Some(JsValue::Bool(true)) {
         decided_by.push(BundledOffBy::Setting);
     }
     // "Set to `1`": an on/off variable with the full spelling set (J3.16).
-    if is_truthy_env(env.get(BUNDLED_SKILLS_ENV).map(String::as_str)) {
+    if is_truthy_env(env.get(BUNDLED_SKILLS_ENV).and_then(Option::as_deref)) {
         decided_by.push(BundledOffBy::Env);
     }
     let disabled = !decided_by.is_empty();
@@ -63,5 +66,7 @@ pub fn bundled_skills(
 crate::registry::exports! {
     "settings/skills/bundled" {
         "BUNDLED_SKILLS_ENV" => ok || BUNDLED_SKILLS_ENV;
+        "bundledSkills" => async ok |view: Port, env: IndexMap<String, Option<String>>|
+            bundled_skills(&view, &env).await;
     }
 }

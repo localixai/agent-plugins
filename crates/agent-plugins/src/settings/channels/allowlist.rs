@@ -1,11 +1,11 @@
-//! Port of `src/settings/channels/allowlist.ts` at sha256:3683c6dbca8a.
+//! Port of `src/settings/channels/allowlist.ts`, switched.
 //!
-//! The channel allowlist in force. Takes the host's `PolicyView`: stays TypeScript in the package
-//! (the module comment of `crate::settings`), so only `isListed` is exported.
+//! The channel allowlist in force.
 
 use serde::{Deserialize, Serialize};
 
 use super::channel_gate::ChannelAccount;
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 /// A channel plugin as an allowlist names it (the official `ChannelPluginRef`).
@@ -18,7 +18,8 @@ pub struct ChannelPluginRef {
 }
 
 /// What the host tells the allowlist besides the layers.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChannelAllowlistContext {
     /// The account the session is signed in with.
     pub account: ChannelAccount,
@@ -66,13 +67,12 @@ const fn reads_organization_list(account: ChannelAccount) -> bool {
 /// marketplace }`: the string `plugin@marketplace` was read as the equivalent object when the layer
 /// was read. An account without an organization skips the key (channels.md, "Enterprise controls";
 /// spec/judgments.md).
-#[must_use]
-pub fn effective_channel_allowlist(
+pub async fn effective_channel_allowlist(
     view: &dyn PolicyView,
     context: &ChannelAllowlistContext,
 ) -> ChannelAllowlist {
     let organization = if reads_organization_list(context.account) {
-        view.get("allowedChannelPlugins")
+        view.get("allowedChannelPlugins").await
     } else {
         None
     };
@@ -97,6 +97,8 @@ pub fn is_listed(list: &[ChannelPluginRef], reference: &ChannelPluginRef) -> boo
 
 crate::registry::exports! {
     "settings/channels/allowlist" {
+        "effectiveChannelAllowlist" => async ok |view: Port, context: ChannelAllowlistContext|
+            effective_channel_allowlist(&view, &context).await;
         "isListed" => ok |list: Vec<ChannelPluginRef>, reference: ChannelPluginRef| is_listed(&list, &reference);
     }
 }

@@ -1,14 +1,14 @@
-//! Port of `src/settings/general/worktree-block.ts` at sha256:83577fccd5bf.
+//! Port of `src/settings/general/worktree-block.ts`, switched.
 //!
 //! The `worktree` block (settings-reference.md, `worktree` and its entries): the fields as the
 //! files combine them, with the documented default of each. An invalid field never reaches the
 //! layer: the read drops it with a warning (`closed-fields.ts`), so a lower file's value or the
-//! default applies. `readWorktree` takes the host's `PolicyView`: stays TypeScript in the package
-//! (the module comment of `crate::settings`), so only the data functions are exported.
+//! default applies.
 
 use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
+use crate::registry::Port;
 use crate::settings::undefined_if_none;
 use crate::settings::view::PolicyView;
 
@@ -59,9 +59,8 @@ fn strings(value: Option<&JsValue>) -> Option<Vec<String>> {
 }
 
 /// The `worktree` block as the files combine it, with the defaults.
-#[must_use]
-pub fn read_worktree(view: &dyn PolicyView) -> WorktreeSettings {
-    let block = view.get("worktree");
+pub async fn read_worktree(view: &dyn PolicyView) -> WorktreeSettings {
+    let block = view.get("worktree").await;
     let field = |name: &str| block.as_ref().and_then(|block| block.get(name));
     WorktreeSettings {
         base_ref: match field("baseRef").and_then(JsValue::as_str) {
@@ -76,6 +75,7 @@ pub fn read_worktree(view: &dyn PolicyView) -> WorktreeSettings {
         },
         location: view
             .get("worktree.location")
+            .await
             .and_then(|value| value.as_str().map(str::to_owned)),
     }
 }
@@ -218,6 +218,7 @@ pub fn worktree_folder(settings: &WorktreeSettings, facts: &WorktreeFolderFacts)
 
 crate::registry::exports! {
     "settings/general/worktree-block" {
+        "readWorktree" => async ok |view: Port| read_worktree(&view).await;
         "baseRefTarget" => ok |base_ref: BaseRef, facts: BaseRefFacts| base_ref_target(base_ref, facts);
         "backgroundEditsBlocked" => ok |bg_isolation: BgIsolation, facts: BackgroundEditFacts| background_edits_blocked(bg_isolation, facts);
         "WORKTREE_CONSUMERS" => ok || WORKTREE_CONSUMERS;

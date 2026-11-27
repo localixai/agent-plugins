@@ -1,8 +1,8 @@
 //! Layer 4: the settings (`src/settings/` in the npm package): how the layers combine, and the
 //! decision each area of them makes. A module taking the host's `PolicyView` or `Environment`
-//! (objects with methods, read synchronously) is ported over the traits of [`view`] and
-//! `ports::environment` and stays TypeScript in the package, whose boundary carries no such host
-//! value to a synchronous call; the exports of such a module are only its data-in, data-out names.
+//! (objects with methods the TypeScript reads synchronously) is ported over the traits of
+//! [`view`] and `ports::environment`: its exports are `async` here, and its synchronous wrapper
+//! answers each need as it comes.
 
 pub mod broken_file;
 pub mod canonical;

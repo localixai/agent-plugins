@@ -1,4 +1,4 @@
-//! Port of `src/settings/hooks/merge-groups.ts` at sha256:f4f36b28f2ab.
+//! Port of `src/settings/hooks/merge-groups.ts`, switched.
 //!
 //! The `hooks` key across settings files (settings-reference.md, `hooks`: "Hooks merge across
 //! files rather than replacing each other, and hooks from managed settings can't be removed from

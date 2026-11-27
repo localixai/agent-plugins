@@ -1,14 +1,14 @@
-//! Port of `src/settings/general/look-and-feel.ts` at sha256:32020814efe2.
+//! Port of `src/settings/general/look-and-feel.ts`, switched.
 //!
 //! The interface keys that pick one value from a closed set: `theme` (settings-reference.md,
 //! `theme`; terminal-config.md, "Create a custom theme") and `teammateMode` (`teammateMode`), plus
 //! `outputStyle`. Each reads the highest file's value; a value Claude Code does not recognize never
 //! reaches the layer (the read drops it with a warning), so the next lower file or the default
-//! applies. Takes the host's `PolicyView`: stays TypeScript in the package (the module comment of
-//! `crate::settings`), so only its data names are exported.
+//! applies.
 
 use serde::{Deserialize, Serialize};
 
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 /// The theme presets.
@@ -92,9 +92,8 @@ pub fn parse_theme(value: &str) -> Option<ThemeChoice> {
 
 /// The theme: the highest file that sets it, else `legacy` (a value "in `~/.claude.json` from an
 /// older version applies when no settings file sets it"), else `"dark"`.
-#[must_use]
-pub fn read_theme_setting(view: &dyn PolicyView, legacy: Option<&str>) -> ThemeChoice {
-    if let Some(set) = view.get("theme") {
+pub async fn read_theme_setting(view: &dyn PolicyView, legacy: Option<&str>) -> ThemeChoice {
+    if let Some(set) = view.get("theme").await {
         return set
             .as_str()
             .and_then(parse_theme)
@@ -113,9 +112,8 @@ fn is_teammate_mode(value: Option<&str>) -> bool {
 /// The teammate display mode: a file's value, else `legacy` from `~/.claude.json`, else
 /// `"in-process"`. A file's value the layer admits is one of `TEAMMATE_MODES`; any other falls to
 /// the next rule here, where the package would pass it on.
-#[must_use]
-pub fn read_teammate_mode(view: &dyn PolicyView, legacy: Option<&str>) -> String {
-    if let Some(set) = view.get("teammateMode")
+pub async fn read_teammate_mode(view: &dyn PolicyView, legacy: Option<&str>) -> String {
+    if let Some(set) = view.get("teammateMode").await
         && let Some(mode) = set.as_str().filter(|mode| is_teammate_mode(Some(mode)))
     {
         return mode.to_owned();
@@ -127,9 +125,9 @@ pub fn read_teammate_mode(view: &dyn PolicyView, legacy: Option<&str>) -> String
 }
 
 /// The output style named by the highest file; `undefined` selects the default style.
-#[must_use]
-pub fn read_output_style_setting(view: &dyn PolicyView) -> Option<String> {
+pub async fn read_output_style_setting(view: &dyn PolicyView) -> Option<String> {
     view.get("outputStyle")
+        .await
         .and_then(|value| value.as_str().map(str::to_owned))
 }
 
@@ -137,6 +135,11 @@ crate::registry::exports! {
     "settings/general/look-and-feel" {
         "THEME_PRESETS" => ok || THEME_PRESETS;
         "parseTheme" => ok |value: String| parse_theme(&value);
+        "readThemeSetting" => async ok |view: Port, legacy: Option<String>|
+            read_theme_setting(&view, legacy.as_deref()).await;
         "TEAMMATE_MODES" => ok || TEAMMATE_MODES;
+        "readTeammateMode" => async ok |view: Port, legacy: Option<String>|
+            read_teammate_mode(&view, legacy.as_deref()).await;
+        "readOutputStyleSetting" => async ok |view: Port| read_output_style_setting(&view).await;
     }
 }

@@ -1,4 +1,4 @@
-//! Port of `src/settings/general/subagent-status-line.ts` at sha256:bd48170f4297.
+//! Port of `src/settings/general/subagent-status-line.ts`, switched.
 //!
 //! Running a `subagentStatusLine` (statusline.md, "Subagent status lines"): what the command reads
 //! on stdin and how its lines rewrite the subagent rows. Which line runs, under which gates, is
@@ -10,16 +10,16 @@
 //! [`JsValue`] objects, kept whole as the spreads of the package keep them: `id`, `name`, `type`
 //! (`local_agent`), `agentType`, `status`, `description`, `label`, `startTime`, `model`, `effort`,
 //! `contextWindowSize`, `tokenCount`, `tokenSamples` ("up to the last 16 `tokenCount` readings, one
-//! per refresh tick, oldest first") and `cwd`. `runSubagentStatusLine` takes the host's
-//! `CommandRunner` and stays TypeScript in the package (the module comment of `crate::settings`),
-//! so only the two data functions are exported.
+//! per refresh tick, oldest first") and `cwd`.
 
 use indexmap::IndexMap;
+use serde::Deserialize;
 
 use crate::js::json_parse::json_parse;
 use crate::js::{JsObject, JsValue, json_stringify, trim};
 use crate::ports::command_runner::{CommandRun, CommandRunner, CommandSpec, ShellKind};
 use crate::ports::{BoxFuture, Signal};
+use crate::registry::Port;
 
 const MAX_TOKEN_SAMPLES: usize = 16;
 
@@ -78,8 +78,15 @@ pub fn read_subagent_status_rows(stdout: &str, tasks: &[JsValue]) -> IndexMap<St
     rows
 }
 
+/// The `subagentStatusLine` setting a run uses: its command.
+#[derive(Clone, Debug, Deserialize)]
+pub struct SubagentStatusLine {
+    /// The `bash` line.
+    pub command: String,
+}
+
 /// What one run needs beyond the line: the stdin object and the whole environment of the process.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct SubagentStatusLineRun {
     /// The stdin object (`subagent_status_line_input`'s answer).
     pub input: JsValue,
@@ -115,7 +122,7 @@ pub fn run_subagent_status_line<'a>(
                 env: run.env.clone(),
                 stdin: json_stringify(&run.input),
                 timeout_ms: None,
-                merge_stderr: false,
+                merge_stderr: None,
                 signal,
             })
             .await;
@@ -137,5 +144,9 @@ crate::registry::exports! {
     "settings/general/subagent-status-line" {
         "subagentStatusLineInput" => ok |base: JsObject, columns: f64, tasks: Vec<JsValue>| subagent_status_line_input(&base, columns, &tasks);
         "readSubagentStatusRows" => ok |stdout: String, tasks: Vec<JsValue>| crate::registry::Map { entries: read_subagent_status_rows(&stdout, &tasks).into_iter().collect() };
+        "runSubagentStatusLine" => async ok |line: SubagentStatusLine, run: SubagentStatusLineRun, runner: Port, signal: Signal|
+            crate::registry::Map {
+                entries: run_subagent_status_line(&line.command, &run, &runner, signal).await.into_iter().collect(),
+            };
     }
 }

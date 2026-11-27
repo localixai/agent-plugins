@@ -1,15 +1,14 @@
-//! Port of `src/settings/managed/sideload.ts` at sha256:8154d2ec62b9.
+//! Port of `src/settings/managed/sideload.ts`, switched.
 //!
 //! `disableSideloadFlags` (settings-reference.md, `disableSideloadFlags`; plugins/troubleshooting.md,
 //! "`--plugin-dir is disabled by your organization's managed settings (disableSideloadFlags)`";
 //! agent-sdk/typescript.md, `addPlugins`): which command-line sideloads managed settings reject and
 //! what a cloud session does instead. The kit reads no command line; the host says what was given.
-//! It takes the host's `PolicyView`, so it stays TypeScript in the package: only its data names are
-//! exported.
 
 use serde::{Deserialize, Serialize};
 
 use crate::js::JsValue;
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 /// The command-line sideloads.
@@ -126,14 +125,13 @@ fn survives_in_cloud(server: &ConfiguredServer) -> bool {
 }
 
 /// Whether managed settings turn the sideload flags off.
-fn flags_disabled(view: &dyn PolicyView) -> bool {
-    view.get("disableSideloadFlags") == Some(JsValue::Bool(true))
+async fn flags_disabled(view: &dyn PolicyView) -> bool {
+    view.get("disableSideloadFlags").await == Some(JsValue::Bool(true))
 }
 
 /// What the session does with its flags and the plugin-folder variable under managed `disableSideloadFlags`.
-#[must_use]
-pub fn sideload_verdict(view: &dyn PolicyView, facts: &SideloadFacts) -> SideloadVerdict {
-    if !flags_disabled(view) {
+pub async fn sideload_verdict(view: &dyn PolicyView, facts: &SideloadFacts) -> SideloadVerdict {
+    if !flags_disabled(view).await {
         return SideloadVerdict {
             refusals: Vec::new(),
             dropped_servers: Vec::new(),
@@ -157,9 +155,8 @@ pub fn sideload_verdict(view: &dyn PolicyView, facts: &SideloadFacts) -> Sideloa
 
 /// The Agent SDK's `addPlugins` option under `disableSideloadFlags`: "that call fails with an error.
 /// The session keeps running with the plugins it already had." `None` when the call proceeds.
-#[must_use]
-pub fn add_plugins_refusal(view: &dyn PolicyView) -> Option<&'static str> {
-    flags_disabled(view).then_some(
+pub async fn add_plugins_refusal(view: &dyn PolicyView) -> Option<&'static str> {
+    flags_disabled(view).await.then_some(
         "reload_plugins add_plugins is disabled by managed settings (disableSideloadFlags)",
     )
 }
@@ -184,13 +181,12 @@ pub struct McpUpdateVerdict {
 /// `setMcpServers()` calls that reach those sessions" (settings-reference.md, `disableSideloadFlags`):
 /// under managed `disableSideloadFlags` a cloud session ignores them, except "in-process `type: "sdk"`
 /// entries and a Claude Tag session's Slack tools". Any other session applies the update.
-#[must_use]
-pub fn mid_session_mcp_updates(
+pub async fn mid_session_mcp_updates(
     view: &dyn PolicyView,
     facts: &McpUpdateFacts,
     servers: &[ConfiguredServer],
 ) -> McpUpdateVerdict {
-    if !facts.cloud || !flags_disabled(view) {
+    if !facts.cloud || !flags_disabled(view).await {
         return McpUpdateVerdict {
             applied: servers.to_vec(),
             ignored: Vec::new(),
@@ -212,7 +208,11 @@ pub fn mid_session_mcp_updates(
 
 crate::registry::exports! {
     "settings/managed/sideload" {
-        "SIDELOAD_FLAGS" => ok || SIDELOAD_FLAGS;
         "SIDELOAD_CLOSING" => ok || SIDELOAD_CLOSING;
+        "sideloadVerdict" => async ok |view: Port, facts: SideloadFacts|
+            sideload_verdict(&view, &facts).await;
+        "addPluginsRefusal" => async ok |view: Port| add_plugins_refusal(&view).await;
+        "midSessionMcpUpdates" => async ok |view: Port, facts: McpUpdateFacts, servers: Vec<ConfiguredServer>|
+            mid_session_mcp_updates(&view, &facts, &servers).await;
     }
 }

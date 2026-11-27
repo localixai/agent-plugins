@@ -43,22 +43,9 @@ pub async fn command_matches(
     wanted.len() == server.len() && wanted.iter().zip(server).all(|(part, other)| part == other)
 }
 
-/// The exports, in a module of their own: every one waits on the host, so the macro's synchronous
-/// caller reads no argument.
-mod exported {
-    #![expect(
-        unused_variables,
-        reason = "every export waits on the host, so the macro's synchronous caller reads no argument"
-    )]
-
-    use super::{Callback, command_matches};
-
-    crate::registry::exports! {
-        "settings/mcp/command-match" {
-            "commandMatches" => async ok |entry: Vec<String>, server: Vec<String>, expand_entry: Callback|
-                command_matches(&entry, &server, &expand_entry).await;
-        }
+crate::registry::exports! {
+    "settings/mcp/command-match" {
+        "commandMatches" => async ok |entry: Vec<String>, server: Vec<String>, expand_entry: Callback|
+            command_matches(&entry, &server, &expand_entry).await;
     }
 }
-
-pub(crate) use exported::EXPORTS;

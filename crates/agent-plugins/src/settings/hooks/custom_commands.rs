@@ -3,9 +3,10 @@
 //! The commands that follow the hooks (settings-reference.md, `disableAllHooks` "Status line and
 //! file suggestion gates" and `allowManagedHooksOnly`; goal.md, "Requirements"): the status line,
 //! the file suggestion command, the subagent status line, plugin monitors and `/goal`. The kit
-//! gives the decision; rendering, starting a monitor and running a command stay the host's. Takes
-//! the host's `HookGate`: stays TypeScript in the package (the module comment of
-//! `crate::settings`), so it exports nothing.
+//! gives the decision; rendering, starting a monitor and running a command stay the host's. Its
+//! gates mix data members with a method that asks the host's `HookGate` (`monitorsRun`), which no
+//! answer of the boundary carries (a handle has methods only), so the package keeps its
+//! TypeScript: nothing of it is exported.
 
 use super::hook_gate::HookGate;
 

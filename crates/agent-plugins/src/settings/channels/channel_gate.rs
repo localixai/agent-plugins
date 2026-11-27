@@ -1,12 +1,12 @@
-//! Port of `src/settings/channels/channel-gate.ts` at sha256:c854da77d58d.
+//! Port of `src/settings/channels/channel-gate.ts`, switched.
 //!
 //! The account kinds the `channelsEnabled` default depends on (settings-reference.md,
 //! `channelsEnabled`; channels.md, "Enterprise controls"). The host tells which one the session is
-//! signed in with. Takes the host's `PolicyView`: stays TypeScript in the package (the module
-//! comment of `crate::settings`), so only its data names are exported.
+//! signed in with.
 
 use serde::{Deserialize, Serialize};
 
+use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::undefined_if_none;
 use crate::settings::view::PolicyView;
@@ -112,11 +112,11 @@ fn gate_rule(account: ChannelAccount, input: &GateInput) -> Option<ChannelGateBy
 /// false` is "the same as unset" and the key counts from managed settings only (its Scope line,
 /// enforced by the view), so a user cannot lift the block. A closed gate blocks every channel, the
 /// development flag included (channels-reference.md, "Test during the research preview").
-#[must_use]
-pub fn channel_gate(view: &dyn PolicyView, context: &ChannelsContext) -> ChannelGate {
+pub async fn channel_gate(view: &dyn PolicyView, context: &ChannelsContext) -> ChannelGate {
     let managed = context.has_managed_settings
         || view
             .layers()
+            .await
             .iter()
             .any(|layer| layer.scope == PolicyScope::Managed);
     let by = gate_rule(
@@ -124,6 +124,7 @@ pub fn channel_gate(view: &dyn PolicyView, context: &ChannelsContext) -> Channel
         &GateInput {
             enabled: view
                 .get("channelsEnabled")
+                .await
                 .and_then(|value| value.as_bool())
                 == Some(true),
             managed,
@@ -144,5 +145,7 @@ pub fn channel_gate(view: &dyn PolicyView, context: &ChannelsContext) -> Channel
 crate::registry::exports! {
     "settings/channels/channel-gate" {
         "CHANNEL_ACCOUNTS" => ok || CHANNEL_ACCOUNTS;
+        "channelGate" => async ok |view: Port, context: ChannelsContext|
+            channel_gate(&view, &context).await;
     }
 }

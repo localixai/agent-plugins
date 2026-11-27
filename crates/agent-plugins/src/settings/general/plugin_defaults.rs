@@ -1,14 +1,13 @@
-//! Port of `src/settings/general/plugin-defaults.ts` at sha256:b14ab4431913.
+//! Port of `src/settings/general/plugin-defaults.ts`, switched.
 //!
 //! A plugin is any object with `name` and `settings`, kept whole (its other members too) where the
-//! package keeps it by reference. `valueWithPluginDefaults` takes the host's `PolicyView`: stays
-//! TypeScript in the package (the module comment of `crate::settings`), so only `pluginDefaultsOf`
-//! is exported.
+//! package keeps it by reference.
 
 use indexmap::IndexMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::js::{JsObject, JsValue};
+use crate::registry::Port;
 use crate::settings::view::PolicyView;
 
 /// A plugin as its defaults are merged: its name (for the debug line) and its applied settings,
@@ -19,7 +18,7 @@ pub type PluginWithDefaults = JsValue;
 pub type PluginSettings = JsObject;
 
 /// plugins/components.md, "Default settings": last plugin wins, below every settings source.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PluginDefaults {
     /// The merged settings.
     pub settings: PluginSettings,
@@ -74,21 +73,22 @@ pub fn plugin_defaults_of(plugins: &[PluginWithDefaults]) -> PluginDefaults {
 }
 
 /// A key's value after the plugin defaults: from a settings source, or from the plugin named.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SettingWithDefault {
     /// The value.
     pub value: JsValue,
     /// The plugin whose default it is; absent when a settings source sets the key.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub plugin: Option<PluginWithDefaults>,
 }
 
 /// What the settings sources themselves set of the two keys.
-fn own_settings(view: &dyn PolicyView) -> PluginSettings {
+async fn own_settings(view: &dyn PolicyView) -> PluginSettings {
     let mut own = PluginSettings::new();
-    if let Some(agent) = view.get("agent") {
+    if let Some(agent) = view.get("agent").await {
         own.insert("agent".to_owned(), agent);
     }
-    if let Some(line) = view.get("subagentStatusLine") {
+    if let Some(line) = view.get("subagentStatusLine").await {
         own.insert("subagentStatusLine".to_owned(), line);
     }
     own
@@ -96,13 +96,12 @@ fn own_settings(view: &dyn PolicyView) -> PluginSettings {
 
 /// The value of `agent` or `subagentStatusLine`: "plugin defaults are the lowest layer, so a user's
 /// own `agent` in `~/.claude/settings.json` overrides yours". `undefined` when nothing sets it.
-#[must_use]
-pub fn value_with_plugin_defaults(
+pub async fn value_with_plugin_defaults(
     view: &dyn PolicyView,
     key: &str,
     defaults: &PluginDefaults,
 ) -> Option<SettingWithDefault> {
-    if let Some(set) = own_settings(view).get(key) {
+    if let Some(set) = own_settings(view).await.get(key) {
         return Some(SettingWithDefault {
             value: set.clone(),
             plugin: None,
@@ -119,5 +118,7 @@ pub fn value_with_plugin_defaults(
 crate::registry::exports! {
     "settings/general/plugin-defaults" {
         "pluginDefaultsOf" => ok |plugins: Vec<PluginWithDefaults>| plugin_defaults_of(&plugins);
+        "valueWithPluginDefaults" => async ok |view: Port, key: String, defaults: PluginDefaults|
+            value_with_plugin_defaults(&view, &key, &defaults).await;
     }
 }

@@ -3,8 +3,9 @@
 //! `disableCommandPluginSources`: whether Claude Code may run a command a marketplace declares
 //! (settings-reference.md, `disableCommandPluginSources` and "What runs under `allowManagedHooksOnly`";
 //! plugins/host-marketplace.md, "When Claude Code skips a headersHelper command"). The kit returns the
-//! decision; running, installing or loading a command-sourced plugin stays the host's. It takes the
-//! host's `PolicyView`, so it stays TypeScript in the package: nothing of it is exported.
+//! decision; running, installing or loading a command-sourced plugin stays the host's. Its policy
+//! mixes data members with a method (`headersHelper`), which no answer of the boundary carries (a
+//! handle has methods only), so the package keeps its TypeScript: nothing of it is exported.
 
 use crate::js::{JsValue, is_truthy};
 use crate::settings::layers::PolicyScope;
@@ -56,22 +57,21 @@ impl CommandSourcePolicy {
 /// organization's hook restriction decides ("Default: unset, so Claude Code follows
 /// `allowManagedHooksOnly`"). `disableAllHooks` is not consulted, not even from the SDK's
 /// `managedSettings`: it "doesn't by itself disable command sources".
-fn blocker(view: &dyn PolicyView) -> Option<CommandBlocker> {
-    if let Some(explicit) = view.get("disableCommandPluginSources")
+async fn blocker(view: &dyn PolicyView) -> Option<CommandBlocker> {
+    if let Some(explicit) = view.get("disableCommandPluginSources").await
         && !explicit.is_undefined()
     {
         return is_truthy(&explicit).then_some(CommandBlocker::DisableCommandPluginSources);
     }
-    (view.get("allowManagedHooksOnly") == Some(JsValue::Bool(true)))
+    (view.get("allowManagedHooksOnly").await == Some(JsValue::Bool(true)))
         .then_some(CommandBlocker::AllowManagedHooksOnly)
 }
 
 const ALLOWED: CommandVerdict = CommandVerdict::Run;
 
 /// The policy the view's settings make.
-#[must_use]
-pub fn create_command_source_policy(view: &dyn PolicyView) -> CommandSourcePolicy {
-    let reason = blocker(view);
+pub async fn create_command_source_policy(view: &dyn PolicyView) -> CommandSourcePolicy {
+    let reason = blocker(view).await;
     let blocked_verdict = reason.map_or(ALLOWED, CommandVerdict::Blocked);
     CommandSourcePolicy {
         disabled: reason.is_some(),
