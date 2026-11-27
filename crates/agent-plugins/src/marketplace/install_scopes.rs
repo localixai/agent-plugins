@@ -203,8 +203,6 @@ pub fn default_scope(command: ScopedCommand, listed_in: &[InstallScope]) -> Opti
 
 crate::registry::exports! {
     "marketplace/install-scopes" {
-        "INSTALL_SCOPES" => ok || INSTALL_SCOPES;
-        "isWritableScope" => ok |scope: InstallScope| is_writable_scope(scope);
         "scopeReach" => ok |scope: ChosenScope| scope_reach(scope);
         "SCOPES_BY_PRECEDENCE" => ok || SCOPES_BY_PRECEDENCE;
         "mostSpecificScope" => ok |scopes: Vec<InstallScope>| most_specific_scope(&scopes);

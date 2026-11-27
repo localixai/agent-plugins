@@ -44,6 +44,7 @@ pub mod installed_plugins;
 pub mod installed_plugins_store;
 pub mod known_marketplaces;
 pub mod lfs_pointer;
+pub mod marketplace_catalog;
 pub mod marketplace_download;
 pub mod marketplace_fetch_plan;
 pub mod marketplace_input;

@@ -1,6 +1,6 @@
 import type { InstallScope } from '../marketplace/install-scopes.ts';
-import { SCOPE_RANK } from '../settings/layers.ts';
-import { usageError, type UsageError } from './result.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { UsageError } from './result.ts';
 
 /**
  * The scope grammar of the plugin commands (plugins/cli-reference.md, "claude plugin commands":
@@ -9,17 +9,21 @@ import { usageError, type UsageError } from './result.ts';
  * update", "Which scope the command updates"; "claude plugin marketplace commands": "their `--scope`
  * flag has no `-s` short form"). Pure: which scope a command works on from the flag and the scopes a
  * plugin is declared in; the host reads and writes the settings files.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/scope.rs`, docs/RUST.md).
  */
 
+const call = coreModule('cli/scope');
+
 /** The values `--scope` takes on every command that takes it. */
-export const CONFIG_SCOPES = ['user', 'project', 'local'] as const;
+export const CONFIG_SCOPES: readonly ['user', 'project', 'local'] = call('CONFIG_SCOPES');
 export type ConfigScope = (typeof CONFIG_SCOPES)[number];
 
 /** `update` also takes `managed`, the one scope that can be updated but not installed to. */
 export type CommandScope = InstallScope;
 
 /** The commands that take `--scope`. */
-export const SCOPED_COMMANDS = [
+export const SCOPED_COMMANDS: readonly [
   'install',
   'uninstall',
   'enable',
@@ -28,7 +32,7 @@ export const SCOPED_COMMANDS = [
   'prune',
   'marketplace-add',
   'marketplace-remove',
-] as const;
+] = call('SCOPED_COMMANDS');
 export type ScopedCommand = (typeof SCOPED_COMMANDS)[number];
 
 /** What a command does when `--scope` is omitted. */
@@ -39,62 +43,9 @@ export type ScopeChoice =
   /** The command acts on every scope. */
   | { readonly allScopes: true };
 
-interface ScopeRule {
-  readonly accepts: readonly CommandScope[];
-  readonly whenOmitted: ScopeChoice;
-  /** The scopes auto-detect checks, in order; empty for a command that does not detect. */
-  readonly detects: readonly CommandScope[];
-  /** The marketplace commands' `--scope` has no `-s`. */
-  readonly short: boolean;
-}
-
-const DEFAULT_USER: ScopeChoice = { scope: 'user' };
-const AUTO: ScopeChoice = { autoDetect: true };
-const LOCAL_PROJECT_USER: readonly CommandScope[] = ['local', 'project', 'user'];
-
-/** The registry: a command added to `SCOPED_COMMANDS` fails the typecheck until it has a rule. */
-const SCOPE_RULES: { readonly [C in ScopedCommand]: ScopeRule } = {
-  install: { accepts: CONFIG_SCOPES, whenOmitted: DEFAULT_USER, detects: [], short: true },
-  uninstall: { accepts: CONFIG_SCOPES, whenOmitted: DEFAULT_USER, detects: [], short: true },
-  prune: { accepts: CONFIG_SCOPES, whenOmitted: DEFAULT_USER, detects: [], short: true },
-  enable: {
-    accepts: CONFIG_SCOPES,
-    whenOmitted: AUTO,
-    detects: LOCAL_PROJECT_USER,
-    short: true,
-  },
-  disable: {
-    accepts: CONFIG_SCOPES,
-    whenOmitted: AUTO,
-    detects: LOCAL_PROJECT_USER,
-    short: true,
-  },
-  update: {
-    accepts: [...CONFIG_SCOPES, 'managed'],
-    whenOmitted: AUTO,
-    detects: [...LOCAL_PROJECT_USER, 'managed'],
-    short: true,
-  },
-  'marketplace-add': {
-    accepts: CONFIG_SCOPES,
-    whenOmitted: DEFAULT_USER,
-    detects: [],
-    short: false,
-  },
-  'marketplace-remove': {
-    accepts: CONFIG_SCOPES,
-    whenOmitted: { allScopes: true },
-    detects: [],
-    short: false,
-  },
-};
-
 /** How the help spells the flag: `-s, --scope <scope>`, or `--scope <scope>` for a marketplace command. */
 export const scopeFlagSpelling = (command: ScopedCommand): string =>
-  SCOPE_RULES[command].short ? '-s, --scope <scope>' : '--scope <scope>';
-
-const acceptedScope = (command: ScopedCommand, value: string): CommandScope | undefined =>
-  SCOPE_RULES[command].accepts.find((scope) => scope === value);
+  call('scopeFlagSpelling', command);
 
 /** The commands that write to one scope, `user` when `--scope` is omitted. */
 export type DefaultedCommand = 'install' | 'uninstall' | 'prune' | 'marketplace-add';
@@ -116,11 +67,7 @@ export function chooseScope(
   command: ScopedCommand,
   given: string | undefined,
 ): ScopeChoice | UsageError {
-  if (given === undefined) return SCOPE_RULES[command].whenOmitted;
-  const scope = acceptedScope(command, given);
-  if (scope !== undefined) return { scope };
-  const accepted = SCOPE_RULES[command].accepts.join(', ');
-  return usageError(`Invalid scope: ${given}. Use one of: ${accepted}`);
+  return call('chooseScope', command, given);
 }
 
 /**
@@ -128,12 +75,10 @@ export function chooseScope(
  * local, project, user, then managed" (`update`); `enable` and `disable` check "local, project,
  * user" and use "the first scope that mentions the plugin". `undefined` when none does.
  */
-export function detectScope(
+export const detectScope = (
   command: ScopedCommand,
   declaredAt: readonly CommandScope[],
-): CommandScope | undefined {
-  return SCOPE_RULES[command].detects.find((scope) => declaredAt.includes(scope));
-}
+): CommandScope | undefined => call('detectScope', command, declaredAt);
 
 export type ScopeWrite =
   | { readonly kind: 'write'; readonly scope: CommandScope }
@@ -149,20 +94,8 @@ export type ScopeWrite =
  * <scope> scope, not <given>. Use --scope <scope> or omit --scope to auto-detect.`, naming the scope
  * auto-detect would pick. A plugin no scope declares is the caller's `not-installed`.
  */
-export function writeScope(
+export const writeScope = (
   plugin: string,
   requested: CommandScope,
   declaredAt: readonly CommandScope[],
-): ScopeWrite {
-  if (declaredAt.includes(requested)) return { kind: 'write', scope: requested };
-  const strongest = Math.max(...declaredAt.map((scope) => SCOPE_RANK[scope]));
-  if (declaredAt.length > 0 && SCOPE_RANK[requested] > strongest) {
-    return { kind: 'override', scope: requested };
-  }
-  const found = detectScope('enable', declaredAt) ?? declaredAt[0];
-  if (found === undefined) return { kind: 'not-installed' };
-  return {
-    kind: 'refused',
-    message: `Plugin "${plugin}" is installed at ${found} scope, not ${requested}. Use --scope ${found} or omit --scope to auto-detect.`,
-  };
-}
+): ScopeWrite => call('writeScope', plugin, requested, declaredAt);

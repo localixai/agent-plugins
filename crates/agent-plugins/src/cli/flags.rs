@@ -1,5 +1,6 @@
 //! The session flags (`src/cli/flags/` in the npm package).
 
+pub mod add_dir;
 pub mod agents;
 pub mod channels;
 pub mod customizations;

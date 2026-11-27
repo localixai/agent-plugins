@@ -1,6 +1,3 @@
-import { BRACED_REFERENCE, isVariableName, splitDefault } from '../../format/mcp-env.ts';
-import { matchesWildcard } from '../../format/wildcard.ts';
-
 /**
  * A `serverUrl` pattern against a server URL (managed-mcp.md, "How `serverUrl` entries match"):
  * `*` wildcards in the scheme, host, port and path; scheme and host case-insensitive and a trailing
@@ -13,81 +10,15 @@ import { matchesWildcard } from '../../format/wildcard.ts';
  * the path compared is the path and the query string (a fragment is never sent); a pattern or URL that
  * does not parse matches nothing; the glob is matched without backtracking blow-up, since the server's
  * URL is text a user controls.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/mcp/url_pattern.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
 
-interface PatternParts {
-  readonly scheme: string;
-  readonly host: string;
-  /** `undefined` when the pattern gives no port (an empty `:` counts as none). */
-  readonly port: string | undefined;
-  /** `undefined` when the pattern gives no path. */
-  readonly path: string | undefined;
-}
+const call = coreModule('settings/mcp/url-pattern');
 
-const PATTERN = /^([^:/]+):\/\/(\[[^\]]*\]|[^/:]*)(?::([^/]*))?(\/.*)?$/;
-
-function parsePattern(text: string): PatternParts | undefined {
-  const [, scheme, host, port, path] = PATTERN.exec(text) ?? [];
-  if (scheme === undefined || host === undefined || host === '') return undefined;
-  return { scheme, host, port: port === '' ? undefined : port, path };
-}
-
-/** The ports a URL without one is on; a scheme not listed has no default. */
-const DEFAULT_PORTS: ReadonlyMap<string, string> = new Map([
-  ['http', '80'],
-  ['https', '443'],
-  ['ws', '80'],
-  ['wss', '443'],
-]);
-
-interface UrlParts {
-  readonly scheme: string;
-  readonly host: string;
-  /** The port the server is on: the written one, or the scheme's default. */
-  readonly port: string;
-  /** Whether the URL names no port other than the scheme's default. */
-  readonly defaultPort: boolean;
-  readonly path: string;
-}
-
-function parseUrl(text: string): UrlParts | undefined {
-  if (!URL.canParse(text)) return undefined;
-  const url = new URL(text);
-  const scheme = url.protocol.slice(0, -1);
-  return {
-    scheme,
-    host: url.hostname,
-    port: url.port === '' ? (DEFAULT_PORTS.get(scheme) ?? '') : url.port,
-    defaultPort: url.port === '',
-    path: url.pathname + url.search,
-  };
-}
-
-const withoutDot = (host: string): string => host.toLowerCase().replace(/\.$/, '');
-
-/** Hostname rule: no port in the pattern allows every port only for a host with a `*` in it. */
-function portMatches(want: PatternParts, have: UrlParts): boolean {
-  if (want.port !== undefined) return matchesWildcard(want.port, have.port);
-  return want.host.includes('*') || have.defaultPort;
-}
-
-const pathMatches = (want: PatternParts, have: UrlParts): boolean =>
-  want.path === undefined || matchesWildcard(want.path, have.path);
-
-export function urlPatternMatches(pattern: string, url: string): boolean {
-  const want = parsePattern(pattern.trim());
-  const have = parseUrl(url.trim());
-  if (want === undefined || have === undefined) return false;
-  return (
-    matchesWildcard(want.scheme.toLowerCase(), have.scheme) &&
-    matchesWildcard(withoutDot(want.host), withoutDot(have.host)) &&
-    portMatches(want, have) &&
-    pathMatches(want, have)
-  );
-}
-
-/** Stands for a `${VAR}` while the shape of an entry is read; no URL holds it. */
-const HOLE = '\u0000';
+export const urlPatternMatches = (pattern: string, url: string): boolean =>
+  call('urlPatternMatches', pattern, url);
 
 /**
  * Whether a `${VAR}` reference of an entry written as `template` sits in the scheme, host or path: the
@@ -97,13 +28,5 @@ const HOLE = '\u0000';
  * the docs name the three parts without saying how an expansion "would change" one, so a reference
  * in any of them counts, and an entry that does not parse around its references (`${BASE}/*`) counts.
  */
-export function referenceInUrlScope(template: string): boolean {
-  const masked = template.replace(BRACED_REFERENCE, (raw, inner: string) =>
-    isVariableName(splitDefault(inner).name) ? HOLE : raw,
-  );
-  if (!masked.includes(HOLE)) return false;
-  const parts = parsePattern(masked);
-  return parts === undefined || [parts.scheme, parts.host, parts.path ?? ''].some(has);
-}
-
-const has = (part: string): boolean => part.includes(HOLE);
+export const referenceInUrlScope = (template: string): boolean =>
+  call('referenceInUrlScope', template);

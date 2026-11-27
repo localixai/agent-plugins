@@ -74,6 +74,5 @@ pub fn without_reserved_servers(read: &McpConfigRead, origin: &str) -> McpConfig
 crate::registry::exports! {
     "format/mcp-reserved" {
         "RESERVED_MCP_SERVER_NAMES" => ok || RESERVED_MCP_SERVER_NAMES;
-        "withoutReservedServers" => ok |read: JsValue, origin: String| without_reserved_servers(&read, &origin);
     }
 }

@@ -291,7 +291,6 @@ pub fn ignored_because(
 
 crate::registry::exports! {
     "settings/env/ignored-variables" {
-        "envText" => ok |value: JsValue| env_text(&value);
         "ignoredBecause" => ok |scope: PolicyScope, name: String, value: JsValue, windows: Option<bool>|
             ignored_because(scope, &name, &value, windows.unwrap_or(false));
     }

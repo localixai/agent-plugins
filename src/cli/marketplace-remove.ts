@@ -1,17 +1,3 @@
-import {
-  isWritableScope,
-  type ChosenScope,
-  type InstallScope,
-} from '../marketplace/install-scopes.ts';
-import {
-  marketplaceFailure,
-  marketplaceSuccess,
-  noResultLine,
-  type CommandOutput,
-} from './result.ts';
-import { isReservedName, RESERVED_QUIET_NAME } from './marketplace-add.ts';
-import { chooseScope, type ConfigScope } from './scope.ts';
-
 /**
  * `claude plugin marketplace remove <name>` as a plan (plugins/cli-reference.md, "plugin marketplace
  * remove"): which settings files lose the declaration and, when the last one does, the cache, the
@@ -21,7 +7,15 @@ import { chooseScope, type ConfigScope } from './scope.ts';
  * "your settings files" are why `managed` is left alone. The Marketplaces tab names the `uninstall`
  * ids before it asks to confirm. The wording for a marketplace nobody knows and for one plugin, and
  * what a plugin only managed settings installed does, are in spec/judgments.md.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/marketplace_remove.rs`, docs/RUST.md).
  */
+import type { ChosenScope, InstallScope } from '../marketplace/install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { CommandOutput } from './result.ts';
+import type { ConfigScope } from './scope.ts';
+
+const call = coreModule('cli/marketplace-remove');
 
 export interface RemoveArguments {
   /** The marketplace name `plugin marketplace list` shows, not the source passed to `add`. */
@@ -82,100 +76,6 @@ export interface RemovePlan {
   readonly dropEnabledEntries: readonly EnabledEntry[];
 }
 
-const removal = (plugin: InstalledFromMarketplace): PluginRemoval => ({
-  id: plugin.id,
-  scopes: plugin.scopes.filter(isWritableScope),
-  deleteOptions: true,
-  deleteSecrets: true,
-  deleteData: true,
-});
-
-const nothing = (output: CommandOutput): RemovePlan => ({
-  output,
-  removeFrom: [],
-  deleteCache: false,
-  uninstall: [],
-  dropEnabledEntries: [],
-});
-
-function lineOf(name: string, uninstalled: readonly PluginRemoval[]): string {
-  const head = `Successfully removed marketplace: ${name}`;
-  if (uninstalled.length === 0) return head;
-  const noun = uninstalled.length === 1 ? 'plugin' : 'plugins';
-  return [
-    head,
-    `Also uninstalled ${uninstalled.length} ${noun} from this marketplace:`,
-    ...uninstalled.map((one) => `  ${one.id}`),
-  ].join('\n');
-}
-
-const success = (name: string, uninstalled: readonly PluginRemoval[]): CommandOutput =>
-  marketplaceSuccess('marketplace-remove', name, lineOf(name, uninstalled));
-
-/** The declarations that go: the one `--scope` names, or every one without it. */
-const declarationsToRemove = (
-  chosen: ReturnType<typeof chooseScope>,
-  facts: RemoveFacts,
-): readonly ConfigScope[] =>
-  'scope' in chosen
-    ? facts.declaredIn.filter((declared) => declared === chosen.scope)
-    : facts.declaredIn;
-
-/**
- * "`remove` without `--scope` on a seed marketplace fail[s] with a message that names the seed
- * directory" (plugins/org.md, "Seed containers and CI"). Judgment: the wording follows `marketplace
- * update`'s and the code is its `seed_managed` (spec/judgments.md).
- */
-const seedManaged = (name: string, seed: string): RemovePlan =>
-  nothing(
-    marketplaceFailure(
-      'marketplace-remove',
-      name,
-      `Marketplace '${name}' is seed-managed (${seed}). Ask your administrator to remove it from the seed directory, or remove it from one scope with --scope`,
-      'seed_managed',
-    ),
-  );
-
 /** What `plugin marketplace remove` does and prints. */
-export function planMarketplaceRemove(args: RemoveArguments, facts: RemoveFacts): RemovePlan {
-  if (isReservedName(args.name)) {
-    return nothing(noResultLine(`"${RESERVED_QUIET_NAME}" is a reserved marketplace name`));
-  }
-  const chosen = chooseScope('marketplace-remove', args.scope);
-  if ('reason' in chosen) return nothing(chosen);
-  if (!facts.known) {
-    return nothing(
-      marketplaceFailure(
-        'marketplace-remove',
-        args.name,
-        `Marketplace '${args.name}' not found`,
-        'not_found',
-      ),
-    );
-  }
-  if (facts.seeded !== undefined && !('scope' in chosen))
-    return seedManaged(args.name, facts.seeded);
-  const removeFrom = declarationsToRemove(chosen, facts);
-  if ('scope' in chosen && removeFrom.length === 0) {
-    return nothing(
-      marketplaceFailure(
-        'marketplace-remove',
-        args.name,
-        `Marketplace '${args.name}' is not declared in ${chosen.scope} settings. Omit --scope to remove it from all scopes.`,
-        'not_declared_in_scope',
-      ),
-    );
-  }
-  const last = facts.declaredIn.every((scope) => removeFrom.includes(scope));
-  if (!last) {
-    return { ...nothing(success(args.name, [])), removeFrom };
-  }
-  const uninstall = facts.plugins.map(removal).filter((one) => one.scopes.length > 0);
-  return {
-    output: success(args.name, uninstall),
-    removeFrom,
-    deleteCache: true,
-    uninstall,
-    dropEnabledEntries: facts.enabledEntries.filter((one) => one.id.endsWith(`@${args.name}`)),
-  };
-}
+export const planMarketplaceRemove = (args: RemoveArguments, facts: RemoveFacts): RemovePlan =>
+  call('planMarketplaceRemove', args, facts);

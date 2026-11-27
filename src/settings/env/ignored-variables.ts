@@ -30,12 +30,6 @@ const IGNORE_REASONS = [
 export type IgnoreReason = (typeof IGNORE_REASONS)[number];
 
 /**
- * The text of an `env` value as the process gets it: claude sets JavaScript's `String(value)` for a
- * value that is not a string (oracle 2.1.321, spec/judgments.md `src/settings/env/check-env.ts`).
- */
-export const envText = (value: unknown): string => call('envText', value);
-
-/**
  * Why Claude Code drops the variable `name` set to `value` in a file of `scope`, or `undefined` when
  * the variable stays. `windows`: the host's variable names are case-insensitive.
  */

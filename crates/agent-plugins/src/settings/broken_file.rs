@@ -29,7 +29,9 @@ pub const SCOPE_LABEL: [(PolicyScope, &str); 7] = [
     (PolicyScope::User, "user settings"),
 ];
 
-fn scope_label(scope: PolicyScope) -> &'static str {
+/// `SCOPE_LABEL[scope]`.
+#[must_use]
+pub fn scope_label(scope: PolicyScope) -> &'static str {
     SCOPE_LABEL
         .iter()
         .find(|(each, _)| *each == scope)
