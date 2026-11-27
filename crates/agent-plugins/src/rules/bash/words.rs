@@ -1,4 +1,4 @@
-//! The core's counterpart of `src/rules/bash/words.ts` at sha256:f30e7a2805ce, which stays TypeScript: it declares types only, so it has nothing to run (docs/RUST.md, "What stays TypeScript").
+//! Ported from `src/rules/bash/words.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The words and redirections of one command (bash(1), "SHELL GRAMMAR" and "REDIRECTION"). An
 //! unquoted `<` or `>` ends a word wherever it stands, so `echo x>/etc/x` is `echo x` writing

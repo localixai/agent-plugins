@@ -1,11 +1,11 @@
-//! Port of `src/hooks/input/facts-session.ts` at sha256:08e5cbcd7323.
+//! Ported from `src/hooks/input/facts-session.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Facts of the session and prompt events (hooks.md, "SessionStart input", "Setup input",
 //! "SessionEnd", "PreCompact", "PostCompact", "UserPromptSubmit input", "UserPromptExpansion input",
 //! "MessageDisplay input").
 //!
-//! Each schema is bound to the official input in the TypeScript (`satisfies
-//! z.ZodType<EventFactsOf<E>>`); here it is the same schema, written line by line.
+//! Each schema follows the official input of its event (the SDK's `HookInput` member), field by
+//! field: the SDK stays the source of truth for what a field is called and typed.
 
 use std::sync::LazyLock;
 

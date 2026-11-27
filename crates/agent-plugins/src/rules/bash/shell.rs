@@ -1,4 +1,4 @@
-//! Port of `src/rules/bash/shell.ts`, switched.
+//! Ported from `src/rules/bash/shell.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What differs between the command tools, the one matcher below reading it: how a command
 //! splits, the forms of a subcommand a rule is tried against, and how a pattern is compared with
@@ -104,10 +104,4 @@ pub fn match_shell_rule(
         covered,
         &scan.whole,
     )
-}
-
-crate::registry::exports! {
-    "rules/bash/shell" {
-        "commandOf" => ok |input: JsValue| command_of(&input).map(str::to_owned);
-    }
 }

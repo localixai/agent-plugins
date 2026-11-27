@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/fs-operands.ts`, switched.
+//! Ported from `src/rules/decide/fs-operands.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The filesystem commands `acceptEdits` approves (permission-modes.md, "Auto-approve file edits with
 //! acceptEdits mode": "`mkdir`, `touch`, `rm`, `rmdir`, `mv`, `cp`, and `sed`") and the operands each
@@ -140,11 +140,4 @@ pub fn filesystem_operands(program: &str, args: &[ShellWord]) -> Option<Vec<Shel
         .iter()
         .find(|(name, _)| *name == program)
         .and_then(|(_, operands)| operands(args))
-}
-
-crate::registry::exports! {
-    "rules/decide/fs-operands" {
-        "isFilesystemProgram" => ok |program: String| is_filesystem_program(&program);
-        "filesystemOperands" => ok |program: String, args: Vec<ShellWord>| filesystem_operands(&program, &args);
-    }
 }

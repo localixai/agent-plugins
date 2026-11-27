@@ -1,4 +1,4 @@
-//! Port of `src/rules/path/posix.ts`, switched.
+//! Ported from `src/rules/path/posix.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Path arithmetic on the kit's one path form: absolute, `/`-separated, no `.` or `..` segments.
 //! Pure string work, because the kit never calls the host's `path` module (docs/ARCHITECTURE.md, L3)
@@ -176,12 +176,6 @@ pub fn dirname_of(path: &str) -> String {
 #[must_use]
 pub fn has_glob_syntax(segment: &str) -> bool {
     segment.contains(['*', '?', '[', '\\'])
-}
-
-crate::registry::exports! {
-    "rules/path/posix" {
-        "absolutePath" => ok |path: String, paths: HostPaths| absolute_path(&path, &paths);
-    }
 }
 
 #[cfg(test)]

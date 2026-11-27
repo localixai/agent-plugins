@@ -1,4 +1,4 @@
-//! Port of `src/rules/decide/scope.ts`, switched.
+//! Ported from `src/rules/decide/scope.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The working directories and what is inside them.
 
@@ -40,11 +40,4 @@ pub fn in_scope(path: &str, paths: &PathContext) -> bool {
     working_directories(paths)
         .iter()
         .any(|root| relative_within(root, path, Some(paths.platform)).is_some())
-}
-
-crate::registry::exports! {
-    "rules/decide/scope" {
-        "posixOf" => ok |path: String, paths: PathContext| posix_of(&path, &paths);
-        "inScope" => ok |path: String, paths: PathContext| in_scope(&path, &paths);
-    }
 }

@@ -1,5 +1,5 @@
 import type { HookPermissionDecision, PermissionMode } from '../../protocol/official.ts';
-import type { Decision, MatchContext, PermissionRule } from '../types.ts';
+import type { MatchContext, PermissionRule } from '../types.ts';
 
 /**
  * What a PreToolUse hook answered (hooks.md, "PreToolUse decision control"): its
@@ -163,18 +163,4 @@ export interface ProtectedPathOptions {
   readonly remoteSettingsFiles?: readonly string[];
   /** A session started with `--restricted`. */
   readonly restricted?: boolean;
-}
-
-/**
- * How far a mod's approval reaches over an outcome: over anything (`any`), unless a permission
- * callback cannot be bypassed (`unbypassable`), only where no managed policy applies or the guard
- * option lifts it (`unenforced`), as that and only for a hook outside managed settings (`hook`), or
- * never.
- */
-export type ModReach = 'any' | 'unbypassable' | 'unenforced' | 'hook' | 'never';
-
-/** An outcome and how far a mod's approval reaches over it. */
-export interface Pending {
-  readonly decision: Decision;
-  readonly reach: ModReach;
 }

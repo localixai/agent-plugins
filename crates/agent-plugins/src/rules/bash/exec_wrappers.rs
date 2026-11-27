@@ -57,7 +57,6 @@ pub fn requires_prompt_despite_prefix_rule(subcommand: &str) -> bool {
 
 crate::registry::exports! {
     "rules/bash/exec-wrappers" {
-        "promptsDespitePrefixRule" => ok |command: ShellCommand| prompts_despite_prefix_rule(&command);
         "requiresPromptDespitePrefixRule" => ok |subcommand: String| requires_prompt_despite_prefix_rule(&subcommand);
     }
 }
