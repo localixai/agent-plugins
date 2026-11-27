@@ -233,7 +233,5 @@ crate::registry::exports! {
         "readSkillFields" => ok |fields: JsObject| read_skill_fields(&fields);
         "firstContentLine" => ok |body: String| first_content_line(&body);
         "escapeAngleBrackets" => ok |text: String| escape_angle_brackets(&text);
-        "readInvocable" => ok |fields: JsObject, body: String, untaken: Option<Vec<String>>|
-            read_invocable(&fields, &body, &untaken.unwrap_or_default());
     }
 }

@@ -7,6 +7,7 @@ pub mod display_fields;
 pub mod entries;
 pub mod entry_append;
 pub mod entry_checks;
+pub mod entry_merge;
 pub mod entry_schema;
 pub mod header_names;
 pub mod ids;

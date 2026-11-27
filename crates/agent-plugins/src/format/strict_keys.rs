@@ -1,4 +1,4 @@
-//! Port of `src/format/strict-keys.ts` at sha256:4b316d842c5d.
+//! Ported from `src/format/strict-keys.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A strict object as Claude Code's schema check treats one (plugins/manifest-reference.md,
 //! "Unrecognized fields": "An unknown key inside one is an error"): an unknown key is reported as
@@ -6,9 +6,6 @@
 //! the known fields rather than instead of them, so inside a union the object's own path is kept
 //! (oracle 2.1.325: `lspServers.go: Unrecognized key: "foo"`, not a bare `Invalid input` at
 //! `lspServers`). Zod's `strictObject` aborts on an unknown key, which a union then hides.
-//!
-//! The module exports only this builder, which returns a schema: a schema never crosses the
-//! boundary, so it has no `exports!`.
 
 use crate::js::{JsValue, property_order};
 use crate::zod::{self, Schema, Shape, issue};

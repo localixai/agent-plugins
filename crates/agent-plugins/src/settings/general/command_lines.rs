@@ -229,7 +229,6 @@ pub async fn read_subagent_status_line(
 crate::registry::exports! {
     "settings/general/command-lines" {
         "COMMAND_LINE_KEYS" => ok || COMMAND_LINE_KEYS;
-        "commandLine" => ok |value: JsValue, at: RepairAt| command_line(&value, &at);
         "readCommandLine" => async ok |view: Port, key: String, policy: HookPolicy|
             read_command_line(&view, &key, policy).await;
         "readSubagentStatusLine" => async ok |view: Port, policy: HookPolicy, defaults: JsValue|

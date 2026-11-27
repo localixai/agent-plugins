@@ -1,4 +1,5 @@
-//! Port of `src/loading/validate/components.ts`, switched.
+//! Ported from `src/loading/validate/components.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The Markdown components `claude plugin validate` reads (oracle 2.1.319): each skill folder's
 //! `SKILL.md`, and every `.md` below `agents/` and `commands/` at any depth. Paths the manifest
@@ -16,7 +17,6 @@ use crate::format::validate::finding::{ValidationIssue, in_file};
 use crate::js::JsValue;
 use crate::ports::files::PluginFiles;
 use crate::ports::{BoxFuture, Signal};
-use crate::registry::Port;
 
 const SKILL_FILE: &str = "SKILL.md";
 
@@ -195,12 +195,4 @@ pub async fn component_issues(
         );
     }
     issues
-}
-
-crate::registry::exports! {
-    "loading/validate/components" {
-        "manifestPaths" => ok |value: JsValue| manifest_paths(&value);
-        "componentIssues" => async ok |files: Port, signal: Option<Signal>|
-            component_issues(&files, signal.as_ref()).await;
-    }
 }

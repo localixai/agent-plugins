@@ -1,4 +1,5 @@
-//! Port of `src/format/marketplace/entry-append.ts`, switched.
+//! Ported from `src/format/marketplace/entry-append.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! How one component field of an entry joins the same field of plugin.json under strict mode
 //! (plugins/manifest-reference.md, "How entry fields combine with `plugin.json`"): paths are
@@ -151,13 +152,5 @@ pub fn merge_hooks(manifest: Option<&Hooks>, entry: &JsObject) -> Hooks {
             merged.extend(entry.clone());
             Hooks::Inline(in_property_order(merged))
         }
-    }
-}
-
-crate::registry::exports! {
-    "format/marketplace/entry-append" {
-        "appendPaths" => ok |manifest: Option<Paths>, entry: Option<Paths>| append_paths(manifest.as_ref(), entry.as_ref());
-        "combineCommands" => ok |manifest: Option<Commands>, entry: Option<Commands>| combine_commands(manifest.as_ref(), entry.as_ref());
-        "mergeHooks" => ok |manifest: Option<Hooks>, entry: JsObject| merge_hooks(manifest.as_ref(), &entry);
     }
 }

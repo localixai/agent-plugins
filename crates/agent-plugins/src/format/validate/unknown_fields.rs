@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/unknown-fields.ts`, switched.
+//! Ported from `src/format/validate/unknown-fields.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! What `claude plugin validate` says about a key it does not know (oracle 2.1.319). Claude Code
 //! ignores such a key at load time; the validator tells the author why it is probably there:
@@ -181,11 +182,4 @@ pub fn unknown_field_finding(key: &str, known: &[String], path: &str, site: Fiel
         );
     }
     warning_at(path, &format!("Unknown field '{key}'. {IGNORED_AT_LOAD}"))
-}
-
-crate::registry::exports! {
-    "format/validate/unknown-fields" {
-        "FIELD_SITES" => ok || FIELD_SITES;
-        "unknownFieldFinding" => ok |key: String, known: Vec<String>, path: Option<String>, site: Option<FieldSite>| unknown_field_finding(&key, &known, path.as_deref().unwrap_or(&key), site.unwrap_or_default());
-    }
 }

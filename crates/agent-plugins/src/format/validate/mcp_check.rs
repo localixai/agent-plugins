@@ -269,8 +269,6 @@ pub fn mcp_findings(raw: &JsValue, declared: &IndexSet<String>) -> Vec<Finding> 
 
 crate::registry::exports! {
     "format/validate/mcp-check" {
-        "inlineFindings" => ok |servers: JsObject, declared: Set<String>|
-            inline_findings(&servers, &declared.members.into_iter().collect());
         "mcpFindings" => ok |raw: JsValue, declared: Set<String>|
             mcp_findings(&raw, &declared.members.into_iter().collect());
     }

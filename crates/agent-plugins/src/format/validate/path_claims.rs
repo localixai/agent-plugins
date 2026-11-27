@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/path-claims.ts`, switched.
+//! Ported from `src/format/validate/path-claims.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The paths a manifest names that the validator then looks for on disk (oracle 2.1.319). A path
 //! with a `..` segment is refused outright; the rest are claims the caller checks against the files:
@@ -132,11 +133,5 @@ pub fn claims_of(manifest: &JsObject) -> Claims {
             .iter()
             .map(|claim| error_at(&claim.path, &format!("{TRAVERSAL}: {}", claim.value)))
             .collect(),
-    }
-}
-
-crate::registry::exports! {
-    "format/validate/path-claims" {
-        "claimsOf" => ok |manifest: JsObject| claims_of(&manifest);
     }
 }

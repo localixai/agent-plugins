@@ -1,4 +1,5 @@
-//! Port of `src/settings/general/sandbox-check.ts`, switched.
+//! Ported from `src/settings/general/sandbox-check.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! A managed `sandbox` block, validated field by field (managed-settings.md, "Invalid values
 //! inside `sandbox`"): one invalid value never drops the block. A quoted Boolean counts as that
@@ -216,10 +217,4 @@ fn closed_sandbox(start: State<'_>) -> Repaired {
     let done = withheld(lists, &faulty);
     let block = done.settings.get("sandbox").cloned().unwrap_or_default();
     kept(block, done.found)
-}
-
-crate::registry::exports! {
-    "settings/general/sandbox-check" {
-        "sandbox" => ok |value: JsValue, at: RepairAt| sandbox(&value, &at);
-    }
 }

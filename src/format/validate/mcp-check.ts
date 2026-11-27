@@ -12,12 +12,6 @@ import type { Finding } from './finding.ts';
 
 const call = coreModule('format/validate/mcp-check');
 
-/** Only what the manifest's own schema leaves to the MCP check: undeclared references, urls and headers. */
-export const inlineFindings = (
-  servers: Readonly<Record<string, unknown>>,
-  declared: ReadonlySet<string>,
-): Finding[] => call('inlineFindings', servers, declared);
-
 /** The findings of a parsed `.mcp.json`. */
 export const mcpFindings = (raw: unknown, declared: ReadonlySet<string>): Finding[] =>
   call('mcpFindings', raw, declared);

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- `plugin.json` is read and validated on the core (`readManifest`, `validateManifest`) with its
+  schemas, and so are `claude plugin validate`'s plugin and marketplace folders, a command file and
+  a `commands` entry (`readCommand`, `readCommandEntry`), a host's bundled skill, the entry and
+  `plugin.json` merge, `claude plugin tag` and each general settings key's check. No TypeScript
+  module builds a manifest schema any more; `PluginManifest`, `UserConfigOption`, `CommandEntry`,
+  `PluginDependency` and `PluginChannel` are written out as the types they were inferred as.
 - A command hook's run is the core's from end to end: the plan, the shell prefix, the missing
   plugin directory, the working directory, the environment and the background modes. So are the
   validator's `.mcp.json` checks and `plugin.json` field rules, and the status line, file

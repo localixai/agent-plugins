@@ -130,8 +130,8 @@ fn an_answer_to_no_need_and_a_wrong_shape_are_faults() {
 fn an_export_that_waits_is_no_sync_call() {
     let text = call("format/read-json#readJson", r#"[{"$port":0},"a"]"#);
     assert!(text.starts_with(r#"{"fault":"#), "{text}");
-    let sync = start_json("format/read-json#invalidJsonSyntax", r#"["x"]"#);
-    assert_eq!(sync, r#"{"done":{"result":"Invalid JSON syntax: x"}}"#);
+    let sync = start_json("format/skill-fields#escapeAngleBrackets", r#"["<x>"]"#);
+    assert_eq!(sync, r#"{"done":{"result":"&lt;x&gt;"}}"#);
 }
 
 #[test]

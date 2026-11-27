@@ -2,6 +2,7 @@
 //! package).
 
 pub mod agent_keys;
+pub mod checks;
 pub mod claude_json;
 pub mod closed_fields;
 pub mod command_lines;

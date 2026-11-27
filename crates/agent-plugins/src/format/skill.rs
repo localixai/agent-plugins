@@ -96,7 +96,6 @@ pub fn read_skill(path: &str, text: &str, layout: &SkillLayout, origin: JsValue)
 
 crate::registry::exports! {
     "format/skill" {
-        "directoryOf" => ok |path: String| directory_of(&path);
         "readSkill" => fallible |path: String, text: String, layout: JsValue| {
             let read = SkillLayout::deserialize(layout.clone()).map_err(|problem| problem.to_string())?;
             let origin = layout.get("origin").cloned().unwrap_or_default();

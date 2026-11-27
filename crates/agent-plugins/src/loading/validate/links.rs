@@ -1,4 +1,4 @@
-//! Port of `src/loading/validate/links.ts`, switched.
+//! Ported from `src/loading/validate/links.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What the validator says about links (oracle 2.1.319). It never follows a symlink: a folder that
 //! is one is not read, an entry that is one is not read, and each warns, because Claude Code does
@@ -12,7 +12,6 @@ use crate::js::number_to_string;
 use crate::format::validate::finding::{ValidationIssue, warning_in};
 use crate::ports::Signal;
 use crate::ports::files::PluginFiles;
-use crate::registry::Port;
 
 /// The two kinds of folder the validator reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,14 +143,3 @@ pub const MCP_PAST_CAP: &str = concat!(
     cap!(),
     " The plugin loader has neither limit, so validate the real file separately."
 );
-
-crate::registry::exports! {
-    "loading/validate/links" {
-        "isLink" => async ok |files: Port, path: String, signal: Option<Signal>|
-            is_link(&files, &path, signal.as_ref()).await;
-        "HOOKS_LINK" => ok || HOOKS_LINK;
-        "MCP_NOT_REGULAR" => ok || MCP_NOT_REGULAR;
-        "MCP_FILE_CAP_BYTES" => ok || MCP_FILE_CAP_BYTES;
-        "MCP_PAST_CAP" => ok || MCP_PAST_CAP;
-    }
-}

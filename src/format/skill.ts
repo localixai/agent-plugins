@@ -15,9 +15,6 @@ export interface SkillRead {
   readonly issues: readonly PluginIssue[];
 }
 
-/** `skills/review/SKILL.md` is in `skills/review`; a file at the root is in `.`. */
-export const directoryOf = (path: string): string => call('directoryOf', path);
-
 /**
  * Read one `SKILL.md`. Never throws and never refuses the file (skills.md: "If the YAML between
  * the markers doesn't parse, the skill still loads with no fields set"; an unknown field is

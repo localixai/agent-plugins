@@ -211,8 +211,6 @@ crate::registry::exports! {
         "kept" => ok |value: JsValue, issues: Option<Vec<PluginIssue>>| kept(value, issues.unwrap_or_default());
         "note" => ok |at: RepairAt, field: String, message: String| note(&at, &field, &message);
         "dropped" => ok |at: RepairAt, reason: String| dropped(&at, &reason);
-        "mustBe" => ok |at: RepairAt, expected: String| must_be(&at, &expected);
-        "presentButInvalid" => ok |at: RepairAt, effect: String, field: Option<String>| present_but_invalid(&at, &effect, field.as_deref().unwrap_or(""));
         "stripInvalid" => async ok |list: Vec<JsValue>, at: RepairAt, read: Callback, reason: String|
             strip_invalid(&list, &at, &read, &reason).await;
     }

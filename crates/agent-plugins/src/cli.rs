@@ -21,6 +21,7 @@ pub mod prune_plan;
 pub mod records_refusal;
 pub mod result;
 pub mod scope;
+pub mod tag_plan;
 pub mod toggle_target;
 pub mod uninstall_data;
 pub mod uninstall_flags;

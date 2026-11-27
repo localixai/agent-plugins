@@ -1,4 +1,5 @@
-//! Port of `src/format/validate/plugin-fields.ts`, switched.
+//! Ported from `src/format/validate/plugin-fields.ts`; only the core uses it now, so it has no
+//! wrapper.
 //!
 //! The type rules of `plugin.json` as `claude plugin validate` applies them (oracle 2.1.319): one
 //! check per key, in the order the validator reports them. A key with no entry here is either a
@@ -15,7 +16,8 @@ use super::mcp_check::inline_servers_valid;
 use super::plugin_paths::{PathKey, is_path_key};
 use super::received::kind_of;
 use super::zod_findings::zod_findings;
-use crate::format::manifest_schema::{DEPENDENCY_TEXT, USER_CONFIG_KEY, USER_CONFIG_OPTION_SCHEMA};
+use crate::format::manifest_schema::{DEPENDENCY_TEXT, USER_CONFIG_OPTION_SCHEMA};
+use crate::format::user_config_refs::USER_CONFIG_KEY_SOURCE as USER_CONFIG_KEY;
 use crate::js::{JsObject, JsValue};
 use crate::zod::{self, Schema, fields};
 
@@ -200,14 +202,4 @@ pub fn loose_object_findings(manifest: &JsObject) -> Vec<Finding> {
         ));
     }
     found
-}
-
-crate::registry::exports! {
-    "format/validate/plugin-fields" {
-        "PLUGIN_KEYS" => ok plugin_keys;
-        "SUGGESTED_KEYS" => ok || SUGGESTED_KEYS;
-        "fieldFindings" => ok |manifest: JsObject| field_findings(&manifest);
-        "missingName" => ok |manifest: JsObject| missing_name(&manifest);
-        "looseObjectFindings" => ok |manifest: JsObject| loose_object_findings(&manifest);
-    }
 }

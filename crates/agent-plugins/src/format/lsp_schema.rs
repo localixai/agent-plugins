@@ -1,4 +1,4 @@
-//! Port of `src/format/lsp-schema.ts` at sha256:4bd4202a60eb.
+//! Port of `src/format/lsp-schema.ts`, switched.
 //!
 //! The LSP server configuration as Claude Code's schema check reads it, one rule set for the loader
 //! and the validator (plugins/manifest-reference.md, "lspServers": "Each server config is a strict

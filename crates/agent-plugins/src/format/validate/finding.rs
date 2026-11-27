@@ -92,9 +92,5 @@ pub fn in_file(file: &str, findings: &[Finding], prefix: &str) -> Vec<Validation
 crate::registry::exports! {
     "format/validate/finding" {
         "errorIn" => ok |file: String, path: String, message: String| error_in(&file, &path, &message);
-        "warningIn" => ok |file: String, path: String, message: String| warning_in(&file, &path, &message);
-        "errorAt" => ok |path: String, message: String| error_at(&path, &message);
-        "warningAt" => ok |path: String, message: String| warning_at(&path, &message);
-        "inFile" => ok |file: String, findings: Vec<Finding>, prefix: Option<String>| in_file(&file, &findings, prefix.as_deref().unwrap_or_default());
     }
 }

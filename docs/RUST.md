@@ -299,7 +299,7 @@ TypeScript they follow changed.
 
 | Id  | Rule |
 | --- | --- |
-| RS1 | A module of `src/` is a module of the crate, file for file: `src/format/code-points.ts` is `crates/agent-plugins/src/format/code_points.rs`, and a folder such as `src/format/` is `crates/agent-plugins/src/format.rs` beside its folder. Layers are the package's (docs/ARCHITECTURE.md): a module uses only its own folder and lower layers. |
+| RS1 | A module of `src/` is a module of the crate, file for file: `crates/agent-plugins/src/format/code_points.rs` is `crates/agent-plugins/src/format/code_points.rs`, and a folder such as `src/format/` is `crates/agent-plugins/src/format.rs` beside its folder. Layers are the package's (docs/ARCHITECTURE.md): a module uses only its own folder and lower layers. |
 | RS2 | An exported function keeps its name in snake case and answers what its namesake answers. Every export is declared in its module's `exports!` block under its TypeScript name, and `crates/agent-plugins/tests/differential/registry.rs` holds every declared export to every recorded call, called by name as the wrapper calls it. A call with no Rust spelling (an `undefined` where the parameter is no `JsValue` or `Option`) is counted and left out; nothing else is. |
 | RS3 | No I/O, no ambient state: files, commands, requests, the environment and the clock are ports (`crates/agent-plugins/src/ports/`), traits whose methods return a `BoxFuture`. The crate never spawns, sleeps or blocks (clippy.toml's disallowed list). |
 | RS4 | No panic: no `unwrap`, `expect`, `panic!`, indexing that can fail, or slicing inside a character. A plugin's mistake is a `PluginIssue`, as in the package. |
