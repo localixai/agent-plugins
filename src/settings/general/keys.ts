@@ -1,5 +1,9 @@
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/general/keys.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { Settings } from '../../protocol/official.ts';
 import type { PolicyKey } from '../../protocol/settings-keys.ts';
+
+const call = coreModule('settings/general/keys');
 
 /**
  * The keys beyond the policy keys the kit combines: the ones settings.md names (the whole-value
@@ -8,7 +12,7 @@ import type { PolicyKey } from '../../protocol/settings-keys.ts';
  * (settings.md, "Exceptions to managed settings precedence"); every other key of a file is
  * combined by the general rule of `merge.ts` and needs no row.
  */
-export const GENERAL_KEYS = [
+export const GENERAL_KEYS: readonly [
   'agent',
   'attribution',
   'autoMode.classifyAllShell',
@@ -43,7 +47,8 @@ export const GENERAL_KEYS = [
   'theme',
   'worktree',
   'worktree.location',
-] as const;
+] = call('GENERAL_KEYS');
+
 export type GeneralKey = (typeof GENERAL_KEYS)[number];
 
 /** A key the layers combine by name: a policy key or one of the general keys. */

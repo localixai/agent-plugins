@@ -327,6 +327,72 @@ pub fn key_order<'a>(keys: impl IntoIterator<Item = &'a String>) -> Vec<&'a Stri
         .collect()
 }
 
+/// JavaScript's `JSON.stringify(value)` of plain data: `None` where it answers `undefined` (a
+/// value that is `undefined`), an item that is `undefined` written `null`, a member that is
+/// `undefined` left out, a number with no JSON text (`NaN`, an infinity) written `null` and `-0`
+/// written `0`, the members in the order `Object.keys` lists them, no blanks.
+#[must_use]
+pub fn json_stringify(value: &JsValue) -> Option<String> {
+    let mut out = String::new();
+    write_stringified(value, &mut out).then_some(out)
+}
+
+/// Writes the value; `false` (nothing written) for `undefined`.
+fn write_stringified(value: &JsValue, out: &mut String) -> bool {
+    match value {
+        JsValue::Undefined => return false,
+        JsValue::Null => out.push_str("null"),
+        JsValue::Bool(flag) => out.push_str(if *flag { "true" } else { "false" }),
+        JsValue::Number(number) if number.is_finite() => out.push_str(&number_to_string(*number)),
+        JsValue::Number(_) => out.push_str("null"),
+        JsValue::String(text) => value::write_json_string(text, out),
+        JsValue::Array(items) => {
+            out.push('[');
+            for (index, item) in items.iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                if !write_stringified(item, out) {
+                    out.push_str("null");
+                }
+            }
+            out.push(']');
+        }
+        JsValue::Object(members) => {
+            out.push('{');
+            let mut first = true;
+            for (key, member) in property_order(members) {
+                let mark = out.len();
+                if !first {
+                    out.push(',');
+                }
+                value::write_json_string(key, out);
+                out.push(':');
+                if write_stringified(member, out) {
+                    first = false;
+                } else {
+                    out.truncate(mark);
+                }
+            }
+            out.push('}');
+        }
+    }
+    true
+}
+
+/// JavaScript's truthiness (`if (value)`): `undefined`, `null`, `false`, `0`, `-0`, `NaN` and the
+/// empty string are falsy; every other value, an empty array or object included, is truthy.
+#[must_use]
+pub fn is_truthy(value: &JsValue) -> bool {
+    match value {
+        JsValue::Undefined | JsValue::Null => false,
+        JsValue::Bool(flag) => *flag,
+        JsValue::Number(number) => *number != 0.0 && !number.is_nan(),
+        JsValue::String(text) => !text.is_empty(),
+        JsValue::Array(_) | JsValue::Object(_) => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,5 +527,51 @@ mod tests {
             .map(|(key, _)| key.as_str())
             .collect();
         assert_eq!(keys, ["2", "10", "b", "01", "a"]);
+    }
+
+    // bun -e 'console.log(JSON.stringify({b:1,"2":[0,5,-0,"a\n"],d:null}),
+    //   JSON.stringify({a:undefined,b:NaN,c:[undefined]}))' writes
+    // {"2":[0,5,0,"a\n"],"b":1,"d":null} and {"b":null,"c":[null]}.
+    #[test]
+    fn json_stringify_writes_what_javascript_writes() {
+        let value =
+            json_parse::json_parse(r#"{"b":1,"2":[0,5,-0,"a\n"],"d":null}"#).unwrap_or_default();
+        assert_eq!(
+            json_stringify(&value).as_deref(),
+            Some(r#"{"2":[0,5,0,"a\n"],"b":1,"d":null}"#)
+        );
+        assert_eq!(json_stringify(&JsValue::Undefined), None);
+        let object = JsValue::from([
+            ("a", JsValue::Undefined),
+            ("b", JsValue::Number(f64::NAN)),
+            ("c", JsValue::Array(vec![JsValue::Undefined])),
+        ]);
+        assert_eq!(
+            json_stringify(&object).as_deref(),
+            Some(r#"{"b":null,"c":[null]}"#)
+        );
+    }
+
+    // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{},1].map(Boolean).join())'
+    // writes false,false,false,false,false,false,false,true,true,true,true.
+    #[test]
+    fn is_truthy_answers_as_javascript() {
+        let falsy = [
+            JsValue::Undefined,
+            JsValue::Null,
+            JsValue::Bool(false),
+            JsValue::Number(0.0),
+            JsValue::Number(-0.0),
+            JsValue::Number(f64::NAN),
+            JsValue::String(String::new()),
+        ];
+        assert!(falsy.iter().all(|value| !is_truthy(value)));
+        let truthy = [
+            JsValue::String("0".to_owned()),
+            JsValue::Array(Vec::new()),
+            JsValue::Object(JsObject::new()),
+            JsValue::Number(1.0),
+        ];
+        assert!(truthy.iter().all(is_truthy));
     }
 }

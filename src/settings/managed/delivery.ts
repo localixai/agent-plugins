@@ -1,16 +1,22 @@
-import { warning, type PluginIssue } from '../../format/issues.ts';
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/managed/delivery.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../../format/issues.ts';
 import type { Settings } from '../../protocol/official.ts';
 import type { ManagedSource } from './admin-source.ts';
+
+const call = coreModule('settings/managed/delivery');
 
 /**
  * The delivery mechanisms as data (managed-settings.md, "Deploy a managed settings file", "Choose a
  * delivery mechanism", "Where each mechanism stores the policy"): where each stores the policy, how
  * often Claude Code reads it, and which source of the composition it is.
  */
-export const PLATFORMS = ['macos', 'linux', 'wsl', 'windows'] as const;
+export const PLATFORMS: readonly ['macos', 'linux', 'wsl', 'windows'] = call('PLATFORMS');
+
 export type Platform = (typeof PLATFORMS)[number];
 
-export const MECHANISMS = ['serverManaged', 'mdm', 'file', 'hkcu'] as const;
+export const MECHANISMS: readonly ['serverManaged', 'mdm', 'file', 'hkcu'] = call('MECHANISMS');
+
 export type Mechanism = (typeof MECHANISMS)[number];
 
 export interface MechanismTraits {
@@ -26,35 +32,8 @@ export interface MechanismTraits {
   readonly endpointManaged: boolean;
 }
 
-export const MECHANISM_TRAITS: { readonly [M in Mechanism]: MechanismTraits } = {
-  serverManaged: {
-    sources: ['remote'],
-    readAtStartup: true,
-    pollEveryMinutes: 60,
-    reloadsOnChange: false,
-    endpointManaged: false,
-  },
-  mdm: {
-    sources: ['plist', 'hklm'],
-    readAtStartup: true,
-    pollEveryMinutes: 30,
-    reloadsOnChange: false,
-    endpointManaged: true,
-  },
-  file: {
-    sources: ['file'],
-    readAtStartup: true,
-    reloadsOnChange: true,
-    endpointManaged: true,
-  },
-  hkcu: {
-    sources: ['hkcu'],
-    readAtStartup: true,
-    pollEveryMinutes: 30,
-    reloadsOnChange: false,
-    endpointManaged: false,
-  },
-};
+export const MECHANISM_TRAITS: { readonly [M in Mechanism]: MechanismTraits } =
+  call('MECHANISM_TRAITS');
 
 export interface RereadFacts {
   readonly minutesSinceRead: number;
@@ -63,47 +42,29 @@ export interface RereadFacts {
 }
 
 /** Whether Claude Code reads the mechanism again now: on its poll interval, or when its file changes. */
-export function rereadDue(mechanism: Mechanism, facts: RereadFacts): boolean {
-  const traits = MECHANISM_TRAITS[mechanism];
-  const polled =
-    traits.pollEveryMinutes !== undefined && facts.minutesSinceRead >= traits.pollEveryMinutes;
-  return polled || (traits.reloadsOnChange && facts.changed);
-}
+export const rereadDue = (mechanism: Mechanism, facts: RereadFacts): boolean =>
+  call('rereadDue', mechanism, facts);
 
 /** The MDM mechanism a platform has: a configuration profile on macOS, the `HKLM` registry on Windows; Linux has neither. */
-export const MDM_SOURCE: { readonly [P in Platform]: ManagedSource | undefined } = {
-  macos: 'plist',
-  linux: undefined,
-  wsl: 'hklm',
-  windows: 'hklm',
-};
+export const MDM_SOURCE: { readonly [P in Platform]: ManagedSource | undefined } =
+  call('MDM_SOURCE');
 
 /** "The `com.anthropic.claudecode` managed preferences domain." */
-export const PLIST_DOMAIN = 'com.anthropic.claudecode';
+export const PLIST_DOMAIN: 'com.anthropic.claudecode' = call('PLIST_DOMAIN');
 
 /** The registry: "the JSON as a `REG_SZ` or `REG_EXPAND_SZ` value named `Settings` under `SOFTWARE\Policies\ClaudeCode`". */
-export const REGISTRY_VALUE = {
-  name: 'Settings',
-  types: ['REG_SZ', 'REG_EXPAND_SZ'],
-  key: 'SOFTWARE\\Policies\\ClaudeCode',
-} as const;
+export const REGISTRY_VALUE: {
+  readonly name: 'Settings';
+  readonly types: readonly ['REG_SZ', 'REG_EXPAND_SZ'];
+  readonly key: 'SOFTWARE\\Policies\\ClaudeCode';
+} = call('REGISTRY_VALUE');
 
-export const HIVES = ['HKLM', 'HKCU'] as const;
+export const HIVES: readonly ['HKLM', 'HKCU'] = call('HIVES');
+
 export type Hive = (typeof HIVES)[number];
 
 /** The registry path of a hive's policy value, as `/status` and errors write it. */
-export const registryPath = (hive: Hive): string =>
-  `${hive}\\${REGISTRY_VALUE.key}\\${REGISTRY_VALUE.name}`;
-
-/** The system directory of each platform, and the separator its paths use. */
-const SYSTEM_DIRECTORY: {
-  readonly [P in Platform]: { readonly dir: string; readonly separator: string };
-} = {
-  macos: { dir: '/Library/Application Support/ClaudeCode', separator: '/' },
-  linux: { dir: '/etc/claude-code', separator: '/' },
-  wsl: { dir: '/etc/claude-code', separator: '/' },
-  windows: { dir: 'C:\\Program Files\\ClaudeCode', separator: '\\' },
-};
+export const registryPath = (hive: Hive): string => call('registryPath', hive);
 
 export interface ManagedFilePaths {
   readonly dir: string;
@@ -116,20 +77,12 @@ export interface ManagedFilePaths {
 }
 
 /** Where the file-based mechanism keeps its files. */
-export function managedFilePaths(platform: Platform): ManagedFilePaths {
-  const { dir, separator } = SYSTEM_DIRECTORY[platform];
-  const inside = (name: string): string => `${dir}${separator}${name}`;
-  return {
-    dir,
-    settings: inside('managed-settings.json'),
-    dropIns: inside('managed-settings.d'),
-    mcp: inside('managed-mcp.json'),
-  };
-}
+export const managedFilePaths = (platform: Platform): ManagedFilePaths =>
+  call('managedFilePaths', platform);
 
 /** Whether Claude Code reads `path` as the managed settings file of `platform`. */
 export const readsManagedSettingsAt = (platform: Platform, path: string): boolean =>
-  path === managedFilePaths(platform).settings;
+  call('readsManagedSettingsAt', platform, path);
 
 export interface SymlinkFacts {
   /** The deployed file's path. */
@@ -150,16 +103,8 @@ export interface SymlinkVerdict {
  * policy still applies when the link leads outside the system directory or Claude Code can't confirm
  * that it stays inside. A warning naming the file then appears in `/status` and `claude doctor`."
  */
-export function symlinkVerdict(facts: SymlinkFacts): SymlinkVerdict {
-  if (facts.targetInside === true) return { applies: true };
-  return {
-    applies: true,
-    warning: warning(
-      facts.path,
-      `${facts.path} is a symbolic link that does not lead to a target inside the system directory; point the link at a target inside it to clear this warning`,
-    ),
-  };
-}
+export const symlinkVerdict = (facts: SymlinkFacts): SymlinkVerdict =>
+  call('symlinkVerdict', facts);
 
 /** What one fetch of server-managed settings came to: the policy it delivered, or a failure. */
 export type ServerFetch =
@@ -175,24 +120,13 @@ export type ServerFetch =
 export const cacheAfterFetch = (
   cached: Settings | undefined,
   fetch: ServerFetch,
-): Settings | undefined => (fetch.ok ? fetch.settings : cached);
+): Settings | undefined => call('cacheAfterFetch', cached, fetch);
 
 /** How long a developer's edit of a managed source stays. */
-export const EDIT_OUTCOMES = ['stays', 'until-next-fetch', 'refused'] as const;
+export const EDIT_OUTCOMES: readonly ['stays', 'until-next-fetch', 'refused'] =
+  call('EDIT_OUTCOMES');
+
 export type EditOutcome = (typeof EDIT_OUTCOMES)[number];
 
-/**
- * What a developer's own edit of the managed source does (managed-settings.md, "What a developer can
- * change"): "a developer who is an administrator on the machine can edit the managed source itself"
- * (the file, the MDM profile; MDM tooling can redeploy it); the HKCU registry is user-writable; an edit
- * to the server-managed cache lasts until the next successful fetch.
- */
-const EDITS: { readonly [M in Mechanism]: (localAdmin: boolean) => EditOutcome } = {
-  serverManaged: () => 'until-next-fetch',
-  mdm: (localAdmin) => (localAdmin ? 'stays' : 'refused'),
-  file: (localAdmin) => (localAdmin ? 'stays' : 'refused'),
-  hkcu: () => 'stays',
-};
-
 export const editOfManagedSource = (mechanism: Mechanism, localAdmin: boolean): EditOutcome =>
-  EDITS[mechanism](localAdmin);
+  call('editOfManagedSource', mechanism, localAdmin);

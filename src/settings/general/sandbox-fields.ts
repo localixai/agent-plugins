@@ -1,4 +1,8 @@
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/general/sandbox_fields.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { Settings } from '../../protocol/official.ts';
+
+const call = coreModule('settings/general/sandbox-fields');
 
 /**
  * What an invalid Boolean inside a managed `sandbox` block reads as (managed-settings.md, "Invalid
@@ -10,6 +14,7 @@ import type { Settings } from '../../protocol/official.ts';
 export type Stance = 'restricts' | 'loosens' | 'dropped';
 
 type Sandbox = NonNullable<Settings['sandbox']>;
+
 /** The keys a type declares by name: the SDK's `sandbox` also has an open `[k: string]: unknown`. */
 type Declared<T> = { [K in keyof T as string extends K ? never : K]: T[K] };
 
@@ -24,33 +29,14 @@ type BooleanPaths<T, Prefix extends string = ''> = {
         : never;
 }[keyof Declared<T> & string];
 
-export const BOOLEAN_STANCES = {
-  enabled: 'restricts',
-  failIfUnavailable: 'dropped',
-  autoAllowBashIfSandboxed: 'loosens',
-  allowUnsandboxedCommands: 'loosens',
-  'network.strictAllowlist': 'restricts',
-  'network.allowManagedDomainsOnly': 'restricts',
-  'network.allowAllUnixSockets': 'loosens',
-  'network.allowLocalBinding': 'loosens',
-  'filesystem.allowManagedReadPathsOnly': 'restricts',
-  'filesystem.disabled': 'loosens',
-  'credentials.allowPlaintextInject': 'loosens',
-  enableWeakerNestedSandbox: 'loosens',
-  allowNestedUserNamespaces: 'loosens',
-  enableWeakerNetworkIsolation: 'loosens',
-  allowAppleEvents: 'loosens',
-} as const satisfies { readonly [P in BooleanPaths<Sandbox>]: Stance };
+export const BOOLEAN_STANCES: { readonly [P in BooleanPaths<Sandbox>]: Stance } =
+  call('BOOLEAN_STANCES');
 
 /** The value an invalid Boolean reads as, per stance; `dropped` has none. */
-export const STANCE_VALUE: { readonly [S in Stance]: boolean | undefined } = {
-  restricts: true,
-  loosens: false,
-  dropped: undefined,
-};
+export const STANCE_VALUE: { readonly [S in Stance]: boolean | undefined } = call('STANCE_VALUE');
 
 /** The lists outside `credentials` (the docs name `excludedCommands` and `network.allowedDomains`). */
-export const SANDBOX_LISTS = [
+export const SANDBOX_LISTS: readonly [
   'excludedCommands',
   'network.allowedDomains',
   'network.deniedDomains',
@@ -60,14 +46,10 @@ export const SANDBOX_LISTS = [
   'filesystem.denyWrite',
   'filesystem.denyRead',
   'filesystem.allowRead',
-] as const;
+] = call('SANDBOX_LISTS');
 
 /**
  * While a deny list, or any entry in it, is invalid, the allow lists it restrains are withheld "so
  * the managed allowlist grants nothing until you fix the deny list".
  */
-export const WITHHELD_BY: Readonly<Record<string, readonly string[]>> = {
-  'network.deniedDomains': ['network.allowedDomains'],
-  'filesystem.denyRead': ['filesystem.allowRead', 'filesystem.allowWrite'],
-  'filesystem.denyWrite': ['filesystem.allowRead', 'filesystem.allowWrite'],
-};
+export const WITHHELD_BY: Readonly<Record<string, readonly string[]>> = call('WITHHELD_BY');
