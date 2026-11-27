@@ -6,8 +6,9 @@ use serde::{Serialize, Serializer};
 
 use crate::js::JsValue;
 use crate::registry::Port;
+use crate::settings::layers::KeyHolder;
 use crate::settings::layers::PolicyScope;
-use crate::settings::view::{KeyHolder, PolicyView};
+use crate::settings::view::PolicyView;
 
 /// Where an `enabledPlugins` decision came from: a file, or the plugin's own `defaultEnabled`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

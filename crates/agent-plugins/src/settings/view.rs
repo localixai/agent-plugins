@@ -4,23 +4,10 @@
 //! value: its methods answer at once there, and here they return futures, so a host across the
 //! boundary answers each as a need (`crate::registry`), and a Rust host returns ready ones.
 
-use serde::Deserialize;
-
 use crate::js::JsValue;
 use crate::ports::BoxFuture;
 use crate::registry::Port;
-use crate::settings::layers::{PolicyLayer, PolicyScope};
-
-/// One layer's value of a key, with the layer it came from.
-#[derive(Clone, Debug, PartialEq, Deserialize)]
-pub struct KeyHolder {
-    /// The layer's scope.
-    pub scope: PolicyScope,
-    /// Position among the ordered layers: two files of one scope have two positions.
-    pub position: usize,
-    /// The key's value in that layer.
-    pub value: JsValue,
-}
+use crate::settings::layers::{KeyHolder, PolicyLayer};
 
 /// Typed questions over the ordered layers (docs/API.md, "Settings"). A key is the name the
 /// package uses (`allowedChannelPlugins`, `permissions.defaultMode`).

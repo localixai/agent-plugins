@@ -1,6 +1,3 @@
-import { applySettingsEnv } from '../../../settings/index.ts';
-import { scrubEnvironment } from '../../../loading/resolve/subprocess-scrub.ts';
-
 /**
  * The environment of a subprocess Claude Code starts (env-vars.md, "Set variables in settings files",
  * "Precedence", `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, `CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`,
@@ -26,27 +23,17 @@ import { scrubEnvironment } from '../../../loading/resolve/subprocess-scrub.ts';
  * removed when the host's own environment holds it; `CLAUDE_ENV_FILE` of the host's environment
  * reaches no subprocess (a hook gets the file of its event from `processEnvironment`, a Bash command
  * runs the files); a variable of a session or process id the host did not give is not set.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/command/subprocess_env.rs`,
+ * docs/RUST.md).
  */
+import { coreModule } from '../../../wasm/bridge.ts';
 
-export const SUBPROCESS_KINDS = ['hook', 'bash', 'powershell', 'mcp', 'monitor'] as const;
+const call = coreModule('hooks/handlers/command/subprocess-env');
+
+export const SUBPROCESS_KINDS: readonly ['hook', 'bash', 'powershell', 'mcp', 'monitor'] =
+  call('SUBPROCESS_KINDS');
 export type SubprocessKind = (typeof SUBPROCESS_KINDS)[number];
-
-/** Which of the optional variables a kind of subprocess gets. */
-interface KindVariables {
-  readonly childSession: boolean;
-  readonly sessionId: boolean;
-  readonly processId: boolean;
-  /** env-vars.md, `CLAUDE_EFFORT`: "Set automatically in Bash tool subprocesses and hook commands". */
-  readonly effort: boolean;
-}
-
-const KIND_VARIABLES: { readonly [K in SubprocessKind]: KindVariables } = {
-  hook: { childSession: true, sessionId: true, processId: true, effort: true },
-  bash: { childSession: true, sessionId: true, processId: true, effort: true },
-  powershell: { childSession: true, sessionId: true, processId: true, effort: false },
-  mcp: { childSession: false, sessionId: true, processId: false, effort: false },
-  monitor: { childSession: true, sessionId: false, processId: false, effort: false },
-};
 
 export interface SubprocessEnvironmentInput {
   readonly kind: SubprocessKind;
@@ -66,53 +53,6 @@ export interface SubprocessEnvironmentInput {
   readonly hipaa?: boolean | undefined;
 }
 
-/**
- * hipaa-setup.md, "Anthropic credentials in commands, hooks, and MCP servers": "With the HIPAA
- * configuration applied, Claude Code removes the credentials it uses to reach Anthropic, such as
- * `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`, from the environment of the shell commands,
- * hooks, and MCP servers it starts"; cloud provider and GitHub credentials stay (Agent Plugins
- * Extended §7.3.2.3 item 2). Judgment (spec/judgments.md): the credentials are the environment
- * variables of authentication.md, "Authentication precedence", that reach Anthropic, so
- * `CLAUDE_CODE_OAUTH_TOKEN` too; matched in any case on Windows.
- */
-const ANTHROPIC_CREDENTIALS: ReadonlySet<string> = new Set([
-  'ANTHROPIC_API_KEY',
-  'ANTHROPIC_AUTH_TOKEN',
-  'CLAUDE_CODE_OAUTH_TOKEN',
-]);
-
-const OTEL = /^OTEL_/;
-const OTEL_ANY_CASE = /^OTEL_/i;
-const ENV_FILE = 'CLAUDE_ENV_FILE';
-
-/** The variables Claude Code sets for this kind of subprocess. */
-function setByClaudeCode(input: SubprocessEnvironmentInput): Record<string, string> {
-  const kind = KIND_VARIABLES[input.kind];
-  return {
-    CLAUDECODE: '1',
-    ...(kind.childSession ? { CLAUDE_CODE_CHILD_SESSION: '1' } : {}),
-    ...(kind.sessionId && input.sessionId !== undefined
-      ? { CLAUDE_CODE_SESSION_ID: input.sessionId }
-      : {}),
-    ...(kind.processId && input.processId !== undefined
-      ? { CLAUDE_PID: String(input.processId) }
-      : {}),
-    ...(kind.effort && input.effort !== undefined ? { CLAUDE_EFFORT: input.effort } : {}),
-  };
-}
-
 /** The environment a subprocess of this kind inherits, with what Claude Code sets for it. */
-export function subprocessEnvironment(input: SubprocessEnvironmentInput): Record<string, string> {
-  const { windows } = input;
-  const parent = applySettingsEnv(input.environment, input.settingsEnv ?? {}, windows);
-  const scrubbed = scrubEnvironment(parent);
-  const exporter = windows ? OTEL_ANY_CASE : OTEL;
-  const nameOf = (name: string): string => (windows ? name.toUpperCase() : name);
-  const isEnvFile = (name: string): boolean => nameOf(name) === ENV_FILE;
-  const isCredential = (name: string): boolean =>
-    input.hipaa === true && ANTHROPIC_CREDENTIALS.has(nameOf(name));
-  const inherited = Object.entries(scrubbed).filter(
-    ([name]) => !exporter.test(name) && !isEnvFile(name) && !isCredential(name),
-  );
-  return { ...Object.fromEntries(inherited), ...setByClaudeCode(input) };
-}
+export const subprocessEnvironment = (input: SubprocessEnvironmentInput): Record<string, string> =>
+  call('subprocessEnvironment', input);

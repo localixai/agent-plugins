@@ -2,4 +2,6 @@
 
 pub mod r#async;
 pub mod cwd_fallback;
+pub mod env;
 pub mod shell;
+pub mod subprocess_env;

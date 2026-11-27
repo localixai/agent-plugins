@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/command/shell.ts`, switched.
+//! Ported from `src/hooks/handlers/command/shell.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The shell a command hook runs in, or none: "A command hook runs as exec form when `args` is set",
 //! and exec form has no shell; shell form runs in the hook's `shell`, else the host's default
@@ -28,11 +28,9 @@ pub struct HandlerEntry {
 }
 
 /// What of a run's context the choice reads (`Pick<RunContext, 'defaultShell'>`).
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default)]
 pub struct ShellContext {
     /// The host's default shell.
-    #[serde(default)]
     pub default_shell: Option<ShellKind>,
 }
 
@@ -43,11 +41,5 @@ pub fn shell_of(entry: &HandlerEntry, context: &ShellContext) -> Option<ShellKin
         entry.handler.shell.or(context.default_shell)
     } else {
         None
-    }
-}
-
-crate::registry::exports! {
-    "hooks/handlers/command/shell" {
-        "shellOf" => ok |entry: HandlerEntry, context: ShellContext| shell_of(&entry, &context);
     }
 }

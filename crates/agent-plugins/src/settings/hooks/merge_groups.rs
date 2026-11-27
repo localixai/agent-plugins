@@ -1,4 +1,4 @@
-//! Port of `src/settings/hooks/merge-groups.ts`, switched.
+//! Ported from `src/settings/hooks/merge-groups.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `hooks` key across settings files (settings-reference.md, `hooks`: "Hooks merge across
 //! files rather than replacing each other, and hooks from managed settings can't be removed from
@@ -105,10 +105,4 @@ pub fn merge_hook_settings(files: &[JsObject]) -> JsObject {
         .into_iter()
         .map(|(event, groups)| (event, JsValue::Array(groups)))
         .collect()
-}
-
-crate::registry::exports! {
-    "settings/hooks/merge-groups" {
-        "mergeHookSettings" => ok |files: Vec<JsObject>| merge_hook_settings(&files);
-    }
 }

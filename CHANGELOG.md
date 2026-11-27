@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The settings merges, the layers' order and each key's holders, how `managedSourcesBehavior:
+  "merge"` combines the sources and the cross-source keys, the `env` block's ignored variables,
+  `resolveEnv` and `resolveSettingsEnv`, and the environment of a subprocess and of a command hook
+  run on the core. The key table (`KEY_SPECS`, `SPECS`) has a core counterpart; the TypeScript
+  table stays for the policy view.
 - The managed settings' repairs run on the core: the `sandbox` block and its credentials, the
   closed fields, the value and list repairs, the permissions merge and the permission flag, the
   MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the

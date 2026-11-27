@@ -3,7 +3,7 @@ import { PERMISSION_BEHAVIORS } from '../../protocol/permission-modes.ts';
 import type { PolicyContext } from '../context.ts';
 import type { PolicyScope } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
-import type { PermissionsBlock } from './merge.ts';
+import type { PermissionsBlock } from '../merge.ts';
 
 /**
  * Which settings files contribute permission rules and directories: `allowManagedPermissionRulesOnly`
