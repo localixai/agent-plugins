@@ -1,5 +1,9 @@
-import type { InvocableFrontmatter, SkillOriginKind } from '../format/skill-types.ts';
+import type { InvocableFrontmatter } from '../format/skill-types.ts';
 import type { Command, Skill } from '../format/skill-types.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/skills/expand_policy.rs`, docs/RUST.md). */
+const call = coreModule('skills/expand-policy');
 
 /**
  * The managed settings that take a skill's `allowed-tools` or `hooks` away (skills.md, "When
@@ -27,50 +31,14 @@ export interface ExpandPolicy {
  */
 export type SkillPluginSource = 'installed' | 'skills-directory' | 'inline-managed-session';
 
-interface Keeps {
-  /** The skill's frontmatter hooks register under the hooks lock. */
-  readonly hooks: boolean;
-  /** The skill's `allowed-tools` grant applies under `allowManagedPermissionRulesOnly`. */
-  readonly grant: boolean;
-}
-
-const KEEPS_ALL: Keeps = { hooks: true, grant: true };
-const KEEPS_NONE: Keeps = { hooks: false, grant: false };
-
-const PLUGIN_KEEPS: { readonly [S in SkillPluginSource]: Keeps } = {
-  installed: KEEPS_ALL,
-  'skills-directory': KEEPS_NONE,
-  'inline-managed-session': { hooks: true, grant: false },
-};
-
-/**
- * What each origin keeps. Under the hooks lock "a skill keeps its frontmatter hooks ... only if it's
- * a plugin skill, a bundled skill, or a skill in the managed settings directory" (the kit models
- * the managed directory as the `managed` origin, which keeps both; a bundled skill is the host's, `bundled`). With only managed permission rules, "Claude Code ignores
- * `allowed-tools` in project and personal skills and in the other sources the setting's entry
- * lists", and a synced skill's grant "doesn't apply". A plugin keeps what its source keeps.
- */
-const KEEPS: { readonly [K in SkillOriginKind]: (source: SkillPluginSource) => Keeps } = {
-  plugin: (source) => PLUGIN_KEEPS[source],
-  managed: () => KEEPS_ALL,
-  user: () => KEEPS_NONE,
-  project: () => KEEPS_NONE,
-  synced: () => KEEPS_NONE,
-  // "Skills from managed settings and bundled skills keep their `allowed-tools`"
-  // (settings-reference.md, `allowManagedPermissionRulesOnly`).
-  bundled: () => KEEPS_ALL,
-};
-
 type Source = Pick<Skill | Command, 'origin' | 'context'> & Pick<InvocableFrontmatter, 'hooks'>;
 
 /** Whether the skill's frontmatter hooks register when it is invoked. */
-export function hooksRegister(
+export const hooksRegister = (
   skill: Source,
   policy: ExpandPolicy | undefined,
   source: SkillPluginSource = 'installed',
-): boolean {
-  return policy?.hooksLockedToPlugins !== true || KEEPS[skill.origin.kind](source).hooks;
-}
+): boolean => call('hooksRegister', skill, policy, source);
 
 /**
  * Whether the skill's `allowed-tools` grant applies. A skill that declares hooks under the hooks
@@ -78,15 +46,8 @@ export function hooksRegister(
  * through `context: fork`, it keeps the pre-approval". The fork exception is the hooks lock's only;
  * `allowManagedPermissionRulesOnly` ignores the field in a forked skill too.
  */
-export function grantApplies(
+export const grantApplies = (
   skill: Source,
   policy: ExpandPolicy | undefined,
   source: SkillPluginSource = 'installed',
-): boolean {
-  if (policy?.managedPermissionRulesOnly === true && !KEEPS[skill.origin.kind](source).grant) {
-    return false;
-  }
-  return (
-    skill.hooks === undefined || skill.context === 'fork' || hooksRegister(skill, policy, source)
-  );
-}
+): boolean => call('grantApplies', skill, policy, source);

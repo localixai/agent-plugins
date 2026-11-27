@@ -1,5 +1,11 @@
-import { CONFIG_DIR_VARIABLE, configDirectoryOf } from '../../format/config-directory.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/headers_helper_origins.rs`,
+ * docs/RUST.md).
+ */
 import type { Locations } from '../../ports/index.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('loading/resolve/headers-helper-origins');
 
 /**
  * Where an MCP server was configured, as far as its `headersHelper` is concerned (mcp.md, "Where
@@ -9,7 +15,7 @@ import type { Locations } from '../../ports/index.ts';
  * three tables name that are not scopes: the SDK, `--mcp-config` and the five sources of an inline
  * server in an agent file.
  */
-export const HEADERS_HELPER_ORIGINS = [
+export const HEADERS_HELPER_ORIGINS: readonly [
   'plugin',
   'project',
   'local',
@@ -23,7 +29,7 @@ export const HEADERS_HELPER_ORIGINS = [
   'agent-user',
   'agent-managed',
   'agent-flag',
-] as const;
+] = call('HEADERS_HELPER_ORIGINS');
 export type HeadersHelperOrigin = (typeof HEADERS_HELPER_ORIGINS)[number];
 
 /** The kinds of working directory the "Where the helper runs" table names. */
@@ -32,104 +38,6 @@ export type DirectoryKind =
   | 'project-directory'
   | 'primary-directory'
   | 'config-directory';
-
-/** Who must be trusted before anything runs: nobody, the helper alone, or the server's loading. */
-export type TrustGate = 'none' | 'helper' | 'load';
-
-export interface OriginRule {
-  readonly directory: DirectoryKind;
-  /** "Removed" in the "Which variables a helper can read" lists. */
-  readonly removesCredentials: boolean;
-  readonly gate: TrustGate;
-  /** A plugin-provided server has a plugin root: the helper gets `CLAUDE_PLUGIN_ROOT`. */
-  readonly providesPluginRoot: boolean;
-}
-
-/**
- * The three tables of mcp.md in one row per place. Judgments (spec/judgments.md): an inline server
- * of an agent from managed settings or `--agents` is "from outside your project", so it runs in the
- * configuration directory; the docs list both only under "Not removed".
- */
-export const ORIGIN_RULES: { readonly [O in HeadersHelperOrigin]: OriginRule } = {
-  plugin: {
-    directory: 'plugin-root',
-    removesCredentials: true,
-    gate: 'none',
-    providesPluginRoot: true,
-  },
-  project: {
-    directory: 'project-directory',
-    removesCredentials: true,
-    gate: 'helper',
-    providesPluginRoot: false,
-  },
-  local: {
-    directory: 'project-directory',
-    removesCredentials: false,
-    gate: 'helper',
-    providesPluginRoot: false,
-  },
-  user: {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  managed: {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  connector: {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  sdk: {
-    directory: 'primary-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  'mcp-config': {
-    directory: 'primary-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  'agent-project': {
-    directory: 'primary-directory',
-    removesCredentials: true,
-    gate: 'load',
-    providesPluginRoot: false,
-  },
-  'agent-add-dir': {
-    directory: 'config-directory',
-    removesCredentials: true,
-    gate: 'load',
-    providesPluginRoot: false,
-  },
-  'agent-user': {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  'agent-managed': {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-  'agent-flag': {
-    directory: 'config-directory',
-    removesCredentials: false,
-    gate: 'none',
-    providesPluginRoot: false,
-  },
-};
 
 /** What the plan reads from the host: the environment it inherits and the directories it picks from. */
 export interface HelperContext {
@@ -145,20 +53,4 @@ export interface HelperContext {
 }
 
 /** "Your configuration directory, `~/.claude` unless you set `CLAUDE_CONFIG_DIR`." */
-export function configDirectory(context: HelperContext): string {
-  const { locations, environment } = context;
-  return configDirectoryOf(
-    locations.homeDir(),
-    environment[CONFIG_DIR_VARIABLE],
-    locations.joinPath,
-  );
-}
-
-export const DIRECTORIES: {
-  readonly [D in DirectoryKind]: (context: HelperContext) => string | undefined;
-} = {
-  'plugin-root': (context) => context.pluginRoot,
-  'project-directory': (context) => context.projectDirectory,
-  'primary-directory': (context) => context.primaryDirectory,
-  'config-directory': configDirectory,
-};
+export const configDirectory = (context: HelperContext): string => call('configDirectory', context);

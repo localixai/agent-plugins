@@ -4,8 +4,14 @@
  * tool again. If your hook keeps denying, the subagent ends without delivering a report through this
  * tool, and the conversation waiting on it gets a note saying so." The tool call, the message to the
  * subagent and the note are the host's; this counts.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/handback_denial.rs`, docs/RUST.md).
  */
-export const HANDBACK_DENIALS_TOLD = 3;
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('agents/handback-denial');
+
+export const HANDBACK_DENIALS_TOLD: number = call('HANDBACK_DENIALS_TOLD');
 
 export type HandbackAfterDenial =
   /** Tell the subagent its report was not delivered and to call the tool again. */
@@ -15,4 +21,4 @@ export type HandbackAfterDenial =
 
 /** What follows the `denials`-th denial of one subagent's handback (1 for the first). */
 export const afterHandbackDenial = (denials: number): HandbackAfterDenial =>
-  denials <= HANDBACK_DENIALS_TOLD ? 'tell-subagent' : 'end-without-report';
+  call('afterHandbackDenial', denials);

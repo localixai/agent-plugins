@@ -24,8 +24,9 @@
 ///
 /// `async` before the kind marks an export that waits on the host: one the TypeScript declares
 /// `async`, or one that takes a port, a callback or an `AbortSignal` ([`Port`], [`Callback`],
-/// [`Signal`]). Its body may `.await`; a host runs it with `registry::start` and `resume`, never
-/// with `call`, which answers a fault.
+/// [`Signal`]). Its body may `.await`; a host runs it with `registry::start` and `resume`. `call`
+/// answers it only when it asks the host nothing (a sync wrapper's call with no host value among
+/// its arguments, `registry::settled`), and with a fault when it would wait.
 ///
 /// A parameter the TypeScript types `unknown` is a [`JsValue`](crate::js::JsValue), which takes
 /// any value, `undefined` included; an `Option` takes `undefined` and `null` as `None`; any other
@@ -87,8 +88,8 @@ macro_rules! exports {
         })
     };
     (@call [async $kind:ident $params:tt $body:expr] $args:ident) => {
-        $crate::registry::Answer::Fault(
-            "it waits on the host: a host starts it (registry::start)".to_owned(),
+        $crate::registry::settled(
+            $crate::registry::exports!(@start [async $kind $params $body] $args),
         )
     };
     (@start [sync $kind:ident $body:expr] $args:ident) => {

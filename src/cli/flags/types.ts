@@ -1,17 +1,21 @@
-import type { PluginIssue } from '../../format/issues.ts';
-import type { ChannelEntry } from '../../settings/channels/verdict.ts';
-import type { PolicyLayer, PolicyScope } from '../../settings/layers.ts';
-import type { PermissionMode } from '../../protocol/official.ts';
-
 /**
  * The shapes of the session flags (cli-reference.md, "CLI flags"): what the host parsed from the
  * command line (`FlagArguments`), what it knows about the machine (`FlagFacts`) and what the flags
  * add up to (`SessionPlan`). Every flag is one strategy in `flags/registry.ts` over `FlagName`; the
  * plan is data the host hands to the modules that own each behaviour (settings, loading, agents,
  * rules, mcp), so no decision is made twice.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/types.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PluginIssue } from '../../format/issues.ts';
+import type { ChannelEntry } from '../../settings/channels/verdict.ts';
+import type { PolicyLayer, PolicyScope } from '../../settings/layers.ts';
+import type { PermissionMode } from '../../protocol/official.ts';
 
-export const FLAG_NAMES = [
+const call = coreModule('cli/flags/types');
+
+export const FLAG_NAMES: readonly [
   '--plugin-dir',
   '--plugin-url',
   '--bare',
@@ -32,7 +36,8 @@ export const FLAG_NAMES = [
   '--strict-mcp-config',
   '--permission-mode',
   '--tools',
-] as const;
+] = call('FLAG_NAMES');
+
 export type FlagName = (typeof FLAG_NAMES)[number];
 
 /** What each flag was given: a repeatable flag its values in order, a switch `true`, the rest the text. */
@@ -99,7 +104,7 @@ export interface FlagContext {
 }
 
 /** The customizations a mode can leave out (`flags/customizations.ts`). */
-export const CUSTOMIZATIONS = [
+export const CUSTOMIZATIONS: readonly [
   'hooks',
   'skills',
   'commands',
@@ -115,7 +120,8 @@ export const CUSTOMIZATIONS = [
   'status-line',
   'file-suggestion',
   'lsp-servers',
-] as const;
+] = call('CUSTOMIZATIONS');
+
 export type Customization = (typeof CUSTOMIZATIONS)[number];
 
 /** A plugin for this session only: `--plugin-dir` and `--plugin-url` load plugins of the `inline` origin. */
@@ -190,4 +196,4 @@ export type FlagStrategy<F extends FlagName> = (
   context: FlagContext,
 ) => Contribution;
 
-export const refuse = (...reasons: string[]): Contribution => ({ refusals: reasons });
+export const refuse = (...reasons: string[]): Contribution => call('refuse', ...reasons);

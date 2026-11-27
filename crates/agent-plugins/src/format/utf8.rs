@@ -1,4 +1,5 @@
-//! Port of `src/format/utf8.ts`, switched.
+//! The core's counterpart of `src/format/utf8.ts` at sha256:1cc69c689dc0, which stays TypeScript: a
+//! pass over host text of any size, which crossing the boundary would copy twice (docs/RUST.md, "What stays TypeScript").
 //! Sizes in UTF-8 bytes, for every limit the docs give in bytes: one byte count and one cut that
 //! never splits a character.
 
@@ -22,13 +23,6 @@ pub fn prefix_within_bytes(text: &str, limit: usize) -> &str {
     // is false), so a cut that begins with U+FEFF loses it; an uncut text is returned as it is.
     let cut = text.get(..end).unwrap_or_default();
     cut.strip_prefix('\u{FEFF}').unwrap_or(cut)
-}
-
-crate::registry::exports! {
-    "format/utf8" {
-        "utf8Length" => ok |text: String| utf8_length(&text);
-        "prefixWithinBytes" => ok |text: String, limit: usize| prefix_within_bytes(&text, limit).to_owned();
-    }
 }
 
 #[cfg(test)]

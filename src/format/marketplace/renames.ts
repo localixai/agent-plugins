@@ -13,24 +13,7 @@ import type { PluginIssue } from '../issues.ts';
 
 export type Renames = Readonly<Record<string, string | null>>;
 
-/**
- * Where a chain from `start` ends. `plugins` is checked before the keys: a name that is still a
- * plugin is where users end up (judgment, spec/judgments.md). Keys are read as own properties only,
- * so `constructor` or `__proto__` in a map or a target is a plain name.
- */
-export type Chain =
-  | { readonly end: 'plugin'; readonly name: string }
-  | { readonly end: 'removed' }
-  | { readonly end: 'dangling'; readonly name: string }
-  | { readonly end: 'cycle'; readonly path: readonly string[] };
-
 const call = coreModule('format/marketplace/renames');
-
-export const followRenames = (
-  renames: Renames,
-  start: string,
-  plugins: ReadonlySet<string>,
-): Chain => call('followRenames', renames, start, plugins);
 
 /**
  * What `claude plugin validate` reports about `renames`, on `renames.<old>`: a chain that cycles or

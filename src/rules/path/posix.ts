@@ -1,10 +1,15 @@
-import type { PathContext } from '../types.ts';
-
 /**
  * Path arithmetic on the kit's one path form: absolute, `/`-separated, no `.` or `..` segments.
  * Pure string work, because the kit never calls the host's `path` module (docs/ARCHITECTURE.md, L3)
  * and path rules match on POSIX form everywhere (permissions.md, "Where a pattern anchors").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/path/posix.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PathContext } from '../types.ts';
+
+const call = coreModule('rules/path/posix');
+
 export type Platform = PathContext['platform'];
 
 /**
@@ -13,89 +18,35 @@ export type Platform = PathContext['platform'];
  * through the later folding to `/server/share`; networks are told apart on the raw spelling
  * (`network.ts`).
  */
-const DRIVE_PREFIX = /^([A-Za-z]):(?=[\\/]|$)/;
-const NORMALIZERS: { readonly [P in Platform]: (path: string) => string } = {
-  posix: (path) => path,
-  windows: (path) =>
-    path
-      .replaceAll('\\', '/')
-      .replace(DRIVE_PREFIX, (_, drive: string) => `/${drive.toLowerCase()}`),
-};
-
 export const toPosixPath = (path: string, platform: Platform): string =>
-  NORMALIZERS[platform](path);
+  call('toPosixPath', path, platform);
 
 /** Folds `.`, `..` and repeated slashes of a POSIX path; the result is absolute. */
-export function normalizeAbsolute(path: string): string {
-  const kept: string[] = [];
-  for (const segment of path.split('/')) {
-    if (segment === '' || segment === '.') continue;
-    if (segment === '..') kept.pop();
-    else kept.push(segment);
-  }
-  return `/${kept.join('/')}`;
-}
+export const normalizeAbsolute = (path: string): string => call('normalizeAbsolute', path);
 
 /** `path` against `base` (a normalised absolute path), normalised; an absolute `path` ignores `base`. */
-export const resolvePath = (base: string, path: string): string =>
-  normalizeAbsolute(path.startsWith('/') ? path : `${base}/${path}`);
-
-/** `~` alone or before a separator; `~alice` is a folder of that name (spec/judgments.md). */
-const HOME_PREFIX = /^~(?=[\\/]|$)/;
-
-/** A path with a leading `~` spelled as the home directory. */
-export const homeExpanded = (path: string, home: string): string =>
-  path.replace(HOME_PREFIX, () => home);
+export const resolvePath = (base: string, path: string): string => call('resolvePath', base, path);
 
 /**
  * A host path in POSIX form, `~` expanded and resolved against the session's current directory:
  * the one reading of a path the rules, the working directories and the modes share.
  */
-export function absolutePath(
+export const absolutePath = (
   path: string,
   paths: Pick<PathContext, 'cwd' | 'home' | 'platform'>,
-): string {
-  const cwd = normalizeAbsolute(toPosixPath(paths.cwd, paths.platform));
-  return resolvePath(cwd, toPosixPath(homeExpanded(path, paths.home), paths.platform));
-}
-
-/**
- * The spelling two paths are compared in. Windows names compare without case and drop the dots and
- * spaces that end them (`.GIT`, `.git.` and `.git ` are `.git`); POSIX names compare as written,
- * macOS included (spec/judgments.md).
- */
-const FOLDS: { readonly [P in Platform]: (path: string) => string } = {
-  posix: (path) => path,
-  windows: (path) =>
-    path
-      .split('/')
-      .map((segment) => (/^\.\.?$/.test(segment) ? segment : segment.replace(/[. ]+$/, '')))
-      .join('/')
-      .toLowerCase(),
-};
-
-export const foldPath = (path: string, platform: Platform): string => FOLDS[platform](path);
+): string => call('absolutePath', path, paths);
 
 /**
  * The text of `path` below `root` (`''` for the root itself), or `undefined` when it is not below;
  * on Windows both are folded first (`foldPath`), and so is the text returned.
  */
-export function relativeWithin(
+export const relativeWithin = (
   root: string,
   path: string,
   platform: Platform = 'posix',
-): string | undefined {
-  const base = foldPath(root, platform);
-  const below = foldPath(path, platform);
-  if (base === '/') return below.slice(1);
-  if (below === base) return '';
-  return below.startsWith(`${base}/`) ? below.slice(base.length + 1) : undefined;
-}
+): string | undefined => call('relativeWithin', root, path, platform);
 
-export function dirnameOf(path: string): string {
-  const cut = path.lastIndexOf('/');
-  return cut <= 0 ? '/' : path.slice(0, cut);
-}
+export const dirnameOf = (path: string): string => call('dirnameOf', path);
 
 /** Whether a segment holds a gitignore wildcard (or an escape), so a literal prefix ends before it. */
-export const hasGlobSyntax = (segment: string): boolean => /[*?[\\]/.test(segment);
+export const hasGlobSyntax = (segment: string): boolean => call('hasGlobSyntax', segment);

@@ -45,9 +45,6 @@ export const COMMUNITY_NAMES: readonly [
 export const DIRECTORY_NAMES: readonly ['anthropic-plugin-directory', 'claude-plugin-directory'] =
   call('DIRECTORY_NAMES');
 
-/** The three lists whose names the `anthropics` organization on GitHub may use. */
-export const OFFICIAL_LISTS: ReadonlySet<string> = call('OFFICIAL_LISTS');
-
 /** Names Claude Code gives plugins that come from no marketplace, and what each one means. */
 export const NON_MARKETPLACE_NAMES: ReadonlyMap<string, string> = call('NON_MARKETPLACE_NAMES');
 

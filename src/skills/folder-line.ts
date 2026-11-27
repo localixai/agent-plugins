@@ -1,5 +1,10 @@
+import { coreModule } from '../wasm/bridge.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/skills/folder_line.rs`, docs/RUST.md). */
+const call = coreModule('skills/folder-line');
+
 /** The line a skill's text opens with, its folder after it. */
-export const BASE_DIRECTORY = 'Base directory for this skill: ';
+export const BASE_DIRECTORY: string = call('BASE_DIRECTORY');
 
 /**
  * The text the model receives: a skill's opens with its folder and a blank line, a command's (no
@@ -7,4 +12,4 @@ export const BASE_DIRECTORY = 'Base directory for this skill: ';
  * show the line).
  */
 export const withFolderLine = (text: string, dir: string | undefined): string =>
-  dir === undefined ? text : `${BASE_DIRECTORY}${dir}\n\n${text}`;
+  call('withFolderLine', text, dir);

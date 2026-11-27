@@ -1,6 +1,3 @@
-import { toJsonValue } from '../foundation/json-value.ts';
-import type { JsonValue } from '../foundation/plain-data.ts';
-
 /**
  * What a `claude plugin` command reports (plugins/cli-reference.md, "claude plugin commands",
  * "JSON result format", "JSON result for marketplace commands"): the human line, the exit code and,
@@ -8,9 +5,15 @@ import type { JsonValue } from '../foundation/plain-data.ts';
  * is a plan whose outcome is one of these values; a host prints `renderCommand`'s lines and exits with its
  * code. The streams a human line goes to, and the exit code of a refusal that prints no result line,
  * are in spec/judgments.md.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/result.rs`, docs/RUST.md).
  */
+import type { JsonValue } from '../foundation/plain-data.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
-export const COMMAND_OUTCOMES = ['ok', 'failed'] as const;
+const call = coreModule('cli/result');
+
+export const COMMAND_OUTCOMES: readonly ['ok', 'failed'] = call('COMMAND_OUTCOMES');
 export type CommandOutcome = (typeof COMMAND_OUTCOMES)[number];
 
 /** `0` success, `1` failure, `2` an unexpected error (`validate` only). */
@@ -59,123 +62,44 @@ interface Extras {
   readonly fields?: ResultFields;
 }
 
-const withExtras = (base: PluginCommandResult, extras: Extras): PluginCommandResult => ({
-  ...base,
-  ...(extras.failureCode === undefined ? {} : { failureCode: extras.failureCode }),
-  ...(extras.fields === undefined ? {} : { fields: extras.fields }),
-});
-
-const resulted = (result: PluginCommandResult): CommandOutput => ({ kind: 'result', result });
-
 export const commandSucceeded = (
   command: string,
   message: string,
   extras: Extras = {},
-): CommandOutput => resulted(withExtras({ command, outcome: 'ok', message }, extras));
+): CommandOutput => call('commandSucceeded', command, message, extras);
 
 export const commandFailed = (
   command: string,
   message: string,
   extras: Extras = {},
-): CommandOutput => resulted(withExtras({ command, outcome: 'failed', message }, extras));
+): CommandOutput => call('commandFailed', command, message, extras);
 
 export type UsageError = Extract<CommandOutput, { kind: 'usage-error' }>;
-export const usageError = (reason: string): UsageError => ({ kind: 'usage-error', reason });
-export const noResultLine = (reason: string): CommandOutput => ({ kind: 'no-result-line', reason });
-export const unexpectedError = (reason: string): CommandOutput => ({
-  kind: 'unexpected-error',
-  reason,
-});
+export const usageError = (reason: string): UsageError => call('usageError', reason);
+export const noResultLine = (reason: string): CommandOutput => call('noResultLine', reason);
+export const unexpectedError = (reason: string): CommandOutput => call('unexpectedError', reason);
 
 /** The `command` values of the marketplace commands ("`marketplace-add`, `marketplace-remove`, or `marketplace-update`"). */
-export const MARKETPLACE_COMMANDS = [
+export const MARKETPLACE_COMMANDS: readonly [
   'marketplace-add',
   'marketplace-remove',
   'marketplace-update',
-] as const;
+] = call('MARKETPLACE_COMMANDS');
 export type MarketplaceCommand = (typeof MARKETPLACE_COMMANDS)[number];
-
-const marketplaceFields = (marketplace: string | undefined): Extras =>
-  marketplace === undefined ? {} : { fields: { marketplace } };
 
 export const marketplaceSuccess = (
   command: MarketplaceCommand,
   marketplace: string | undefined,
   message: string,
-): CommandOutput => commandSucceeded(command, message, marketplaceFields(marketplace));
+): CommandOutput => call('marketplaceSuccess', command, marketplace, message);
 
 export const marketplaceFailure = (
   command: MarketplaceCommand,
   marketplace: string | undefined,
   message: string,
   failureCode: string,
-): CommandOutput =>
-  commandFailed(command, message, { ...marketplaceFields(marketplace), failureCode });
-
-/** The three keys "always present": a key of `fields` with one of these names is dropped (spec/judgments.md). */
-const ALWAYS_PRESENT: readonly string[] = ['command', 'outcome', 'message'];
-
-const otherFields = (fields: ResultFields | undefined): ResultFields =>
-  Object.fromEntries(Object.entries(fields ?? {}).filter(([key]) => !ALWAYS_PRESENT.includes(key)));
-
-/** The object of the last line: `command`, `outcome`, the other fields, `failureCode`, `message`. */
-function resultObject(found: PluginCommandResult): Readonly<Record<string, JsonValue>> {
-  return {
-    command: found.command,
-    outcome: found.outcome,
-    ...otherFields(found.fields),
-    ...(found.failureCode === undefined ? {} : { failureCode: found.failureCode }),
-    message: found.message,
-  };
-}
-
-const EXIT: { readonly [O in CommandOutcome]: ExitCode } = { ok: 0, failed: 1 };
-
-/** The stream a result's human line goes to. */
-const HUMAN_STREAM: { readonly [O in CommandOutcome]: 'stdout' | 'stderr' } = {
-  ok: 'stdout',
-  failed: 'stderr',
-};
-
-/** A result's human line goes to stdout on success and stderr on failure; with `--json` both are the last stdout line. */
-function renderResult(found: PluginCommandResult, options: RenderOptions): Rendered {
-  const before = options.before ?? [];
-  const exitCode = EXIT[found.outcome];
-  if (options.json) {
-    const line = toJsonValue(resultObject(found));
-    return { stdout: [...before, JSON.stringify(line)], stderr: [], exitCode };
-  }
-  const onStderr = HUMAN_STREAM[found.outcome] === 'stderr';
-  return {
-    stdout: onStderr ? [...before] : [...before, found.message],
-    stderr: onStderr ? [found.message] : [],
-    exitCode,
-  };
-}
-
-const reasonOnly = (reason: string, exitCode: ExitCode): Rendered => ({
-  stdout: [],
-  stderr: [reason],
-  exitCode,
-});
-
-type Renderer<K extends CommandOutput['kind']> = (
-  output: Extract<CommandOutput, { kind: K }>,
-  options: RenderOptions,
-) => Rendered;
-
-const RENDERERS: { readonly [K in CommandOutput['kind']]: Renderer<K> } = {
-  result: (output, options) => renderResult(output.result, options),
-  'usage-error': (output) => reasonOnly(output.reason, 1),
-  'no-result-line': (output) => reasonOnly(output.reason, 1),
-  'unexpected-error': (output) => reasonOnly(output.reason, 2),
-};
-
-const renderKind = <K extends CommandOutput['kind']>(
-  output: Extract<CommandOutput, { kind: K }>,
-  options: RenderOptions,
-): Rendered => RENDERERS[output.kind](output, options);
+): CommandOutput => call('marketplaceFailure', command, marketplace, message, failureCode);
 
 /** What a host prints and exits with for `output`. */
 export const renderCommand = (output: CommandOutput, options: RenderOptions): Rendered =>
-  renderKind(output, options);
+  call('renderCommand', output, options);

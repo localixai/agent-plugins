@@ -3,13 +3,18 @@
  * doesn't continue on its own. The run continues only when Claude relaunches it with a `Workflow` call,
  * which replays the run from its saved results." Pure decisions over facts the host holds: which way
  * the person left, whether the earlier run's saved results can be found.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/workflow/relaunch.rs`, docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
 
-export const LEAVE_WAYS = [
+const call = coreModule('agents/workflow/relaunch');
+
+export const LEAVE_WAYS: readonly [
   'background',
   'move-to-background-and-exit',
   'exit-and-stop-tasks',
-] as const;
+] = call('LEAVE_WAYS');
 export type LeaveWay = (typeof LEAVE_WAYS)[number];
 
 /** Where the run can be picked up again. */
@@ -28,26 +33,10 @@ export interface Leaving {
  * How each way of leaving leaves the run. In none of the three does the run continue on its own: it
  * continues only through a relaunch (`relaunchAfter`), which is where the three differ.
  */
-export const LEAVING: { readonly [W in LeaveWay]: Leaving } = {
-  background: {
-    stoppedWithSession: false,
-    relaunchIn: 'background-session',
-    resumeCommand: undefined,
-  },
-  'move-to-background-and-exit': {
-    stoppedWithSession: false,
-    relaunchIn: 'background-session',
-    resumeCommand: undefined,
-  },
-  'exit-and-stop-tasks': {
-    stoppedWithSession: true,
-    relaunchIn: 'resumed-session',
-    resumeCommand: 'claude --resume',
-  },
-};
+export const LEAVING: { readonly [W in LeaveWay]: Leaving } = call('LEAVING');
 
 /** The error of a relaunch that finds no saved results at all: it never starts the run over on its own. */
-export const NOTHING_TO_RESUME = 'nothing to resume';
+export const NOTHING_TO_RESUME: 'nothing to resume' = call('NOTHING_TO_RESUME');
 
 export interface RelaunchFacts {
   /** Claude has an earlier run of this workflow to relaunch (a fresh session has none). */
@@ -70,24 +59,14 @@ export type Relaunch =
  * whose saved results are gone, or a background session relaunching a script that lives outside
  * `~/.claude/projects/`, it fails with `nothing to resume`; otherwise it replays from the saved results.
  */
-export function relaunch(facts: RelaunchFacts): Relaunch {
-  if (!facts.earlierRun) return { relaunch: 'new-run' };
-  const cannotFind =
-    !facts.resultsFound || (facts.inBackgroundSession && facts.scriptOutsideProjects);
-  return cannotFind ? { relaunch: 'fail', error: NOTHING_TO_RESUME } : { relaunch: 'replay' };
-}
+export const relaunch = (facts: RelaunchFacts): Relaunch => call('relaunch', facts);
 
 /**
  * What Claude's relaunch does after the person left in `way`: in the background session it is a
  * relaunch there (so a script outside `~/.claude/projects/` cannot be found), after `Exit and stop
  * tasks` it happens in the resumed session.
  */
-export function relaunchAfter(
+export const relaunchAfter = (
   way: LeaveWay,
   facts: Omit<RelaunchFacts, 'inBackgroundSession'>,
-): Relaunch {
-  return relaunch({
-    ...facts,
-    inBackgroundSession: LEAVING[way].relaunchIn === 'background-session',
-  });
-}
+): Relaunch => call('relaunchAfter', way, facts);

@@ -2,6 +2,111 @@
 
 ## [Unreleased]
 
+- A skill's injected commands run on the core (permission answer, refusal, the run, the output
+  window, the move to the background), and so do stacked skills in one message, the
+  `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,
+  subagent tool resolution, and `--permission-mode` and `--tools`.
+- The workflow script readers run on the core (the tokenizer, the `meta` literal, its rewrite and
+  the script's inspection), and so do the scope folders of the skills, agents and saved-workflows
+  scans. The project directories' scan hands its `AbortSignal` to `FolderScan.repository` and
+  `open` again.
+- `permissions.denyInsteadOfPrompting` denies again a call that would prompt when the session's
+  context also holds functions (`requiresPermission`), a hook's `defaultShell` applies again when
+  its run context does, and so does `bypassAvailable` for `permissionUpdatesInEffect`: such a
+  context crossed into the core as a handle, and read as data it had none of its fields. The core
+  now refuses a handle where it reads data, so the mistake cannot pass silently.
+- The SDK hook answer, `watchPaths` resolution and the `FileChanged` watch list, the runnable
+  handlers a host lists, the Stop block cap, block routing and the original prompt of a blocked
+  prompt, the effects a block leaves, `systemMessage` routing, the MCP client skip, the observer's
+  start notice, the debug-log notes, the `PermissionRequest` decision and the permission updates in
+  effect run on the core. A `once` hook's hold is settled on the registration the selection gave.
+- Permission rules run more of their work on the core: Bash, Monitor and PowerShell command
+  rules, WebFetch domain, Agent and Skill rules, protected paths, critical and PowerShell
+  removals, the read and write blocks, the read-only set, tool availability and host tool names,
+  the startup warnings of a rule list and the tools' limits; so do the mods event catalog, the
+  object plugin sources and MCP elicitation answers.
+- Core packages load on the core (manifest step, fixed locations, `mcp.json` and `hooks.json`,
+  skills, icons, dual check), and so do both converters' hooks and skills, discovery of hooks, LSP,
+  monitors, settings and `bin/`, the text readers, plugin variables, `headersHelper` plans, skill
+  invocation and execution, and subagent tool lists and permission modes.
+- A plugin's MCP sources load one at a time, so the host reads their files and opens their bundles
+  in the order the manifest declares them (run together, the order followed how long each path
+  took to resolve).
+- Hook runs, the env file, the command handler's working-directory fallback, the HTTP and MCP-tool
+  handlers, run facts, model switches and background verdicts run on the core, and so do
+  cross-marketplace refusals, dependency enable, prune and tags, install plans and errors, removal,
+  renames and version troubleshooting. An HTTP hook's request reaches the host's `HttpClient` with
+  `as: "text"` and `redirect: "follow"` stated; timeouts reach the ports as whole milliseconds.
+- An MCP tool's input schema is checked against the official JSON Schema draft 2020-12
+  meta-schema by `flowschema` instead of a table of keywords: an `$anchor` or `$dynamicAnchor`
+  that is no anchor name, an `$id` with a fragment and a `$recursiveAnchor` or `$recursiveRef`
+  that is not text now exclude the tool too, a `format` stays an annotation, and each reason is
+  worded by flowschema from the tool's `inputSchema` (`inputSchema.properties.a.minLength must be
+  >= 0 (is -1)`), each once.
+- `semver` and `yaml` are no longer dependencies: the core reads versions and frontmatter itself.
+- More of loading, conversion, agents, marketplace installs, updates and skills run on the core:
+  trust checks (workspace, repository, local settings, headers helpers), manifest gates, the
+  subprocess scrub, bundle scopes and monitor triggers, the converters both ways, launch models,
+  marketplace downloads, version resolution, staged commits and install records, skill visibility
+  and file references.
+- A hook matcher tested against a value that is not text (an input that fails its schema) answers
+  as before the move to the core: no list names it, and a pattern tests `String(value)`. A tool
+  pattern's RegExp is compiled once per pattern again.
+- Promises cross into and out of the core: background deliveries are settled there, an async
+  command hook's background run is a core promise, and `withInterrupt` runs on the core.
+- Hooks and plugin file readers run more of their work on the core: a hook's output and profile
+  results, the remote handlers' environment, `ok: false` and failure runs, timeouts, permission
+  mode and conditional input fields, the text cap, registration, the event catalog and gates;
+  agent scalars, the dual, hooks, MCP and skill cores, marketplace archive URLs, entry checks and
+  schema, elicitation forms, output styles and component frontmatter.
+- A hook's matcher, a rule's tool-name glob and tool-name match, and the relevance signals run on
+  the core, over its own JavaScript regular expressions (`js::regexp`, the `regress` crate held to
+  Bun's `RegExp`). A pattern reads as JavaScriptCore reads it on every host, Node's included
+  (docs/RUST.md).
+- Bash command lines are cut into words and commands on the core, CLI results are written there,
+  and npm semver (ported by hand, held to npm semver 7.8.6 on 21,473 cases) decides marketplace
+  dependency versions, their graph and install scopes.
+- Marketplaces and updates run more of their work on the core: CLI plugin hints, copy-mode,
+  link-mode and `git-subdir` version hashes, an archive's totals and unsafe entries, and the
+  variables that stop updates and traffic. An archive's names fold by Unicode 18, where Bun's
+  ICU is Unicode 17: a character Unicode 18 added may fold where it did not (docs/RUST.md).
+- Marketplaces and updates run more of their work on the core: install hosts, modes and failures,
+  git transports and submodules, download header policy, name and folder conflicts, a plugin's
+  content and footprint, reload summaries, remote and seeded plugins, telemetry names, and which
+  plugins an update targets or skips.
+- Loading, agents and skills run more of their work on the core: background trust and trust
+  gates, channels, a plugin's folder, debug and scaffold, hook merging, data ids, field maps, LSP
+  startup, path and link validation and its report; built-in agents, models, tool filters,
+  permission baselines, teammates and the workflow limits, attempts, relaunch and replay; a skill's
+  arguments, expansion policy, fork, hook limits, shell scan and refusal, and its rule.
+- The protocol tables (efforts, exit reasons, hook events and config, permission modes, settings
+  keys, tool names, the mods API names, limits, settings, tiers and UI names), the CLI's command
+  table, flags and uninstall checks, the converter's profiles, adapters, namespaces, notes and
+  placeholders, icon candidates, the folder walk and a scope folder's file read (a refused file
+  still becomes a warning, an aborted read still rejects with the port's own error) run on the core.
+- Byte counts and cuts (`utf8Length`, `prefixWithinBytes`) run in TypeScript again: a command's
+  output of up to 64 MiB crossed into the core and back for a pass the host does natively, four
+  times slower. The core reads and writes the JSON of a call in one pass over its text.
+- Agents, loading and skills run more of their work on the core: a subagent's MCP scope, memory,
+  preloaded skills and structured output, a saved workflow, plugin `bin/` directories, the
+  `commands` debug line and declared path shapes, the `headersHelper` origins, shell guards and
+  shell prefix, locations without a plugin, a skill's content lifecycle, mentions and folded
+  names. A `patternProperties` pattern the core cannot run (lookaround, backreferences, `\p{…}`)
+  is one that may match when a schema's contradictions are checked (docs/RUST.md).
+- Permission rules run more of their work on the core: Bash and PowerShell dialects, safe
+  environment variables and text patterns, approval memory, hook permission updates and
+  rewrites, `sed` scripts, path sources and targets, tool names and rule formats, and what the
+  Edit, Read, Grep, WebFetch and WebSearch rules check.
+- **Breaking** (`/layout`): a `ManifestKey` is the key alone (`{ key }`); its `read` member is
+  gone, as `declaredKey` reads the manifest in the core. The `/layout` entry now loads the core.
+- Hooks run more of their work on the core: what a handler's exit code and stdout mean, the
+  verdict notices and model switches, output caps and deferral, tool output shapes, matcher
+  values and lock gates, shell choice, the remote handlers' HTTP policy and prompt text, and the
+  `CLAUDE_ENV_FILE` readers.
+- More of `format` runs on the core: agent and skill names, agent records, MCP server, prompt,
+  elicitation and tool-schema checks, `.mcpb` manifests, theme colours and writing, marketplace
+  entry fields and ids, path claims and unknown fields. A table looked up by a name from a file
+  no longer answers `Object.prototype`'s members for names like `constructor` (docs/RUST.md).
 - The package starts running on a Rust core: `crates/agent-plugins` (docs/RUST.md), compiled to
   WebAssembly and loaded by `src/wasm/bridge.ts`. The modules of `format` and `protocol` that
   read and check values are now thin wrappers over it, with the same exports, types and answers;
@@ -13,6 +118,17 @@
   kept by the wrapper and crosses as a number, and the wrapper answers what the core asks of it
   in a plain loop (docs/RUST.md, "Effects"). `readJson`, `readJsonWithoutBom`, `listSorted`,
   `configDirectoryOf` and `globalConfigFileOf` now run there; the host's ports see the same calls.
+- The frontmatter reader and writer (`format/frontmatter`, `format/frontmatter-write`) run on the
+  core, which reads and writes YAML as the `yaml` package does: the same values, errors and
+  their places, the same written text. Where it answers differently is in docs/RUST.md, "Where the
+  crate answers differently": YAML nested past 128 collections is refused, the YAML 1.1 tags and
+  schema are not read, and an alias inside its own anchor reads as an empty list.
+
+- The core reaches every port: each one a host passes crosses whole, a record that holds a
+  function crosses as one and its members are read when needed, and a timer's callback is a
+  function of the core's. The `WorktreeCreate` path, the hook merge's shared rules and the
+  `PostToolUse` output check now run there; the built-in tools' output shapes are generated as the
+  core's own tables (`bun scripts/tool-output-shapes.ts`) and the TypeScript copies are gone.
 
 ## [0.2.0] - 2026-11-23
 
@@ -1913,7 +2029,7 @@ once, in Changed or Removed.
 - **BREAKING** a cancellable function's `signal` anywhere → `{ signal }` as its last argument. Every kit function that can be cancelled takes `{ signal }` as its last argument
   (`loadSettingsLayers(sources, { signal, scopes })`, `fetchArchive(plan, ports, { signal })` and 20 more);
   port methods keep the signal as their last parameter.
-- `SAFE_ENVIRONMENT_VARIABLES` is replaced by `src/rules/bash/safe-env.ts`
+- `SAFE_ENVIRONMENT_VARIABLES` is replaced by `crates/agent-plugins/src/rules/bash/safe_env.rs`
   (`isSafeAssignment`, `assignedVariable`), and `redirectFacts` and `fileTargetFacts` by
   `targetFacts(commandTargets(command), ctx, resolvedPaths)`; `Target.tee` is `Target.source`.
 - An empty `CLAUDE_CONFIG_DIR` counts as unset everywhere (`settingsLocations`, saved workflows,

@@ -1,21 +1,44 @@
 //! What the npm package gets from JavaScript itself and Rust spells differently: strings are
 //! UTF-16 code units there (their length, their order), a number has one text and reads from a
-//! text by JavaScript's grammar, `JSON.parse` words its errors and `new URL` reads an address.
+//! text by JavaScript's grammar, `JSON.parse` words its errors, `new URL` reads an address,
+//! `normalize` composes a text and `new RegExp` reads a pattern by ECMAScript's grammar and
+//! matches it on UTF-16 (`regexp`).
 //! The ports of its modules use these wherever JavaScript's own semantics reach a result;
 //! `scripts/rust/js-oracle.ts` records the built-ins themselves, which `tests/differential/js.rs`
 //! holds these to.
 
+pub mod array_join;
+pub mod identifier;
+pub mod indexing;
 pub mod json_parse;
+pub mod json_stringify;
+pub mod json_value;
+mod math;
+pub mod normalize;
+mod promise;
+mod radix;
+pub mod regexp;
+mod slice;
 mod string_to_number;
+mod uri;
 pub mod url;
+pub mod utf16;
 pub mod value;
 
+pub use array_join::{array_join, string_of};
+pub use json_stringify::{json_stringify, json_stringify_indented};
+pub use math::{math_max, math_min, math_round};
+pub use promise::{promise_all, promise_all_pair};
+pub use radix::{to_exponential, to_radix_string};
+pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;
+pub use uri::{decode_uri_component, encode_uri_component};
 pub use value::{JsObject, JsValue};
 
 use std::cmp::Ordering;
 use std::sync::LazyLock;
 
+use indexmap::IndexMap;
 use regex::Regex;
 
 /// The order of two texts by UTF-16 code units, JavaScript's `<` on strings. It differs from
@@ -54,6 +77,11 @@ pub fn is_whitespace(character: char) -> bool {
 pub fn trim(text: &str) -> &str {
     text.trim_matches(is_whitespace)
 }
+
+/// JavaScript's `\s` inside a character class of a Rust regular expression, `is_whitespace`'s
+/// set (RS6): `[{SPACE_CLASS}]` is `\s` and `[^{SPACE_CLASS}()]` is `[^\s()]`. Rust's own `\s`
+/// differs in U+0085 and U+FEFF, as `char::is_whitespace` does.
+pub const SPACE_CLASS: &str = r"\t\n\x0B\x0C\r \u{A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}";
 
 /// The largest integer a double holds exactly, `Number.MAX_SAFE_INTEGER` (2^53 - 1).
 pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
@@ -169,19 +197,20 @@ pub fn parse_int_hex(text: &str) -> f64 {
     if run.is_empty() {
         return f64::NAN;
     }
-    let number = hex_value(&run);
+    let number = radix_value(&run, 16.0);
     if negative { -number } else { number }
 }
 
-/// The value of hexadecimal digits as the runtime's `parseInt` sums them (JavaScriptCore): digit
-/// by digit, most significant first, while it stays below 2^53; past that the digits are summed
-/// again from the least significant one, each times a running power of 16 that is itself a double,
-/// so a long run is not the correctly rounded number (`parseIntOverflow`). Zeros after the power
-/// has overflowed add nothing; any other digit then makes the value infinite.
-fn hex_value(digits: &[u32]) -> f64 {
+/// The value of digits in a power-of-two radix as the runtime's `parseInt` sums them
+/// (JavaScriptCore): digit by digit, most significant first, while it stays below 2^53; past that
+/// the digits are summed again from the least significant one, each times a running power of the
+/// radix that is itself a double, so a long run is not the correctly rounded number
+/// (`parseIntOverflow`). Zeros after the power has overflowed add nothing; any other digit then
+/// makes the value infinite.
+fn radix_value(digits: &[u32], radix: f64) -> f64 {
     let mut number = 0.0_f64;
     for digit in digits {
-        number = number * 16.0 + f64::from(*digit);
+        number = number * radix + f64::from(*digit);
     }
     if number < 9_007_199_254_740_992.0 {
         return number;
@@ -196,9 +225,23 @@ fn hex_value(digits: &[u32]) -> f64 {
         } else {
             sum += f64::from(*digit) * multiplier;
         }
-        multiplier *= 16.0;
+        multiplier *= radix;
     }
     sum
+}
+
+/// JavaScript's `Number.parseInt(digits, 8)` of a run of octal digits (as YAML's `0o17` holds
+/// after its prefix), NaN for none.
+#[must_use]
+pub fn parse_int_octal(digits: &str) -> f64 {
+    let run: Vec<u32> = digits
+        .chars()
+        .map_while(|character| character.to_digit(8))
+        .collect();
+    if run.is_empty() {
+        return f64::NAN;
+    }
+    radix_value(&run, 8.0)
 }
 
 /// A text without the blanks before it, as JavaScript's `String.prototype.trimStart` cuts them.
@@ -207,11 +250,29 @@ pub fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_whitespace)
 }
 
+/// A text without the blanks after it, as JavaScript's `String.prototype.trimEnd` cuts them.
+#[must_use]
+pub fn trim_end(text: &str) -> &str {
+    text.trim_end_matches(is_whitespace)
+}
+
+/// `text.split(/\r?\n/)`: the lines of a text, each cut at a `\n` or a `\r\n`. A `\r` that is
+/// not followed by a `\n` stays in its line, and so does one at the very end of the text.
+#[must_use]
+pub fn split_line_breaks(text: &str) -> Vec<&str> {
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    let last = lines.len().saturating_sub(1);
+    for line in lines.iter_mut().take(last) {
+        *line = line.strip_suffix('\r').unwrap_or(line);
+    }
+    lines
+}
+
 /// The shortest round-trip digits of a positive finite number and `n`, the position of the
 /// decimal point after the first digit counted as JavaScript's algorithm counts it. Of the
 /// shortest, the closest to the number, the even one of two as close (Number::toString, ECMA-262
 /// §6.1.6.1.20): Rust's shortest digits settle the count, its exact rounding then the digits.
-fn shortest_digits(value: f64) -> (String, i64) {
+pub(crate) fn shortest_digits(value: f64) -> (String, i64) {
     let shortest = format!("{value:e}");
     let count = shortest
         .split('e')
@@ -327,61 +388,25 @@ pub fn key_order<'a>(keys: impl IntoIterator<Item = &'a String>) -> Vec<&'a Stri
         .collect()
 }
 
-/// JavaScript's `JSON.stringify(value)` of plain data: `None` where it answers `undefined` (a
-/// value that is `undefined`), an item that is `undefined` written `null`, a member that is
-/// `undefined` left out, a number with no JSON text (`NaN`, an infinity) written `null` and `-0`
-/// written `0`, the members in the order `Object.keys` lists them, no blanks.
+/// A record held as any ordered map, with its entries in the order an object holds them: the array
+/// indexes ascending, then the other keys as written (`key_order`). A port builds one with it
+/// wherever the TypeScript builds an object with `Object.fromEntries` or a spread.
 #[must_use]
-pub fn json_stringify(value: &JsValue) -> Option<String> {
-    let mut out = String::new();
-    write_stringified(value, &mut out).then_some(out)
+pub fn in_key_order<V>(map: IndexMap<String, V>) -> IndexMap<String, V> {
+    #[expect(
+        clippy::needless_collect,
+        reason = "the order borrows the map the loop below drains"
+    )]
+    let order: Vec<String> = key_order(map.keys()).into_iter().cloned().collect();
+    let mut map = map;
+    order
+        .into_iter()
+        .filter_map(|key| map.swap_remove(&key).map(|value| (key, value)))
+        .collect()
 }
 
-/// Writes the value; `false` (nothing written) for `undefined`.
-fn write_stringified(value: &JsValue, out: &mut String) -> bool {
-    match value {
-        JsValue::Undefined => return false,
-        JsValue::Null => out.push_str("null"),
-        JsValue::Bool(flag) => out.push_str(if *flag { "true" } else { "false" }),
-        JsValue::Number(number) if number.is_finite() => out.push_str(&number_to_string(*number)),
-        JsValue::Number(_) => out.push_str("null"),
-        JsValue::String(text) => value::write_json_string(text, out),
-        JsValue::Array(items) => {
-            out.push('[');
-            for (index, item) in items.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
-                }
-                if !write_stringified(item, out) {
-                    out.push_str("null");
-                }
-            }
-            out.push(']');
-        }
-        JsValue::Object(members) => {
-            out.push('{');
-            let mut first = true;
-            for (key, member) in property_order(members) {
-                let mark = out.len();
-                if !first {
-                    out.push(',');
-                }
-                value::write_json_string(key, out);
-                out.push(':');
-                if write_stringified(member, out) {
-                    first = false;
-                } else {
-                    out.truncate(mark);
-                }
-            }
-            out.push('}');
-        }
-    }
-    true
-}
-
-/// JavaScript's truthiness (`if (value)`): `undefined`, `null`, `false`, `0`, `-0`, `NaN` and the
-/// empty string are falsy; every other value, an empty array or object included, is truthy.
+/// Whether JavaScript reads `value` as true in a condition: not `undefined`, `null`, `false`, `0`,
+/// `-0`, `NaN` or the empty string.
 #[must_use]
 pub fn is_truthy(value: &JsValue) -> bool {
     match value {
@@ -396,6 +421,74 @@ pub fn is_truthy(value: &JsValue) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{}].map(Boolean))' prints
+    // [ false, false, false, false, false, false, false, true, true, true ]
+    #[test]
+    fn truthiness_follows_javascript() {
+        let falsy = [
+            JsValue::Undefined,
+            JsValue::Null,
+            JsValue::Bool(false),
+            JsValue::Number(0.0),
+            JsValue::Number(-0.0),
+            JsValue::Number(f64::NAN),
+            JsValue::String(String::new()),
+        ];
+        assert!(falsy.iter().all(|value| !is_truthy(value)));
+        let truthy = [
+            JsValue::String("0".to_owned()),
+            JsValue::Array(Vec::new()),
+            JsValue::Object(JsObject::new()),
+            JsValue::Number(1.0),
+        ];
+        assert!(truthy.iter().all(is_truthy));
+    }
+
+    // bun -e 'console.log(JSON.stringify(" a\u00a0\ufeff\u0085 ".trimEnd()))' prints " a" ahead of U+0085
+    #[test]
+    fn trim_end_cuts_javascripts_blanks() {
+        assert_eq!(trim_end(" a\u{A0}\u{FEFF} "), " a");
+        assert_eq!(trim_end("a\u{85}"), "a\u{85}");
+    }
+
+    // bun -e 'console.log(Object.keys({b:1,"10":2,a:3,"2":4}))' prints [ "2", "10", "b", "a" ]
+    #[test]
+    fn a_record_is_held_in_key_order() {
+        let map = IndexMap::from([
+            ("b".to_owned(), 1),
+            ("10".to_owned(), 2),
+            ("a".to_owned(), 3),
+            ("2".to_owned(), 4),
+        ]);
+        let keys: Vec<String> = in_key_order(map).into_keys().collect();
+        assert_eq!(keys, ["2", "10", "b", "a"]);
+    }
+
+    // bun -e 'console.log(JSON.stringify(["a\r\nb","a\r\r\nb\r","\n","", "a\rb"].map((t) => t.split(/\r?\n/))))' prints
+    // [["a","b"],["a\r","b\r"],["",""],[""],["a\rb"]]
+    #[test]
+    fn lines_are_cut_at_a_line_feed_with_one_carriage_return() {
+        assert_eq!(split_line_breaks("a\r\nb"), ["a", "b"]);
+        assert_eq!(split_line_breaks("a\r\r\nb\r"), ["a\r", "b\r"]);
+        assert_eq!(split_line_breaks("\n"), ["", ""]);
+        assert_eq!(split_line_breaks(""), [""]);
+        assert_eq!(split_line_breaks("a\rb"), ["a\rb"]);
+    }
+
+    #[test]
+    fn the_space_class_is_javascripts_whitespace() {
+        let class = Regex::new(&format!("^[{SPACE_CLASS}]$")).ok();
+        assert!(class.is_some());
+        for point in 0..=0x2FFFF_u32 {
+            let Some(character) = char::from_u32(point) else {
+                continue;
+            };
+            let text = character.to_string();
+            let in_class = class.as_ref().is_some_and(|regex| regex.is_match(&text));
+            assert_eq!(in_class, is_whitespace(character), "U+{point:04X}");
+        }
+    }
 
     #[test]
     fn numbers_read_as_javascript_writes_them() {
@@ -501,6 +594,22 @@ mod tests {
         assert_eq!("\u{FF61}".cmp("\u{1F600}"), Ordering::Less);
         assert_eq!(code_unit_length("a\u{1F600}"), 3);
         assert_eq!(trim("\u{FEFF} a \u{85}"), "a \u{85}");
+    }
+
+    #[test]
+    fn the_space_class_is_is_whitespace() {
+        let class = Regex::new(&format!("^[{SPACE_CLASS}]$")).ok();
+        assert!(class.is_some(), "the class compiles");
+        for character in (0..=0xFFFF_u32).filter_map(char::from_u32) {
+            assert_eq!(
+                class
+                    .as_ref()
+                    .is_some_and(|class| class.is_match(&character.to_string())),
+                is_whitespace(character),
+                "U+{:04X}",
+                u32::from(character)
+            );
+        }
     }
 
     #[test]

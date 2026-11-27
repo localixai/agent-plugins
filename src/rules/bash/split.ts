@@ -1,7 +1,17 @@
-import { memoize } from '../memo.ts';
-import { BASH_DIALECT, POWERSHELL_DIALECT, type ShellDialect } from './dialect.ts';
-import { newScan, readList, type Span } from './scanner.ts';
-import { readCommand, type ShellCommand } from './words.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/bash/split.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
+import { BASH_DIALECT, type ShellDialect } from './dialect.ts';
+import type { ShellCommand } from './words.ts';
+
+const call = coreModule('rules/bash/split');
+
+/** Where something sits in the text that was scanned (the core's `rules/bash/scanner.rs`). */
+interface Span {
+  readonly start: number;
+  readonly end: number;
+}
 
 /** The subcommands a command line runs, and whether the kit could read it all. */
 export interface SplitCommand {
@@ -36,39 +46,12 @@ export interface CommandScan extends SplitCommand {
   readonly heredocs: readonly Span[];
 }
 
-function scanText(src: string, dialect: ShellDialect): CommandScan {
-  const scan = newScan(src, dialect, 0);
-  readList(scan, undefined);
-  const commands = scan.subs.map((sub) => readCommand(sub, dialect));
-  // `echo >` with nothing to redirect to is a syntax error, so the line is not read.
-  const complete = commands.every((command) =>
-    command.redirects.every((redirect) => redirect.target !== undefined),
-  );
-  return {
-    subcommands: scan.subs,
-    parseable: scan.ok && complete,
-    commands,
-    whole: readCommand(src.trim(), dialect),
-    substitutes: scan.substitutes,
-    nests: scan.nests,
-    functions: scan.functions,
-    comments: scan.comments,
-    heredocs: scan.bodies,
-  };
-}
-
-const SCANS: ReadonlyMap<ShellDialect, (command: string) => CommandScan> = new Map([
-  [BASH_DIALECT, memoize((command) => scanText(command, BASH_DIALECT), 64)],
-  [POWERSHELL_DIALECT, memoize((command) => scanText(command, POWERSHELL_DIALECT), 64)],
-]);
-
 /**
  * The reading of a command line (`CommandScan`), remembered for the last lines read so every check
  * of one call shares it.
  */
-export function scanCommand(command: string, dialect: ShellDialect = BASH_DIALECT): CommandScan {
-  return SCANS.get(dialect)?.(command) ?? scanText(command, dialect);
-}
+export const scanCommand = (command: string, dialect: ShellDialect = BASH_DIALECT): CommandScan =>
+  call('scanCommand', command, dialect);
 
 /**
  * Splits a command line into the commands it runs (permissions.md, "Compound commands"): at every
@@ -77,7 +60,5 @@ export function scanCommand(command: string, dialect: ShellDialect = BASH_DIALEC
  * another. The text of each subcommand is as written, comments cut. A command the kit cannot read
  * to the end is `parseable: false`, with the subcommands found so far.
  */
-export function splitCommand(command: string, dialect: ShellDialect = BASH_DIALECT): SplitCommand {
-  const { subcommands, parseable } = scanCommand(command, dialect);
-  return { subcommands, parseable };
-}
+export const splitCommand = (command: string, dialect: ShellDialect = BASH_DIALECT): SplitCommand =>
+  call('splitCommand', command, dialect);

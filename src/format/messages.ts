@@ -11,21 +11,6 @@ import type { PluginIssue } from './issues.ts';
 
 const call = coreModule('format/messages');
 
-/** `<component> path escapes plugin directory: <path>`, with where a symlink really leads. */
-export const pathEscapes = (
-  component: string,
-  path: string,
-  resolvesTo?: string,
-  /** Also outside the marketplace: the form for a plugin's own file in a local marketplace. */
-  withMarketplace = false,
-): string => call('pathEscapes', component, path, resolvesTo, withMarketplace);
-
-/**
- * What `<component> path escapes plugin directory: <path>` adds when the path stays inside but holds a
- * backslash on macOS or Linux (errors.md, "Path escapes plugin directory").
- */
-export const BACKSLASH_TAIL: string = call('BACKSLASH_TAIL');
-
 /** `<component> path not found: <path>`. */
 export const pathNotFound = (component: string, path: string): string =>
   call('pathNotFound', component, path);
@@ -37,14 +22,3 @@ export const pathNotFound = (component: string, path: string): string =>
  */
 export const missingPath = (component: string, path: string): PluginIssue =>
   call('missingPath', component, path);
-
-/** The error for a `skills` entry that is not a directory ("Path-only fields": "`skills` entries must be directories"). */
-export const skillsEntryNotDirectory = (path: string): string =>
-  call('skillsEntryNotDirectory', path);
-
-/** The error for an `agents` entry that is not a file ("Path-only fields": "`agents` entries must be `.md` files"). */
-export const agentsEntryNotFile = (path: string): string => call('agentsEntryNotFile', path);
-
-/** The warning for a default folder a replacing manifest key leaves unscanned. */
-export const defaultFolderIgnored = (folder: string, key: string): string =>
-  call('defaultFolderIgnored', folder, key);

@@ -1,11 +1,8 @@
 import type { CommandSurface } from '../marketplace/install-plans.ts';
-import { planUpdate } from '../updates/update-targets.ts';
-import {
-  marketplaceFailure,
-  marketplaceSuccess,
-  usageError,
-  type CommandOutput,
-} from './result.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { CommandOutput } from './result.ts';
+
+const call = coreModule('cli/marketplace-update');
 
 /**
  * `claude plugin marketplace update [name]` as a plan (plugins/cli-reference.md, "plugin marketplace
@@ -16,6 +13,8 @@ import {
  * a plugin"). Pure; the host fetches. Judgment (spec/judgments.md): a session counts every listing
  * it refreshed the way a shell does, `✔ Updated N marketplaces`, 0 for an empty registry. After a
  * git refresh that left LFS files as pointer files the host adds `lfsPointerLine(count)`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/marketplace_update.rs`, docs/RUST.md).
  */
 
 export interface UpdateArguments {
@@ -51,90 +50,8 @@ export interface MarketplaceUpdatePlan {
   readonly update: readonly string[];
 }
 
-const nothing = (output: CommandOutput): MarketplaceUpdatePlan => ({
-  output,
-  refresh: [],
-  update: [],
-});
-
-const targetOf = (marketplace: RegisteredForUpdate): RefreshTarget => ({
-  name: marketplace.name,
-  ...(marketplace.ref === undefined ? {} : { ref: marketplace.ref }),
-});
-
-const plural = (count: number): string =>
-  `${count} ${count === 1 ? 'marketplace' : 'marketplaces'}`;
-
-/** The success line: `Successfully updated ...` from a shell, `✔ Updated ...` in a session. */
-const UPDATED: { readonly [S in CommandSurface]: (count: number, name?: string) => string } = {
-  shell: (count, name) =>
-    name === undefined
-      ? `Successfully updated ${plural(count)}`
-      : `Successfully updated marketplace: ${name}`,
-  session: (count) => `✔ Updated ${plural(count)}`,
-};
-
-function named(
-  name: string,
-  found: RegisteredForUpdate | undefined,
-  surface: CommandSurface,
-): MarketplaceUpdatePlan {
-  if (found === undefined) {
-    return nothing(
-      marketplaceFailure(
-        'marketplace-update',
-        name,
-        `Marketplace '${name}' not found`,
-        'not_found',
-      ),
-    );
-  }
-  if (found.seeded !== undefined) {
-    return nothing(
-      marketplaceFailure(
-        'marketplace-update',
-        name,
-        `Marketplace '${name}' is seed-managed (${found.seeded}). Ask your administrator to update the seed directory`,
-        'seed_managed',
-      ),
-    );
-  }
-  return {
-    output: marketplaceSuccess('marketplace-update', name, UPDATED[surface](1, name)),
-    refresh: [targetOf(found)],
-    update: [],
-  };
-}
-
 /** What `plugin marketplace update` refreshes and prints. */
-export function planMarketplaceUpdate(
+export const planMarketplaceUpdate = (
   args: UpdateArguments,
   facts: UpdateFacts,
-): MarketplaceUpdatePlan {
-  const surface = args.surface ?? 'shell';
-  if (args.name !== undefined) {
-    return named(
-      args.name,
-      facts.registered.find((marketplace) => marketplace.name === args.name),
-      surface,
-    );
-  }
-  if (args.json === true) {
-    return nothing(usageError('--json needs a marketplace name: pass the marketplace to update'));
-  }
-  const listed = planUpdate(
-    { kind: 'marketplace-listing' },
-    [],
-    facts.registered
-      .filter((marketplace) => marketplace.seeded === undefined)
-      .map((one) => one.name),
-  );
-  const refresh = facts.registered
-    .filter((marketplace) => listed.refresh.includes(marketplace.name))
-    .map(targetOf);
-  return {
-    output: marketplaceSuccess('marketplace-update', undefined, UPDATED[surface](refresh.length)),
-    refresh,
-    update: listed.update,
-  };
-}
+): MarketplaceUpdatePlan => call('planMarketplaceUpdate', args, facts);

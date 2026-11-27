@@ -1,11 +1,15 @@
 import type { InitPluginFields, SDKPluginInstallMessage } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * What a non-interactive run reports about plugins in its stream output (headless.md, "Fail CI when
  * a plugin or MCP server doesn't load", "Track plugin installs"; the SDK's `SDKSystemMessage` and
  * `SDKPluginInstallMessage`). The kit builds the fields from what the host loaded and installed;
  * writing the events to the stream, and when, is the host's.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/headless_report.rs`, docs/RUST.md).
  */
+const call = coreModule('marketplace/headless-report');
 
 /** A load-time error: a category from an open set (`path-not-found`, `dependency-unsatisfied`, ...) and display text. */
 export interface PluginLoadError {
@@ -50,40 +54,14 @@ export interface InitPluginFacts {
   readonly persistedRemotely?: boolean;
 }
 
-type InitPluginError = NonNullable<InitPluginFields['plugin_errors']>[number];
-
-const rowOf = (plugin: LoadedPluginRow): InitPluginFields['plugins'][number] => ({
-  name: plugin.name,
-  path: plugin.path,
-  ...(plugin.version === undefined ? {} : { version: plugin.version }),
-});
-
-const directoryError = (entry: FailedPluginDirectory): InitPluginError => ({
-  plugin: `${entry.origin}[${entry.index}]`,
-  ...entry.error,
-  ...(entry.path === undefined ? {} : { path: entry.path }),
-});
-
 /**
  * `plugins` lists what loaded, each with `name` and `path`; `plugin_errors` the load-time errors,
  * each with `plugin`, `type` and `message`, and the key "is omitted when there are no errors". A
  * plugin that did not load is absent from `plugins`; one that loaded without a component keeps its
  * row and gets an entry too.
  */
-export function initPluginFields(facts: InitPluginFacts): InitPluginFields {
-  const errors: InitPluginError[] = [
-    ...facts.loaded.flatMap((plugin) =>
-      (plugin.errors ?? []).map((error) => ({ plugin: plugin.id, ...error })),
-    ),
-    ...(facts.unloaded ?? []).map((plugin) => ({ plugin: plugin.id, ...plugin.error })),
-    ...(facts.failedDirectories ?? []).map(directoryError),
-  ];
-  const omitted = errors.length === 0 || facts.persistedRemotely === true;
-  return {
-    plugins: facts.loaded.map(rowOf),
-    ...(omitted ? {} : { plugin_errors: errors }),
-  };
-}
+export const initPluginFields = (facts: InitPluginFacts): InitPluginFields =>
+  call('initPluginFields', facts);
 
 /** How one marketplace's install ended: `error` when it failed. */
 export interface MarketplaceInstallOutcome {
@@ -102,26 +80,7 @@ export interface PluginInstallStamp {
  * `started` and `completed` bracket the install, `installed` and `failed` report one marketplace
  * each, with `name` and, on `failed`, `error`. Whether the install waits is `syncPluginInstall`'s.
  */
-export function pluginInstallEvents(
+export const pluginInstallEvents = (
   outcomes: readonly MarketplaceInstallOutcome[],
   stamp: PluginInstallStamp,
-): readonly SDKPluginInstallMessage[] {
-  const event = (
-    fields: Pick<SDKPluginInstallMessage, 'status' | 'name' | 'error'>,
-  ): SDKPluginInstallMessage => ({
-    type: 'system',
-    subtype: 'plugin_install',
-    ...fields,
-    uuid: stamp.uuid(),
-    session_id: stamp.sessionId,
-  });
-  return [
-    event({ status: 'started' }),
-    ...outcomes.map((outcome) =>
-      outcome.error === undefined
-        ? event({ status: 'installed', name: outcome.name })
-        : event({ status: 'failed', name: outcome.name, error: outcome.error }),
-    ),
-    event({ status: 'completed' }),
-  ];
-}
+): readonly SDKPluginInstallMessage[] => call('pluginInstallEvents', outcomes, stamp);

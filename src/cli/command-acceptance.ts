@@ -1,5 +1,8 @@
 import type { Sha256 } from '../ports/marketplace.ts';
-import { usageError, type UsageError } from './result.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { UsageError } from './result.ts';
+
+const call = coreModule('cli/command-acceptance');
 
 /**
  * Accepting a marketplace-declared command before `claude plugin install` or `update` runs it
@@ -14,6 +17,8 @@ import { usageError, type UsageError } from './result.ts';
  * refresh fetches also counts as such a change." Judgments (spec/judgments.md): what the digest
  * covers (`digestOf`), that a `--accept-command` that does not match never prompts, and the line a
  * command source gets when it cannot be confirmed without a terminal.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/command_acceptance.rs`, docs/RUST.md).
  */
 
 /** What the entry asks Claude Code to run. A `headersHelper` wins when an entry has both. */
@@ -32,11 +37,8 @@ export interface AcceptanceFlags {
 }
 
 /** "Can't be combined with `-y`": a flag problem, nothing is printed but the reason. */
-export function exclusiveAcceptFlags(flags: AcceptanceFlags): UsageError | undefined {
-  return flags.yes === true && flags.acceptCommand !== undefined
-    ? usageError('--accept-command cannot be combined with -y')
-    : undefined;
-}
+export const exclusiveAcceptFlags = (flags: AcceptanceFlags): UsageError | undefined =>
+  call('exclusiveAcceptFlags', flags);
 
 /** The object a `--json` run's `failed` result carries when it displays a command and does not run it. */
 export interface ShownCommand {
@@ -60,12 +62,7 @@ export interface AcceptanceRequest {
   readonly answer?: boolean;
 }
 
-export const PROMPT = 'Run this command now? [y/N]';
-const ABORTED = 'Aborted.';
-const ABORTED_NOT_RUN = 'Aborted — the command was not run.';
-/** What a command source gets without a terminal and without `-y` or `--accept-command`: "the command was only displayed". */
-const ONLY_DISPLAYED =
-  'The install command was only displayed, not run. Pass -y, or --accept-command with the sha256 of the displayed command, to run it.';
+export const PROMPT: string = call('PROMPT');
 
 export type CommandAcceptance =
   | { readonly run: true }
@@ -84,56 +81,18 @@ export type CommandAcceptance =
     };
 
 /** The digest `--accept-command` names: SHA-256 of the command, the plugin and the catalog it came from (judgment: the docs do not say how it is built). */
-export async function digestOf(
+export const digestOf = (
   shown: DisplayedCommand,
   catalog: string,
   sha256: Sha256,
-): Promise<string> {
-  const text = JSON.stringify({ command: shown.command, plugin: shown.plugin, catalog });
-  return sha256.hex(new TextEncoder().encode(text));
-}
-
-const DECLINED: { readonly [O in CommandOrigin]: string } = {
-  'command-source': ABORTED,
-  'headers-helper': ABORTED_NOT_RUN,
-};
-
-const UNCONFIRMED: { readonly [O in CommandOrigin]: string } = {
-  'command-source': ONLY_DISPLAYED,
-  'headers-helper': ABORTED_NOT_RUN,
-};
-
-const refused = (line: string, shownCommand: ShownCommand): CommandAcceptance => ({
-  run: false,
-  ask: false,
-  line,
-  shownCommand,
-});
-
-/** Without `-y` or a matching digest: ask at a terminal, refuse without one. */
-function confirm(request: AcceptanceRequest, shownCommand: ShownCommand): CommandAcceptance {
-  const { origin } = request.shown;
-  if (!request.tty) return refused(UNCONFIRMED[origin], shownCommand);
-  if (request.answer === undefined) return { run: false, ask: true, prompt: PROMPT, shownCommand };
-  return request.answer ? { run: true } : refused(DECLINED[origin], shownCommand);
-}
+): Promise<string> => call.async('digestOf', shown, catalog, sha256);
 
 /**
  * Whether the displayed command runs. Inside a session neither `-y` nor `--accept-command` counts.
  * A digest that does not match the command now displayed is shown again with
  * `acceptCommandMatched: false` and never prompts.
  */
-export async function decideAcceptance(
+export const decideAcceptance = (
   request: AcceptanceRequest,
   sha256: Sha256,
-): Promise<CommandAcceptance> {
-  const digest = await digestOf(request.shown, request.catalog, sha256);
-  const base = { command: request.shown.command, plugin: request.shown.plugin, sha256: digest };
-  const given = request.session ? undefined : request.flags.acceptCommand;
-  if (given !== undefined) {
-    if (given === digest) return { run: true };
-    return refused(DECLINED[request.shown.origin], { ...base, acceptCommandMatched: false });
-  }
-  if (!request.session && request.flags.yes === true) return { run: true };
-  return confirm(request, base);
-}
+): Promise<CommandAcceptance> => call.async('decideAcceptance', request, sha256);

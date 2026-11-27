@@ -1,4 +1,11 @@
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/output/background.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { BackgroundDelivery } from '../verdict/types.ts';
+
+const call = coreModule('hooks/output/background');
 
 /**
  * What a host takes from the deliveries of background hooks (hooks.md, "How async hooks execute"):
@@ -14,30 +21,14 @@ export interface SettledDeliveries {
 }
 
 /** The deliveries as one value, in the order given; pure. */
-export function groupDeliveries(deliveries: readonly BackgroundDelivery[]): SettledDeliveries {
-  const wakes = deliveries.flatMap((delivery) => delivery.wake ?? []);
-  return {
-    additionalContext: deliveries.flatMap((delivery) => delivery.additionalContext ?? []),
-    systemMessages: deliveries.flatMap((delivery) => delivery.systemMessage ?? []),
-    ...(wakes.length === 0 ? {} : { wake: wakes.join('\n') }),
-  };
-}
+export const groupDeliveries = (deliveries: readonly BackgroundDelivery[]): SettledDeliveries =>
+  call('groupDeliveries', deliveries);
 
 /**
  * Waits for the promises of `HookOutcome.background` and groups what they delivered, in the order of
  * the promises. Judgment (spec/judgments.md): a promise that rejects (the runner lost the process)
  * delivers nothing and does not hide the others; the dispatch already reported the run.
  */
-export async function settleDeliveries(
+export const settleDeliveries = (
   background: readonly Promise<BackgroundDelivery>[],
-): Promise<SettledDeliveries> {
-  const settled = await Promise.all(
-    background.map((promise) =>
-      promise.then(
-        (delivery) => [delivery],
-        () => [],
-      ),
-    ),
-  );
-  return groupDeliveries(settled.flat());
-}
+): Promise<SettledDeliveries> => call.async('settleDeliveries', background);

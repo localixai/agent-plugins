@@ -2,6 +2,12 @@ import type { AgentExtras, AgentRecord, AgentSource } from '../../format/agent-r
 import type { FolderSource, PluginSource } from '../../format/component-source.ts';
 import type { HooksSettings } from '../../protocol/hook-config.ts';
 import type { AgentDefinition } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/catalog/types.rs`, docs/RUST.md).
+ */
+const call = coreModule('agents/catalog/types');
 
 /**
  * One subagent a session can run, whatever it came from (sub-agents.md, "Choose the subagent scope"
@@ -25,12 +31,8 @@ export type CatalogSource =
   | { readonly kind: 'flag' }
   | { readonly kind: 'builtin' };
 
-/** The tier of each source that is not a folder: a folder source ranks by its scope. */
-const KIND_TIER = { plugin: 'plugin', flag: 'flag', builtin: 'builtin' } as const;
-
 /** The row of the Priority column (sub-agents.md, "Choose the subagent scope") a source ranks by. */
-export const catalogTier = (source: CatalogSource): CatalogTier =>
-  'scope' in source ? source.scope : KIND_TIER[source.kind];
+export const catalogTier = (source: CatalogSource): CatalogTier => call('catalogTier', source);
 
 /** What a subagent loads when it starts (sub-agents.md, "Built-in subagents" and "What loads at startup"). */
 export interface StartContext {
@@ -59,46 +61,11 @@ export interface CatalogAgent {
   readonly startsWith: StartContext;
 }
 
-/** The source of a record; a plugin record names the plugin by `pluginId`. */
-const SOURCE_OF: { readonly [S in AgentSource]: (pluginId: string) => CatalogSource } = {
-  managed: () => ({ kind: 'folder', scope: 'managed' }),
-  flag: () => ({ kind: 'flag' }),
-  project: () => ({ kind: 'folder', scope: 'project' }),
-  user: () => ({ kind: 'folder', scope: 'user' }),
-  plugin: (pluginId) => ({ kind: 'plugin', pluginId }),
-};
-
-/** A plugin record's plugin name: its scoped name up to the first `:`. */
-const pluginNameOf = (record: AgentRecord): string => record.scopedName.split(':')[0] ?? '';
-
 /**
  * The catalog entry of an agent read from a file, the flag or a plugin. `pluginId` is the id the host
  * uses for the plugin of a plugin record (a session passes it); without it the plugin's name stands.
  */
-export function catalogAgentOf(record: AgentRecord, pluginId?: string): CatalogAgent {
-  return {
-    name: record.scopedName,
-    ownName: record.name,
-    source: SOURCE_OF[record.source](pluginId ?? pluginNameOf(record)),
-    definition: record.definition,
-    extras: record.extras,
-    hooks: record.hooks,
-    path: record.path,
-    // "unless you set `omitClaudeMd` in a custom subagent's definition to start it without the user,
-    // project, and local CLAUDE.md files"; the git status snapshot is the one every custom agent loads.
-    startsWith: { claudeMd: record.definition.omitClaudeMd !== true, gitStatus: true },
-  };
-}
+export const catalogAgentOf = (record: AgentRecord, pluginId?: string): CatalogAgent =>
+  call('catalogAgentOf', record, pluginId);
 
-/** Which tiers count as built-in; a registry over the tiers, so no code compares one to a string. */
-const BUILTIN_SOURCE: { readonly [S in CatalogTier]: boolean } = {
-  builtin: true,
-  managed: false,
-  flag: false,
-  project: false,
-  user: false,
-  plugin: false,
-};
-
-export const isBuiltinAgent = (agent: CatalogAgent): boolean =>
-  BUILTIN_SOURCE[catalogTier(agent.source)];
+export const isBuiltinAgent = (agent: CatalogAgent): boolean => call('isBuiltinAgent', agent);

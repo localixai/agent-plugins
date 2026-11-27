@@ -1,4 +1,10 @@
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/sources.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
 import type { RuleSource } from './types.ts';
+
+const call = coreModule('rules/sources');
 
 /**
  * Whether a source is a settings file or object, as against the command line or the session.
@@ -8,13 +14,5 @@ import type { RuleSource } from './types.ts';
  * read like a file (spec/judgments.md). A registry typed over the source kinds: a kind added to
  * `RuleSource` fails the typecheck here.
  */
-export const IS_SETTINGS_SOURCE: { readonly [K in RuleSource['kind']]: boolean } = {
-  managed: true,
-  'embedder-managed': true,
-  project: true,
-  local: true,
-  user: true,
-  'flag-settings': true,
-  cli: false,
-  session: false,
-};
+export const IS_SETTINGS_SOURCE: { readonly [K in RuleSource['kind']]: boolean } =
+  call('IS_SETTINGS_SOURCE');

@@ -1,22 +1,20 @@
-import type { PluginSource } from '../format/marketplace/types.ts';
-import type { DeclaredIn } from './cross-marketplace.ts';
-import {
-  checkInstalledDependency,
-  dependencyId,
-  type DependencyIssue,
-  type InstalledDependency,
-} from './dependencies.ts';
-import { SCOPES_BY_PRECEDENCE, type InstallScope } from './install-scopes.ts';
-import { satisfiesRange } from './semver.ts';
-import type { NormalizedDependency } from './types.ts';
-
 /**
  * The facts the dependency graph reads, as plain data (plugins/dependencies.md; plugins/install.md,
  * "Plugins with dependencies"; plugins/cli-reference.md, `plugin enable`, `plugin disable`,
  * `plugin prune`). The kit has no disk and no settings reader: a host (or the settings and updates
  * modules) reads `installed_plugins.json`, the `enabledPlugins` of each scope and the marketplace
  * catalog, and passes what it found. Every function of the graph is pure over these facts.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/dependency_graph.rs`, docs/RUST.md).
  */
+import type { PluginSource } from '../format/marketplace/types.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { DeclaredIn } from './cross-marketplace.ts';
+import type { DependencyIssue, InstalledDependency } from './dependencies.ts';
+import type { InstallScope } from './install-scopes.ts';
+import type { NormalizedDependency } from './types.ts';
+
+const call = coreModule('marketplace/dependency-graph');
 
 /** A dependency as a manifest or a marketplace entry declares it: where it was declared decides what a cross-marketplace refusal does. */
 export interface DeclaredDependency {
@@ -91,45 +89,30 @@ export interface GraphFacts {
   readonly localCopies?: readonly LocalCopy[];
 }
 
-export const recordsOf = (id: string, facts: GraphFacts): readonly InstalledRecord[] =>
-  facts.installed.filter((record) => record.id === id);
-
 export const recordAt = (
   id: string,
   scope: InstallScope,
   facts: GraphFacts,
-): InstalledRecord | undefined =>
-  facts.installed.find((record) => record.id === id && record.scope === scope);
+): InstalledRecord | undefined => call('recordAt', id, scope, facts);
 
 /** The highest-precedence scope whose `enabledPlugins` lists `id`, if any does. */
 export const winningScope = (id: string, facts: GraphFacts): InstallScope | undefined =>
-  SCOPES_BY_PRECEDENCE.find((scope) => facts.enabled[scope]?.[id] !== undefined);
+  call('winningScope', id, facts);
 
 /** The value the winning scope writes for `id`, if any scope writes one. */
-export const effectiveEnabled = (id: string, facts: GraphFacts): boolean | undefined => {
-  const writer = winningScope(id, facts);
-  return writer === undefined ? undefined : facts.enabled[writer]?.[id];
-};
+export const effectiveEnabled = (id: string, facts: GraphFacts): boolean | undefined =>
+  call('effectiveEnabled', id, facts);
 
 /**
  * Whether an installed plugin is on: the value the winning scope writes, else its `defaultEnabled`
  * ("Default `true`. Whether the plugin starts enabled when the user hasn't set it in
  * `enabledPlugins`", marketplace-reference.md). A plugin with no install record is not on.
  */
-export const isEnabled = (id: string, facts: GraphFacts): boolean => {
-  const record = recordsOf(id, facts)[0];
-  if (record === undefined) return false;
-  return effectiveEnabled(id, facts) ?? record.defaultEnabled ?? true;
-};
-
-/** The plugin ids installed, once each however many scopes hold them. */
-const installedIds = (facts: GraphFacts): readonly string[] => [
-  ...new Set(facts.installed.map((record) => record.id)),
-];
+export const isEnabled = (id: string, facts: GraphFacts): boolean => call('isEnabled', id, facts);
 
 /** The dependencies a plugin declares, from any of its installed records (the manifest does not differ per scope). */
 export const dependenciesOf = (id: string, facts: GraphFacts): readonly NormalizedDependency[] =>
-  recordsOf(id, facts)[0]?.dependencies ?? [];
+  call('dependenciesOf', id, facts);
 
 /** An installed plugin that constrains `dependency` with a range. */
 export interface Constraint {
@@ -143,13 +126,8 @@ export interface Constraint {
  * from several plugins"), once per constraining plugin. Judgment: every installed plugin counts,
  * whatever its scope or whether it is enabled; the docs say "installed plugins".
  */
-export function constraintsOn(dependency: string, facts: GraphFacts): readonly Constraint[] {
-  return installedIds(facts).flatMap((by) =>
-    dependenciesOf(by, facts).flatMap((dep) =>
-      dependencyId(dep) === dependency && dep.range !== undefined ? [{ range: dep.range, by }] : [],
-    ),
-  );
-}
+export const constraintsOn = (dependency: string, facts: GraphFacts): readonly Constraint[] =>
+  call('constraintsOn', dependency, facts);
 
 /** What "installed on a host that loads the copy" means for the `--plugin-dir` copy of a dependency. */
 export interface CopyLookup {
@@ -159,36 +137,11 @@ export interface CopyLookup {
   readonly namesMarketplace?: boolean;
 }
 
-const NAMED_ENTRY_MATCH = '>=2.1.242';
-
-const fromRecord = (id: string, facts: GraphFacts): InstalledDependency | undefined => {
-  const records = recordsOf(id, facts);
-  const record = records.find((one) => facts.enabled[one.scope]?.[id] === true) ?? records[0];
-  if (record === undefined) return undefined;
-  return {
-    enabled: isEnabled(id, facts),
-    ...(record.version === undefined ? {} : { version: record.version }),
-  };
-};
-
-const localMatches = (lookup: CopyLookup): boolean =>
-  lookup.namesMarketplace !== true ||
-  lookup.hostVersion === undefined ||
-  satisfiesRange(lookup.hostVersion, NAMED_ENTRY_MATCH);
-
 export const localCopyOf = (
   dep: NormalizedDependency,
   facts: GraphFacts,
   lookup: CopyLookup = {},
-): InstalledDependency | undefined => {
-  const local = facts.localCopies?.find((copy) => copy.name === dep.name);
-  if (local === undefined || !localMatches(lookup)) return undefined;
-  return {
-    enabled: local.enabled,
-    local: true,
-    ...(local.version === undefined ? {} : { version: local.version }),
-  };
-};
+): InstalledDependency | undefined => call('localCopyOf', dep, facts, lookup);
 
 /**
  * The copy that meets a dependency entry (plugins/dependencies.md, "Test a plugin and its
@@ -198,21 +151,18 @@ export const localCopyOf = (
  * local one, as "until you install the dependency from its marketplace" puts the local copy first
  * only until then.
  */
-export function findDependencyCopy(
+export const findDependencyCopy = (
   dep: NormalizedDependency,
   facts: GraphFacts,
   lookup: CopyLookup = {},
-): InstalledDependency | undefined {
-  return fromRecord(dependencyId(dep), facts) ?? localCopyOf(dep, facts, lookup);
-}
+): InstalledDependency | undefined => call('findDependencyCopy', dep, facts, lookup);
 
 /** The load-time check of one declared dependency against what is installed or loaded locally. */
 export const checkDeclaredDependency = (
   dep: NormalizedDependency,
   facts: GraphFacts,
   lookup: CopyLookup = {},
-): DependencyIssue | undefined =>
-  checkInstalledDependency(dep, findDependencyCopy(dep, facts, lookup));
+): DependencyIssue | undefined => call('checkDeclaredDependency', dep, facts, lookup);
 
 /** What `claude plugin disable` does with a plugin other plugins still need. */
 export type DisableDecision =
@@ -230,20 +180,7 @@ export type DisableDecision =
 
 /** The enabled plugins that declare `id` as a dependency. */
 export const dependentsOf = (id: string, facts: GraphFacts): readonly string[] =>
-  installedIds(facts).filter(
-    (other) =>
-      other !== id &&
-      isEnabled(other, facts) &&
-      dependenciesOf(other, facts).some((dep) => dependencyId(dep) === id),
-  );
-
-/** Post-order over dependents, so a plugin comes after everything that needs it; cycle-safe. */
-function disableOrder(id: string, facts: GraphFacts, seen: Set<string>): readonly string[] {
-  if (seen.has(id)) return [];
-  seen.add(id);
-  const before = dependentsOf(id, facts).flatMap((one) => disableOrder(one, facts, seen));
-  return [...before, id];
-}
+  call('dependentsOf', id, facts);
 
 /**
  * Whether a plugin may be disabled (plugins/install.md, "Plugins with dependencies": "when another
@@ -251,15 +188,5 @@ function disableOrder(id: string, facts: GraphFacts, seen: Set<string>): readonl
  * that disables both in the right order"; cli-reference.md, `plugin disable`: "names the dependents
  * to disable first"). The refusal text is a judgment; the docs quote none.
  */
-export function disableDecision(id: string, facts: GraphFacts): DisableDecision {
-  const dependents = dependentsOf(id, facts);
-  if (dependents.length === 0) return { allowed: true };
-  const chain = disableOrder(id, facts, new Set());
-  return {
-    allowed: false,
-    dependents,
-    chain,
-    command: chain.map((one) => `claude plugin disable ${one}`).join(' && '),
-    message: `Cannot disable "${id}": ${dependents.map((one) => `"${one}"`).join(', ')} depend${dependents.length === 1 ? 's' : ''} on it; disable ${dependents.length === 1 ? 'it' : 'them'} first`,
-  };
-}
+export const disableDecision = (id: string, facts: GraphFacts): DisableDecision =>
+  call('disableDecision', id, facts);

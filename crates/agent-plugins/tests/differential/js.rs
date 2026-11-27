@@ -1,11 +1,13 @@
 //! Differential checks of `src/js.rs` against the built-ins themselves, as
 //! `scripts/rust/js-oracle.ts` recorded them in the runtime Claude Code runs on.
 
-use agent_plugins::js::url::{INVALID_URL_MESSAGE, parse};
+use agent_plugins::js::normalize::{NormalForm, normalize};
+use agent_plugins::js::regexp::RegExp;
+use agent_plugins::js::url::{INVALID_URL_MESSAGE, parse, parse_with_base};
 use agent_plugins::js::{JsValue, json_parse::json_parse, number, number_to_string, trim};
 use serde_json::{Value, json};
 
-use crate::support::{check, check_fallible};
+use crate::support::{cases_if_any, check, check_fallible};
 
 /// A number as the oracle records one: a JSON number, or `{"$number": …}` for the four JSON
 /// has no text for.
@@ -86,4 +88,65 @@ fn url_answers_as_javascript_core() {
     check_fallible("js/url", "URL", |(text,): (String,)| {
         parse(&text).ok_or(INVALID_URL_MESSAGE)
     });
+}
+
+#[test]
+fn url_with_a_base_answers_as_javascript_core() {
+    check_fallible("js/url-base", "URL", |(text, base): (String, String)| {
+        parse_with_base(&text, &base).ok_or(INVALID_URL_MESSAGE)
+    });
+}
+
+#[test]
+fn normalize_answers_as_javascript_core() {
+    check(
+        "js/normalize",
+        "normalize",
+        |(text, form): (String, NormalForm)| normalize(&text, form),
+    );
+}
+
+#[test]
+fn case_mapping_answers_as_javascript_core() {
+    check("js/case", "toUpperCase", |(text,): (String,)| {
+        text.to_uppercase()
+    });
+    check("js/case", "toLowerCase", |(text,): (String,)| {
+        text.to_lowercase()
+    });
+}
+
+/// `new RegExp(source, 'u')`: every source JavaScript refuses is refused, and every one it runs
+/// answers each text's `test` as it did.
+#[test]
+fn unicode_reg_exp_tests_as_javascript_core() {
+    let cases = cases_if_any("js/reg-exp", "RegExp");
+    assert!(!cases.is_empty(), "no recorded patterns");
+    let mut wrong = Vec::new();
+    for case in &cases {
+        let source = case.args[0].as_str().unwrap_or_default();
+        let texts: Vec<&str> = case.args[1]
+            .as_array()
+            .map(|texts| texts.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        match (RegExp::new(source, "u"), case.outcomes[0].get("result")) {
+            (Err(_), None) => {}
+            (Ok(mut regexp), Some(want)) => {
+                let got: Vec<bool> = texts.iter().map(|text| regexp.test(text)).collect();
+                if &json!(got) != want {
+                    wrong.push(format!("{source:?} answers {got:?}, JavaScript {want}"));
+                }
+            }
+            (ours, want) => wrong.push(format!(
+                "{source:?}: compiles {}, JavaScript {want:?}",
+                ours.is_ok()
+            )),
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "{} differ:\n{}",
+        wrong.len(),
+        wrong.join("\n")
+    );
 }

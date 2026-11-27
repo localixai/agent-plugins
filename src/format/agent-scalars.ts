@@ -1,14 +1,15 @@
-import { EFFORT_LEVELS } from '../protocol/effort.ts';
-import {
-  readEnum,
-  readFlag,
-  readInteger,
-  readList,
-  readTable,
-  readText,
-  type FieldRead,
-} from './frontmatter-values.ts';
-import { warning, type PluginIssue } from './issues.ts';
+/**
+ * The coercers of an agent's scalar frontmatter fields (sub-agents.md, "Supported frontmatter
+ * fields"), each over a shared reader of `frontmatter-values.ts`.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/agent_scalars.rs`,
+ * docs/RUST.md).
+ */
+import type { EffortLevel } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginIssue } from './issues.ts';
+
+const call = coreModule('format/agent-scalars');
 
 /** What one agent field read gives: its value, or `undefined` with the issues that say why. */
 export interface AgentFieldRead<T> {
@@ -19,109 +20,55 @@ export interface AgentFieldRead<T> {
 /** The coercer of a field: `path` is the agent file, for the issues it reports. */
 export type AgentCoercer<T> = (path: string, key: string, raw: unknown) => AgentFieldRead<T>;
 
-/**
- * A value of the wrong shape is dropped with a warning and the agent still loads: sub-agents.md
- * says only that Claude Code "ignores a field it doesn't recognize without reporting an error",
- * and, for `autoCompactWindow`, that a bad value loads "as if the field were absent". The same is
- * the kit's judgment for every field the docs give no invalid-value rule (spec/judgments.md).
- */
-function ignored(path: string, key: string, reason: string): readonly PluginIssue[] {
-  return [warning(path, `Invalid "${key}": it ${reason}; the field is ignored`)];
-}
-
-/** Adapts a shared coercion (`frontmatter-values.ts`) to the agent shape. */
-function adapt<T>(path: string, read: FieldRead<T>): AgentFieldRead<T> {
-  const { problem } = read;
-  return {
-    value: read.value,
-    issues: problem === undefined ? [] : ignored(path, problem.key, problem.reason),
-  };
-}
-
-export const textField: AgentCoercer<string> = (path, key, raw) => adapt(path, readText(key, raw));
+export const textField: AgentCoercer<string> = (path, key, raw) =>
+  call('textField', path, key, raw);
 
 /**
  * `model`: any non-empty text (spec §5.4.3, J5.5). An empty or blank value is dropped like any bad
  * value, with the warning the client logs, and the default applies.
  */
-export const modelField: AgentCoercer<string> = (path, key, raw) => {
-  const blank = raw === '' || (typeof raw === 'string' && raw.trim() === '');
-  return blank
-    ? { value: undefined, issues: ignored(path, key, 'is empty') }
-    : textField(path, key, raw);
-};
+export const modelField: AgentCoercer<string> = (path, key, raw) =>
+  call('modelField', path, key, raw);
 
 /**
  * `background`, `omitClaudeMd`: sub-agents.md says "Set to `true`", so only a YAML boolean or the
  * text `true` or `false` is a flag here; `yes`, `on`, `1` and `0` belong to skills and commands
  * (judgment, spec/judgments.md).
  */
-export const boolField: AgentCoercer<boolean> = (path, key, raw) => {
-  const text = typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
-  const spelled = text === undefined || text === '' || text === 'true' || text === 'false';
-  if (typeof raw === 'number' || !spelled) {
-    return { value: undefined, issues: ignored(path, key, 'is not a flag: use true or false') };
-  }
-  return adapt(path, readFlag(key, raw));
-};
+export const boolField: AgentCoercer<boolean> = (path, key, raw) =>
+  call('boolField', path, key, raw);
 
 /** `tools`, `disallowedTools`, `skills`: "a comma-separated string ... or a YAML list". */
-export const tokenList: AgentCoercer<string[]> = (path, key, raw) => {
-  const read = adapt(path, readList(key, raw, { separators: 'comma' }));
-  return { value: read.value === undefined ? undefined : [...read.value], issues: read.issues };
-};
+export const tokenList: AgentCoercer<string[]> = (path, key, raw) =>
+  call('tokenList', path, key, raw);
 
 /** A whole number of at least 1. */
 export const positiveInt: AgentCoercer<number> = (path, key, raw) =>
-  adapt(path, readInteger(key, raw, { min: 1 }));
+  call('positiveInt', path, key, raw);
 
 /** One of `allowed`, exactly. */
 export function enumField<T extends string>(allowed: readonly T[]): AgentCoercer<T> {
-  return (path, key, raw) => adapt(path, readEnum(key, raw, allowed));
+  return (path, key, raw) => call('enumField', allowed, path, key, raw);
 }
 
 /** sub-agents.md, "Choose an effort level": `low`, `medium`, `high`, `xhigh` or `max`. */
-export const effortField = enumField(EFFORT_LEVELS);
+export const effortField: AgentCoercer<EffortLevel> = (path, key, raw) =>
+  call('effortField', path, key, raw);
 
 /** sub-agents.md, "Set the auto-compact window for one subagent": a token count in this range. */
-export const AUTO_COMPACT_RANGE = { min: 100_000, max: 1_000_000 } as const;
-
-const LEADING_INTEGER = /^\s*[+-]?\d+(?!\.\d)/;
-
-/**
- * What Claude Code reads from the field: a YAML number as it is, and a string as its leading
- * integer, because "in frontmatter Claude Code reads `200k` as 200". YAML 1.2 reads `200k` as a
- * string, so the leading integer is how the kit reaches the documented 200. A value with no
- * leading integer, or whose integer is followed by a fraction (`"200000.5"`), reads as nothing,
- * the same as the unquoted number (judgment, spec/judgments.md).
- */
-function windowTokens(raw: unknown): number | undefined {
-  if (typeof raw === 'number') return raw;
-  if (typeof raw !== 'string') return undefined;
-  const match = LEADING_INTEGER.exec(raw);
-  return match === null ? undefined : Number(match[0]);
-}
+export const AUTO_COMPACT_RANGE: { readonly min: 100_000; readonly max: 1_000_000 } =
+  call('AUTO_COMPACT_RANGE');
 
 /**
  * `autoCompactWindow`: from 100000 to 1000000. A value out of that range (or not a number) leaves
  * the subagent loading "as if the field were absent", reported with the words the docs tell the
  * author to search the debug log for: `invalid autoCompactWindow`.
  */
-export const autoCompactWindow: AgentCoercer<number> = (path, key, raw) => {
-  if (raw === undefined || raw === null) return { value: undefined, issues: [] };
-  const tokens = windowTokens(raw);
-  const { min, max } = AUTO_COMPACT_RANGE;
-  if (tokens !== undefined && Number.isSafeInteger(tokens) && tokens >= min && tokens <= max) {
-    return { value: tokens, issues: [] };
-  }
-  const read = tokens === undefined ? 'not a number' : `read as ${tokens}`;
-  const message = `invalid ${key} ${JSON.stringify(raw)}: ${read}, outside ${min} to ${max}; the field is ignored`;
-  return { value: undefined, issues: [warning(path, message)] };
-};
+export const autoCompactWindow: AgentCoercer<number> = (path, key, raw) =>
+  call('autoCompactWindow', path, key, raw);
 
 /** `experimental.cacheTtl`: "`5m` or `1h`". */
-const CACHE_TTLS = ['5m', '1h'] as const;
-export type CacheTtl = (typeof CACHE_TTLS)[number];
+export type CacheTtl = '5m' | '1h';
 
 /** What the kit keeps of the `experimental` map: only `cacheTtl`. */
 export interface Experimental {
@@ -132,10 +79,5 @@ export interface Experimental {
  * The `experimental` map: "Claude Code ignores any other value", so another key is dropped
  * silently, and a `cacheTtl` that is not `5m` or `1h` is dropped with a warning (judgment).
  */
-export const experimentalMap: AgentCoercer<Experimental> = (path, key, raw) => {
-  const table = readTable(key, raw);
-  if (table.value === undefined) return adapt(path, table);
-  const ttl = readEnum(`${key}.cacheTtl`, table.value.cacheTtl, CACHE_TTLS);
-  const { value, issues } = adapt(path, ttl);
-  return { value: value === undefined ? {} : { cacheTtl: value }, issues };
-};
+export const experimentalMap: AgentCoercer<Experimental> = (path, key, raw) =>
+  call('experimentalMap', path, key, raw);

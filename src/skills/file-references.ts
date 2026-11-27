@@ -1,6 +1,6 @@
-import { isAbsolutePath } from '../format/path-text.ts';
-import { ORIGIN_TRAITS, type SkillOrigin } from '../format/skill-types.ts';
+import type { SkillOrigin } from '../format/skill-types.ts';
 import type { Locations } from '../ports/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The files a text names with `@`. Claude Code attaches them for a local skill's or command's body:
@@ -17,7 +17,10 @@ import type { Locations } from '../ports/index.ts';
  * spans and fences are not skipped; trailing `` .,;:!?)"` `` and a `#<line range>` are not part of the
  * path; a relative path resolves against the working directory (not the skill's folder), `~/` against
  * the home folder; the same reference twice is attached once.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/skills/file_references.rs`, docs/RUST.md).
  */
+const call = coreModule('skills/file-references');
 
 export interface FileReference {
   /** The reference as written, `@` included: `@src/a.ts`, `@"Design Docs/api.md"`, `@notes.md#2-3`. */
@@ -32,30 +35,10 @@ export interface ReferenceBase {
   readonly locations: Pick<Locations, 'homeDir' | 'joinPath'>;
 }
 
-const REFERENCE =
-  /(?<!\S)@(?:"(?<quoted>[^"\n]+)"|(?<bare>\S*?[^\s.,;:!?)"`]))(?:#L?\d+(?:-L?\d+)?)?[.,;:!?)"`]*(?=\s|$)/gu;
-
-function resolved(path: string, base: ReferenceBase): string {
-  const { locations } = base;
-  if (path === '~') return locations.homeDir();
-  if (path.startsWith('~/')) return locations.joinPath(locations.homeDir(), path.slice(2));
-  return isAbsolutePath(path) ? path : locations.joinPath(base.cwd, path);
-}
-
 /** The references of `text`, in order, each once. */
-export function readFileReferences(text: string, base: ReferenceBase): FileReference[] {
-  const seen = new Set<string>();
-  const references: FileReference[] = [];
-  for (const found of text.matchAll(REFERENCE)) {
-    const path = found.groups?.['quoted'] ?? found.groups?.['bare'] ?? '';
-    const written = found[0];
-    if (path === '' || seen.has(written)) continue;
-    seen.add(written);
-    references.push({ text: written, path: resolved(path, base) });
-  }
-  return references;
-}
+export const readFileReferences = (text: string, base: ReferenceBase): FileReference[] =>
+  call('readFileReferences', text, base);
 
 /** Whether an expansion of a skill from `origin` attaches its references; `isolated`: a cloud or Cowork session. */
 export const attachesFileReferences = (origin: SkillOrigin, isolated: boolean): boolean =>
-  ORIGIN_TRAITS[origin.kind].attachesFileReferences || isolated;
+  call('attachesFileReferences', origin, isolated);

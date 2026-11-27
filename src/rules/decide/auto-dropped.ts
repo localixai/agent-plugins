@@ -1,6 +1,5 @@
-import { textPatternOf } from '../bash/text-pattern.ts';
 import type { PermissionRule } from '../types.ts';
-import { isAllowRule } from './behavior.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * permission-modes.md, "How the classifier evaluates actions": "On entering auto mode, broad allow
@@ -8,50 +7,15 @@ import { isAllowRule } from './behavior.ts';
  * wildcarded interpreters like `Bash(python*)`, package-manager run commands, `Agent` allow rules
  * and `Monitor` allow rules. "Narrow rules like `Bash(npm test)` stay in effect", and the dropped
  * rules come back when auto mode is left (they are only left out of this view of the rules).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/decide/auto_dropped.rs`,
+ * docs/RUST.md).
  */
-
-/** A bare rule (`Bash(*)` reads as bare; `PowerShell(*)` is the pattern `*`, handled below) on one of the tools whose every use runs code. */
-const BARE_TOOLS: ReadonlySet<string> = new Set(['Bash', 'PowerShell', 'Agent', 'Monitor']);
-
-/**
- * The docs name `python`; the others are the same kind of interpreter, and the shell wrappers
- * `bash`, `sh` and `zsh` (with their `-c` forms) are the "shell-wrapper prefixes" of
- * settings-reference.md, `autoMode.classifyAllShell` (spec/judgments.md).
- */
-const INTERPRETERS: ReadonlySet<string> = new Set([
-  'python',
-  'python3',
-  'node',
-  'ruby',
-  'perl',
-  'bash',
-  'sh',
-  'zsh',
-]);
-
-/** The docs say "package-manager run commands" without naming the managers (spec/judgments.md). */
-const PACKAGE_RUN = /^(?:npm|yarn|pnpm|bun) run\b/;
-
-const SHELL_TOOLS: ReadonlySet<string> = new Set(['Bash', 'PowerShell']);
-
-function wildcardedInterpreter(pattern: string): boolean {
-  const program = pattern.split(' ')[0]?.replace(/:?\*+$/, '') ?? '';
-  return pattern.includes('*') && INTERPRETERS.has(program);
-}
+const call = coreModule('rules/decide/auto-dropped');
 
 /**
  * Whether `rule` is an allow rule auto mode drops. With `autoMode.classifyAllShell` "auto mode suspends
  * every shell allow rule" as well (settings-reference.md), `Bash(npm test)` included.
  */
-export function isDroppedInAuto(rule: PermissionRule, classifyAllShell = false): boolean {
-  if (!isAllowRule(rule)) return false;
-  const tool = rule.value.toolName;
-  if (classifyAllShell && SHELL_TOOLS.has(tool)) return true;
-  if (rule.specifier === undefined) return BARE_TOOLS.has(tool);
-  const pattern = textPatternOf(rule);
-  return (
-    SHELL_TOOLS.has(tool) &&
-    pattern !== undefined &&
-    (pattern === '*' || wildcardedInterpreter(pattern) || PACKAGE_RUN.test(pattern))
-  );
-}
+export const isDroppedInAuto = (rule: PermissionRule, classifyAllShell = false): boolean =>
+  call('isDroppedInAuto', rule, classifyAllShell);

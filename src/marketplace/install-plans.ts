@@ -1,16 +1,16 @@
-import {
-  isWritableScope,
-  scopeReach,
-  type ChosenScope,
-  type InstallScope,
-} from './install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { InstallScope } from './install-scopes.ts';
 
 /**
  * What the `/plugin` panel and the marketplace commands do, as plans a host executes (plugins/
  * install.md, "Manage installed plugins", "Uninstall a plugin the project enables", "Update plugins
  * now", "Manage marketplaces"; plugins/cli-reference.md, "plugin marketplace update"): pure
  * decisions over facts the host read; the kit moves no file and writes no settings.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/install_plans.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/install-plans');
 
 // ---- the installed plugin's details menu ----
 
@@ -31,16 +31,8 @@ export interface PluginActionFacts {
  * uninstall here". Judgment (spec/judgments.md): it keeps `Update now`, since `claude plugin
  * update` accepts the managed scope, and a plugin that is also at a writable scope keeps its actions.
  */
-export function pluginActions(facts: PluginActionFacts): readonly string[] {
-  const changeable = facts.scopes.length === 0 || facts.scopes.some(isWritableScope);
-  return [
-    ...(changeable ? [facts.enabled ? 'Disable plugin' : 'Enable plugin'] : []),
-    'Update now',
-    ...(changeable ? ['Uninstall'] : []),
-    ...(facts.userConfig ? ['Configure options'] : []),
-    ...(facts.bundledMcpServer ? ['Configure'] : []),
-  ];
-}
+export const pluginActions = (facts: PluginActionFacts): readonly string[] =>
+  call('pluginActions', facts);
 
 export type PanelClose =
   | { readonly reload: 'run' }
@@ -56,18 +48,12 @@ export type PanelClose =
  * (troubleshooting.md, `Run /reload-plugins to apply.`). Judgment (spec/judgments.md): the warning
  * comes first, since the docs give the prompt-cache refusal without a streaming exception.
  */
-export function closePanel(state: {
+export const closePanel = (state: {
   readonly pending: boolean;
   readonly invalidatesPromptCache: boolean;
   /** A response is streaming in the session. */
   readonly streaming: boolean;
-}): PanelClose {
-  if (!state.pending) return { reload: 'none' };
-  if (state.invalidatesPromptCache) {
-    return { reload: 'warn-and-leave-pending', forceCommand: '/reload-plugins --force' };
-  }
-  return state.streaming ? { reload: 'queue-until-response-ends' } : { reload: 'run' };
-}
+}): PanelClose => call('closePanel', state);
 
 // ---- uninstalling a plugin the project enables ----
 
@@ -82,38 +68,20 @@ export interface UninstallOption {
   readonly installed: boolean;
 }
 
-const fileOf = (scope: ChosenScope): string => scopeReach(scope).file;
-
 /**
  * For a plugin this repository's `.claude/settings.json` enables, Uninstall asks: `y`, **Disable
  * for me** writes `false` for it in your `.claude/settings.local.json` and leaves it installed for
  * the project; `u`, **Uninstall for everyone** removes it from the shared `.claude/settings.json`.
  * Any other plugin is uninstalled without the question (`undefined`).
  */
-export function uninstallChoice(facts: {
+export const uninstallChoice = (facts: {
   readonly enabledByProject: boolean;
-}): readonly UninstallOption[] | undefined {
-  if (!facts.enabledByProject) return undefined;
-  return [
-    {
-      key: 'y',
-      label: 'Disable for me',
-      writes: { file: fileOf('local'), value: false },
-      installed: true,
-    },
-    { key: 'u', label: 'Uninstall for everyone', removesFrom: fileOf('project'), installed: false },
-  ];
-}
+}): readonly UninstallOption[] | undefined => call('uninstallChoice', facts);
 
 // ---- marketplaces ----
 
 export type MarketplaceAction = 'list' | 'update' | 'remove';
 export type CommandSurface = 'shell' | 'session';
-
-const PREFIX: { readonly [S in CommandSurface]: string } = {
-  shell: 'claude plugin marketplace',
-  session: '/plugin marketplace',
-};
 
 /**
  * The command for an action, in a shell or in a session. `claude plugin marketplace remove <name>`
@@ -134,5 +102,5 @@ export function marketplaceCommand(
   surface: CommandSurface,
   name?: string,
 ): string {
-  return [PREFIX[surface], action, name].filter((part) => part !== undefined).join(' ');
+  return call('marketplaceCommand', action, surface, name);
 }

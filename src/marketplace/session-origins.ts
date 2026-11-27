@@ -1,15 +1,20 @@
+import { coreModule } from '../wasm/bridge.ts';
+
 /**
  * The plugins that are not installed: the origins `inline` and `skills-dir` (plugins/loading.md,
  * "Find where a plugin came from"), how a session-only plugin is listed and which copy of a name
  * wins (plugins/cli-reference.md, "Flags that load a plugin for one session"), and how to stop
  * loading a skills-directory plugin (plugins/create.md, "Stop loading the plugin"). Pure.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/session_origins.rs`, docs/RUST.md).
  */
+const call = coreModule('marketplace/session-origins');
 
 /** `<name>@inline`: "a plugin that `--plugin-dir`, `--plugin-url`, `CLAUDE_CODE_PLUGIN_DIRS` or the Agent SDK `plugins` option loaded". */
-export const inlinePluginId = (name: string): string => `${name}@inline`;
+export const inlinePluginId = (name: string): string => call('inlinePluginId', name);
 
 /** `<name>@skills-dir`: "`skills-dir` stands where a marketplace name would". */
-export const skillsDirPluginId = (name: string): string => `${name}@skills-dir`;
+export const skillsDirPluginId = (name: string): string => call('skillsDirPluginId', name);
 
 /**
  * How `claude plugin list` shows a session-only plugin: "only when the same flag precedes the
@@ -22,18 +27,10 @@ export interface SessionOnlyRow {
   readonly scope: 'session';
 }
 
-export function sessionOnlyRow(
+export const sessionOnlyRow = (
   name: string,
   flagPrecedesSubcommand: boolean,
-): SessionOnlyRow | undefined {
-  return flagPrecedesSubcommand
-    ? {
-        id: inlinePluginId(name),
-        heading: 'Session-only plugins (--plugin-dir / --plugin-url):',
-        scope: 'session',
-      }
-    : undefined;
-}
+): SessionOnlyRow | undefined => call('sessionOnlyRow', name, flagPrecedesSubcommand);
 
 export interface NameClash {
   /** The session-only copy was disabled with `claude plugin disable <name>@inline`. */
@@ -48,20 +45,16 @@ export interface NameClash {
  * if you disabled the session-only copy with `claude plugin disable <name>@inline`, or if managed
  * settings lock that plugin name."
  */
-export function copyThatLoads(clash: NameClash): 'session-only' | 'installed' {
-  return clash.sessionOnlyDisabled || clash.managedLocksName ? 'installed' : 'session-only';
-}
+export const copyThatLoads = (clash: NameClash): 'session-only' | 'installed' =>
+  call('copyThatLoads', clash);
 
 /**
  * The two ways to stop loading a scaffolded plugin: "delete its directory, or run `claude plugin
  * disable my-tool@skills-dir` in your shell".
  */
-export function stopLoadingSkillsDirPlugin(name: string): {
+export const stopLoadingSkillsDirPlugin = (
+  name: string,
+): {
   readonly deleteDirectory: true;
   readonly disableCommand: string;
-} {
-  return {
-    deleteDirectory: true,
-    disableCommand: `claude plugin disable ${skillsDirPluginId(name)}`,
-  };
-}
+} => call('stopLoadingSkillsDirPlugin', name);

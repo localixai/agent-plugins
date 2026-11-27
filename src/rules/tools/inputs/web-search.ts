@@ -1,17 +1,18 @@
-import { isRecord } from '../../../protocol/is-record.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/inputs/web_search.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/inputs/web-search');
 
 /** hooks.md ("WebSearch"): `"standard"` requests a lighter search and `"extended"` the full search. */
-export const WEB_SEARCH_MODES = ['standard', 'extended'] as const;
+export const WEB_SEARCH_MODES: readonly ['standard', 'extended'] = call('WEB_SEARCH_MODES');
 export type WebSearchMode = (typeof WEB_SEARCH_MODES)[number];
-
-/** "Some sessions don't send `mode`, and a call without it runs the full search." */
-const DEFAULT_MODE: WebSearchMode = 'extended';
 
 /**
  * The search a call runs. A `mode` that is neither of the two is read as absent here;
  * `parseToolInput` reports it.
  */
-export function effectiveSearchMode(input: unknown): WebSearchMode {
-  const mode = isRecord(input) ? input.mode : undefined;
-  return WEB_SEARCH_MODES.find((known) => known === mode) ?? DEFAULT_MODE;
-}
+export const effectiveSearchMode = (input: unknown): WebSearchMode =>
+  call('effectiveSearchMode', input);

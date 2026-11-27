@@ -2,7 +2,14 @@
  * tools-reference.md, "Shell selection in settings, hooks, and skills": `"defaultShell": "powershell"`
  * "routes interactive `!` commands through PowerShell. Requires the PowerShell tool to be enabled."
  * (A command hook's `shell` and a skill's `shell` are read by `hooks` and `skills`.)
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/shell_selection.rs`,
+ * docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/shell-selection');
+
 export type InteractiveShell = 'bash' | 'powershell';
 
 /**
@@ -12,5 +19,4 @@ export type InteractiveShell = 'bash' | 'powershell';
 export const interactiveShell = (input: {
   readonly defaultShell: string | undefined;
   readonly powerShellToolEnabled: boolean;
-}): InteractiveShell =>
-  input.defaultShell === 'powershell' && input.powerShellToolEnabled ? 'powershell' : 'bash';
+}): InteractiveShell => call('interactiveShell', input);

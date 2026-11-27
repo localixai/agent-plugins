@@ -79,12 +79,7 @@ pub fn default_folder_ignored(folder: &str, key: &str) -> String {
 
 crate::registry::exports! {
     "format/messages" {
-        "pathEscapes" => ok |component: String, path: String, resolves_to: Option<String>, with_marketplace: Option<bool>| path_escapes(&component, &path, resolves_to.as_deref(), with_marketplace.unwrap_or(false));
-        "BACKSLASH_TAIL" => ok || BACKSLASH_TAIL;
         "pathNotFound" => ok |component: String, path: String| path_not_found(&component, &path);
         "missingPath" => ok |component: String, path: String| missing_path(&component, &path);
-        "skillsEntryNotDirectory" => ok |path: String| skills_entry_not_directory(&path);
-        "agentsEntryNotFile" => ok |path: String| agents_entry_not_file(&path);
-        "defaultFolderIgnored" => ok |folder: String, key: String| default_folder_ignored(&folder, &key);
     }
 }

@@ -4,9 +4,12 @@
  * without the trust step; "when the file is tracked in git, or `.claude` is a symlink", it is
  * repository-supplied and its rules wait for trust. Pure over the facts the host reports (git is the
  * host's effect, run only once the folder is trusted).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/local_settings_trust.rs`, docs/RUST.md).
  */
 
-import { contentGate, type TrustSituation } from './trust-gates.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { TrustSituation } from './trust-gates.ts';
 
 export interface LocalSettingsFacts {
   /**
@@ -35,22 +38,7 @@ export interface LocalSettingsVerdict {
   readonly runsGit: boolean;
 }
 
-/** Whether git may run: "once you've trusted the folder", for it or a parent, or in a `-p` or SDK session. */
-const GIT_MAY_RUN: { readonly [T in TrustSituation]: boolean } = {
-  trusted: true,
-  'parent-trusted': true,
-  'non-interactive': true,
-  dialog: false,
-};
+const call = coreModule('loading/local-settings-trust');
 
-export function localSettingsVerdict(facts: LocalSettingsFacts): LocalSettingsVerdict {
-  if (!GIT_MAY_RUN[facts.trust]) {
-    // The configuration-home exception skips only the trust step, unless the settings live at a repository root.
-    const own = facts.inConfigurationHome && !facts.configHomeKeptAtRepositoryRoot;
-    return { rulesApply: own, runsGit: false };
-  }
-  const repositorySupplied = facts.trackedInGit || facts.claudeDirIsSymlink;
-  // A repository-supplied file's rules are project allow rules: the trust table's `allow-rules` row.
-  const released = contentGate('allow-rules', facts.trust).applies;
-  return { rulesApply: !repositorySupplied || released, runsGit: true };
-}
+export const localSettingsVerdict = (facts: LocalSettingsFacts): LocalSettingsVerdict =>
+  call('localSettingsVerdict', facts);

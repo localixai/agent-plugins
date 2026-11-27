@@ -6,8 +6,9 @@
  * A step is `{"done": answer}`, `{"task": n, "needs": [{"id", "port", "method", "args"}]}` (the
  * task waits on these and on any asked before and not answered yet) or `{"rethrow": id}` (the
  * host threw for need `id`, so the export throws that). The answers are `{"answers": [{"id",
- * "result"} | {"id", "throws"}], "aborted": [n]}`, `aborted` the host's signals that aborted
- * since the last step.
+ * "result"} | {"id", "throws", "name"?}], "aborted": [n]}`, `throws` the message of what the host
+ * threw and `name` an `Error`'s name (the core may catch it, `registry::catch_host`), `aborted`
+ * the host's signals that aborted since the last step.
  */
 import {
   type Answer,
@@ -33,10 +34,10 @@ export type Step =
   | { readonly task: number; readonly needs: readonly Need[] }
   | { readonly rethrow: number };
 
-/** The host's answer to a need: what the method gave, or that it threw. */
+/** The host's answer to a need: what the method gave, or that it threw (its message and name). */
 export type Given =
   | { readonly id: number; readonly result: unknown }
-  | { readonly id: number; readonly throws: string };
+  | { readonly id: number; readonly throws: string; readonly name?: string };
 
 type Raw = Readonly<Record<string, unknown>>;
 

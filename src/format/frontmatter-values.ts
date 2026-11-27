@@ -25,8 +25,6 @@ export interface FieldRead<T> {
 
 const call = coreModule('format/frontmatter-values');
 
-export const NOT_A_TABLE: string = call('NOT_A_TABLE');
-
 /** `true`/`false`/`yes`/`no`/`on`/`off`/`1`/`0`, as a YAML boolean, number or string in any case. */
 export const readFlag = (key: string, value: unknown): FieldRead<boolean> =>
   call('readFlag', key, value);

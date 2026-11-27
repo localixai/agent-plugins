@@ -1,7 +1,12 @@
+import { coreModule } from '../wasm/bridge.ts';
+
 /**
  * "Plugin doesn't appear or its skills don't show up" (plugins/troubleshooting.md): the three checks, in
  * the docs' order, and what to do next. Pure over what the host can read.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/missing_plugin_diagnosis.rs`, docs/RUST.md).
  */
+const call = coreModule('marketplace/missing-plugin-diagnosis');
 
 export interface MissingPluginFacts {
   readonly installed: boolean;
@@ -22,19 +27,4 @@ export type Step =
   | { readonly step: 'someone-elses-plugin'; readonly look: string };
 
 /** The next step: the first check that fails, else what to do when the plugin loads with no error and still shows no skills. */
-export function nextStep(facts: MissingPluginFacts): Step {
-  if (!facts.installed || !facts.enabled) {
-    return {
-      step: 'confirm-installed-and-enabled',
-      where: '/plugin Installed tab, or `claude plugin list` (Status: ✔ enabled)',
-    };
-  }
-  if (facts.errors.length > 0) return { step: 'read-errors-tab', errors: facts.errors };
-  if (facts.installedThisSession) return { step: 'reload', command: '/reload-plugins' };
-  return facts.ownPlugin
-    ? { step: 'own-plugin', see: 'Plugin loads but its skills are missing' }
-    : {
-        step: 'someone-elses-plugin',
-        look: "the plugin's details pane under Installed in /plugin, which lists what it contains",
-      };
-}
+export const nextStep = (facts: MissingPluginFacts): Step => call('nextStep', facts);

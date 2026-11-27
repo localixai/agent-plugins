@@ -10,6 +10,10 @@ use serde::forward_to_deserialize_any;
 use super::{JsObject, JsValue};
 use crate::js::is_safe_integer;
 
+/// The one-member objects the boundary uses for a value the host keeps on its side
+/// (`src/wasm/wire.ts`): a port, a function, a promise.
+const HOST_HANDLES: [&str; 3] = ["$port", "$fn", "$promise"];
+
 impl<'de> Deserialize<'de> for JsValue {
     /// Any self-describing value: a unit is `null`, a none `undefined`, and a map that is a wire
     /// tag (`{"$undefined": true}`, `{"$number": name}`) the value it stands for, at every depth.
@@ -158,9 +162,32 @@ impl<'de> Deserializer<'de> for JsValue {
         visitor.visit_newtype_struct(self)
     }
 
+    /// A host value kept on the host's side (`{"$port": n}`, `{"$fn": n}`: an object that holds a
+    /// function crosses as one) is refused where a struct of data is read, unless the struct is
+    /// that handle: read as data, it would be an object with none of its fields, and every
+    /// optional one would read as absent.
+    fn deserialize_struct<V: Visitor<'de>>(
+        self,
+        name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Error> {
+        if let Self::Object(members) = &self
+            && let [(key, _)] = members.iter().collect::<Vec<_>>()[..]
+            && HOST_HANDLES.contains(&key.as_str())
+            && !fields.contains(&key.as_str())
+        {
+            return Err(de::Error::custom(format!(
+                "{name} is data, but the host passed a value it keeps ({key}): an object that \
+                 holds a function crosses as a port, so pass the fields {name} reads"
+            )));
+        }
+        self.deserialize_any(visitor)
+    }
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes byte_buf
-        unit unit_struct seq tuple tuple_struct map struct identifier ignored_any
+        unit unit_struct seq tuple tuple_struct map identifier ignored_any
     }
 }
 

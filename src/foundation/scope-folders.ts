@@ -1,9 +1,6 @@
-import { configFolderOf } from '../format/config-directory.ts';
 import type { PluginIssue } from '../format/issues.ts';
 import type { FolderScan, ScanFolder } from '../ports/folder-scan.ts';
-import { readTextOf } from './folder-read.ts';
-import { listChildren, walkFiles } from './folder-walk.ts';
-import { projectDirectories } from './project-directories.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The scope folders of a session, shared by the skills, the agents and the saved-workflows scans:
@@ -11,7 +8,11 @@ import { projectDirectories } from './project-directories.ts';
  * added directories, the home), and the files of one folder below a base, read through the host's
  * `FolderScan` port. Each scan keeps its own table of scopes and its own parser; this is what the
  * tables and the parsers stand on.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/foundation/scope_folders.rs`, docs/RUST.md).
  */
+
+const call = coreModule('foundation/scope-folders');
 
 /** What a scan of the scope folders is asked for. */
 export interface ScopeRequest {
@@ -40,7 +41,7 @@ export interface ScopeContext<R extends ScopeRequest = ScopeRequest> {
 }
 
 /** The documented folder below every scope base. */
-export const CLAUDE_FOLDER = '.claude';
+export const CLAUDE_FOLDER: '.claude' = call('CLAUDE_FOLDER');
 
 /**
  * The folders read below each base of a scope, in precedence order: `.claude`, then the host's extra
@@ -49,28 +50,16 @@ export const CLAUDE_FOLDER = '.claude';
  * file never yields its name to one of an extra folder of its own scope, and the scopes keep their
  * documented order.
  */
-export const scopeFoldersOf = (context: ScopeContext): readonly string[] => [
-  ...new Set([CLAUDE_FOLDER, ...(context.extraScopeFolders ?? [])]),
-];
+export const scopeFoldersOf = (context: ScopeContext): readonly string[] =>
+  call('scopeFoldersOf', context);
 
 /** Where the base directories of a scope are; the user scope's are `SCOPE_PLACES.user`. */
 export type ScopeBase = 'managed' | 'project' | 'repository' | 'added';
 
-const only = (dir: string | undefined): Promise<readonly string[]> =>
-  Promise.resolve(dir === undefined ? [] : [dir]);
-
 /** The base directories of each kind, in precedence order within it. */
 export const SCOPE_BASES: {
   readonly [B in ScopeBase]: (context: ScopeContext) => Promise<readonly string[]>;
-} = {
-  managed: ({ folders }) => only(folders.managedDirectory()),
-  /** The working directory up to the repository root, and a worktree's main checkout (`projectDirectories`). */
-  project: ({ folders, request, signal }) => projectDirectories(folders, request.cwd, signal),
-  /** The working directory up to the repository root, nearest first, without the main checkout. */
-  repository: async ({ folders, request, signal }) =>
-    (await folders.repository(request.cwd, signal)).directories,
-  added: ({ request }) => Promise.resolve(request.addedDirectories ?? []),
-};
+} = call('SCOPE_BASES');
 
 /** One folder a scope reads its containers (`skills`, `agents`) below. */
 export interface ScopePlace {
@@ -90,40 +79,23 @@ export type ScopePlaces<C extends ScopeContext = ScopeContext> = (
   roots: readonly string[],
 ) => Promise<readonly ScopePlace[]>;
 
-/** Each root below each base: every base's `.claude` first, then each extra folder of every base. */
+/**
+ * Each root below each base: every base's `.claude` first, then each extra folder of every base. The
+ * function it returns calls the core with `bases`, as a function of the core's that waits on the host
+ * cannot cross the boundary.
+ */
 export const placesBelow =
   <C extends ScopeContext>(bases: (context: C) => Promise<readonly string[]>): ScopePlaces<C> =>
-  async (context, roots) => {
-    const found = await bases(context);
-    return roots.flatMap((root) =>
-      found.map((base, index) => ({ base, root, index, documented: root === CLAUDE_FOLDER })),
-    );
-  };
-
-/** The user scope: `.claude` is the configuration directory; an extra folder stays below the home. */
-const userPlaces: ScopePlaces = ({ request }, roots) => {
-  const config = configFolderOf(request.home, request.configDir);
-  return Promise.resolve(
-    roots.map((root) =>
-      root === CLAUDE_FOLDER
-        ? { base: config.base, root: config.folder, index: 0, documented: true }
-        : { base: request.home, root, index: 0, documented: false },
-    ),
-  );
-};
+  (context, roots) =>
+    call.async('placesBelow', bases, context, roots);
 
 /** The places of each kind of scope base, and of the user scope. */
-export const SCOPE_PLACES: { readonly [B in ScopeBase | 'user']: ScopePlaces } = {
-  managed: placesBelow(SCOPE_BASES.managed),
-  project: placesBelow(SCOPE_BASES.project),
-  repository: placesBelow(SCOPE_BASES.repository),
-  added: placesBelow(SCOPE_BASES.added),
-  user: userPlaces,
-};
+export const SCOPE_PLACES: { readonly [B in ScopeBase | 'user']: ScopePlaces } =
+  call('SCOPE_PLACES');
 
 /** The path of a container below a place's root: `.claude/skills`, or `skills` in the configuration directory. */
 export const placePath = (place: Pick<ScopePlace, 'root'>, container: string): string =>
-  place.root === '' ? container : `${place.root}/${container}`;
+  call('placePath', place, container);
 
 /** One file of a scope folder, with its text. */
 export interface ScopeFile {
@@ -152,67 +124,19 @@ export interface ScopeFilesOptions {
   readonly signal?: AbortSignal | undefined;
 }
 
-type Listed = {
-  readonly path: string;
-  readonly segments: readonly string[];
-  readonly canonical?: string;
-};
-type Lister = (
-  base: ScanFolder,
-  container: string,
-  options: ScopeFilesOptions,
-) => Promise<{ readonly found: readonly Listed[]; readonly issues: readonly PluginIssue[] }>;
-
-/** The files below `container` each depth names, without their text. */
-const LISTERS: { readonly [D in ScopeFilesOptions['depth']]: Lister } = {
-  tree: (base, container, { extension, signal }) =>
-    walkFiles(base, container, { extension, ...(signal === undefined ? {} : { signal }) }),
-  flat: async (base, container, { extension, signal }) => {
-    const children = await listChildren(base, container, signal);
-    const wanted = extension.toLowerCase();
-    const found = children.found
-      .filter((child) => child.isFile && child.name.toLowerCase().endsWith(wanted))
-      .map((child) => ({
-        path: child.path,
-        segments: [child.name],
-        ...(child.canonical === undefined ? {} : { canonical: child.canonical }),
-      }));
-    return { found, issues: children.issues };
-  },
-};
-
 /**
  * The files of one folder below an opened base, with their text. A file the port refuses is skipped
  * with a warning (`readTextOf`); an aborted signal still rejects.
  */
-export async function readScopeFiles(
+export const readScopeFiles = (
   base: ScanFolder,
   container: string,
   options: ScopeFilesOptions,
-): Promise<ScopeFiles> {
-  const walked = await LISTERS[options.depth](base, container, options);
-  const reads = await Promise.all(
-    walked.found.map(async (file) => ({
-      file,
-      read: await readTextOf(base, file.path, options.signal),
-    })),
-  );
-  return {
-    files: reads.flatMap(({ file, read }) =>
-      read.text === undefined
-        ? []
-        : [{ ...file, hostPath: base.hostPath(file.path), text: read.text }],
-    ),
-    issues: [...walked.issues, ...reads.flatMap(({ read }) => read.issue ?? [])],
-  };
-}
+): Promise<ScopeFiles> => call.async('readScopeFiles', base, container, options);
 
 /** The folder to watch below an opened base: its host path when the scope watches it and it exists. */
-export async function watchedFolder(
+export const watchedFolder = (
   base: ScanFolder,
   container: string,
   options: { readonly watched: boolean; readonly signal?: AbortSignal | undefined },
-): Promise<readonly string[]> {
-  if (!options.watched) return [];
-  return (await base.files.exists(container, options.signal)) ? [base.hostPath(container)] : [];
-}
+): Promise<readonly string[]> => call.async('watchedFolder', base, container, options);

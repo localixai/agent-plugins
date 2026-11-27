@@ -1,4 +1,8 @@
-import type { HookMatcherGroup, HooksSettings } from '../protocol/hook-config.ts';
+import type { HooksSettings } from '../protocol/hook-config.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/loading/merge_hooks.rs`, docs/RUST.md). */
+const call = coreModule('loading/merge-hooks');
 
 /**
  * Joins the hooks of a plugin's sources: "Claude Code merges whatever you declare with
@@ -7,13 +11,5 @@ import type { HookMatcherGroup, HooksSettings } from '../protocol/hook-config.ts
  * (spec/judgments.md): merging is per event, the matcher groups of each source one after the other
  * in loading order (the default file first), so no source's hook is lost or overwritten.
  */
-export function mergeHooks(sources: readonly HooksSettings[]): HooksSettings {
-  const merged = new Map<string, HookMatcherGroup[]>();
-  for (const source of sources) {
-    for (const [event, groups] of Object.entries(source)) {
-      merged.set(event, [...(merged.get(event) ?? []), ...groups]);
-    }
-  }
-  // `fromEntries` defines own properties, so an event called `__proto__` stays a plain entry.
-  return Object.fromEntries(merged);
-}
+export const mergeHooks = (sources: readonly HooksSettings[]): HooksSettings =>
+  call('mergeHooks', sources);

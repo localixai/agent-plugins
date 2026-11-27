@@ -1,9 +1,18 @@
-import { error, type PluginIssue } from '../../../format/issues.ts';
+/**
+ * The Glob tool's result cap, its null-byte check and its `.gitignore` switch (tools-reference.md,
+ * "Glob tool behavior").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/semantics/glob_cap.rs`,
+ * docs/RUST.md).
+ */
+import type { PluginIssue } from '../../../format/issues.ts';
 import type { Environment } from '../../../ports/environment.ts';
-import { isRecord } from '../../../protocol/is-record.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/semantics/glob-cap');
 
 /** tools-reference.md, "Glob tool behavior": "capped at 100 files". */
-export const GLOB_RESULT_CAP = 100;
+export const GLOB_RESULT_CAP: number = call('GLOB_RESULT_CAP');
 
 export interface GlobMatch {
   readonly path: string;
@@ -23,15 +32,8 @@ export interface CappedGlob {
  * not say which end of the order survives the cap: the newest files do, and files of one time keep
  * their order of arrival (spec/judgments.md). Walking the disk and reading times are the host's.
  */
-export function capGlobMatches(matches: readonly GlobMatch[]): CappedGlob {
-  const sorted = matches.toSorted((left, right) => right.mtimeMs - left.mtimeMs);
-  return {
-    paths: sorted.slice(0, GLOB_RESULT_CAP).map((match) => match.path),
-    truncated: sorted.length > GLOB_RESULT_CAP,
-  };
-}
-
-const NULL_BYTE = '\u0000';
+export const capGlobMatches = (matches: readonly GlobMatch[]): CappedGlob =>
+  call('capGlobMatches', matches);
 
 /**
  * "A `pattern` or `path` value that contains a null byte returns an error asking Claude to remove
@@ -39,21 +41,13 @@ const NULL_BYTE = '\u0000';
  * holds one. The wording is a judgment (spec/judgments.md); a value that is not a string is left to
  * `parseToolInput`.
  */
-export function validateGlobInput(input: unknown): readonly PluginIssue[] {
-  if (!isRecord(input)) return [];
-  return (['pattern', 'path'] as const).flatMap((field) => {
-    const value = input[field];
-    return typeof value === 'string' && value.includes(NULL_BYTE)
-      ? [error(`tool_input.${field}`, `${field} contains a null byte: remove it and search again`)]
-      : [];
-  });
-}
+export const validateGlobInput = (input: unknown): readonly PluginIssue[] =>
+  call('validateGlobInput', input);
 
 /**
  * "Glob doesn't respect `.gitignore` by default ... To make Glob respect `.gitignore`, set
  * `CLAUDE_CODE_GLOB_NO_IGNORE=false`" (tools-reference.md; env-vars.md: "Set to `false`"). Only the
  * text `false` does; any other value, or none, leaves gitignored files in (spec/judgments.md).
  */
-export function globRespectsIgnore(env: Pick<Environment, 'get'>): boolean {
-  return env.get('CLAUDE_CODE_GLOB_NO_IGNORE')?.trim() === 'false';
-}
+export const globRespectsIgnore = (env: Pick<Environment, 'get'>): boolean =>
+  call('globRespectsIgnore', env);

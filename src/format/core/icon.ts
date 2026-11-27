@@ -1,4 +1,5 @@
 import type { DirectoryEntry } from '../../ports/files.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * Plugin icon candidates (core §4.3.1): a regular file directly in the root `assets/` directory whose
@@ -6,26 +7,17 @@ import type { DirectoryEntry } from '../../ports/files.ts';
  * one format every displaying client supports, so it is always recognised. The kit only finds the
  * candidates: reading, decoding and rendering them, and making SVG inert, are the host's, and an
  * unusable candidate never affects the package (core §4.3.1).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/core/icon.rs`, docs/RUST.md).
  */
 
-const CANDIDATE = /^icon\.([a-z0-9]+)$/;
+const call = coreModule('format/core/icon');
 
 /**
  * The candidates among the entries of `assets/`, as root-relative paths: PNG first, then the other
  * recognised formats in the order `formats` gives them (judgment: a client may pick any).
  */
-export function iconCandidates(
+export const iconCandidates = (
   entries: readonly DirectoryEntry[],
   formats: readonly string[] = [],
-): readonly string[] {
-  const order = [
-    'png',
-    ...formats.map((format) => format.toLowerCase()).filter((one) => one !== 'png'),
-  ];
-  const found = entries.flatMap((entry) => {
-    const extension = entry.isFile ? CANDIDATE.exec(entry.name)?.[1] : undefined;
-    const rank = extension === undefined ? -1 : order.indexOf(extension);
-    return rank < 0 ? [] : [{ rank, path: `assets/${entry.name}` }];
-  });
-  return found.toSorted((first, second) => first.rank - second.rank).map((one) => one.path);
-}
+): readonly string[] => call('iconCandidates', entries, formats);

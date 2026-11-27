@@ -4,10 +4,14 @@
 
 use indexmap::IndexMap;
 
-/// Environment variables, read through the host.
+use super::BoxFuture;
+
+/// Environment variables, read through the host. Its methods answer at once in the TypeScript;
+/// here they return futures, so a host across the boundary answers each as a need
+/// (`crate::registry`), and a Rust host returns ready ones.
 pub trait Environment: Send + Sync {
     /// The variable's value, or `None` when it is not set.
-    fn get(&self, name: &str) -> Option<String>;
+    fn get<'a>(&'a self, name: &'a str) -> BoxFuture<'a, Option<String>>;
     /// Every variable, in the host's order.
-    fn snapshot(&self) -> IndexMap<String, String>;
+    fn snapshot(&self) -> BoxFuture<'_, IndexMap<String, String>>;
 }

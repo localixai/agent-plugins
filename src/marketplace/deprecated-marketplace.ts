@@ -2,18 +2,19 @@
  * The deprecated `claude-code-plugins` marketplace (plugins/anthropic-marketplaces.md, "Deprecated
  * `claude-code-plugins` marketplace"): what to run for an install that used to come from it and for the
  * two plugins that changed. Pure; the docs' commands.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/deprecated_marketplace.rs`, docs/RUST.md).
  */
-import { installCommand } from './install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
-const DEPRECATED_MARKETPLACE = 'claude-code-plugins';
-const OFFICIAL_MARKETPLACE = 'claude-plugins-official';
+const call = coreModule('marketplace/deprecated-marketplace');
 
 /** Where a plugin of the deprecated marketplace is installed from now: "run `claude plugin install <plugin>@claude-plugins-official`". */
 export const officialInstallCommand = (plugin: string): string =>
-  installCommand(`${plugin}@${OFFICIAL_MARKETPLACE}`);
+  call('officialInstallCommand', plugin);
 
 /** The tutorial step to skip. */
-export const SKIPPED_TUTORIAL_STEP = '/plugin marketplace add anthropics/claude-code';
+export const SKIPPED_TUTORIAL_STEP: string = call('SKIPPED_TUTORIAL_STEP');
 
 export interface DeprecatedPluginAdvice {
   /** What changed. */
@@ -24,18 +25,6 @@ export interface DeprecatedPluginAdvice {
   readonly commandPrefix?: string;
 }
 
-const ADVICE: Readonly<Record<string, DeprecatedPluginAdvice>> = {
-  'ralph-wiggum': {
-    change: 'renamed',
-    command: officialInstallCommand('ralph-loop'),
-    commandPrefix: '/ralph-loop:',
-  },
-  'claude-opus-4-5-migration': {
-    change: 'retired',
-    command: `claude plugin uninstall claude-opus-4-5-migration@${DEPRECATED_MARKETPLACE}`,
-  },
-};
-
 /** Advice for the two plugins that need it; `undefined` for every other: "you can leave your plugins and the marketplace as they are". */
 export const deprecatedPluginAdvice = (plugin: string): DeprecatedPluginAdvice | undefined =>
-  Object.hasOwn(ADVICE, plugin) ? ADVICE[plugin] : undefined;
+  call('deprecatedPluginAdvice', plugin);

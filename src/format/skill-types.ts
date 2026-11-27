@@ -2,16 +2,22 @@ import type { EffortLevel } from '../protocol/official.ts';
 import type { HooksSettings } from '../protocol/hook-config.ts';
 import type { Assert, Equal } from '../protocol/type-equality.ts';
 import type { ShellKind } from '../ports/command-runner.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * The model of a skill and of a command (skills.md, "Configure skills"; plugins/components.md,
  * "Skills" and "Commands"). A command file is "the older format" and "supports the same
  * frontmatter" as a skill (skills.md, "Choose where skills load"), so both carry one
  * `InvocableFrontmatter`.
+ *
+ * The two constants are implemented by the Rust core (`crates/agent-plugins/src/format/skill_types.rs`,
+ * docs/RUST.md); the types are TypeScript's.
  */
 
+const call = coreModule('format/skill-types');
+
 /** The shells `shell` accepts (skills.md, frontmatter reference: "`bash` (default) or `powershell`"). */
-export const SKILL_SHELLS = ['bash', 'powershell'] as const satisfies readonly ShellKind[];
+export const SKILL_SHELLS: readonly ['bash', 'powershell'] = call('SKILL_SHELLS');
 export type SkillShell = (typeof SKILL_SHELLS)[number];
 
 /** @public A compile-time drift guard: a shell added to `ShellKind` fails the typecheck here. */
@@ -71,51 +77,8 @@ export interface OriginTraits {
   readonly attachesFileReferences: boolean;
 }
 
-export const ORIGIN_TRAITS: { readonly [K in SkillOriginKind]: OriginTraits } = {
-  plugin: {
-    substitutesPluginVariables: true,
-    substitutesSessionVariables: true,
-    runsShell: true,
-    honoursSkillOverrides: false,
-    attachesFileReferences: true,
-  },
-  managed: {
-    substitutesPluginVariables: false,
-    substitutesSessionVariables: true,
-    runsShell: true,
-    honoursSkillOverrides: true,
-    attachesFileReferences: true,
-  },
-  user: {
-    substitutesPluginVariables: false,
-    substitutesSessionVariables: true,
-    runsShell: true,
-    honoursSkillOverrides: true,
-    attachesFileReferences: true,
-  },
-  project: {
-    substitutesPluginVariables: false,
-    substitutesSessionVariables: true,
-    runsShell: true,
-    honoursSkillOverrides: true,
-    attachesFileReferences: true,
-  },
-  synced: {
-    substitutesPluginVariables: false,
-    substitutesSessionVariables: false,
-    runsShell: false,
-    honoursSkillOverrides: true,
-    attachesFileReferences: false,
-  },
-  // "set one skill to `"off"` in `skillOverrides` to hide it" (skills.md, "Remove a skill").
-  bundled: {
-    substitutesPluginVariables: false,
-    substitutesSessionVariables: true,
-    runsShell: true,
-    honoursSkillOverrides: true,
-    attachesFileReferences: true,
-  },
-};
+export const ORIGIN_TRAITS: { readonly [K in SkillOriginKind]: OriginTraits } =
+  call('ORIGIN_TRAITS');
 
 /** The frontmatter a skill and a command share, with the documented defaults applied. */
 export interface InvocableFrontmatter {

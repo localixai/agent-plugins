@@ -1,9 +1,11 @@
+import { coreModule } from '../../wasm/bridge.ts';
 import type { ModelCatalog } from '../contracts.ts';
 
-/** hooks.md, "PreModelSwitch": the matcher ignores "any `[1m]` suffix". */
-const LONG_CONTEXT_SUFFIX = /\[1m\]$/;
-
-const withoutSuffix = (model: string): string => model.replace(LONG_CONTEXT_SUFFIX, '');
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/select/model_switch.rs`,
+ * docs/RUST.md).
+ */
+const call = coreModule('hooks/select/model-switch');
 
 /**
  * The canonical name of the model a switch goes to, which `PreModelSwitch` and `PostModelSwitch`
@@ -11,7 +13,7 @@ const withoutSuffix = (model: string): string => model.replace(LONG_CONTEXT_SUFF
  * (the catalog's job, the kit holds no model list). `undefined` when no canonical name can be
  * determined, so every hook of the event runs, whatever its matcher.
  */
-export function canonicalMatcherModel(toModel: string, catalog?: ModelCatalog): string | undefined {
-  const canonical = catalog?.canonicalModel(withoutSuffix(toModel));
-  return canonical === undefined ? undefined : withoutSuffix(canonical);
-}
+export const canonicalMatcherModel = (
+  toModel: string,
+  catalog?: ModelCatalog,
+): string | undefined => call('canonicalMatcherModel', toModel, catalog);

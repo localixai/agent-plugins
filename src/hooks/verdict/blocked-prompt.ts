@@ -1,5 +1,5 @@
 import type { HookEvent } from '../../protocol/official.ts';
-import { textFactOf } from '../input/fact-read.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { HookOutcome } from '../outcome.ts';
 
 /**
@@ -11,25 +11,13 @@ import type { HookOutcome } from '../outcome.ts';
  *
  * Judgment (spec/judgments.md): the docs give no layout for the ending, so the label starts a line
  * of its own. A block no one is shown (`to` is not the user) has no message to end.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/verdict/blocked_prompt.rs`, docs/RUST.md).
  */
 
-/** The events whose block message quotes what was submitted. */
-const QUOTES_PROMPT: ReadonlySet<HookEvent> = new Set<HookEvent>(['UserPromptSubmit']);
+const call = coreModule('hooks/verdict/blocked-prompt');
 
-const ORIGINAL_PROMPT = 'Original prompt:';
-
-export function withOriginalPrompt<E extends HookEvent>(
+export const withOriginalPrompt = <E extends HookEvent>(
   outcome: HookOutcome<E>,
   facts: object,
-): HookOutcome<E> {
-  const { block } = outcome;
-  const prompt = textFactOf(facts, 'prompt');
-  if (block === undefined || prompt === undefined || !QUOTES_PROMPT.has(outcome.event)) {
-    return outcome;
-  }
-  if (block.to !== 'user' || outcome.effects.suppressOriginalPrompt === true) return outcome;
-  return {
-    ...outcome,
-    block: { ...block, message: `${block.message}\n${ORIGINAL_PROMPT} ${prompt}` },
-  };
-}
+): HookOutcome<E> => call('withOriginalPrompt', outcome, facts);

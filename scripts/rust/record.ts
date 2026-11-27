@@ -89,8 +89,15 @@ function known(file: string, module: string): Map<string, Line> {
   return calls;
 }
 
+/** The recorded cache, every folder but `js/`: the JavaScript oracles are committed, never recorded here. */
+function clearRecorded(): void {
+  for (const entry of readdirSync(vectors, { withFileTypes: true })) {
+    if (entry.name !== 'js') rmSync(join(vectors, entry.name), { recursive: true, force: true });
+  }
+}
+
 function write(modules: Map<string, Map<string, Line>>, replaceAll: boolean): number {
-  if (replaceAll) rmSync(vectors, { recursive: true, force: true });
+  if (replaceAll) clearRecorded();
   let count = 0;
   for (const [module, recorded] of modules) {
     const file = join(vectors, `${module}.jsonl`);

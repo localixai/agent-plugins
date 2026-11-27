@@ -4,8 +4,15 @@
  * every part that differs per format (matching, syntax details) is a registry typed over
  * `RuleFormatId`, so a format added here fails the typecheck until each registry handles it. Which
  * tool uses which format is the catalog's `ruleFormat` (`catalog.ts`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/rule_formats.rs`,
+ * docs/RUST.md).
  */
-export const RULE_FORMATS = [
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/rule-formats');
+
+export const RULE_FORMATS: readonly [
   'command',
   'powershell-command',
   'read-path',
@@ -14,6 +21,6 @@ export const RULE_FORMATS = [
   'subagent-type',
   'domain',
   'bare',
-] as const;
+] = call('RULE_FORMATS');
 
 export type RuleFormatId = (typeof RULE_FORMATS)[number];

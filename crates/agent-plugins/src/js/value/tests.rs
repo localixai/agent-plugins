@@ -157,3 +157,22 @@ fn a_serializable_value_becomes_a_value() {
     let written = to_js_value(&items).ok();
     assert_eq!(written, Some(JsValue::Array(items)));
 }
+
+#[test]
+fn a_value_the_host_keeps_is_no_struct_of_data() {
+    #[derive(Debug, Deserialize)]
+    struct Facts {
+        #[serde(default)]
+        flag: Option<bool>,
+    }
+    let port = JsValue::from([("$port", JsValue::from(3.0))]);
+    let refused = Facts::deserialize(port).map(|facts| facts.flag);
+    assert!(refused.is_err_and(|error| error.to_string().contains("Facts is data")));
+    let data = JsValue::from([("flag", JsValue::Bool(true))]);
+    assert_eq!(
+        Facts::deserialize(data).map(|facts| facts.flag).ok(),
+        Some(Some(true))
+    );
+    let kept = crate::registry::Port::deserialize(JsValue::from([("$port", JsValue::from(3.0))]));
+    assert!(kept.is_ok());
+}
