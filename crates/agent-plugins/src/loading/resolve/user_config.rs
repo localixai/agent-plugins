@@ -4,13 +4,13 @@
 //! (plugins/manifest-reference.md, "User configuration"). The kit never stores or prompts: the
 //! host reads `pluginConfigs` and its secure store and hands the values over as plain data.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::format::user_config_refs::{USER_CONFIG_KEY, user_config_references};
 use crate::js::{JsObject, JsValue, array_join, regex_test, string_of};
 
 /// The saved values of a plugin's options, and what the manifest declares (`ResolvedUserConfig`).
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ResolvedUserConfig {
     /// The manifest's `userConfig`.
     #[serde(default)]

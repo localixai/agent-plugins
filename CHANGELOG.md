@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- The `plugin` commands' plans run on the core: `enable`, `disable` and the target they resolve,
+  `update` and which install it locates, `prune`, `marketplace add` and `marketplace remove`, the
+  scope flags, the configuration dialog and the `userConfig` input, and `--add-dir`. So do the
+  MCP server candidates, origins, URL patterns and the managed servers, the `env` and `hooks`
+  repairs, a core skill's shape, the marketplace catalog read, the headers helper's planned
+  source and the auto-update precedence.
 - The settings merges, the layers' order and each key's holders, how `managedSourcesBehavior:
   "merge"` combines the sources and the cross-source keys, the `env` block's ignored variables,
   `resolveEnv` and `resolveSettingsEnv`, and the environment of a subprocess and of a command hook

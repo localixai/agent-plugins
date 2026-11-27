@@ -1,6 +1,7 @@
 //! Layer 3: what an update pass touches and what it leaves to the user (`src/updates/` in the npm
 //! package).
 
+pub mod auto_update_precedence;
 pub mod auto_update_skips;
 pub mod command_source_rerun;
 pub mod env_flags;

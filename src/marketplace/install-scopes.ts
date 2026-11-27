@@ -11,13 +11,8 @@ import { coreModule } from '../wasm/bridge.ts';
 
 const call = coreModule('marketplace/install-scopes');
 
-export const INSTALL_SCOPES: readonly InstallScope[] = call('INSTALL_SCOPES');
-
 /** The SDK's setting sources but `flag` (the `--settings` tier), which the docs do not name as a scope a plugin is installed in. */
 export type InstallScope = Exclude<ResolvedSettingSource, 'flag'>;
-
-/** Whether the user can have a plugin changed in the scope: every scope but `managed`. */
-export const isWritableScope = (scope: InstallScope): boolean => call('isWritableScope', scope);
 
 /** Who a scope reaches, and in which projects (plugins/install.md, "Choose an install scope"; plugins/overview.md, "Understand install scopes"). */
 export interface ScopeReach {

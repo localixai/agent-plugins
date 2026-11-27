@@ -1,6 +1,6 @@
 import type { UserConfigOption } from '../format/index.ts';
 import type { ResolvedUserConfig, UserConfigValue } from '../loading/resolve/user-config.ts';
-import { validateUserConfigValues } from '../loading/resolve/user-config-values.ts';
+import { coreModule } from '../wasm/bridge.ts';
 
 /**
  * `userConfig` values that arrive as text from a shell (plugins/cli-reference.md, "plugin install",
@@ -9,7 +9,11 @@ import { validateUserConfigValues } from '../loading/resolve/user-config-values.
  * (`validateUserConfigValues`: "Claude Code validates each value against the option's declared
  * type"). Pure. How a text becomes a number, a boolean or a list is a judgment (spec/judgments.md):
  * the docs show strings only.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/user_config_input.rs`, docs/RUST.md).
  */
+
+const call = coreModule('cli/user-config-input');
 
 export type DeclaredOptions = Readonly<Record<string, UserConfigOption>>;
 
@@ -26,83 +30,25 @@ export interface CheckedInput {
   readonly problems: readonly ConfigProblem[];
 }
 
-type Converter = (option: UserConfigOption, text: string) => UserConfigValue;
-
-const asText: Converter = (option, text) =>
-  option.multiple === true
-    ? text.trim() === ''
-      ? []
-      : text.split(',').map((item) => item.trim())
-    : text;
-
-const asNumber: Converter = (_option, text) =>
-  text.trim() !== '' && Number.isFinite(Number(text)) ? Number(text) : text;
-
-const asBoolean: Converter = (_option, text) => {
-  if (text === 'true') return true;
-  return text === 'false' ? false : text;
-};
-
-/** Per declared type, how a text becomes a value; a text that does not fit stays text and fails the check. */
-const CONVERTERS: { readonly [T in UserConfigOption['type']]: Converter } = {
-  string: asText,
-  directory: asText,
-  file: asText,
-  number: asNumber,
-  boolean: asBoolean,
-};
-
 /** A text as the option's type: numbers and booleans are parsed, a `multiple` list splits on commas. */
 export const convertText = (option: UserConfigOption, text: string): UserConfigValue =>
-  CONVERTERS[option.type](option, text);
-
-const undeclaredProblem = (key: string, declared: DeclaredOptions): ConfigProblem => {
-  const known = Object.keys(declared);
-  const list = known.length === 0 ? 'none' : known.join(', ');
-  return {
-    key,
-    undeclared: true,
-    message: `"${key}" isn't declared in this plugin's userConfig (it declares: ${list})`,
-  };
-};
-
-function checkOne(
-  key: string,
-  text: string,
-  declared: DeclaredOptions,
-): { readonly value: UserConfigValue } | ConfigProblem {
-  const option = Object.hasOwn(declared, key) ? declared[key] : undefined;
-  if (option === undefined) return undeclaredProblem(key, declared);
-  const value = convertText(option, text);
-  const config: ResolvedUserConfig = { declared: { [key]: option }, values: { [key]: value } };
-  const [issue] = validateUserConfigValues(config);
-  return issue === undefined ? { value } : { key, undeclared: false, message: issue.message };
-}
+  call('convertText', option, text);
 
 /** Each given `key` → text against the declared options; undeclared keys and failing values are problems. */
-export function checkGiven(
+export const checkGiven = (
   declared: DeclaredOptions,
   given: Readonly<Record<string, string>>,
-): CheckedInput {
-  const accepted: Record<string, UserConfigValue> = {};
-  const problems: ConfigProblem[] = [];
-  for (const [key, text] of Object.entries(given)) {
-    const checked = checkOne(key, text, declared);
-    if ('value' in checked) accepted[key] = checked.value;
-    else problems.push(checked);
-  }
-  return { accepted, problems };
-}
+): CheckedInput => call('checkGiven', declared, given);
 
 /**
  * The options that are not set: no saved value. A `default` gives an option a value but does not set
  * it, so the dialog, `plugin configure` and the install line still count it (spec §3.4.4, §3.4.6).
  */
 export const unsetKeys = (config: ResolvedUserConfig): readonly string[] =>
-  Object.keys(config.declared).filter((key) => !Object.hasOwn(config.values, key));
+  call('unsetKeys', config);
 
 /** The saved values merged with `accepted`: what a config reads once the values are stored. */
 export const withValues = (
   config: ResolvedUserConfig,
   accepted: Readonly<Record<string, UserConfigValue>>,
-): ResolvedUserConfig => ({ declared: config.declared, values: { ...config.values, ...accepted } });
+): ResolvedUserConfig => call('withValues', config, accepted);
