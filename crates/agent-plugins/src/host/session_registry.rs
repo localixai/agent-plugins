@@ -262,6 +262,5 @@ crate::registry::exports! {
     "host/session-registry" {
         "registerEntries" => ok |core: Own<SessionCore>, prefix: String, entries: Vec<JsValue>|
             Handle::new(register_entries(&core.0, &prefix, entries));
-        "dropSpent" => ok |core: Own<SessionCore>, spent: Vec<u32>| drop_spent(&mut core.lock(), &spent);
     }
 }

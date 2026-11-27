@@ -4,12 +4,15 @@
 pub mod assemble;
 pub mod contracts;
 pub mod core;
+pub mod dispatch;
+pub mod engine;
 pub mod env_file;
 pub mod handlers;
 pub mod input;
 pub mod interrupt;
 pub mod output;
 pub mod register;
+pub mod run_all;
 pub mod run_facts;
 pub mod select;
 pub mod source_kind;

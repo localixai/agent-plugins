@@ -9,6 +9,7 @@ pub mod saved_approval;
 pub mod sdk_output;
 pub mod session_core;
 pub mod session_directories;
+pub mod session_engine;
 pub mod session_hook_scope;
 pub mod session_permission_updates;
 pub mod session_registry;

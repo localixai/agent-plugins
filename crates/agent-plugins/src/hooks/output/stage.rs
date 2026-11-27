@@ -81,6 +81,6 @@ crate::registry::methods! {
 crate::registry::exports! {
     "hooks/output/stage" {
         "createOutputStage" => ok |options: Option<OutputStageOptions>|
-            Handle::new(create_output_stage(options.unwrap_or_default()));
+            Handle::own(create_output_stage(options.unwrap_or_default()));
     }
 }

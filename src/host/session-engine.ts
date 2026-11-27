@@ -1,20 +1,28 @@
 import {
-  createHookEngine,
   ifEvaluatorFor,
-  type HookEngine,
-  type StopBlockCap,
+  type DispatchRequest,
+  type HookOutcome,
+  type HookSourceKind,
 } from '../hooks/index.ts';
+import { coreEngine, type CoreEngine } from '../hooks/engine.ts';
+import type { HookEvent } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import { currentOf, type EngineInputs, type SessionCore } from './session-core.ts';
 import { environmentFor, portsOf } from './session-environment.ts';
 import type { SessionOptions } from './session-types.ts';
 
 /**
- * The one engine of a session (docs/API.md, "Hooks"): a session's dispatch is `createHookEngine`'s
- * dispatch, and what lasts across its dispatches (the Stop block count, the `once` holds, the
- * environment files) is the core's, so an engine built again keeps it. The engine is built again
- * only when what it is built over changes: the host's state (an update), or the turn's ports,
- * working directory, added folders or trust.
+ * The one engine of a session (docs/API.md, "Hooks"): a session's dispatch is the engine's over
+ * the session's own registry and `once` claims, which the core holds (`dispatchIn`), and what lasts
+ * across its dispatches (the Stop block count, the `once` holds, the environment files) is the
+ * session's, so an engine built again keeps it. The engine is built again only when what it is
+ * built over changes: the host's state (an update), or the turn's ports, working directory, added
+ * folders or trust; its edge compares those host objects by identity.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_engine.rs`, docs/RUST.md).
  */
+
+const call = coreModule('host/session-engine');
 
 const inputsOf = (core: SessionCore, options: SessionOptions): EngineInputs => ({
   state: currentOf(core).state,
@@ -31,19 +39,15 @@ const sameInputs = (a: EngineInputs, b: EngineInputs): boolean =>
   a.additionalDirectories === b.additionalDirectories &&
   a.trusted === b.trusted;
 
-/** A cap that counts nothing: the session applies its own to an outcome it combined first. */
-const UNCOUNTED: StopBlockCap = { apply: (outcome) => outcome, reset: () => undefined };
-
-function built(core: SessionCore, options: SessionOptions, stopCap = core.stopCap): HookEngine {
+function built(core: SessionCore, options: SessionOptions): CoreEngine {
   const { state, gates } = currentOf(core);
   const ports = portsOf(state, options);
   const environment = environmentFor(core, options);
   const windows = state.options.windows ?? false;
-  return createHookEngine(ports, {
+  return coreEngine(ports, {
     ...state.options.hookExecution,
     windows,
-    stopCap,
-    onceClaims: core.onceClaims,
+    stopCap: core.stopCap,
     settingsEnv: environment.settings.values,
     ...(environment.files === undefined ? {} : { envFiles: environment.files }),
     ...(state.options.processId === undefined ? {} : { processId: state.options.processId }),
@@ -63,7 +67,7 @@ function built(core: SessionCore, options: SessionOptions, stopCap = core.stopCa
   });
 }
 
-export function engineFor(core: SessionCore, options: SessionOptions): HookEngine {
+export function engineFor(core: SessionCore, options: SessionOptions): CoreEngine {
   const inputs = inputsOf(core, options);
   const last = core.engine.get();
   if (last !== undefined && sameInputs(last.inputs, inputs)) return last.engine;
@@ -72,10 +76,21 @@ export function engineFor(core: SessionCore, options: SessionOptions): HookEngin
   return engine;
 }
 
-/**
- * The session's engine without the Stop cap, for a `Stop` that core handlers share: the session
- * counts the combined continuation in `core.stopCap` once (Agent Plugins Extended §18.1.2, J18.9).
- * Built for that dispatch alone; the `once` claims are the session's as always.
- */
-export const uncappedEngineFor = (core: SessionCore, options: SessionOptions): HookEngine =>
-  built(core, options, UNCOUNTED);
+/** Which of the session's handlers one dispatch reaches, and whether the Stop cap counts it. */
+export interface DispatchScope {
+  /** Only the handlers of these sources, when given. */
+  readonly sourcesOnly: readonly HookSourceKind[] | undefined;
+  /**
+   * False for a `Stop` that core handlers share: the session counts the combined continuation in
+   * `core.stopCap` once (Agent Plugins Extended §18.1.2, J18.9).
+   */
+  readonly capped: boolean;
+}
+
+/** One dispatch of the session's registry through `engine`, within `scope`. */
+export const dispatchIn = <E extends HookEvent>(
+  engine: CoreEngine,
+  core: SessionCore,
+  request: DispatchRequest<E>,
+  scope: DispatchScope,
+): Promise<HookOutcome<E>> => call.async('dispatchIn', engine, core.handle, request, scope);

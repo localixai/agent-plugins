@@ -1,4 +1,4 @@
-//! Port of `src/hooks/run-facts.ts`, switched.
+//! Ported from `src/hooks/run-facts.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What the run stage tells the host about each run it finishes (hooks.md, "Debug hooks": the line
 //! names the event and the matched value, the command, the plugin, how the run ended and its
@@ -170,13 +170,5 @@ pub async fn run_facts_of(entry: &FactsEntry, run: &FactsRun, timing: &RunTiming
             None
         },
         duration_ms: duration_of(timing).await,
-    }
-}
-
-crate::registry::exports! {
-    "hooks/run-facts" {
-        "startedAt" => async ok |clock: Option<Port>| started_at(clock.as_ref()).await;
-        "runFactsOf" => async ok |entry: FactsEntry, run: FactsRun, timing: RunTiming|
-            run_facts_of(&entry, &run, &timing).await;
     }
 }

@@ -1,4 +1,5 @@
-//! Port of `src/hooks/handlers/status.ts`, switched.
+//! Ported from `src/hooks/handlers/status.ts`; only the core uses it now, so it has no wrapper; the
+//! TypeScript keeps the shapes the host's observer is called with.
 //!
 //! `statusMessage` (hooks.md, "Common fields"): "Custom spinner message displayed while the hook
 //! runs". Showing a spinner is the host's job; the kit tells it when a hook starts and with what
@@ -87,12 +88,4 @@ pub async fn announce_start(observer: Option<&StartObserver>, entry: &StartedEnt
         }
     })
     .await;
-}
-
-crate::registry::exports! {
-    "hooks/handlers/status" {
-        "observe" => async ok |call: Callback| observe(call.call::<JsValue>(vec![])).await;
-        "announceStart" => async ok |observer: Option<StartObserver>, entry: StartedEntry|
-            announce_start(observer.as_ref(), &entry).await;
-    }
 }

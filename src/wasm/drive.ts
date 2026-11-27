@@ -79,7 +79,16 @@ function invoke(need: Need, hosts: HostTable): unknown {
   return Reflect.apply(method, target, need.args);
 }
 
+/**
+ * The need `$hold` (`registry::detach`): its argument is a promise of the core's, which reading the
+ * need already started, answered as it is, not awaited, so the core holds it as the host's own.
+ */
+const held = (need: Need): Given | undefined =>
+  need.method === '$hold' ? { id: need.id, result: need.args[0] } : undefined;
+
 function answerSync(need: Need, hosts: HostTable, thrown: Map<number, unknown>): Given {
+  const hold = held(need);
+  if (hold !== undefined) return hold;
   try {
     const result = invoke(need, hosts);
     if (isThenable(result)) {
@@ -97,6 +106,8 @@ async function answerAsync(
   hosts: HostTable,
   thrown: Map<number, unknown>,
 ): Promise<Given> {
+  const hold = held(need);
+  if (hold !== undefined) return hold;
   try {
     return { id: need.id, result: await invoke(need, hosts) };
   } catch (error) {

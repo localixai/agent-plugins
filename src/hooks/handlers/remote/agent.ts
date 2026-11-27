@@ -7,15 +7,9 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/remote/agent.rs`,
  * docs/RUST.md).
  */
-import type { HandlerEntry, HandlerResult, RunContext } from '../context.ts';
 import { coreModule } from '../../../wasm/bridge.ts';
 
 const call = coreModule('hooks/handlers/remote/agent');
 
 /** "Tools like Read, Grep, and Glob": the read-only investigation tools the docs name (judgment). */
 export const AGENT_HOOK_TOOLS: readonly string[] = call('AGENT_HOOK_TOOLS');
-
-export const runAgent = (
-  entry: HandlerEntry<'agent'>,
-  context: RunContext,
-): Promise<HandlerResult> => call.async('runAgent', entry, context);

@@ -17,7 +17,6 @@ export interface HookEnvironment {
   readonly settings: SettingsEnv;
   readonly files?: EnvFiles;
 }
-const FILES = new WeakMap<SessionCore, EnvFiles>();
 
 /** The host's ports with each port the turn's `ports` gives in place of the host's of that name. */
 const launchPortsOf = (state: HostState, options: SessionOptions): HookPorts => ({
@@ -82,14 +81,14 @@ export function portsOf(state: HostState, options: SessionOptions): HookPorts {
 export function environmentFor(core: SessionCore, options: SessionOptions): HookEnvironment {
   const { state } = currentOf(core);
   const { environment } = launchPortsOf(state, options);
-  let files = FILES.get(core);
+  let files = core.envFiles.get();
   if (files === undefined && state.options.envFiles !== undefined) {
     const inherited = environment.get('CLAUDE_ENV_FILE');
     files = createEnvFiles(state.options.envFiles, {
       sessionId: options.sessionId,
       launchScript: inherited === '' ? undefined : inherited,
     });
-    FILES.set(core, files);
+    core.envFiles.set(files);
   }
   const settings = settingsEnvOf(state, options);
   return { settings, ...(files === undefined ? {} : { files }) };

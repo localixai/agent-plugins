@@ -1,6 +1,7 @@
 //! The core's remote handlers (`src/hooks/handlers/remote/` in the npm package).
 
 pub mod agent;
+pub mod concurrency;
 pub mod failure_run;
 pub mod http;
 pub mod http_env;

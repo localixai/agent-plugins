@@ -4,17 +4,30 @@
 //! kit writes no log, the host does (judgment, spec/judgments.md; Agent Plugins Extended §7.4.12).
 //!
 //! `Subject`, what every verdict reader is given, is declared here, where the readers first need
-//! it. The core builds it (`interpretRun`), so it is never the host's value: its output parser is
-//! the host's function.
+//! it. The core builds it (`interpretRun`, or the dispatch), so it is never the host's value: its
+//! output parser is the core's own stage, or the host's.
 
 use serde::Deserialize;
 
 use super::types::ParseResult;
 use crate::format::issues::{PluginIssue, warning};
 use crate::hooks::contracts::HookSource;
+use crate::hooks::output::stage::OutputStage;
 use crate::js::value::to_js_value;
 use crate::js::{JsObject, JsValue};
-use crate::registry::Callback;
+use crate::registry::{Callback, Port};
+
+/// The output stage's reading of a JSON value (`ParseOutput`): the core's own stage, the host's
+/// stage object, or the host's function.
+#[derive(Clone, Copy, Debug)]
+pub enum Parser {
+    /// The real stage (`createOutputStage`).
+    Core,
+    /// A stage the host gave, called as its method `parse`.
+    Stage(Port),
+    /// The host's function.
+    Host(Callback),
+}
 
 /// What reading one run needs to know about the call it belongs to.
 #[derive(Clone, Debug)]
@@ -27,8 +40,8 @@ pub struct Subject {
     pub facts: JsValue,
     /// `Bash` of a `PreToolUse:Bash` hook; absent on an event with no tool.
     pub tool_name: Option<String>,
-    /// The output stage's reading of a JSON value (the host's `ParseOutput`).
-    pub parse: Callback,
+    /// The output stage's reading of a JSON value (`ParseOutput`).
+    pub parse: Parser,
     /// A Monitor call reached the hook through a `Bash` matcher ("allow and updatedInput have no
     /// effect").
     pub effects_ignored: bool,
@@ -71,9 +84,25 @@ impl Subject {
 
     /// `subject.parse(event, json)`: the output stage's reading of `json`.
     pub async fn parse(&self, event: &str, json: JsValue) -> ParseResult {
-        self.parse
-            .call::<ParseResult>(vec![JsValue::from(event), json])
-            .await
+        let args = vec![JsValue::from(event), json];
+        match self.parse {
+            Parser::Host(parse) => parse.call::<ParseResult>(args).await,
+            Parser::Stage(stage) => stage.method::<ParseResult>("parse", args).await,
+            Parser::Core => {
+                let json = args.into_iter().nth(1).unwrap_or_default();
+                // An event the schemas do not know is no output to keep, as a failed check is.
+                match OutputStage::parse(event, &json) {
+                    Ok(parsed) => to_js_value(&parsed)
+                        .ok()
+                        .and_then(|value| ParseResult::deserialize(value).ok())
+                        .unwrap_or_default(),
+                    Err(failure) => ParseResult {
+                        failure: Some(failure),
+                        ..ParseResult::default()
+                    },
+                }
+            }
+        }
     }
 }
 

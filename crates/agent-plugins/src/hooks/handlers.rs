@@ -2,6 +2,7 @@
 
 pub mod command;
 pub mod context;
+pub mod registry;
 pub mod remote;
 pub mod status;
 pub mod timeouts;

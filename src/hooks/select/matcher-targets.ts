@@ -131,6 +131,3 @@ export const MATCHER_TARGETS: { readonly [E in HookEvent]: MatcherTarget<E> } = 
   WorktreeRemove: NONE,
   MessageDisplay: NONE,
 };
-
-/** The target of `event`, typed for its facts. */
-export const targetOf = <E extends HookEvent>(event: E): MatcherTarget<E> => MATCHER_TARGETS[event];

@@ -1,7 +1,4 @@
-import type { Environment } from '../ports/index.ts';
-import type { HookEvent } from '../protocol/official.ts';
 import { coreModule } from '../wasm/bridge.ts';
-import type { HookOutcome } from './outcome.ts';
 
 /**
  * What a user's interrupt does to the hooks of an event (hooks.md, "PostToolUse after an
@@ -34,26 +31,3 @@ export interface UserInterrupt {
   /** A `!` shell command was queued ahead of the messages. */
   readonly queuedShellCommand?: boolean;
 }
-
-/** What the interrupt does to the hooks that have not run. */
-export interface InterruptPlan {
-  /** The hooks are cancelled at once, none of them runs. */
-  readonly cancel: boolean;
-  /** The most a hook may run, in milliseconds, whatever its `timeout`. */
-  readonly capMs?: number;
-}
-
-export const interruptPlan = (
-  event: HookEvent,
-  interrupt: UserInterrupt | undefined,
-  environment: Environment,
-): InterruptPlan => call('interruptPlan', event, interrupt, environment);
-
-/**
- * An interrupt that cancelled a prompt check: the prompt does not go ahead, and its text returns to
- * the input unless a hook blocked it, in which case the block message is what the user sees.
- */
-export const withInterrupt = <E extends HookEvent>(
-  outcome: HookOutcome<E>,
-  aborted: boolean,
-): HookOutcome<E> => call('withInterrupt', outcome, aborted);

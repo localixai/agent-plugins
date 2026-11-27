@@ -34,6 +34,14 @@ export function hostTable(makers: Makers, parent?: HostTable): HostTable {
   const values = new Map<number, unknown>();
   const numbers = new Map<object, number>();
   const signals = new Map<number, AbortSignal>();
+  const adopted = new Set<HostValues>();
+  const fromAdopted = (number: number): unknown => {
+    for (const other of adopted) {
+      const found = other.find(number);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
   const table: HostTable = {
     keep(value) {
       const known = numbers.get(value);
@@ -44,10 +52,14 @@ export function hostTable(makers: Makers, parent?: HostTable): HostTable {
       if (value instanceof AbortSignal) signals.set(lastNumber, value);
       return lastNumber;
     },
-    find: (number) => (values.has(number) ? values.get(number) : parent?.find(number)),
+    find: (number) =>
+      values.has(number) ? values.get(number) : (fromAdopted(number) ?? parent?.find(number)),
+    adopt(other) {
+      if (other !== table) adopted.add(other);
+    },
     handle: (handle, sync, async) => makers.handle(handle, { sync, async }, table),
     promise: (task) => makers.promise(task, table),
-    empty: () => values.size === 0,
+    empty: () => values.size === 0 && adopted.size === 0,
     aborted() {
       const now = [...signals].filter(([, signal]) => signal.aborted).map(([number]) => number);
       for (const number of now) signals.delete(number);

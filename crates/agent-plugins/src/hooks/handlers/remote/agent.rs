@@ -44,6 +44,5 @@ pub async fn run_agent(entry: &TimedEntry, context: RunContext) -> ModelHandled 
 crate::registry::exports! {
     "hooks/handlers/remote/agent" {
         "AGENT_HOOK_TOOLS" => ok || AGENT_HOOK_TOOLS;
-        "runAgent" => async ok |entry: TimedEntry, context: RunContext| run_agent(&entry, context).await;
     }
 }

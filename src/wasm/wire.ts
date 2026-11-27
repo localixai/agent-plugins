@@ -58,6 +58,11 @@ export interface HostValues {
   handle(handle: number, sync: readonly string[], async: readonly string[]): object;
   /** The promise that drives the core's task `task`, kept for a promise of the core's. */
   promise(task: number): Promise<unknown>;
+  /**
+   * Reads `other`'s values too: a core object given back holds the host values of the call that
+   * made it (an output stage's scratch port), which the core may ask for in this call.
+   */
+  adopt(other: HostValues): void;
 }
 
 /** Whether `value` is a port: an object with a method, its own or its class's. */
@@ -80,9 +85,9 @@ function hostTagged(value: unknown, hosts: HostValues): unknown {
  * as its handle, `{"$handle": h}`, and is the core's own object again (`registry::Own`). Another
  * handle given back stays a port, as the core reads it.
  */
-const OWN = new WeakMap<object, number>();
+const OWN = new WeakMap<object, { readonly number: number; readonly hosts: HostValues }>();
 
-const ownOf = (value: unknown): number | undefined =>
+const ownOf = (value: unknown) =>
   typeof value === 'object' && value !== null ? OWN.get(value) : undefined;
 
 /** A number JSON has no text for, as its tag; `undefined` for one it has. */
@@ -95,7 +100,10 @@ const numberTag = (value: number): unknown => {
 function tagged(value: unknown, hosts: HostValues | undefined): unknown {
   if (value === undefined) return UNDEFINED;
   const own = ownOf(value);
-  if (own !== undefined) return { $handle: own };
+  if (own !== undefined) {
+    hosts?.adopt(own.hosts);
+    return { $handle: own.number };
+  }
   if (typeof value === 'number') return numberTag(value);
   if (value instanceof Set) return { $set: [...value] };
   if (value instanceof Map) return { $map: [...value] };
@@ -174,7 +182,7 @@ const own: Reader = (tag, _read, hosts) => {
   const [sync, async] = [names(tag.sync), names(tag.async)];
   if (hosts === undefined || typeof number !== 'number' || !sync || !async) return undefined;
   const object = hosts.handle(number, sync, async);
-  OWN.set(object, number);
+  OWN.set(object, { number, hosts });
   return { value: object };
 };
 

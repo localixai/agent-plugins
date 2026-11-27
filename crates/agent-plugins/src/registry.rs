@@ -48,7 +48,7 @@ pub use catch::{Thrown, catch_host};
 pub(crate) use exports::exports;
 pub(crate) use handle::methods;
 pub use handle::{Function, Handle, Methods, Own, release};
-pub use promise::{CorePromise, HostPromise};
+pub use promise::{CorePromise, Detached, HostPromise, detach};
 pub use remote::{Callback, Port};
 #[doc(hidden)]
 pub use steps::settled;
@@ -280,20 +280,19 @@ pub const MODULES: &[Module] = &[
     crate::hooks::core::profile_results::EXPORTS,
     crate::hooks::core::profiles::EXPORTS,
     crate::hooks::core::run::EXPORTS,
+    crate::hooks::engine::EXPORTS,
     crate::hooks::env_file::events::EXPORTS,
     crate::hooks::env_file::files::EXPORTS,
     crate::hooks::env_file::ports::EXPORTS,
     crate::hooks::env_file::powershell_reader::EXPORTS,
-    crate::hooks::handlers::command::run_command::EXPORTS,
     crate::hooks::handlers::command::subprocess_env::EXPORTS,
+    crate::hooks::handlers::registry::EXPORTS,
     crate::hooks::handlers::remote::agent::EXPORTS,
-    crate::hooks::handlers::remote::http::EXPORTS,
+    crate::hooks::handlers::remote::concurrency::EXPORTS,
     crate::hooks::handlers::remote::http_policy::EXPORTS,
     crate::hooks::handlers::remote::mcp_tool::EXPORTS,
     crate::hooks::handlers::remote::ok_false::EXPORTS,
-    crate::hooks::handlers::remote::prompt::EXPORTS,
     crate::hooks::handlers::remote::prompt_text::EXPORTS,
-    crate::hooks::handlers::status::EXPORTS,
     crate::hooks::handlers::timeouts::EXPORTS,
     crate::hooks::input::build::EXPORTS,
     crate::hooks::input::permission_mode::EXPORTS,
@@ -315,19 +314,17 @@ pub const MODULES: &[Module] = &[
     crate::hooks::output::text_cap::EXPORTS,
     crate::hooks::output::tool_output::EXPORTS,
     crate::hooks::output::tool_shape::EXPORTS,
-    crate::hooks::output::watch_paths::EXPORTS,
     crate::hooks::output::worktree_path::EXPORTS,
     crate::hooks::register::EXPORTS,
-    crate::hooks::run_facts::EXPORTS,
     crate::hooks::select::dedupe::EXPORTS,
     crate::hooks::select::event_catalog::EXPORTS,
     crate::hooks::select::if_guard::EXPORTS,
     crate::hooks::select::matcher_values::EXPORTS,
     crate::hooks::select::model_switch::EXPORTS,
+    crate::hooks::select::once::EXPORTS,
     crate::hooks::select::select::EXPORTS,
     crate::hooks::select::watch_list::EXPORTS,
     crate::hooks::source_kind::EXPORTS,
-    crate::hooks::verdict::blocked_prompt::EXPORTS,
     crate::hooks::verdict::exit_codes::EXPORTS,
     crate::hooks::verdict::interpret::EXPORTS,
     crate::hooks::verdict::model_switch::EXPORTS,
@@ -341,6 +338,7 @@ pub const MODULES: &[Module] = &[
     crate::host::sdk_output::EXPORTS,
     crate::host::session_core::EXPORTS,
     crate::host::session_directories::EXPORTS,
+    crate::host::session_engine::EXPORTS,
     crate::host::session_hook_scope::EXPORTS,
     crate::host::session_permission_updates::EXPORTS,
     crate::host::session_registry::EXPORTS,

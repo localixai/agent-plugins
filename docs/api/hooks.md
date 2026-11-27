@@ -35,7 +35,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `createEnvFiles` | function | The `CLAUDE_ENV_FILE` files of a session over an `EnvFileStore` |
 | `createHookEngine` | function | The engine over the real stages: select, build, run through the ports, read, merge |
 | `createHookRegistry` | function | An immutable registry; `with` appends, `without` drops by id, each returning a new one (itself when nothing changes) |
-| `createOnceClaims` | function | The claims of `once` hooks: each runs once per session |
 | `createOutputStage` | function | The real output stage the engine takes: parse, cap, merge |
 | `createStopBlockCap` | function | The cap on how many times Stop hooks block in a row |
 | `DeferResolution` | type | What `resolveDefer` returns |
@@ -130,7 +129,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `okFalseEffect` | function | What the verdict of a prompt or agent hook does on `event` |
 | `OkFalseEffect` | type | What `okFalseEffect` returns |
 | `OkFalseOptions` | type | The `options` argument of `okFalseEffect` |
-| `OnceClaims` | type | The `once` handlers of a session: held while a dispatch runs one, spent after its first successful run (a background one when its process ends) |
 | `OUTPUT_CAPS` | constant | `terminalSequence` is dropped nowhere here |
 | `OutputCap` | type | Which capped output fields an event accepts and which it discards |
 | `OutputStage` | type | The output stage the verdict and the dispatch lean on: `hooks/output` implements it |
@@ -191,7 +189,6 @@ One row per export; `scripts/check-docs.ts` (DOC3) keeps this table equal to the
 | `TimeoutPlan` | type | What an event adds to the timeouts of its handlers; computed once per dispatch |
 | `ToolCallView` | type | A tool call as a hook's `if` reads it |
 | `UserInterrupt` | type | The key the user pressed while a tool ran, and what the host knows of what they queued |
-| `withoutSpent` | function | The registry without the registrations a run spent; the same registry when none is in it |
 | `WorktreeAnswer` | type | What a merged `WorktreeCreate` outcome holds of the hooks' answers |
 | `WorktreeLocation` | type | What the host knows about where the hook ran |
 | `WorktreePath` | type | The path, or why creation fails |
