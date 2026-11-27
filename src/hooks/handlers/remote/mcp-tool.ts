@@ -6,7 +6,7 @@ import type { HandlerEntry, HandlerResult, RunContext } from '../context.ts';
  * An `mcp_tool` hook (hooks.md, "MCP tool hook fields"). The `server` is passed as the hook writes
  * it: for a plugin-bundled server that is "the scoped name `plugin:<plugin-name>:<server-name>`,
  * not the bare server key". Running no hook on `SessionStart` at launch and on `Setup` (no MCP
- * client yet) is the select stage's (`select/mcp-client.ts`).
+ * client yet) is the select stage's (`crates/agent-plugins/src/hooks/select/mcp_client.rs`).
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/remote/mcp_tool.rs`, docs/RUST.md).
  */

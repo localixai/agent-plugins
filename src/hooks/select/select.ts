@@ -1,5 +1,13 @@
-import { warning, type PluginIssue } from '../../format/issues.ts';
+/**
+ * The handlers an event runs, out of a registry.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/select/select.rs`, docs/RUST.md).
+ * The entries are the host's own objects, told apart by identity: the core answers with the
+ * places of the selected entries, and this hands back the entries at those places.
+ */
+import type { PluginIssue } from '../../format/issues.ts';
 import type { HookEvent } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type {
   EventFactsOf,
   HookRegistry,
@@ -8,15 +16,10 @@ import type {
   MonitorTreatment,
   RegisteredHandler,
   Selection,
-  ToolCallView,
 } from '../contracts.ts';
-import { firesForTool, supportsHandlerType } from './event-catalog.ts';
-import { dedupeSettingsHandlers } from './dedupe.ts';
-import { passesGates } from './gates.ts';
-import { guardWithIf, type IfEvaluator } from './if-guard.ts';
-import { lacksMcpClient, noMcpClientMessage } from './mcp-client.ts';
-import { matcherSelects } from './matcher.ts';
-import { targetOf } from './matcher-targets.ts';
+import type { IfEvaluator } from './if-guard.ts';
+
+const call = coreModule('hooks/select/select');
 
 export interface SelectRequest<E extends HookEvent> {
   readonly event: E;
@@ -28,45 +31,11 @@ export interface SelectRequest<E extends HookEvent> {
   readonly modelCatalog?: ModelCatalog;
 }
 
-interface Verdict {
-  readonly selected: boolean;
-  readonly monitor?: MonitorTreatment;
+/** What the core answers: the selected entries by their place in the registry. */
+interface Picked {
+  readonly selected: readonly number[];
   readonly issues: readonly PluginIssue[];
-}
-
-const SKIPPED: Verdict = { selected: false, issues: [] };
-
-/** Where an issue about one handler is reported: the event and the handler's place under it. */
-const pathOf = (event: HookEvent, index: number): string => `hooks.${event}[${index}]`;
-
-/**
- * One handler against the event: its type is supported (an unsupported one "is skipped", reported
- * as a warning: spec/judgments.md), its matcher selects the occurrence, an `mcp_tool` one has an MCP
- * client to call, and its `if` lets it run.
- */
-function judge<E extends HookEvent>(
-  entry: RegisteredHandler,
-  index: number,
-  request: SelectRequest<E>,
-  call: ToolCallView | undefined,
-): Verdict {
-  const { event, facts, modelCatalog, ifEvaluator } = request;
-  const path = pathOf(event, index);
-  if (!supportsHandlerType(event, entry.handler.type)) {
-    const message = `A hook of type ${entry.handler.type} is not supported on ${event} and is skipped`;
-    return { selected: false, issues: [warning(path, message)] };
-  }
-  const matched = matcherSelects(event, facts, entry, modelCatalog);
-  if (!matched.selects) return SKIPPED;
-  if (lacksMcpClient(event, facts, entry.handler.type)) {
-    return { selected: false, issues: [warning(path, noMcpClientMessage(event))] };
-  }
-  const guard = guardWithIf(entry, { call, monitor: matched.monitor, evaluate: ifEvaluator }, path);
-  return {
-    selected: guard.runs,
-    issues: guard.issues,
-    ...(matched.monitor === undefined ? {} : { monitor: matched.monitor }),
-  };
+  readonly monitor: readonly (readonly [number, MonitorTreatment])[];
 }
 
 /**
@@ -79,21 +48,28 @@ export function selectHandlers<E extends HookEvent>(
   registry: Pick<HookRegistry, 'entries'>,
   request: SelectRequest<E>,
 ): Selection {
-  const { event, facts, session } = request;
-  const ofEvent = registry.entries.filter((entry) => entry.event === event);
-  const call = targetOf(event).call?.(facts);
-  if (call !== undefined && !firesForTool(event, call.toolName)) {
-    return { selected: [], issues: [], monitor: new Map() };
-  }
-  const selected: RegisteredHandler[] = [];
-  const issues: PluginIssue[] = [];
-  const monitor = new Map<RegisteredHandler, MonitorTreatment>();
-  for (const entry of dedupeSettingsHandlers(ofEvent.filter((e) => passesGates(e, session)))) {
-    const verdict = judge(entry, ofEvent.indexOf(entry), request, call);
-    issues.push(...verdict.issues);
-    if (!verdict.selected) continue;
-    selected.push(entry);
-    if (verdict.monitor !== undefined) monitor.set(entry, verdict.monitor);
-  }
-  return { selected, issues, monitor };
+  const { entries } = registry;
+  const { event, facts, session, ifEvaluator, modelCatalog } = request;
+  const picked: Picked = call(
+    'selectHandlers',
+    entries,
+    event,
+    facts,
+    session,
+    ifEvaluator,
+    modelCatalog,
+  );
+  const at = (index: number): readonly RegisteredHandler[] => {
+    const entry = entries[index];
+    return entry === undefined ? [] : [entry];
+  };
+  return {
+    selected: picked.selected.flatMap(at),
+    issues: picked.issues,
+    monitor: new Map(
+      picked.monitor.flatMap(([index, treatment]) =>
+        at(index).map((entry) => [entry, treatment] as const),
+      ),
+    ),
+  };
 }

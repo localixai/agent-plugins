@@ -1,4 +1,4 @@
-//! Port of `src/hooks/select/mcp-client.ts`, switched.
+//! Ported from `src/hooks/select/mcp-client.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! hooks.md, "Events that fire before MCP servers are available": `SessionStart` at launch and every
 //! `Setup` event "skip their `mcp_tool` hooks without calling the tool", and "the debug log records
@@ -24,12 +24,4 @@ pub fn no_mcp_client_message(event: &str) -> String {
     format!(
         "mcp_tool hooks are not available for the '{event}' hook event (no MCP client context) and are skipped"
     )
-}
-
-crate::registry::exports! {
-    "hooks/select/mcp-client" {
-        "lacksMcpClient" => ok |event: String, facts: JsValue, kind: String|
-            lacks_mcp_client(&event, &facts, &kind);
-        "noMcpClientMessage" => ok |event: String| no_mcp_client_message(&event);
-    }
 }

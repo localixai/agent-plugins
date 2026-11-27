@@ -24,7 +24,7 @@ fn text_of<'a>(entry: &'a JsValue, key: &str) -> Option<&'a str> {
     entry.get(key).and_then(JsValue::as_str)
 }
 
-fn handler_type(entry: &JsValue) -> &str {
+pub(super) fn handler_type(entry: &JsValue) -> &str {
     entry
         .get("handler")
         .and_then(|handler| handler.get("type"))
@@ -32,7 +32,8 @@ fn handler_type(entry: &JsValue) -> &str {
         .unwrap_or_default()
 }
 
-fn gated_in(entry: &JsValue, session: &HookSession) -> bool {
+/// Whether the entry passes the session's gates (`passesGates`).
+pub(super) fn gated_in(entry: &JsValue, session: &HookSession) -> bool {
     registered(entry).is_some_and(|handler| passes_gates(&handler, session))
 }
 

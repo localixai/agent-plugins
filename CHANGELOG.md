@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Hook selection runs on the core in one call per event (`selectHandlers`): the gates, the
+  settings dedupe, each handler's type, matcher and Monitor treatment, the MCP client check and
+  its `if`; the host gets its own entries back. `ifEvaluatorFor` is the core's evaluator. So do a
+  session's permission start (`startPermissions`) and the rules of a settings view
+  (`permissionRulesOf`).
 - A command hook's run is the core's from end to end: the plan, the shell prefix, the missing
   plugin directory, the working directory, the environment and the background modes. So are the
   validator's `.mcp.json` checks and `plugin.json` field rules, and the status line, file

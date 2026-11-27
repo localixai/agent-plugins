@@ -1,7 +1,9 @@
-//! The core's counterpart of `src/hooks/select/dedupe.ts` at sha256:fac6be892490, which stays TypeScript:
-//! its result is the host's own entries, which the selection that stays TypeScript tells apart by
-//! identity (`indexOf`, a `Map` keyed by entry), and a copy is not that object (docs/RUST.md,
-//! "What stays TypeScript").
+//! Port of `src/hooks/select/dedupe.ts`, switched.
+//!
+//! Its answer holds copies of the entries; the selection (`select.rs`) keeps each entry's place
+//! instead, so the host gets its own entries back.
+
+use std::borrow::Borrow;
 
 use indexmap::IndexSet;
 
@@ -45,12 +47,22 @@ fn merges_copies(entry: &JsValue) -> bool {
         .is_some_and(|policy| policy.merges_copies)
 }
 
-/// The entries with each settings handler kept once, the first in registry order.
+/// The entries with each settings handler kept once, the first in registry order. An item is an
+/// entry, or anything that holds one (an entry with its place in the registry).
 #[must_use]
-pub fn dedupe_settings_handlers(entries: Vec<JsValue>) -> Vec<JsValue> {
+pub fn dedupe_settings_handlers<T: Borrow<JsValue>>(entries: Vec<T>) -> Vec<T> {
     let mut seen = IndexSet::new();
     entries
         .into_iter()
-        .filter(|entry| !merges_copies(entry) || seen.insert(identity(entry)))
+        .filter(|item| {
+            let entry = item.borrow();
+            !merges_copies(entry) || seen.insert(identity(entry))
+        })
         .collect()
+}
+
+crate::registry::exports! {
+    "hooks/select/dedupe" {
+        "dedupeSettingsHandlers" => ok |entries: Vec<JsValue>| dedupe_settings_handlers(entries);
+    }
 }
