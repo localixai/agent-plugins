@@ -5,7 +5,7 @@ Lines are the TypeScript files as they are now: a switched module counts its wra
 
 | Module | switched | ported | stays TypeScript | TypeScript |
 | --- | --- | --- | --- | --- |
-| all | 609 (31493 lines) | 14 (1315 lines) | 50 (3534 lines) | 445 (39586 lines) |
+| all | 609 (31493 lines) | 14 (1315 lines) | 51 (3541 lines) | 445 (39586 lines) |
 | `agents` | 29 (1872 lines) |  | 1 (30 lines) | 7 (777 lines) |
 | `cli` | 40 (2172 lines) |  |  | 12 (1830 lines) |
 | `convert` | 7 (207 lines) |  |  | 3 (171 lines) |
@@ -25,4 +25,4 @@ Lines are the TypeScript files as they are now: a switched module counts its wra
 | `skills` | 21 (1285 lines) |  | 1 (28 lines) | 15 (1390 lines) |
 | `testing` |  |  |  | 27 (2369 lines) |
 | `updates` | 7 (596 lines) |  |  | 2 (197 lines) |
-| `wasm` |  |  | 7 (796 lines) |  |
+| `wasm` |  |  | 8 (803 lines) |  |
