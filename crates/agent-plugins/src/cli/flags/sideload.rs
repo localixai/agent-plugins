@@ -65,7 +65,5 @@ crate::registry::exports! {
     "cli/flags/sideload" {
         "SIDELOAD_FLAGS" => ok || SIDELOAD_FLAGS;
         "sideloadMessage" => ok |name: String| sideload_message(&name);
-        "pluginDirsVariableRefusal" => ok |facts: FlagFacts| plugin_dirs_variable_refusal(&facts);
-        "withSideloadClosing" => ok |refusals: Vec<String>| with_sideload_closing(refusals);
     }
 }

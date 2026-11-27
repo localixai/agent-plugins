@@ -1,20 +1,10 @@
-import { CONFIG_DIR_VARIABLE, configDirectoryOf } from '../format/config-directory.ts';
-import { error, type PluginIssue } from '../format/issues.ts';
-import { readHelperHeaders } from '../format/helper-headers.ts';
-import { commandTextIssues } from '../format/marketplace/plugin-source-kinds.ts';
-import type { CommandResult, CommandRunner } from '../ports/command-runner.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import type { CommandRunner } from '../ports/command-runner.ts';
 import type { Clock } from '../ports/clock.ts';
 import type { Environment } from '../ports/environment.ts';
 import type { Locations } from '../ports/locations.ts';
-import { SHELLS } from './command-source.ts';
-import { withoutCredentials } from './credential-variables.ts';
-import { normalizeHeaders } from './header-map.ts';
-import {
-  stripsCredentials,
-  type HeaderLayer,
-  type HeaderPlace,
-  type HeadersSetting,
-} from './header-policy.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { HeaderLayer, HeaderPlace, HeadersSetting } from './header-policy.ts';
 import type { ResolvedHeaders } from './types.ts';
 
 /**
@@ -23,7 +13,13 @@ import type { ResolvedHeaders } from './types.ts';
  * `CommandRunner` port, from the configuration directory, under 10 seconds, printing one JSON
  * object of header names and string values. A command that fails means the fetch or download it
  * was run for does not happen: a `PluginIssue`, never a throw.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/header_helper.rs`,
+ * docs/RUST.md): the run is the core's; `helperCache` stays here, at the edge, as it keeps the
+ * host's promises of runs still in flight, so concurrent downloads on one origin share one run.
  */
+
+const call = coreModule('marketplace/header-helper');
 
 export interface HeadersHelperPorts {
   /**
@@ -38,70 +34,16 @@ export interface HeadersHelperPorts {
   readonly locations: Locations;
 }
 
-const HELPER_TIMEOUT_MS = 10_000;
 const CACHE_MS = 60_000;
-const problem = (message: string): PluginIssue => error('headersHelper', message);
-
-/** "The working directory is the configuration directory, which is `~/.claude` or `CLAUDE_CONFIG_DIR`." */
-function configDirectory(ports: HeadersHelperPorts): string {
-  const { locations, environment } = ports;
-  return configDirectoryOf(
-    locations.homeDir(),
-    environment.get(CONFIG_DIR_VARIABLE),
-    (base, relative) => locations.joinPath(base, relative),
-  );
-}
-
-function runIssue(result: CommandResult): PluginIssue | undefined {
-  if (result.startError !== undefined) {
-    return problem(`The headersHelper command could not be run: ${result.startError}`);
-  }
-  if (result.timedOut) {
-    return problem(`The headersHelper command ran longer than ${HELPER_TIMEOUT_MS / 1000} seconds`);
-  }
-  if (result.exitCode !== 0) {
-    return problem('The headersHelper command did not exit 0');
-  }
-  return undefined;
-}
-
-/** "Print one JSON object of header names and string values on stdout." */
-function readHeaders(stdout: string): ResolvedHeaders | PluginIssue {
-  const read = readHelperHeaders(stdout);
-  if ('problem' in read) {
-    return problem(
-      read.problem === 'not-an-object'
-        ? 'The headersHelper command did not print a JSON object'
-        : 'The headersHelper command printed a header whose value is not a string',
-    );
-  }
-  return { headers: normalizeHeaders(read.headers) };
-}
 
 /** Runs the layer's command and reads what it printed; a layer without a command prints no headers. */
-export async function runHeadersHelper(
+export const runHeadersHelper = (
   layer: HeaderLayer,
   ports: HeadersHelperPorts,
   setting: Pick<HeadersSetting, 'platform'>,
   { signal }: { readonly signal: AbortSignal },
-): Promise<ResolvedHeaders | PluginIssue> {
-  const command = layer.headersHelper;
-  if (command === undefined) return { headers: {} };
-  const refused = commandTextIssues(command, 'headersHelper')[0];
-  if (refused !== undefined) return refused;
-  const inherited = ports.environment.snapshot();
-  const result = await ports.runner.run({
-    spec: SHELLS[setting.platform === 'windows' ? 'cmd' : 'sh'](command),
-    cwd: configDirectory(ports),
-    env: {
-      ...(stripsCredentials(layer) ? withoutCredentials(inherited) : inherited),
-      ...layer.variables,
-    },
-    timeoutMs: HELPER_TIMEOUT_MS,
-    signal,
-  });
-  return runIssue(result) ?? readHeaders(result.stdout);
-}
+): Promise<ResolvedHeaders | PluginIssue> =>
+  call.async('runHeadersHelper', layer, ports, { platform: setting.platform }, { signal });
 
 /** Which places reuse one run: "Claude Code reuses one run's output for up to 60 seconds" (a `url` source's command). */
 const REUSED: { readonly [P in HeaderPlace]: boolean } = { 'url-source': true, entry: false };

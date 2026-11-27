@@ -1,4 +1,4 @@
-//! Port of `src/cli/uninstall-flags.ts`, switched.
+//! Ported from `src/cli/uninstall-flags.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The flags of `claude plugin uninstall` that bear on whether it can run.
 
@@ -28,10 +28,4 @@ pub fn flag_problem(args: UninstallFlags, tty: bool) -> Option<&'static str> {
         return Some("--prune needs -y when stdin or stdout is not a terminal");
     }
     None
-}
-
-crate::registry::exports! {
-    "cli/uninstall-flags" {
-        "flagProblem" => ok |args: UninstallFlags, tty: bool| flag_problem(args, tty);
-    }
 }

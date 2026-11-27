@@ -1,19 +1,15 @@
-import { error, type PluginIssue } from '../format/issues.ts';
+import type { PluginIssue } from '../format/issues.ts';
 import type { MarketplaceEntry, MarketplaceSource } from '../format/marketplace/types.ts';
-import {
-  helperAllowed,
-  type AcceptedCommand,
-  filtersRouting,
-  type HeaderLayer,
-  type HeaderOrigin,
-  type HelperEffect,
-  type HelperVerdict,
-  type HeadersSetting,
-  type PluginOperation,
+import { coreModule } from '../wasm/bridge.ts';
+import type {
+  AcceptedCommand,
+  HeaderLayer,
+  HeaderOrigin,
+  HeadersSetting,
+  PluginOperation,
 } from './header-policy.ts';
-import { runHeadersHelper, type HelperCache, type HeadersHelperPorts } from './header-helper.ts';
-import { mergeHeaders, normalizeHeaders, withoutRoutingHeaders } from './header-map.ts';
-import type { HeaderMap, ResolvedHeaders } from './types.ts';
+import type { HelperCache, HeadersHelperPorts } from './header-helper.ts';
+import type { ResolvedHeaders } from './types.ts';
 
 /**
  * The headers of a download (plugins/host-marketplace.md, "Authenticate archive downloads"; "Stay
@@ -23,7 +19,11 @@ import type { HeaderMap, ResolvedHeaders } from './types.ts';
  * replaces a header of the same name in `headers`. Redirects to another origin carry none of them:
  * `fetchArchive` drops them on that hop. The prompt that asks a user to accept an entry's command,
  * and the command's own execution, are the host's (`CommandRunner`); here the policy and the merge.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/download_headers.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/download-headers');
 
 export interface DownloadHeaderPorts extends HeadersHelperPorts {
   /** One per host session, so a `url` source's command output is reused for 60 seconds. */
@@ -36,19 +36,8 @@ export type UrlSourceHeaders = Extract<MarketplaceSource, { kind: 'url' }> & {
   readonly name?: string | undefined;
 };
 
-export function urlSourceLayer(source: UrlSourceHeaders, origin: HeaderOrigin): HeaderLayer {
-  return {
-    place: 'url-source',
-    origin,
-    ...(source.headers === undefined ? {} : { headers: source.headers }),
-    ...(source.headersHelper === undefined ? {} : { headersHelper: source.headersHelper }),
-    variables: {
-      CLAUDE_CODE_MARKETPLACE_URL: source.url,
-      ...(source.name === undefined ? {} : { CLAUDE_CODE_MARKETPLACE_NAME: source.name }),
-    },
-    marketplaceUrl: source.url,
-  };
-}
+export const urlSourceLayer = (source: UrlSourceHeaders, origin: HeaderOrigin): HeaderLayer =>
+  call('urlSourceLayer', source, origin);
 
 /** A plugin entry's fields (`MarketplaceEntry`, or an inline entry in settings). */
 export type EntryHeaders = Pick<MarketplaceEntry, 'name' | 'headers' | 'headersHelper'>;
@@ -60,39 +49,11 @@ export interface EntryDeclaration {
   readonly accepted?: AcceptedCommand | undefined;
 }
 
-export function entryLayer(
+export const entryLayer = (
   entry: EntryHeaders,
   archiveUrl: string,
   declared: EntryDeclaration,
-): HeaderLayer {
-  return {
-    place: 'entry',
-    origin: declared.origin,
-    ...(entry.headers === undefined ? {} : { headers: entry.headers }),
-    ...(entry.headersHelper === undefined ? {} : { headersHelper: entry.headersHelper }),
-    variables: {
-      CLAUDE_CODE_PLUGIN_NAME: entry.name,
-      CLAUDE_CODE_PLUGIN_ARCHIVE_URL: archiveUrl,
-    },
-    operation: declared.operation,
-    archiveUrl,
-    ...(declared.accepted === undefined ? {} : { accepted: declared.accepted }),
-  };
-}
-
-const keepFiltered = (layer: HeaderLayer, headers: HeaderMap): HeaderMap =>
-  filtersRouting(layer) ? withoutRoutingHeaders(headers) : headers;
-
-/** What a refused command does: skip it and send the fixed headers, or refuse the download. */
-const REFUSAL_RESULT: {
-  readonly [E in HelperEffect]: (
-    fixed: HeaderMap,
-    verdict: Extract<HelperVerdict, { allowed: false }>,
-  ) => ResolvedHeaders | PluginIssue;
-} = {
-  'skip-helper': (fixed) => ({ headers: fixed }),
-  'refuse-download': (_, verdict) => error('headersHelper', verdict.message),
-};
+): HeaderLayer => call('entryLayer', entry, archiveUrl, declared);
 
 /**
  * The headers one place sends: its `headers`, with the command's output over them when the
@@ -100,22 +61,13 @@ const REFUSAL_RESULT: {
  * `archiveDownloadHeaders`, for an archive. A command that fails, or a refused one that stops
  * the download, is a `PluginIssue`.
  */
-export async function resolveHeaders(
+export const resolveHeaders = (
   layer: HeaderLayer,
   setting: HeadersSetting,
   ports: DownloadHeaderPorts,
   { signal }: { readonly signal: AbortSignal },
-): Promise<ResolvedHeaders | PluginIssue> {
-  const fixed = keepFiltered(layer, normalizeHeaders(layer.headers ?? {}));
-  if (layer.headersHelper === undefined) return { headers: fixed };
-  const verdict = helperAllowed(layer, setting);
-  if (!verdict.allowed) return REFUSAL_RESULT[verdict.effect](fixed, verdict);
-  const printed = await ports.cache.remember(layer, () =>
-    runHeadersHelper(layer, ports, setting, { signal }),
-  );
-  if ('severity' in printed) return printed;
-  return { headers: mergeHeaders(fixed, keepFiltered(layer, printed.headers)) };
-}
+): Promise<ResolvedHeaders | PluginIssue> =>
+  call.async('resolveHeaders', layer, setting, ports, { signal });
 
 export interface DownloadHeaderRequest {
   readonly archiveUrl: string;
@@ -124,41 +76,15 @@ export interface DownloadHeaderRequest {
   readonly entry?: HeaderLayer;
 }
 
-const originOf = (url: string): string | undefined => {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return undefined;
-  }
-};
-
-/** "Archive downloads on the marketplace URL's origin, meaning the same scheme, host, and port." */
-function sourceApplies(marketplace: HeaderLayer | undefined, archiveUrl: string): boolean {
-  if (marketplace?.marketplaceUrl === undefined) return false;
-  const origin = originOf(marketplace.marketplaceUrl);
-  return origin !== undefined && origin === originOf(archiveUrl);
-}
-
 /**
  * The headers of an archive download: the `url` source's when the archive is on its origin, then
  * the entry's over them. The result fills `ArchiveFetchPlan.headers` (`planPluginFetch` leaves it
  * empty because it knows no settings).
  */
-export async function archiveDownloadHeaders(
+export const archiveDownloadHeaders = (
   request: DownloadHeaderRequest,
   setting: HeadersSetting,
   ports: DownloadHeaderPorts,
   { signal }: { readonly signal: AbortSignal },
-): Promise<ResolvedHeaders | PluginIssue> {
-  const { marketplace, entry } = request;
-  const none: ResolvedHeaders = { headers: {} };
-  const fromSource =
-    marketplace !== undefined && sourceApplies(marketplace, request.archiveUrl)
-      ? await resolveHeaders(marketplace, setting, ports, { signal })
-      : none;
-  if ('severity' in fromSource) return fromSource;
-  const fromEntry =
-    entry === undefined ? none : await resolveHeaders(entry, setting, ports, { signal });
-  if ('severity' in fromEntry) return fromEntry;
-  return { headers: mergeHeaders(fromSource.headers, fromEntry.headers) };
-}
+): Promise<ResolvedHeaders | PluginIssue> =>
+  call.async('archiveDownloadHeaders', request, setting, ports, { signal });

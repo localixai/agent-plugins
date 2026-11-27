@@ -1,11 +1,7 @@
 import type { Clock } from '../ports/clock.ts';
 import type { Environment } from '../ports/environment.ts';
-import { autoUpdatePassAllowed } from './auto-update-precedence.ts';
-import {
-  pluginSkippedByAutoUpdate,
-  type AutoUpdateCandidate,
-  type SkippedBy,
-} from './auto-update-skips.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { AutoUpdateCandidate, SkippedBy } from './auto-update-skips.ts';
 
 /**
  * The auto-update pass (plugins/loading.md, "When auto-update runs"): "In an interactive session,
@@ -13,16 +9,16 @@ import {
  * refreshes every marketplace with auto-update on and updates the plugins installed from them on
  * disk." The kit plans one pass and arms the first one on the `Clock`; how often a host repeats it
  * is the host's choice (the docs describe the one pass of a session).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/updates/auto_update_pass.rs`, docs/RUST.md).
  */
 
-export const FIRST_PASS_MAX_DELAY_MS = 10 * 60_000;
+const call = coreModule('updates/auto-update-pass');
+
+export const FIRST_PASS_MAX_DELAY_MS: number = call('FIRST_PASS_MAX_DELAY_MS');
 
 /** A delay in `[0, 10 minutes]` from a source of numbers in `[0, 1]` (anything outside is clamped). */
-export const firstPassDelayMs = (random: () => number): number =>
-  Math.min(
-    FIRST_PASS_MAX_DELAY_MS,
-    Math.max(0, Math.floor(random() * (FIRST_PASS_MAX_DELAY_MS + 1))),
-  );
+export const firstPassDelayMs = (random: () => number): number => call('firstPassDelayMs', random);
 
 export interface FirstPassOptions {
   readonly clock: Clock;
@@ -39,11 +35,7 @@ export interface ArmedPass {
 }
 
 /** Call this after the first message. The pass is armed only when `autoUpdatePassAllowed`. */
-export function armFirstPass(options: FirstPassOptions): ArmedPass {
-  if (!autoUpdatePassAllowed(options.env)) return { armed: false, cancel: () => {} };
-  const cancel = options.clock.setTimer(options.run, firstPassDelayMs(options.random));
-  return { armed: true, cancel };
-}
+export const armFirstPass = (options: FirstPassOptions): ArmedPass => call('armFirstPass', options);
 
 export interface PassMarketplace {
   readonly name: string;
@@ -65,38 +57,11 @@ export interface PassPlan {
   }[];
 }
 
-const EMPTY: PassPlan = { refresh: [], update: [], skipped: [] };
-
 /** One pass: nothing when the environment turns it off, otherwise per auto-update marketplace its plugins less the skipped. */
-export function planAutoUpdatePass(
+export const planAutoUpdatePass = (
   marketplaces: readonly PassMarketplace[],
   env: Environment,
-): PassPlan {
-  if (!autoUpdatePassAllowed(env)) return EMPTY;
-  const on = marketplaces.filter((marketplace) => marketplace.autoUpdate);
-  const verdicts = on.flatMap((marketplace) =>
-    marketplace.plugins.map((plugin) => ({
-      id: plugin.id,
-      skip: pluginSkippedByAutoUpdate(plugin.candidate),
-    })),
-  );
-  return {
-    refresh: on.map((marketplace) => marketplace.name),
-    update: verdicts.filter((each) => !each.skip.skipped).map((each) => each.id),
-    skipped: verdicts.flatMap((each) =>
-      each.skip.skipped
-        ? [
-            {
-              id: each.id,
-              reason: each.skip.reason,
-              listedInErrorsTab: each.skip.listedInErrorsTab,
-            },
-          ]
-        : [],
-    ),
-  };
-}
+): PassPlan => call('planAutoUpdatePass', marketplaces, env);
 
 /** What the running session shows after a plugin updated on disk: it keeps the version it loaded. */
-export const pluginUpdatedNotice = (name: string): string =>
-  `Plugin updated: ${name} · Run /reload-plugins to apply`;
+export const pluginUpdatedNotice = (name: string): string => call('pluginUpdatedNotice', name);

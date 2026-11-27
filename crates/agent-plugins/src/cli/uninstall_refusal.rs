@@ -1,4 +1,4 @@
-//! Port of `src/cli/uninstall-refusal.ts`, switched.
+//! Ported from `src/cli/uninstall-refusal.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The text after `"<name>" was not uninstalled: ` when a settings file of the scope still switches,
 //! or may still switch, the plugin on (errors.md, "Plugin was not uninstalled").
@@ -58,11 +58,5 @@ pub fn still_on_reason(fact: &StillSwitchedOn) -> String {
         StillSwitchedOn::NotRead { file } => format!(
             "{file} (not read: it is on a network path or is a link to one, or could not be checked). {REPAIR_IT}"
         ),
-    }
-}
-
-crate::registry::exports! {
-    "cli/uninstall-refusal" {
-        "stillOnReason" => ok |fact: StillSwitchedOn| still_on_reason(&fact);
     }
 }

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- `claude plugin install` (both halves, `--config` included), `uninstall` and `configure`, the
+  session flags' plan, the marketplace install steps, a download's headers and its
+  `headersHelper` run, plugin names and the auto-update pass run on the core. The flag strategies,
+  the plugin lookup and the install refusals are the core's alone; `helperCache` stays the host's,
+  as it shares a run still in flight. The session plan keeps the order the flags add its members in.
 - The settings areas are built by the core: the hook policy and the hook session gates (with the
   hook gate and the commands that follow the hooks), the customization lock, the plugin, skill,
   workflow and permission policies, `pluginSuggestionMarketplaces`, the command sources and the

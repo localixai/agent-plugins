@@ -312,7 +312,6 @@ crate::registry::exports! {
         "INSTALL_COMMANDS" => ok || INSTALL_COMMANDS;
         "SKIP_REASONS" => ok || SKIP_REASONS;
         "refreshBeforeInstall" => async ok |request: RefreshRequest| refresh_before_install(&request).await;
-        "NOT_REFRESHED" => ok || NOT_REFRESHED;
         "refreshFailed" => ok |command: InstallCommand| refresh_failed(command);
     }
 }

@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/command-output.ts`, switched.
+//! Ported from `src/marketplace/command-output.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a `command` source printed (plugins/marketplace-reference.md, "What the command must do",
 //! "Output that fails the install or update"): "exactly one line on stdout, the absolute path of the
@@ -112,10 +112,4 @@ pub fn contains_session(
     let directory = comparable(printed, platform);
     let session = comparable(session_directory, platform);
     is_within(&directory, &session)
-}
-
-crate::registry::exports! {
-    "marketplace/command-output" {
-        "samePath" => ok |a: String, b: String, platform: Platform| same_path(&a, &b, platform);
-    }
 }

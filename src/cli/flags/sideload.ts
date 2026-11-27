@@ -9,7 +9,7 @@
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/sideload.rs`, docs/RUST.md).
  */
-import type { FlagFacts, FlagName } from './types.ts';
+import type { FlagName } from './types.ts';
 import { coreModule } from '../../wasm/bridge.ts';
 
 const call = coreModule('cli/flags/sideload');
@@ -17,14 +17,3 @@ const call = coreModule('cli/flags/sideload');
 export const SIDELOAD_FLAGS: readonly FlagName[] = call('SIDELOAD_FLAGS');
 
 export const sideloadMessage = (name: string): string => call('sideloadMessage', name);
-
-/** The refusal for the folders `CLAUDE_CODE_PLUGIN_DIRS` names, when it names any: it says to unset it (J14.8). */
-export const pluginDirsVariableRefusal = (facts: FlagFacts): string | undefined =>
-  call('pluginDirsVariableRefusal', facts);
-
-/**
- * The refusals with the docs' closing line after the rejected flags, once, when any was rejected
- * (plugins/troubleshooting.md, "`--plugin-dir is disabled …`"), as `sideloadVerdict` words it.
- */
-export const withSideloadClosing = (refusals: readonly string[]): readonly string[] =>
-  call('withSideloadClosing', refusals);

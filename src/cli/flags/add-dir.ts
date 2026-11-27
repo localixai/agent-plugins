@@ -13,7 +13,7 @@
  */
 import type { PolicyScope } from '../../settings/layers.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Contribution, Customization, FlagContext } from './types.ts';
+import type { Customization } from './types.ts';
 
 const call = coreModule('cli/flags/add-dir');
 
@@ -42,7 +42,3 @@ export interface LoadFacts {
 /** The kinds a flag-added directory loads under the plan. */
 export const addDirLoads = (facts: LoadFacts): readonly AddDirConfiguration[] =>
   call('addDirLoads', facts);
-
-/** `--add-dir <paths…>`: the directories added, or the startup failure. */
-export const addDir = (paths: readonly string[], context: FlagContext): Contribution =>
-  call('addDir', paths, context);

@@ -1,4 +1,4 @@
-//! Port of `src/cli/flags/session.ts`, switched.
+//! Ported from `src/cli/flags/session.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `--permission-mode` and `--tools` (cli-reference.md, "CLI flags"). `--permission-mode` "accepts
 //! `default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions`, or `manual` as an alias
@@ -71,12 +71,5 @@ pub fn tools(value: &str) -> Contribution {
         tools: Some(names),
         opts_into_task_tools: Some(opts_into_task_tools),
         ..Contribution::default()
-    }
-}
-
-crate::registry::exports! {
-    "cli/flags/session" {
-        "permissionMode" => ok |value: String, context: FlagContext| permission_mode(&value, &context);
-        "tools" => ok |value: String| tools(&value);
     }
 }

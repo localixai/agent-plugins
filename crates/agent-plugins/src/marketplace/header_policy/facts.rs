@@ -129,12 +129,12 @@ pub struct HeaderLayer {
     /// A `url` source: the marketplace URL the command is declared for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marketplace_url: Option<String>,
-    /// An entry: the archive URL its command runs for.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub archive_url: Option<String>,
     /// An entry: what the user is doing, and the command and archive URL they accepted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub operation: Option<PluginOperation>,
+    /// An entry: the archive URL its command runs for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive_url: Option<String>,
     /// The command and archive URL the user accepted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accepted: Option<AcceptedCommand>,

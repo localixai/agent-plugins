@@ -1,4 +1,4 @@
-//! Port of `src/cli/flags/values.ts`, switched.
+//! Ported from `src/cli/flags/values.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What the flag strategies share when they read a value: a JSON text, and a value that holds
 //! several space-separated entries ("`--channels`: space-separated list", "`--plugin-url`:
@@ -25,10 +25,4 @@ pub fn words_of(value: &str) -> Vec<String> {
         .filter(|word| !word.is_empty())
         .map(str::to_owned)
         .collect()
-}
-
-crate::registry::exports! {
-    "cli/flags/values" {
-        "parseJson" => ok |text: String| parse_json(&text);
-    }
 }

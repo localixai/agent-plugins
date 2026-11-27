@@ -58,6 +58,3 @@ export interface Retention {
 /** What the uninstall of `facts.id` from `facts.scope` deletes and keeps. */
 export const uninstallRetention = (facts: RetentionFacts): Retention =>
   call('uninstallRetention', facts);
-
-/** `/plugin` "shows `· data preserved` when it did". */
-export const DATA_PRESERVED: string = call('DATA_PRESERVED');

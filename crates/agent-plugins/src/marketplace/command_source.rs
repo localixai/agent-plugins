@@ -193,7 +193,6 @@ pub struct WithSignal {
 
 crate::registry::exports! {
     "marketplace/command-source" {
-        "SHELLS" => ok |shell: CommandShell, command: String| shells(shell, &command);
         "runCommandSource" => async ok
             |plan: CommandFetchPlan, ports: CommandSourcePorts, setting: CommandSourceSetting, options: WithSignal|
             run_command_source(&plan, &ports, &setting, &options.signal).await;

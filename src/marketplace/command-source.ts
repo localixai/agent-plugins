@@ -7,7 +7,7 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/command_source.rs`, docs/RUST.md).
  */
 import type { PluginIssue } from '../format/issues.ts';
-import type { CommandRunner, CommandSpec } from '../ports/command-runner.ts';
+import type { CommandRunner } from '../ports/command-runner.ts';
 import type { Environment } from '../ports/environment.ts';
 import type { PluginFiles } from '../ports/files.ts';
 import type { Locations } from '../ports/locations.ts';
@@ -38,17 +38,6 @@ export interface FetchedCommandPlugin {
   readonly files: PluginFiles;
   readonly mode: CommandFetchPlan['mode'];
 }
-
-/**
- * `sh -c <command>`, or `cmd.exe /c <command>`: the exec form of the shell the docs name. The core
- * export takes the shell as its first argument, as a table of functions cannot cross.
- */
-export const SHELLS: {
-  readonly [S in CommandFetchPlan['shell']]: (command: string) => CommandSpec;
-} = {
-  sh: (command) => call('SHELLS', 'sh', command),
-  cmd: (command) => call('SHELLS', 'cmd', command),
-};
 
 /** Runs the command and judges what it printed; the fetched plugin, or the issue that refuses it. */
 export const runCommandSource = (

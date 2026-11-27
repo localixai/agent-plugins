@@ -10,17 +10,9 @@
  */
 import type { PluginDirectoryReading } from '../../loading/plugin-folder.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Contribution, FlagContext, SessionPluginRequest } from './types.ts';
+import type { SessionPluginRequest } from './types.ts';
 
 const call = coreModule('cli/flags/plugins');
-
-/** "Each flag takes one path. Repeat the flag for more paths": a path is never split, even with a space in it. */
-export const pluginDir = (paths: readonly string[], context: FlagContext): Contribution =>
-  call('pluginDir', paths, context);
-
-/** "Repeat the flag for multiple plugins, or pass space-separated URLs in a single quoted value." */
-export const pluginUrl = (values: readonly string[], context: FlagContext): Contribution =>
-  call('pluginUrl', values, context);
 
 /**
  * The folders to load for one request, given what `readPluginDirectory` read in the directory: an

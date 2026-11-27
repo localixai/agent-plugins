@@ -1,4 +1,4 @@
-//! Port of `src/cli/flags/channels.ts`, switched.
+//! Ported from `src/cli/flags/channels.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `--channels` and `--dangerously-load-development-channels` (cli-reference.md, "CLI flags";
 //! channels.md, "Enterprise controls"; channels-reference.md, "Test during the research preview").
@@ -123,11 +123,4 @@ pub fn development_channels(values: &[String], context: &FlagContext) -> Contrib
         "plugin:<name>@<marketplace> or server:<name>",
         !context.facts.print,
     )
-}
-
-crate::registry::exports! {
-    "cli/flags/channels" {
-        "channels" => ok |values: Vec<String>| channels(&values);
-        "developmentChannels" => ok |values: Vec<String>, context: FlagContext| development_channels(&values, &context);
-    }
 }

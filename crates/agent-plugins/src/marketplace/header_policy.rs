@@ -333,8 +333,6 @@ crate::registry::exports! {
         "HEADER_PLACES" => ok || HEADER_PLACES;
         "HEADER_ORIGINS" => ok || HEADER_ORIGINS;
         "PLUGIN_OPERATIONS" => ok || PLUGIN_OPERATIONS;
-        "filtersRouting" => ok |layer: HeaderLayer| filters_routing(&layer);
-        "stripsCredentials" => ok |layer: HeaderLayer| strips_credentials(&layer);
         "HELPER_REASONS" => ok || HELPER_REASONS;
         "helperAllowed" => ok |layer: HeaderLayer, setting: HeadersSetting| helper_allowed(&layer, &setting);
     }

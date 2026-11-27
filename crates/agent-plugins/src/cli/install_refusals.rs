@@ -1,27 +1,10 @@
-//! Port of `src/cli/install-refusals.ts`, switched.
+//! Ported from `src/cli/install-refusals.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The refusals of `claude plugin install` before anything is written: bad `--config` values, a dependency closure that cannot be met.
 
-use serde::Deserialize;
-
+use super::install_config::ConfigOutcome;
 use super::result::{CommandOutput, Extras, command_failed};
 use crate::js::{JsObject, JsValue};
-
-/// A `--config` value that is refused: its key and why (`install-config.ts`).
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-pub struct ConfigProblem {
-    /// The key.
-    pub key: String,
-    /// Why.
-    pub message: String,
-}
-
-/// What reading the `--config` values found: only what the refusal reads.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-pub struct ConfigOutcome {
-    /// Failing values: the install is refused.
-    pub refused: Vec<ConfigProblem>,
-}
 
 /// The refusal of bad `--config` values.
 #[must_use]
@@ -67,11 +50,4 @@ pub fn closure_refusal(id: &str, messages: &[String]) -> CommandOutput {
             fields: None,
         },
     )
-}
-
-crate::registry::exports! {
-    "cli/install-refusals" {
-        "configRefusal" => ok |config: ConfigOutcome| config_refusal(&config);
-        "closureRefusal" => ok |id: String, messages: Vec<String>| closure_refusal(&id, &messages);
-    }
 }

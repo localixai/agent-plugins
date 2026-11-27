@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::format::issues::PluginIssue;
 use crate::js::{JsObject, JsValue};
-use crate::registry::Rest;
 
 /// One of the flags the session plan reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -452,13 +451,17 @@ pub struct SessionPlan {
     pub add_dir_loads: Vec<String>,
 }
 
-/// What one flag adds to the plan: lists are appended, a scalar replaces.
+/// What one flag adds to the plan: lists are appended, a scalar replaces. Members in the order
+/// the flags write them (`--settings` writes its layer before its warnings).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Contribution {
     /// Why startup exits with `1`: each a line on stderr. Empty when the session starts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refusals: Option<Vec<String>>,
+    /// The `--settings` layer (`PolicyLayer`), above the files.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flag_settings: Option<JsValue>,
     /// The `warnings` member of the plan.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warnings: Option<Vec<PluginIssue>>,
@@ -477,9 +480,6 @@ pub struct Contribution {
     /// The settings scopes that load (`PolicyScope`); absent means every one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub setting_scopes: Option<Vec<String>>,
-    /// The `--settings` layer (`PolicyLayer`), above the files.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flag_settings: Option<JsValue>,
     /// The `additionalDirectories` member of the plan.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub additional_directories: Option<Vec<String>>,
@@ -546,6 +546,5 @@ crate::registry::exports! {
     "cli/flags/types" {
         "FLAG_NAMES" => ok || FLAG_NAMES;
         "CUSTOMIZATIONS" => ok || CUSTOMIZATIONS;
-        "refuse" => ok |reasons: Rest<String>| refuse(reasons.0);
     }
 }

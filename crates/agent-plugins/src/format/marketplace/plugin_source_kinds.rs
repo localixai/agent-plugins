@@ -1,4 +1,4 @@
-//! Port of `src/format/marketplace/plugin-source-kinds.ts`, switched.
+//! Ported from `src/format/marketplace/plugin-source-kinds.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The object plugin sources, one parser each (plugins/marketplace-reference.md, "Plugin sources"
 //! and its sub-sections): the field rules the docs state. A parser returns the source, or the
@@ -220,9 +220,3 @@ pub const OBJECT_PARSERS: [(PluginSourceKind, ObjectParser); 6] = [
     (PluginSourceKind::Archive, archive),
     (PluginSourceKind::Command, read_command),
 ];
-
-crate::registry::exports! {
-    "format/marketplace/plugin-source-kinds" {
-        "commandTextIssues" => ok |command: String, path: String| command_text_issues(&command, &path);
-    }
-}

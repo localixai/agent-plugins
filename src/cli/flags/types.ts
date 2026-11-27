@@ -190,10 +190,3 @@ export interface SessionPlan {
 
 /** What one flag adds to the plan: lists are appended, a scalar replaces. */
 export type Contribution = Partial<SessionPlan>;
-
-export type FlagStrategy<F extends FlagName> = (
-  value: FlagArguments[F],
-  context: FlagContext,
-) => Contribution;
-
-export const refuse = (...reasons: string[]): Contribution => call('refuse', ...reasons);

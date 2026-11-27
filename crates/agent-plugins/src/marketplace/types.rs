@@ -21,6 +21,14 @@ use crate::ports::marketplace::GitRepository;
 /// Header names are lower case, as on the ports (`HttpRequest`).
 pub type HeaderMap = IndexMap<String, String>;
 
+/// The headers a fetch or download sends, once any command has run. Wrapped, so that a result is
+/// never mistaken for a `PluginIssue` (a header map is a record of strings, and so is an issue).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolvedHeaders {
+    /// The headers.
+    pub headers: HeaderMap,
+}
+
 /// The shell a `command` source runs in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

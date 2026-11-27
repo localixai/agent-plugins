@@ -76,13 +76,6 @@ export interface AddConclusion {
   readonly dependencies: readonly InstallPlan[];
 }
 
-/** The first reason the name is refused, or `undefined`; `plugin install --marketplace` runs the same check. */
-export const nameRefusal = (
-  found: Pick<AddFetched, 'name' | 'registered'>,
-  source: MarketplaceSource | undefined,
-): string | undefined =>
-  call('nameRefusal', { name: found.name, registered: found.registered }, source);
-
 /** The starts that wait for the host's fetch. */
 export type PendingAdd = Extract<AddStart, { kind: 'fetch' | 'claudeai' }>;
 

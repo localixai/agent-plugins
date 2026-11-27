@@ -362,8 +362,6 @@ pub fn conclude_marketplace_add(
 crate::registry::exports! {
     "cli/marketplace-add" {
         "startMarketplaceAdd" => ok |args: AddArguments| start_marketplace_add(&args);
-        "nameRefusal" => ok |found: NameFacts, source: Option<MarketplaceSource>|
-            name_refusal(&found.name, &found.registered, source.as_ref());
         "concludeMarketplaceAdd" => fallible |start: AddStart, found: AddFetched| conclude_marketplace_add(&start, &found);
     }
 }

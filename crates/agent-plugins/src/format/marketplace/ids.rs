@@ -199,7 +199,6 @@ crate::registry::exports! {
         "isPluginIdPart" => ok |name: String| is_plugin_id_part(&name);
         "pluginIdIssues" => ok |part: IdPart, name: String, path: String| plugin_id_issues(part, &name, &path);
         "desktopNameIssues" => ok |part: IdPart, name: String, path: String| desktop_name_issues(part, &name, &path);
-        "parsePluginRef" => ok |text: String| parse_plugin_ref(&text);
         "pluginNameOf" => ok |id: String| plugin_name_of(&id);
     }
 }

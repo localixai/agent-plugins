@@ -189,8 +189,6 @@ pub fn mcp_sources_read(plan: &McpPlanView) -> Vec<&'static str> {
 crate::registry::exports! {
     "cli/flags/mcp" {
         "DEFAULT_MCP_TIMEOUT_MS" => ok || DEFAULT_MCP_TIMEOUT_MS;
-        "mcpConfig" => ok |values: Vec<String>, context: FlagContext| mcp_config(&values, &context);
-        "strictMcpConfig" => ok || Contribution { ..strict_mcp_config() };
         "MCP_READ_SOURCES" => ok || MCP_READ_SOURCES;
         "mcpSourcesRead" => ok |plan: McpPlanView| mcp_sources_read(&plan);
     }

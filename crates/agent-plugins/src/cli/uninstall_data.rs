@@ -161,6 +161,5 @@ crate::registry::exports! {
     "cli/uninstall-data" {
         "SAVED_KEPT_UNREADABLE" => ok || SAVED_KEPT_UNREADABLE;
         "uninstallRetention" => ok |facts: RetentionFacts| uninstall_retention(&facts);
-        "DATA_PRESERVED" => ok || DATA_PRESERVED;
     }
 }

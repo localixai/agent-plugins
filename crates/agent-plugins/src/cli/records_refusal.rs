@@ -1,4 +1,4 @@
-//! Port of `src/cli/records-refusal.ts`, switched.
+//! Ported from `src/cli/records-refusal.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! While `installed_plugins.json` holds a record this version cannot read, or is in a format it
 //! does not know, `claude plugin install`, `uninstall` and `update` refuse before anything else
@@ -27,11 +27,4 @@ pub fn records_refusal(
             fields: None,
         },
     ))
-}
-
-crate::registry::exports! {
-    "cli/records-refusal" {
-        "recordsRefusal" => ok |command: RefusingCommand, name: String, unreadable: Option<String>|
-            records_refusal(command, &name, unreadable.as_deref());
-    }
 }

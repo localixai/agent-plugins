@@ -116,8 +116,6 @@ pub fn plugin_folders_of(
 
 crate::registry::exports! {
     "cli/flags/plugins" {
-        "pluginDir" => ok |paths: Vec<String>, context: FlagContext| plugin_dir(&paths, &context);
-        "pluginUrl" => ok |values: Vec<String>, context: FlagContext| plugin_url(&values, &context);
         "pluginFoldersOf" => ok |request: SessionPluginRequest, reading: PluginDirectoryReading, host_version: Option<String>|
             plugin_folders_of(&request, &reading, host_version.as_deref());
     }

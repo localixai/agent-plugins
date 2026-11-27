@@ -11,17 +11,12 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/mcp.rs`, docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Contribution, FlagContext, SessionPlan } from './types.ts';
+import type { SessionPlan } from './types.ts';
 
 const call = coreModule('cli/flags/mcp');
 
 /** "30 seconds by default." */
 export const DEFAULT_MCP_TIMEOUT_MS: number = call('DEFAULT_MCP_TIMEOUT_MS');
-
-export const mcpConfig = (values: readonly string[], context: FlagContext): Contribution =>
-  call('mcpConfig', values, context);
-
-export const strictMcpConfig = (): Contribution => call('strictMcpConfig');
 
 /** The places MCP servers are read from. */
 export const MCP_READ_SOURCES: readonly ['user', 'project', 'local', 'plugins', 'command-line'] =

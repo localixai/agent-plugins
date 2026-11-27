@@ -1,4 +1,4 @@
-//! Port of `src/cli/plugin-ref.ts`, switched.
+//! Ported from `src/cli/plugin-ref.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The `<plugin>` argument of the plugin commands (plugins/cli-reference.md, "claude plugin
 //! commands": "a `<plugin>` argument is a plugin `name` or `name@marketplace`. When two marketplaces
@@ -47,12 +47,4 @@ pub fn qualified_commands(verb: &str, ids: &[String]) -> Vec<String> {
     ids.iter()
         .map(|id| format!("claude plugin {verb} {id}"))
         .collect()
-}
-
-crate::registry::exports! {
-    "cli/plugin-ref" {
-        "nameOf" => ok |id: String| name_of(&id);
-        "matchingIds" => ok |text: String, ids: Vec<String>| matching_ids(&text, &ids);
-        "qualifiedCommands" => ok |verb: String, ids: Vec<String>| qualified_commands(&verb, &ids);
-    }
 }

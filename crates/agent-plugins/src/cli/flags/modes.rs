@@ -114,10 +114,6 @@ pub fn managed_policy_under_safe_mode(kind: &str) -> Option<bool> {
 
 crate::registry::exports! {
     "cli/flags/modes" {
-        "bare" => ok bare;
-        "safeMode" => ok safe_mode;
-        "disableSlashCommands" => ok disable_slash_commands;
-        "restricted" => ok restricted;
         "managedPolicyUnderSafeMode" => ok |kind: String| managed_policy_under_safe_mode(&kind);
     }
 }

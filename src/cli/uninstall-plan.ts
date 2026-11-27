@@ -1,23 +1,8 @@
-import type { JsonValue } from '../foundation/plain-data.ts';
-import {
-  dependentsOf,
-  type GraphFacts,
-  type InstalledRecord,
-} from '../marketplace/dependency-graph.ts';
-import { planUninstall } from '../marketplace/dependency-prune.ts';
-import {
-  commandFailed,
-  commandSucceeded,
-  usageError,
-  type CommandOutput,
-  type ResultFields,
-} from './result.ts';
-import { matchingIds, nameOf, qualifiedCommands } from './plugin-ref.ts';
-import { recordsRefusal } from './records-refusal.ts';
-import { flagProblem } from './uninstall-flags.ts';
-import { chooseScope, type ConfigScope } from './scope.ts';
-import { DATA_PRESERVED, uninstallRetention, type Retention } from './uninstall-data.ts';
-import { stillOnReason, type StillSwitchedOn } from './uninstall-refusal.ts';
+import type { GraphFacts, InstalledRecord } from '../marketplace/dependency-graph.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { CommandOutput } from './result.ts';
+import type { ConfigScope } from './scope.ts';
+import type { StillSwitchedOn } from './uninstall-refusal.ts';
 
 /**
  * `claude plugin uninstall <plugin>` as two decisions around the host's writes (plugins/
@@ -27,7 +12,11 @@ import { stillOnReason, type StillSwitchedOn } from './uninstall-refusal.ts';
  * `concludeUninstall` says what the command prints and which saved state (options, secrets, data
  * directory) goes. The retention rules are `uninstallRetention`'s (G8). What the docs leave open is
  * in spec/judgments.md.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/uninstall_plan.rs`, docs/RUST.md).
  */
+
+const call = coreModule('cli/uninstall-plan');
 
 export interface UninstallArguments {
   /** `name` or `name@marketplace`. */
@@ -101,195 +90,15 @@ export interface UninstallConclusion {
   readonly removePruned: readonly string[];
 }
 
-const done = (output: CommandOutput): UninstallStart => ({ kind: 'done', output });
-
-const failureLine = (argument: string, reason: string): string =>
-  `Failed to uninstall plugin "${argument}": ${reason}`;
-
-const notInstalled = (argument: string, scope: ConfigScope): UninstallStart =>
-  done(
-    commandFailed(
-      'uninstall',
-      failureLine(argument, `Plugin "${argument}" is not installed at scope ${scope}`),
-      {
-        failureCode: 'not_installed',
-      },
-    ),
-  );
-
-const ambiguous = (argument: string, ids: readonly string[]): UninstallStart =>
-  done(
-    commandFailed(
-      'uninstall',
-      failureLine(
-        argument,
-        `"${argument}" is installed from more than one marketplace; run one of: ${qualifiedCommands('uninstall', ids).join(', ')}`,
-      ),
-      { failureCode: 'ambiguous_plugin' },
-    ),
-  );
-
-function pruneStep(
-  args: UninstallArguments,
-  graph: GraphFacts,
-  id: string,
-  scope: ConfigScope,
-): PruneStep {
-  if (args.prune !== true) return { orphans: [], confirm: 'none' };
-  const orphans = planUninstall(id, scope, graph, true).pruned;
-  if (orphans.length === 0) return { orphans, confirm: 'none' };
-  return { orphans, confirm: args.yes === true ? 'skip' : 'ask' };
-}
-
 /** What to remove, or what the command ends with before anything is touched. */
-export function startUninstall(args: UninstallArguments, facts: UninstallFacts): UninstallStart {
-  const chosen = chooseScope('uninstall', args.scope);
-  if ('reason' in chosen) return done(chosen);
-  const problem = flagProblem(args, facts.tty);
-  if (problem !== undefined) return done(usageError(problem));
-  const records = recordsRefusal('uninstall', args.plugin, facts.unreadableRecords);
-  if (records !== undefined) return done(records);
-  const { scope } = chosen;
-  const here = facts.graph.installed
-    .filter((record) => record.scope === scope)
-    .map((record) => record.id);
-  const [id, ...others] = matchingIds(args.plugin, here);
-  if (id === undefined) return notInstalled(args.plugin, scope);
-  if (others.length > 0) return ambiguous(args.plugin, [id, ...others]);
-  return {
-    kind: 'remove',
-    argument: args.plugin,
-    id,
-    scope,
-    keepData: args.keepData === true,
-    json: args.json === true,
-    prune: pruneStep(args, facts.graph, id, scope),
-    requiredBy: dependentsOf(id, facts.graph).map(nameOf),
-  };
-}
-
-const resultFields = (start: Extract<UninstallStart, { kind: 'remove' }>): ResultFields => ({
-  pluginId: start.id,
-  scope: start.scope,
-});
-
-function stillOn(
-  start: Extract<UninstallStart, { kind: 'remove' }>,
-  fact: StillSwitchedOn,
-): UninstallConclusion {
-  const name = nameOf(start.id);
-  const message = failureLine(
-    start.argument,
-    `"${name}" was not uninstalled: ${stillOnReason(fact)}`,
-  );
-  return {
-    output: commandFailed('uninstall', message, {
-      failureCode: 'settings_still_on',
-      fields: resultFields(start),
-    }),
-    json: start.json,
-    removeRecord: false,
-    cleanup: [],
-    removePruned: [],
-  };
-}
-
-const cleanupOf = (id: string, retention: Retention): readonly Cleanup[] => {
-  const deleteSaved = retention.saved === 'delete';
-  const folder = retention.data === 'delete' ? retention.dataFolder : undefined;
-  if (!deleteSaved && folder === undefined) return [];
-  return [{ id, deleteSaved, ...(folder === undefined ? {} : { deleteDataFolder: folder }) }];
-};
-
-/** The orphans to remove: those the user confirmed or `-y` allowed. */
-const prunedOf = (
-  start: Extract<UninstallStart, { kind: 'remove' }>,
-  after: AfterRemoval,
-): readonly string[] => {
-  if (start.prune.confirm === 'ask')
-    return after.pruneConfirmed === true ? start.prune.orphans : [];
-  return start.prune.orphans;
-};
-
-const withoutPruned = (
-  remaining: AfterRemoval['remaining'],
-  pruned: readonly string[],
-  scope: ConfigScope,
-): AfterRemoval['remaining'] =>
-  Array.isArray(remaining)
-    ? remaining.filter((record) => record.scope !== scope || !pruned.includes(record.id))
-    : remaining;
-
-const KEPT_NOTE =
-  'The options, secrets and data directory stayed because the installed plugins could not be read back and the plugin may still be installed at another scope';
-
-function unreadableNote(retention: Retention): readonly string[] {
-  return [
-    `${KEPT_NOTE}. To delete them, remove the saved options and secrets in /plugin or the settings, and the folder ~/.claude/plugins/data/${retention.dataFolder}/`,
-  ];
-}
-
-const requiredNote = (requiredBy: readonly string[]): string =>
-  requiredBy.length === 0 ? '' : ` — warning: required by ${requiredBy.join(', ')}`;
-
-const successMessage = (
-  start: Extract<UninstallStart, { kind: 'remove' }>,
-  extra: readonly string[],
-): string =>
-  [
-    `Successfully uninstalled plugin: ${nameOf(start.id)} (scope: ${start.scope})${requiredNote(start.requiredBy)}`,
-    ...extra,
-  ].join('\n');
-
-const jsonFields = (
-  start: Extract<UninstallStart, { kind: 'remove' }>,
-  retention: Retention,
-): ResultFields => {
-  const fields: Record<string, JsonValue> = {
-    ...resultFields(start),
-    keptData: retention.data === 'keep',
-  };
-  if (retention.savedKept !== undefined) fields['savedKept'] = retention.savedKept;
-  return fields;
-};
+export const startUninstall = (args: UninstallArguments, facts: UninstallFacts): UninstallStart =>
+  call('startUninstall', args, facts);
 
 /** What the command prints and which state goes, once the host has switched the plugin off and removed its record. */
-export function concludeUninstall(
+export const concludeUninstall = (
   start: Extract<UninstallStart, { kind: 'remove' }>,
   after: AfterRemoval,
-): UninstallConclusion {
-  if (after.settingsStillOn !== undefined) return stillOn(start, after.settingsStillOn);
-  const pruned = prunedOf(start, after);
-  const remaining = withoutPruned(after.remaining, pruned, start.scope);
-  const retention = uninstallRetention({
-    id: start.id,
-    scope: start.scope,
-    keepData: start.keepData,
-    remaining,
-  });
-  const extra = [
-    ...(retention.savedKept === undefined ? [] : unreadableNote(retention)),
-    ...(pruned.length === 0
-      ? []
-      : [`Removed ${pruned.length} auto-installed plugins: ${pruned.join(', ')}`]),
-  ];
-  // Judgment: `--keep-data` also keeps the folders of the plugins `--prune` removes (spec/judgments.md).
-  const prunedCleanup = pruned.flatMap((id) =>
-    cleanupOf(
-      id,
-      uninstallRetention({ id, scope: start.scope, keepData: start.keepData, remaining }),
-    ),
-  );
-  return {
-    output: commandSucceeded('uninstall', successMessage(start, extra), {
-      fields: jsonFields(start, retention),
-    }),
-    json: start.json,
-    removeRecord: true,
-    cleanup: [...cleanupOf(start.id, retention), ...prunedCleanup],
-    removePruned: pruned,
-  };
-}
+): UninstallConclusion => call('concludeUninstall', start, after);
 
 /** What `/plugin` shows beside a plugin whose data directory stayed (`keptData`). */
-export const dataPreservedMark = (keptData: boolean): string => (keptData ? DATA_PRESERVED : '');
+export const dataPreservedMark = (keptData: boolean): string => call('dataPreservedMark', keptData);

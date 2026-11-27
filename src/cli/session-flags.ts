@@ -1,19 +1,6 @@
-import { isTruthyEnv } from '../format/env-flag.ts';
-import { usageError, type UsageError } from './result.ts';
-import { addDirLoads } from './flags/add-dir.ts';
-import { sessionAgent } from './flags/agents.ts';
-import { FLAG_STRATEGIES } from './flags/registry.ts';
-import { pluginDirsVariableRefusal, withSideloadClosing } from './flags/sideload.ts';
-import { forwardSubagentTextVariable } from './flags/subagent-prompt.ts';
-import {
-  FLAG_NAMES,
-  type Contribution,
-  type FlagContext,
-  type FlagFacts,
-  type FlagName,
-  type GivenFlags,
-  type SessionPlan,
-} from './flags/types.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { UsageError } from './result.ts';
+import type { FlagFacts, GivenFlags, SessionPlan } from './flags/types.ts';
 
 /**
  * The flags of one `claude` run as a plan (cli-reference.md, "CLI flags"; plugins/cli-reference.md,
@@ -22,96 +9,16 @@ import {
  * behaviour: settings layers, session plugins, the tool filter, the permission mode, the agents,
  * the channel verdict, the MCP sources. Pure over what the host parsed and read. A plan with
  * `refusals` is a run that exits `1` without starting.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/cli/session_flags.rs`, docs/RUST.md).
  */
 
-const EMPTY: SessionPlan = {
-  refusals: [],
-  warnings: [],
-  sessionPlugins: [],
-  skipped: [],
-  readsStoredCredentials: true,
-  env: {},
-  additionalDirectories: [],
-  forwardSubagentText: false,
-  channels: [],
-  mcpConfigs: [],
-  strictMcpConfig: false,
-  optsIntoTaskTools: false,
-  restricted: false,
-  fileToolsConfined: false,
-  cloudSessions: 'allowed',
-  addDirLoads: [],
-};
-
-/** Two flags that each name a set of settings scopes leave the scopes both name. */
-function scopesOf(
-  before: SessionPlan['settingScopes'],
-  added: SessionPlan['settingScopes'],
-): Pick<SessionPlan, 'settingScopes'> {
-  if (added === undefined) return before === undefined ? {} : { settingScopes: before };
-  return { settingScopes: before === undefined ? added : before.filter((s) => added.includes(s)) };
-}
-
-/** What `added` changes: lists grow, a scalar replaces, scopes intersect. */
-function combine(plan: SessionPlan, added: Contribution): SessionPlan {
-  return {
-    ...plan,
-    ...added,
-    refusals: [...plan.refusals, ...(added.refusals ?? [])],
-    warnings: [...plan.warnings, ...(added.warnings ?? [])],
-    sessionPlugins: [...plan.sessionPlugins, ...(added.sessionPlugins ?? [])],
-    skipped: [...new Set([...plan.skipped, ...(added.skipped ?? [])])],
-    env: { ...plan.env, ...added.env },
-    additionalDirectories: [...plan.additionalDirectories, ...(added.additionalDirectories ?? [])],
-    channels: [...plan.channels, ...(added.channels ?? [])],
-    mcpConfigs: [...plan.mcpConfigs, ...(added.mcpConfigs ?? [])],
-    ...scopesOf(plan.settingScopes, added.settingScopes),
-  };
-}
-
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- `F` ties the flag's name to the strategy and the value it takes
-function runFlag<F extends FlagName>(name: F, context: FlagContext): Contribution {
-  const value = context.given[name];
-  return value === undefined ? {} : FLAG_STRATEGIES[name](value, context);
-}
-
-/**
- * What only the whole plan decides: the agent (`--agent` over the `agent` setting), what an
- * `--add-dir` directory loads (it follows the modes and the setting sources the flags chose) and
- * the variables that stand in for a flag.
- */
-function settled(plan: SessionPlan, given: GivenFlags, facts: FlagFacts): SessionPlan {
-  const named = sessionAgent(given['--agent'], facts.agentSetting);
-  const loads =
-    plan.additionalDirectories.length === 0
-      ? []
-      : addDirLoads({
-          bare: given['--bare'] === true,
-          claudeMdEnabled: isTruthyEnv(facts.env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD),
-          skipped: plan.skipped,
-          ...(plan.settingScopes === undefined ? {} : { settingScopes: plan.settingScopes }),
-        });
-  const variable = pluginDirsVariableRefusal(facts);
-  const combined = combine(
-    { ...plan, addDirLoads: loads, ...(named === undefined ? {} : { agent: named }) },
-    {
-      ...forwardSubagentTextVariable(facts),
-      ...(variable === undefined ? {} : { refusals: [variable] }),
-    },
-  );
-  return { ...combined, refusals: withSideloadClosing(combined.refusals) };
-}
+const call = coreModule('cli/session-flags');
 
 /** What the flags a run was given add up to, in the order of `FLAG_NAMES`. */
-export function planSessionFlags(given: GivenFlags, facts: FlagFacts): SessionPlan {
-  const context: FlagContext = { given, facts };
-  const flagged = FLAG_NAMES.reduce<SessionPlan>(
-    (plan, name) => combine(plan, runFlag(name, context)),
-    EMPTY,
-  );
-  return settled(flagged, given, facts);
-}
+export const planSessionFlags = (given: GivenFlags, facts: FlagFacts): SessionPlan =>
+  call('planSessionFlags', given, facts);
 
 /** What the run ends with when the plan refuses it: exit `1`, the reasons on stderr, no result line. */
 export const startupRefusal = (plan: SessionPlan): UsageError | undefined =>
-  plan.refusals.length === 0 ? undefined : usageError(plan.refusals.join('\n'));
+  call('startupRefusal', plan);

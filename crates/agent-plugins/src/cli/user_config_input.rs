@@ -11,14 +11,14 @@
 //! (calling it throws), keeps its text here: the check then reports the type, as for any value
 //! that does not fit. A declared option is a valid manifest's, so no caller meets it.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::js::{self, JsObject, JsValue, in_property_order, property_order};
 use crate::loading::resolve::user_config::ResolvedUserConfig;
 use crate::loading::resolve::user_config_values::validate_user_config_values;
 
 /// A key and the text given for it that did not make a value.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigProblem {
     /// The key.

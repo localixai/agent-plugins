@@ -1,4 +1,4 @@
-//! Port of `src/cli/flags/subagent-prompt.ts`, switched.
+//! Ported from `src/cli/flags/subagent-prompt.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! `--append-subagent-system-prompt`, `--append-subagent-system-prompt-file` and
 //! `--forward-subagent-text` (cli-reference.md, "CLI flags"; errors.md, "Conflict between a
@@ -98,14 +98,5 @@ pub fn forward_subagent_text(_value: bool, context: &FlagContext) -> Contributio
             "has no effect without --print and --output-format stream-json",
         )]),
         ..Contribution::default()
-    }
-}
-
-crate::registry::exports! {
-    "cli/flags/subagent-prompt" {
-        "appendSubagentPrompt" => ok |text: String, context: FlagContext| append_subagent_prompt(&text, &context);
-        "appendSubagentPromptFile" => ok |path: String, context: FlagContext| append_subagent_prompt_file(&path, &context);
-        "forwardSubagentTextVariable" => ok |facts: FlagFacts| forward_subagent_text_variable(&facts);
-        "forwardSubagentText" => ok |value: bool, context: FlagContext| forward_subagent_text(value, &context);
     }
 }

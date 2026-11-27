@@ -62,8 +62,6 @@ export type PluginSource =
       readonly mode: 'copy' | 'link';
     };
 
-export type PluginSourceOf<Kind extends PluginSourceKind> = Extract<PluginSource, { kind: Kind }>;
-
 /**
  * The ten forms a marketplace source takes: in `extraKnownMarketplaces`, in `marketplace add`
  * input, and, for the last three, only in the policy lists (marketplace-reference.md,

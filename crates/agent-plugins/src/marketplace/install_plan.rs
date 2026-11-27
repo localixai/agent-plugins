@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/install-plan.ts` at sha256:b137d8a8f20a.
+//! Port of `src/marketplace/install-plan.ts`, switched.
 //!
 //! Installing a marketplace plugin as two pure steps (plugins/loading.md, "Find plugins on disk",
 //! "In-place and copied plugins", "Cleanup of previous versions"; plugins/marketplace-reference.md,

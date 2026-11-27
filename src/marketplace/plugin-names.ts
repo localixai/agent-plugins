@@ -1,6 +1,7 @@
 import type { EntryMerge } from '../format/marketplace/entry-merge.ts';
 import type { MarketplaceEntry } from '../format/marketplace/types.ts';
-import { pluginNotFound, type PluginNotFound } from './install-errors.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { PluginNotFound } from './install-errors.ts';
 
 /**
  * The two names of a marketplace plugin (plugins/loading.md, "Entry name and manifest name";
@@ -8,7 +9,11 @@ import { pluginNotFound, type PluginNotFound } from './install-errors.ts';
  * name in `marketplace.json` is "the install and enable key": what goes in `enabledPlugins`, what
  * the cache directory is named after and what `claude plugin list` shows. The `name` in the manifest
  * is "what the plugin's components are namespaced under, and what name conflicts compare".
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/plugin_names.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/plugin-names');
 
 export interface PluginNames {
   /** `<entry name>@<marketplace>`: the install id, the `enabledPlugins` key and the id `claude plugin list` shows. */
@@ -20,13 +25,8 @@ export interface PluginNames {
 }
 
 /** The names of a plugin from its entry merge; a plugin that fails to load keeps its entry name, as it still has an id. */
-export function pluginNames(merge: EntryMerge, marketplace: string): PluginNames {
-  return {
-    installId: `${merge.installName}@${marketplace}`,
-    cacheName: merge.installName,
-    namespace: merge.manifest?.name ?? merge.installName,
-  };
-}
+export const pluginNames = (merge: EntryMerge, marketplace: string): PluginNames =>
+  call('pluginNames', merge, marketplace);
 
 export type PluginLookup =
   | { readonly entry: MarketplaceEntry }
@@ -37,12 +37,9 @@ export type PluginLookup =
  * installs by the manifest name, Claude Code reports `Plugin "<manifest-name>" not found in
  * marketplace "<marketplace>"`." The catalog is entries, so a manifest name never matches.
  */
-export function lookupPlugin(
+export const lookupPlugin = (
   entries: readonly MarketplaceEntry[],
   name: string,
   marketplace: string,
   refresh: { readonly done: boolean; readonly failure?: string },
-): PluginLookup {
-  const entry = entries.find((one) => one.name === name);
-  return entry === undefined ? { notFound: pluginNotFound(name, marketplace, refresh) } : { entry };
-}
+): PluginLookup => call('lookupPlugin', entries, name, marketplace, refresh);

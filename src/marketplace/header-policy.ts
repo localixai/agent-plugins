@@ -98,11 +98,6 @@ export interface HeadersSetting {
   readonly managedMarketplace: boolean;
 }
 
-/** "Every `marketplace.json` entry is filtered this way", and an entry in project or `--add-dir` settings. */
-export const filtersRouting = (layer: HeaderLayer): boolean => call('filtersRouting', layer);
-
-export const stripsCredentials = (layer: HeaderLayer): boolean => call('stripsCredentials', layer);
-
 /**
  * Why a command did not run. `skip-helper`: the fixed `headers` still go (judgment where the docs
  * only say the command does not run). `refuse-download`: the plugin is not downloaded at all.

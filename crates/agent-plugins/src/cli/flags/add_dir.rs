@@ -157,6 +157,5 @@ crate::registry::exports! {
     "cli/flags/add-dir" {
         "ADD_DIR_CONFIGURATION" => ok || ADD_DIR_CONFIGURATION;
         "addDirLoads" => ok |facts: LoadFacts| add_dir_loads(&facts);
-        "addDir" => ok |paths: Vec<String>, context: FlagContext| add_dir(&paths, &context);
     }
 }

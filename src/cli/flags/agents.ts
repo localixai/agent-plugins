@@ -13,17 +13,11 @@
  * Implemented by the Rust core (`crates/agent-plugins/src/cli/flags/agents.rs`, docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { Contribution, FlagContext } from './types.ts';
 
 const call = coreModule('cli/flags/agents');
-
-export const agent = (name: string): Contribution => call('agent', name);
 
 /** "Specify an agent for the current session (overrides the `agent` setting)": the flag wins when both name one. */
 export const sessionAgent = (
   flag: string | undefined,
   setting: string | undefined,
 ): string | undefined => call('sessionAgent', flag, setting);
-
-export const agents = (value: string, context: FlagContext): Contribution =>
-  call('agents', value, context);

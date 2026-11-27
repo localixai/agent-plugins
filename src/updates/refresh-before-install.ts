@@ -85,9 +85,6 @@ export interface RefreshFailure {
   readonly report?: PluginIssue;
 }
 
-/** What `claude plugin install` reports when the refresh failed. */
-export const NOT_REFRESHED: 'marketplace not refreshed' = call('NOT_REFRESHED');
-
 /**
  * "When the refresh fails, the install proceeds from the cached catalog and `claude plugin install`
  * reports `marketplace not refreshed`."

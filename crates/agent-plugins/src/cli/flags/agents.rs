@@ -184,8 +184,6 @@ pub fn agents(value: &str, context: &FlagContext) -> Contribution {
 
 crate::registry::exports! {
     "cli/flags/agents" {
-        "agent" => ok |name: String| agent(&name);
         "sessionAgent" => ok |flag: Option<String>, setting: Option<String>| session_agent(flag, setting);
-        "agents" => ok |value: String, context: FlagContext| agents(&value, &context);
     }
 }
