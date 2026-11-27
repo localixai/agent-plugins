@@ -1,4 +1,4 @@
-//! Port of `src/settings/permissions/managed-only.ts`, switched.
+//! Ported from `src/settings/permissions/managed-only.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Which settings files contribute permission rules and directories:
 //! `allowManagedPermissionRulesOnly` (settings-reference.md), the policy an embedding host passes
@@ -273,9 +273,7 @@ fn first_of_each(list: &[SettingsDirectory]) -> Vec<SettingsDirectory> {
         .collect()
 }
 
-crate::registry::exports! {
-    "settings/permissions/managed-only" {
-        "permissionLists" => async ok |view: Port, context: Port|
-            permission_lists(&view, &Context::read(&context).await).await;
-    }
+/// The rules and directories in force over `view`, under the host's `PolicyContext`.
+pub async fn permission_lists_of(view: &dyn PolicyView, context: &Port) -> PermissionLists {
+    permission_lists(view, &Context::read(context).await).await
 }

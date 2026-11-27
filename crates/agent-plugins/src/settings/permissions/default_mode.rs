@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use crate::format::issues::{PluginIssue, warning};
 use crate::js::is_truthy;
 use crate::protocol::permission_modes::normalize_permission_mode;
-use crate::registry::Port;
 use crate::settings::layers::PolicyScope;
 use crate::settings::permissions::start_notices::{NoticeFacts, start_notices};
 use crate::settings::view::PolicyView;
@@ -50,9 +49,12 @@ pub struct StartInput {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StartSettings {
-    disable_auto_mode: bool,
-    disable_bypass_permissions_mode: bool,
-    skip_dangerous_mode_permission_prompt: bool,
+    /// `disableAutoMode` is `"disable"`.
+    pub disable_auto_mode: bool,
+    /// `permissions.disableBypassPermissionsMode` is `"disable"`.
+    pub disable_bypass_permissions_mode: bool,
+    /// `skipDangerousModePermissionPrompt` is `true`.
+    pub skip_dangerous_mode_permission_prompt: bool,
 }
 
 /// The mode a session starts in, or why it is refused.
@@ -370,7 +372,5 @@ crate::registry::exports! {
         "LAUNCH_SURFACES" => ok || LAUNCH_SURFACES;
         "BYPASS_IGNORED_NOTICE" => ok || BYPASS_IGNORED_NOTICE;
         "BYPASS_AS_ROOT" => ok || BYPASS_AS_ROOT;
-        "startingMode" => async ok |view: Port, settings: StartSettings, input: StartInput|
-            starting_mode(&view, &settings, &input).await;
     }
 }

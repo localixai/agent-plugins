@@ -7,9 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::js::JsValue;
 use crate::ports::BoxFuture;
-use crate::registry::Callback;
 
 /// A plugin that ships hooks, with the facts the locks look at.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -177,12 +175,6 @@ pub trait ForceEnabled: Send + Sync {
 impl<F: Fn(&str) -> bool + Send + Sync> ForceEnabled for F {
     fn force_enabled<'a>(&'a self, id: &'a str) -> BoxFuture<'a, bool> {
         Box::pin(std::future::ready(self(id)))
-    }
-}
-
-impl ForceEnabled for Callback {
-    fn force_enabled<'a>(&'a self, id: &'a str) -> BoxFuture<'a, bool> {
-        Box::pin(self.call(vec![JsValue::String(id.to_owned())]))
     }
 }
 

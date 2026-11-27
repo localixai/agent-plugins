@@ -23,7 +23,6 @@ const call = coreModule('settings/marketplaces/registry');
  * docs' allowlist example names ("Allow only the official marketplace").
  */
 export const OFFICIAL_MARKETPLACE: 'claude-plugins-official' = call('OFFICIAL_MARKETPLACE');
-export const OFFICIAL_SOURCE: SdkMarketplaceSource = call('OFFICIAL_SOURCE');
 
 /**
  * - `register`: the host adds the marketplace from this entry.

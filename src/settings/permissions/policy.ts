@@ -1,12 +1,19 @@
 import type { PermissionMode } from '../../protocol/official.ts';
 import type { PolicyContext } from '../context.ts';
 import type { PolicyView } from '../view.ts';
-import { autoModeSettings, type AutoModeSettings } from './auto-mode.ts';
-import { startingMode, type StartInput, type StartingMode } from './default-mode.ts';
-import { permissionLists, type SettingsDirectory, type SettingsRule } from './managed-only.ts';
-import { runningModeOf, type RunningMode } from './running-mode.ts';
+import type { AutoModeSettings } from './auto-mode.ts';
+import type { StartInput, StartingMode } from './default-mode.ts';
+import type { SettingsDirectory, SettingsRule } from './managed-only.ts';
+import type { RunningMode } from './running-mode.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
-/** The permission keys of the settings as one object over a view (docs/API.md, "Settings"). */
+const call = coreModule('settings/permissions/policy');
+
+/**
+ * The permission keys of the settings as one object over a view (docs/API.md, "Settings").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/permissions/policy.rs`, docs/RUST.md).
+ */
 export interface PermissionsPolicy {
   /** `allowManagedPermissionRulesOnly`: managed settings are the only source of permission rules. */
   readonly managedRulesOnly: boolean;
@@ -39,38 +46,7 @@ export interface PermissionsPolicy {
   runningMode(current: PermissionMode): RunningMode;
 }
 
-export function createPermissionsPolicy(
+export const createPermissionsPolicy = (
   view: PolicyView,
   context: PolicyContext,
-): PermissionsPolicy {
-  const block = view.get('permissions');
-  const lists = permissionLists(view, context);
-  const disableAutoMode =
-    view.get('disableAutoMode') === 'disable' || block?.disableAutoMode === 'disable';
-  const disableBypassPermissionsMode = block?.disableBypassPermissionsMode === 'disable';
-  return {
-    managedRulesOnly: lists.managedOnly,
-    rules: lists.rules,
-    additionalDirectories: lists.directories,
-    blockReadsOutsideWorkingDirectories:
-      view.get('permissions.blockReadsOutsideWorkingDirectories') === true,
-    blockWritesOutsideWorkingDirectories:
-      view.get('permissions.blockWritesOutsideWorkingDirectories') === true,
-    denyInsteadOfPrompting: view.get('permissions.denyInsteadOfPrompting') === true,
-    disableBypassPermissionsMode,
-    disableAutoMode,
-    skipDangerousModePermissionPrompt: view.get('skipDangerousModePermissionPrompt') === true,
-    autoMode: autoModeSettings(view),
-    startingMode: (input) =>
-      startingMode(
-        view,
-        {
-          disableAutoMode,
-          disableBypassPermissionsMode,
-          skipDangerousModePermissionPrompt: view.get('skipDangerousModePermissionPrompt') === true,
-        },
-        input,
-      ),
-    runningMode: (current) => runningModeOf(view, current),
-  };
-}
+): PermissionsPolicy => call('createPermissionsPolicy', view, context);

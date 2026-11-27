@@ -266,16 +266,31 @@ pub async fn apply_parent_rules(
     changed.then_some(layers)
 }
 
+/// `applyParentRules` for the core's own readers: the view given, or the core's view over the kept
+/// layers.
+pub async fn effective_view(
+    view: Arc<dyn PolicyView>,
+    context: &ParentSettingsContext,
+) -> Arc<dyn PolicyView> {
+    match apply_parent_rules(&*view, context).await {
+        None => view,
+        Some(layers) => Arc::new(view_over(&layers)),
+    }
+}
+
+/// The core's view over `layers`.
+fn view_over(layers: &[PolicyLayer]) -> crate::settings::view::LayersView {
+    let given: Vec<JsValue> = layers
+        .iter()
+        .filter_map(|layer| crate::js::value::to_js_value(layer).ok())
+        .collect();
+    create_policy_view(&given)
+}
+
 async fn ruled_view(view: Port, context: ParentSettingsContext) -> RuledView {
     match apply_parent_rules(&view, &context).await {
         None => RuledView::Same(view),
-        Some(layers) => {
-            let given: Vec<JsValue> = layers
-                .iter()
-                .filter_map(|layer| crate::js::value::to_js_value(layer).ok())
-                .collect();
-            RuledView::Made(host_view(&Arc::new(create_policy_view(&given))))
-        }
+        Some(layers) => RuledView::Made(host_view(&Arc::new(view_over(&layers)))),
     }
 }
 

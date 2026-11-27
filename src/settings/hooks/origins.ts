@@ -74,19 +74,3 @@ export type HookBlockReason = (typeof HOOK_BLOCK_REASONS)[number];
 export type HookVerdict =
   | { readonly run: true }
   | { readonly run: false; readonly reason: HookBlockReason };
-
-/** Which of the locks stops a hook of one origin. */
-export interface Stops {
-  /** `disableAllHooks` in managed settings. */
-  readonly managedDisable: boolean;
-  /** `disableAllHooks` in any other file, or in the SDK's `managedSettings`. */
-  readonly otherDisable: boolean;
-  /** `allowManagedHooksOnly`. */
-  readonly managedOnly: boolean;
-  /** The `hooks` surface of `strictPluginOnlyCustomization`. */
-  readonly pluginOnly: boolean;
-  /** `disableCommandPluginSources`, or `allowManagedHooksOnly` standing in for it. */
-  readonly commandSource: boolean;
-}
-
-export type ForceEnabled = (id: string) => boolean;

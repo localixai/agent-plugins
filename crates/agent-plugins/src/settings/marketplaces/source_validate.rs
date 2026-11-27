@@ -1,4 +1,4 @@
-//! Port of `src/settings/marketplaces/source-validate.ts`, switched.
+//! Ported from `src/settings/marketplaces/source-validate.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What an `extraKnownMarketplaces` entry's `source` must be to register a marketplace
 //! (settings-reference.md, `extraKnownMarketplaces` "Marketplace source types";
@@ -133,12 +133,6 @@ pub fn registration_problems(key: &str, source: &JsValue) -> Vec<PluginIssue> {
     .iter()
     .map(|message| error(&path, message))
     .collect()
-}
-
-crate::registry::exports! {
-    "settings/marketplaces/source-validate" {
-        "registrationProblems" => ok |key: String, source: JsValue| registration_problems(&key, &source);
-    }
 }
 
 #[cfg(test)]

@@ -373,7 +373,6 @@ crate::registry::methods! {
 crate::registry::exports! {
     "settings/marketplaces/registry" {
         "OFFICIAL_MARKETPLACE" => ok || OFFICIAL_MARKETPLACE;
-        "OFFICIAL_SOURCE" => ok official_source;
         "createMarketplaceRegistry" => ok |view: Port, context: Port| Handle::new(MarketplaceRegistry { view, context: Context(context) });
     }
 }

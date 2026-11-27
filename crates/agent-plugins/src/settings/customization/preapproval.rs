@@ -1,10 +1,8 @@
-//! Port of `src/settings/customization/preapproval.ts`, switched.
+//! Ported from `src/settings/customization/preapproval.ts`; only the core uses it now, so it has no wrapper.
 
 use std::collections::HashSet;
 
 use serde::Deserialize;
-
-use crate::registry::Set;
 
 /// Where a skill comes from, as far as `allowed-tools` pre-approval is concerned.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -63,10 +61,4 @@ pub fn allowed_tools_preapproved(locked: &HashSet<String>, skill: &PreapprovalSk
         && loses(skill.source)
         && skill.declares_hooks
         && !skill.context_fork)
-}
-
-crate::registry::exports! {
-    "settings/customization/preapproval" {
-        "allowedToolsPreapproved" => ok |locked: Set<String>, skill: PreapprovalSkill| allowed_tools_preapproved(&locked.members.into_iter().collect(), &skill);
-    }
 }

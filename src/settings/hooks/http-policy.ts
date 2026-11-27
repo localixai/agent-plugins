@@ -1,8 +1,4 @@
 /** Implemented by the Rust core (`crates/agent-plugins/src/settings/hooks/http_policy.rs`, docs/RUST.md). */
-import type { PolicyView } from '../view.ts';
-import { coreModule } from '../../wasm/bridge.ts';
-
-const call = coreModule('settings/hooks/http-policy');
 
 /**
  * The two allowlists of HTTP hooks (settings-reference.md, `allowedHttpHookUrls` and
@@ -20,6 +16,3 @@ export interface HttpHookUrlPolicy {
    */
   check(url: string, hookAllowedEnvVars: readonly string[]): HttpHookVerdict;
 }
-
-export const createHttpHookPolicy = (view: PolicyView): HttpHookUrlPolicy =>
-  call('createHttpHookPolicy', view);

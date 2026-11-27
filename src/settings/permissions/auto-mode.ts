@@ -7,7 +7,6 @@
  * docs/RUST.md).
  */
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PolicyView } from '../view.ts';
 
 const call = coreModule('settings/permissions/auto-mode');
 
@@ -27,7 +26,3 @@ export interface AutoModeSettings {
   /** The one-time notice of auto mode is skipped. */
   readonly skipAutoPermissionPrompt: boolean;
 }
-
-/** The auto mode settings of a view (docs/API.md, "Settings"). */
-export const autoModeSettings = (view: PolicyView): AutoModeSettings =>
-  call('autoModeSettings', view);

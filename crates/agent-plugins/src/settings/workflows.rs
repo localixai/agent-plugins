@@ -3,4 +3,5 @@
 
 pub mod enablement;
 pub mod keyword;
+pub mod policy;
 pub mod size;

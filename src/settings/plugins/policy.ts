@@ -1,13 +1,17 @@
 import type { PolicyView } from '../view.ts';
-import { enabledPlugin, forceEnabledByManaged, type EnabledDecision } from './enabled-plugins.ts';
-import { modOrder, type ModOrderContext, type ModOrderResult } from './mod-order.ts';
-import { pluginConfig, type PluginConfig } from './plugin-config.ts';
-import { suggestionMarketplaces, type RegisteredMarketplaces } from './suggestions.ts';
-import { syncDecision, type SyncDecision } from './sync-plugins.ts';
-import { trustWarning } from './trust-warning.ts';
+import type { EnabledDecision } from './enabled-plugins.ts';
+import type { ModOrderContext, ModOrderResult } from './mod-order.ts';
+import type { PluginConfig } from './plugin-config.ts';
+import type { RegisteredMarketplaces } from './suggestions.ts';
+import type { SyncDecision } from './sync-plugins.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/plugins/policy');
 
 /**
  * The plugin keys of the settings as one object over a view (docs/API.md, "Settings").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/plugins/policy.rs`, docs/RUST.md).
  */
 export interface PluginSettingsPolicy {
   enabled(id: string, manifestDefaultEnabled?: boolean): EnabledDecision;
@@ -19,17 +23,11 @@ export interface PluginSettingsPolicy {
   suggestionMarketplaces(registered: RegisteredMarketplaces): readonly string[];
 }
 
-export function createPluginSettingsPolicy(
+export const createPluginSettingsPolicy = (
   view: PolicyView,
   context: ModOrderContext,
-): PluginSettingsPolicy {
-  return {
-    enabled: (id, manifestDefaultEnabled) => enabledPlugin(view, id, manifestDefaultEnabled),
-    forceEnabledByManaged: (id) => forceEnabledByManaged(view, id),
-    config: (id) => pluginConfig(view, id),
-    modOrder: (orgMods) => modOrder(view, context, orgMods),
-    syncClaudeAiPlugins: () => syncDecision(view),
-    trustWarning: (standard) => trustWarning(view, standard),
-    suggestionMarketplaces: (registered) => suggestionMarketplaces(view, registered),
-  };
-}
+): PluginSettingsPolicy =>
+  call('createPluginSettingsPolicy', view, {
+    hasManagedSettings: context.hasManagedSettings,
+    account: context.account,
+  });

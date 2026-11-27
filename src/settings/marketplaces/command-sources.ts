@@ -3,10 +3,15 @@
  * (settings-reference.md, `disableCommandPluginSources` and "What runs under `allowManagedHooksOnly`";
  * plugins/host-marketplace.md, "When Claude Code skips a headersHelper command"). The kit returns the
  * decision; running, installing or loading a command-sourced plugin stays the host's.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/marketplaces/command_sources.rs`,
+ * docs/RUST.md).
  */
-import type { PolicyKey } from '../../protocol/settings-keys.ts';
 import type { PolicyScope } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('settings/marketplaces/command-sources');
 
 /** The key that blocks a command: the explicit one, or the one that decides while it is unset. */
 export type CommandBlocker = 'disableCommandPluginSources' | 'allowManagedHooksOnly';
@@ -31,29 +36,5 @@ export interface CommandSourcePolicy {
   headersHelper(declaredIn: PolicyScope): CommandVerdict;
 }
 
-const EXPLICIT = 'disableCommandPluginSources' satisfies PolicyKey;
-const FOLLOWED = 'allowManagedHooksOnly' satisfies PolicyKey;
-
-/**
- * Which key blocks, if any. The explicit value decides when set, `false` included; unset, the
- * organization's hook restriction decides ("Default: unset, so Claude Code follows
- * `allowManagedHooksOnly`"). `disableAllHooks` is not consulted, not even from the SDK's
- * `managedSettings`: it "doesn't by itself disable command sources".
- */
-function blocker(view: PolicyView): CommandBlocker | undefined {
-  const explicit = view.get(EXPLICIT);
-  if (explicit !== undefined) return explicit ? EXPLICIT : undefined;
-  return view.get(FOLLOWED) === true ? FOLLOWED : undefined;
-}
-
-const allowed: CommandVerdict = { run: true };
-
-export function createCommandSourcePolicy(view: PolicyView): CommandSourcePolicy {
-  const reason = blocker(view);
-  const blockedVerdict: CommandVerdict = reason === undefined ? allowed : { run: false, reason };
-  return {
-    disabled: reason !== undefined,
-    pluginSource: blockedVerdict,
-    headersHelper: (declaredIn) => (declaredIn === 'managed' ? allowed : blockedVerdict),
-  };
-}
+export const createCommandSourcePolicy = (view: PolicyView): CommandSourcePolicy =>
+  call('createCommandSourcePolicy', view);

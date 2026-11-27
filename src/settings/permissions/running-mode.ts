@@ -9,7 +9,6 @@
  */
 import type { PermissionMode } from '../../protocol/official.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { PolicyView } from '../view.ts';
 
 const call = coreModule('settings/permissions/running-mode');
 
@@ -22,7 +21,3 @@ export interface RunningMode {
   /** Set when the settings moved the session out of its mode. */
   readonly notice?: string;
 }
-
-/** The mode of a session running in `current` once the settings of `view` reach it. */
-export const runningModeOf = (view: PolicyView, current: PermissionMode): RunningMode =>
-  call('runningModeOf', view, current);

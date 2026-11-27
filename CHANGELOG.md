@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The settings areas are built by the core: the hook policy and the hook session gates (with the
+  hook gate and the commands that follow the hooks), the customization lock, the plugin, skill,
+  workflow and permission policies, `pluginSuggestionMarketplaces`, the command sources and the
+  official marketplace's registration. Each policy's questions are functions of the core's, so a
+  question costs one call.
 - **Breaking** (`/hooks`): `createOnceClaims`, `OnceClaims`, `withoutSpent` and
   `HookEngineOptions.onceClaims` are gone. An engine holds its own `once` claims, and a session's
   dispatches share the session's, by registration serial; a spent handler is dropped by the core.

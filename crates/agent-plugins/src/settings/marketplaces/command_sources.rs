@@ -1,4 +1,4 @@
-//! Port of `src/settings/marketplaces/command-sources.ts` at sha256:8bdf83f2f114.
+//! Port of `src/settings/marketplaces/command-sources.ts`, switched.
 //!
 //! `disableCommandPluginSources`: whether Claude Code may run a command a marketplace declares
 //! (settings-reference.md, `disableCommandPluginSources` and "What runs under `allowManagedHooksOnly`";
@@ -7,12 +7,16 @@
 //! mixes data members with a method (`headersHelper`), which no answer of the boundary carries (a
 //! handle has methods only), so the package keeps its TypeScript: nothing of it is exported.
 
+use serde::Serialize;
+
 use crate::js::{JsValue, is_truthy};
+use crate::registry::{Function, Port};
 use crate::settings::layers::PolicyScope;
 use crate::settings::view::PolicyView;
 
 /// The key that blocks a command: the explicit one, or the one that decides while it is unset.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum CommandBlocker {
     /// `disableCommandPluginSources`.
     DisableCommandPluginSources,
@@ -76,5 +80,61 @@ pub async fn create_command_source_policy(view: &dyn PolicyView) -> CommandSourc
     CommandSourcePolicy {
         disabled: reason.is_some(),
         plugin_source: blocked_verdict,
+    }
+}
+
+/// `CommandVerdict` as the package writes it: `{ run: true }` or `{ run: false, reason }`.
+#[derive(Serialize)]
+struct VerdictShape {
+    run: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<CommandBlocker>,
+}
+
+impl Serialize for CommandVerdict {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let shape = match *self {
+            Self::Run => VerdictShape {
+                run: true,
+                reason: None,
+            },
+            Self::Blocked(reason) => VerdictShape {
+                run: false,
+                reason: Some(reason),
+            },
+        };
+        shape.serialize(serializer)
+    }
+}
+
+struct HeadersHelper(CommandSourcePolicy);
+
+crate::registry::methods! {
+    HeadersHelper {
+        "call" => ok |this, declared_in: PolicyScope| this.0.headers_helper(declared_in);
+    }
+}
+
+/// The policy as the host holds it: `headersHelper` a function of the core's.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HostPolicy {
+    disabled: bool,
+    plugin_source: CommandVerdict,
+    headers_helper: Function,
+}
+
+async fn host_policy(view: Port) -> HostPolicy {
+    let policy = create_command_source_policy(&view).await;
+    HostPolicy {
+        disabled: policy.disabled,
+        plugin_source: policy.plugin_source,
+        headers_helper: Function::new(HeadersHelper(policy)),
+    }
+}
+
+crate::registry::exports! {
+    "settings/marketplaces/command-sources" {
+        "createCommandSourcePolicy" => async ok |view: Port| host_policy(view).await;
     }
 }

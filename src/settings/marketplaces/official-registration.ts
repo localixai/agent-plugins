@@ -1,26 +1,23 @@
 import type { MarketplaceGate } from './gate.ts';
-import { OFFICIAL_SOURCE } from './registry.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * Whether Claude Code registers the official marketplace by itself (settings-reference.md, "Allow only
  * the official marketplace"; env-vars.md, `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL`). Pure
  * over facts the host keeps; the host registers it and records what the verdict says to record.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/marketplaces/official_registration.rs`,
+ * docs/RUST.md).
  */
+
+const call = coreModule('settings/marketplaces/official-registration');
 
 /**
  * How this session was launched: an interactive terminal session, a `-p` run, a terminal attached to
  * a cloud session, or the VS Code extension. Only the first registers ("the first time you start an
  * interactive terminal session").
  */
-const OFFICIAL_REGISTRATION_LAUNCHES = ['terminal', 'print', 'cloud-terminal', 'vs-code'] as const;
-export type OfficialRegistrationLaunch = (typeof OFFICIAL_REGISTRATION_LAUNCHES)[number];
-
-const REGISTERS_AT: { readonly [L in OfficialRegistrationLaunch]: boolean } = {
-  terminal: true,
-  print: false,
-  'cloud-terminal': false,
-  'vs-code': false,
-};
+export type OfficialRegistrationLaunch = 'terminal' | 'print' | 'cloud-terminal' | 'vs-code';
 
 export interface OfficialRegistrationFacts {
   readonly launch: OfficialRegistrationLaunch;
@@ -45,15 +42,7 @@ export type OfficialRegistration =
    */
   | { readonly action: 'record-skip' };
 
-const NONE: OfficialRegistration = { action: 'none' };
-
-export function officialMarketplaceRegistration(
+export const officialMarketplaceRegistration = (
   gate: MarketplaceGate,
   facts: OfficialRegistrationFacts,
-): OfficialRegistration {
-  if (facts.registered || facts.skipRecorded || !REGISTERS_AT[facts.launch]) return NONE;
-  if (!facts.autoinstallEnabled || !gate.check(OFFICIAL_SOURCE).allowed) {
-    return { action: 'record-skip' };
-  }
-  return { action: 'register' };
-}
+): OfficialRegistration => call('officialMarketplaceRegistration', gate, facts);

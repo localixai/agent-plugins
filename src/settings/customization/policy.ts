@@ -1,21 +1,19 @@
 import type { PluginOnlySurface } from '../../protocol/settings-keys.ts';
-import { applyParentRules, type ParentSettingsContext } from '../managed/parent.ts';
-import { createMarketplaceGate, type SkillsDirVerdict } from '../marketplaces/gate.ts';
+import type { ParentSettingsContext } from '../managed/parent.ts';
+import type { SkillsDirVerdict } from '../marketplaces/gate.ts';
 import type { PolicyView } from '../view.ts';
-import { allowedToolsPreapproved, type PreapprovalSkill } from './preapproval.ts';
-import { loads, type OriginOf } from './sources.ts';
-import { readSurfaceLocks } from './surfaces.ts';
+import type { PreapprovalSkill } from './preapproval.ts';
+import type { OriginOf } from './sources.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
-/**
- * What `claude mcp add` says while the `mcp` surface is locked: the message errors.md quotes for
- * "Cannot add MCP server when managed settings allow only plugin servers".
- */
-const MCP_ADD_REFUSAL =
-  "Cannot add MCP server: your organization's managed settings allow only MCP servers that plugins provide. Install a plugin that provides this server, or ask your administrator to make it available.";
+const call = coreModule('settings/customization/policy');
 
 /**
  * `strictPluginOnlyCustomization` as one object over a view (docs/API.md, "Settings"): a host's
  * discovery of skills, agents, hooks and MCP servers asks `loads(surface, origin)` per candidate.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/customization/policy.rs`,
+ * docs/RUST.md).
  */
 export interface CustomizationPolicy {
   /** The kinds of customization the lock covers. */
@@ -33,18 +31,8 @@ export interface CustomizationPolicy {
 }
 
 /** The customization policy over a view the parent rules were already applied to (`resolvePolicy`). */
-export function customizationOver(effective: PolicyView): CustomizationPolicy {
-  const { locked, unknownNames } = readSurfaceLocks(effective.get('strictPluginOnlyCustomization'));
-  const gate = createMarketplaceGate(effective);
-  return {
-    locked,
-    unknownSurfaceNames: unknownNames,
-    loads: (surface, origin) => loads(locked, surface, origin),
-    skillsDirPlugins: () => gate.skillsDirectoryPlugins(),
-    skillAllowedToolsPreapproved: (skill) => allowedToolsPreapproved(locked, skill),
-    mcpAddRefusal: locked.has('mcp') ? MCP_ADD_REFUSAL : undefined,
-  };
-}
+export const customizationOver = (effective: PolicyView): CustomizationPolicy =>
+  call('customizationOver', effective);
 
 /**
  * The key passes the parent filter (claude-apps-gateway.md), but a parent is still ignored where an
@@ -53,4 +41,8 @@ export function customizationOver(effective: PolicyView): CustomizationPolicy {
 export const createCustomizationPolicy = (
   view: PolicyView,
   context: ParentSettingsContext,
-): CustomizationPolicy => customizationOver(applyParentRules(view, context));
+): CustomizationPolicy =>
+  call('createCustomizationPolicy', view, {
+    hasManagedSettings: context.hasManagedSettings,
+    parentMerge: context.parentMerge,
+  });

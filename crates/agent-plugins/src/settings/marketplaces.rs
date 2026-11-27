@@ -8,6 +8,7 @@ pub mod git_url;
 pub mod headers_helper;
 pub mod host_of;
 pub mod match_source;
+pub mod official_registration;
 pub mod refusal_messages;
 pub mod registry;
 pub mod source_kinds;

@@ -1,4 +1,4 @@
-//! Port of `src/settings/customization/sources.ts`, switched.
+//! Ported from `src/settings/customization/sources.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Which origins each locked surface still loads: one table per surface, typed over that surface's
 //! own origins, from the **Stops** and **Keeps** lists of its sub-key entry in
@@ -14,7 +14,6 @@ use serde::Deserialize;
 
 use crate::js::JsValue;
 use crate::ports::now;
-use crate::registry::Set;
 use crate::settings::hooks::origin_stops::stops_of;
 use crate::settings::hooks::origins::{FrontmatterFrom, PolicyHookSource};
 
@@ -122,12 +121,6 @@ pub fn loads(locked: &LockedSurfaces, surface: &str, origin: &JsValue) -> bool {
         "hooks" => hooks_loads(locked, origin),
         "mcp" => table_loads("mcp", MCP, locked, origin),
         _ => true,
-    }
-}
-
-crate::registry::exports! {
-    "settings/customization/sources" {
-        "loads" => ok |locked: Set<String>, surface: String, origin: JsValue| loads(&locked.members, &surface, &origin);
     }
 }
 
