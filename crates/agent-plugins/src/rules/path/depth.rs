@@ -1,4 +1,4 @@
-//! Port of `src/rules/path/depth.ts`, switched.
+//! Ported from `src/rules/path/depth.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! How deep a relative pattern matches (permissions.md, "How deep a pattern matches"): "A relative
 //! pattern with a single directory segment, such as `src/**`, matches at different depths depending
@@ -13,9 +13,6 @@
 //! shape. Widening `src/index.ts` and `src/**` followed by more path is a judgment (the docs show
 //! `src/**` only); it errs towards blocking (spec/judgments.md).
 
-use indexmap::IndexMap;
-
-use crate::registry::Function;
 use crate::rules::types::PermissionBehavior;
 
 /// `SINGLE_DIRECTORY`, `/^(?!\*\*)(?!\.{1,2}\/)[^/!][^/]*\/(?:[^/]+\/?|\*\*\/.+)$/`: a first segment
@@ -68,32 +65,6 @@ pub fn depth_of(behavior: PermissionBehavior, pattern: &str) -> String {
     match behavior {
         PermissionBehavior::Allow => keep(pattern),
         PermissionBehavior::Deny | PermissionBehavior::Ask => widen(pattern),
-    }
-}
-
-/// One behavior's entry of the table, a function the host calls.
-#[derive(Debug)]
-struct Depth(PermissionBehavior);
-
-crate::registry::methods! {
-    Depth {
-        "call" => ok |this, pattern: String| depth_of(this.0, &pattern);
-    }
-}
-
-/// The pattern a rule of each behaviour matches with: only deny and ask rules reach every depth.
-const DEPTH: [(&str, PermissionBehavior); 3] = [
-    ("allow", PermissionBehavior::Allow),
-    ("deny", PermissionBehavior::Deny),
-    ("ask", PermissionBehavior::Ask),
-];
-
-crate::registry::exports! {
-    "rules/path/depth" {
-        "DEPTH" => ok || DEPTH
-            .map(|(name, behavior)| (name, Function::new(Depth(behavior))))
-            .into_iter()
-            .collect::<IndexMap<_, _>>();
     }
 }
 

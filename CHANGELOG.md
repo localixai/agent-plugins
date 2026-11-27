@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
+  `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
+  preparation and the specifier matchers run on the core.
 - A skill's injected commands run on the core (permission answer, refusal, the run, the output
   window, the move to the background), and so do stacked skills in one message, the
   `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,

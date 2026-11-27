@@ -16,6 +16,7 @@ pub mod format;
 pub mod foundation;
 pub mod hooks;
 pub mod host;
+pub mod ignore;
 pub mod js;
 pub mod loading;
 pub mod marketplace;

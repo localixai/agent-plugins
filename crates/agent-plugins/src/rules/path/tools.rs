@@ -230,10 +230,6 @@ pub fn coverage() -> Map<&'static str, Coverage> {
 
 crate::registry::exports! {
     "rules/path/tools" {
-        "pathText" => ok |call: ToolCall| path_text(&call);
         "requestedPath" => ok |call: ToolCall, paths: PathContext| requested_path(&call, &paths);
-        "searchesDirectory" => ok |tool_name: String| searches_directory(&tool_name);
-        "PATHLESS_CALLS" => ok pathless_calls;
-        "COVERAGE" => ok coverage;
     }
 }

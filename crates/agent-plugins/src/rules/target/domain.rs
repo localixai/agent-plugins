@@ -17,7 +17,7 @@ use crate::js::url::{Url, parse};
 use crate::js::{Pattern, trim};
 use crate::rules::restricts::restricts;
 use crate::rules::specifier_guards::is_domain_specifier;
-use crate::rules::types::{MatchContext, PermissionBehavior, PermissionRule, PreparedCall};
+use crate::rules::types::{PermissionBehavior, PermissionRule, PreparedCall};
 
 fn strip_trailing_dot(host: &str) -> &str {
     host.strip_suffix('.').unwrap_or(host)
@@ -247,7 +247,6 @@ pub fn sandbox_domain_lists(rules: &[PermissionRule]) -> SandboxDomainLists {
 crate::registry::exports! {
     "rules/target/domain" {
         "matchDomainPattern" => ok |pattern: String, url: String| match_domain_pattern(&pattern, &url);
-        "matchWebFetchRule" => ok |rule: PermissionRule, call: PreparedCall, _ctx: Option<MatchContext>| match_web_fetch_rule(&rule, &call);
         "domainRuleCoversArtifactRead" => ok |rule: PermissionRule, call: PreparedCall| domain_rule_covers_artifact_read(&rule, &call);
         "sandboxDomainEntry" => ok |rule: PermissionRule| sandbox_domain_entry(&rule);
         "sandboxDomainLists" => ok |rules: Vec<PermissionRule>| sandbox_domain_lists(&rules);

@@ -185,8 +185,6 @@ crate::registry::exports! {
         "resolvePath" => ok |base: String, path: String| resolve_path(&base, &path);
         "absolutePath" => ok |path: String, paths: HostPaths| absolute_path(&path, &paths);
         "relativeWithin" => ok |root: String, path: String, platform: Option<Platform>| relative_within(&root, &path, platform);
-        "dirnameOf" => ok |path: String| dirname_of(&path);
-        "hasGlobSyntax" => ok |segment: String| has_glob_syntax(&segment);
     }
 }
 
