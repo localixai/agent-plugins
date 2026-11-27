@@ -33,6 +33,3 @@ export const limitText = (
   scratch: ScratchFiles | undefined,
   signal: AbortSignal,
 ): Promise<Limited> => call.async('limitText', name, text, scratch, signal);
-
-/** PreCompact stdout: "Claude Code cuts longer output at the cap and appends a marker." */
-export const cutText = (text: string): string => call('cutText', text);

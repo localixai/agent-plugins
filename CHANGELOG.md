@@ -7,6 +7,12 @@
   MCP allow and deny lists, the marketplace source checks and the allow and block matchers, the
   hook origins' stops, and the channel verdict and permission relay. So do `--agent`, `--agents`,
   `--mcp-config`, `--strict-mcp-config` and the sideload checks of the flags.
+- The hooks' 10,000-character cap with its spill to `ScratchFiles` and the output stage, the
+  `prompt` and `agent` hooks, `known_marketplaces.json` and source equality, the marketplace
+  `add` source forms, the stage report and start-up plan, the added-but-ignored and
+  untrusted-source lines, the declared-source refusal, the relevance suggestions and
+  `managed-mcp.json` run on the core.
+
 - Planning a plugin fetch, the dated-copy sweep, the `enabledPlugins` notes, the Node.js package
   install plan, its checks and its failure note, reading and writing `installed_plugins.json` and
   its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and

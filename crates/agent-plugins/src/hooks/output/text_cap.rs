@@ -119,6 +119,5 @@ crate::registry::exports! {
         "TEXT_CAP" => ok || TEXT_CAP;
         "PREVIEW_LENGTH" => ok || PREVIEW_LENGTH;
         "limitText" => async ok |name: String, text: String, scratch: Option<Port>, signal: Signal| limit_text(&name, &text, scratch.as_ref(), &signal).await;
-        "cutText" => ok |text: String| cut_text(&text);
     }
 }

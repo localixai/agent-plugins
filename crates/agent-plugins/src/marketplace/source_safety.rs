@@ -1,4 +1,4 @@
-//! Port of `src/marketplace/source-safety.ts`, switched.
+//! Ported from `src/marketplace/source-safety.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The checks made before anything is fetched (plugins/marketplace-reference.md, "url plugin
 //! source", "git-subdir plugin source", "npm plugin source", "archive plugin source"): pure, they
@@ -376,12 +376,5 @@ pub fn archive_url_issues(url: &str, path: &str) -> Vec<PluginIssue> {
         )]
     } else {
         vec![]
-    }
-}
-
-crate::registry::exports! {
-    "marketplace/source-safety" {
-        "readGitAddress" => ok |text: String, shorthand: bool, path: String| read_git_address(&text, shorthand, &path);
-        "isGitHubRepository" => ok |owner: String, repo: String| is_github_repository(&owner, &repo);
     }
 }

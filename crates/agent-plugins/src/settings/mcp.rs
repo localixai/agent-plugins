@@ -4,4 +4,5 @@
 pub mod command_match;
 pub mod entries;
 pub mod managed;
+pub mod managed_file;
 pub mod managed_timing;
