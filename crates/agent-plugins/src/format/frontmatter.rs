@@ -348,7 +348,6 @@ pub fn parse_frontmatter(text: &str) -> Frontmatter {
 
 crate::registry::exports! {
     "format/frontmatter" {
-        "lineAt" => ok |text: String, at: usize| line_at(&text, at);
         "parseFrontmatter" => ok |text: String| parse_frontmatter(&text);
     }
 }

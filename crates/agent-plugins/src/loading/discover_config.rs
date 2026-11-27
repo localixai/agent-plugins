@@ -139,7 +139,7 @@ fn without_repeated_files(order: Vec<(Item, bool)>) -> Vec<(Item, bool)> {
 }
 
 /// A configuration source as discovery found it.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ConfigInput {
     /// A file to read.

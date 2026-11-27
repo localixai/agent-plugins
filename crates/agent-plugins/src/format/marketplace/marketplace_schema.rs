@@ -1,4 +1,4 @@
-//! Port of `src/format/marketplace/marketplace-schema.ts`, switched.
+//! Ported from `src/format/marketplace/marketplace-schema.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The top level of `marketplace.json` (plugins/marketplace-reference.md, "Top-level fields" and
 //! "Validation messages"): every key Claude Code reads, the type of each, and the report for a key
@@ -389,12 +389,5 @@ pub fn read_top_level(raw: &JsObject) -> TopLevelResult {
             renames: renames.value.unwrap_or_default(),
         }),
         issues,
-    }
-}
-
-crate::registry::exports! {
-    "format/marketplace/marketplace-schema" {
-        "mismatch" => ok |path: String, expected: String, value: JsValue| mismatch(&path, &expected, &value);
-        "readTopLevel" => ok |raw: JsObject| read_top_level(&raw);
     }
 }

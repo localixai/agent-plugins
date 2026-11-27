@@ -30,7 +30,3 @@ export const conversion = (
   notes: readonly ConversionNote[],
   runtime?: string,
 ): Conversion => call('conversion', to, files, notes, runtime);
-
-/** A JSON file as the converter writes it: two-space indent and a final newline, so output is stable (§18.4.1 item 5). */
-export const jsonFile = (path: string, value: unknown): ConvertedFile =>
-  call('jsonFile', path, value);

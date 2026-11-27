@@ -10,6 +10,11 @@ pub mod entry_checks;
 pub mod entry_schema;
 pub mod header_names;
 pub mod ids;
+#[expect(
+    clippy::module_inception,
+    reason = "the package's file `src/format/marketplace/marketplace.ts`, file for file (RS1)"
+)]
+pub mod marketplace;
 pub mod marketplace_name_lists;
 pub mod marketplace_names;
 pub mod marketplace_schema;

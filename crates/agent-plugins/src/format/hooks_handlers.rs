@@ -1,4 +1,4 @@
-//! Port of `src/format/hooks-handlers.ts`, switched.
+//! Ported from `src/format/hooks-handlers.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! Hook handlers (hooks.md, "Hook handler fields"): the five types and the fields each accepts,
 //! bound to the official `HookHandlerOf<T>` so an SDK update that adds a field fails the typecheck
@@ -205,11 +205,5 @@ pub fn read_handler(raw: &JsValue, path: &str) -> HandlerRead {
                 issues,
             }
         }
-    }
-}
-
-crate::registry::exports! {
-    "format/hooks-handlers" {
-        "readHandler" => ok |raw: JsValue, path: String| read_handler(&raw, &path);
     }
 }

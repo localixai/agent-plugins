@@ -333,12 +333,9 @@ pub fn read_mcp_config(raw: &JsValue, origin: &str) -> McpConfigRead {
 crate::registry::exports! {
     "format/mcp-config" {
         "MCP_TRANSPORTS" => ok || MCP_TRANSPORTS;
-        "mcpTransportOf" => ok |server: JsValue| mcp_transport_of(&server);
-        "signsInWithOAuth" => ok |server: JsValue| signs_in_with_oauth(&server);
         "isRemoteMcpServer" => ok |server: JsValue| is_remote_mcp_server(&server);
         "droppedServerLogLine" => ok |server: String, path: String| dropped_server_log_line(&server, &path);
         "readMcpServer" => ok |name: String, raw: JsValue, origin: String| read_mcp_server(&name, &raw, &origin);
-        "rejectsManifest" => ok |raw: JsValue| rejects_manifest(&raw);
         "readMcpConfig" => ok |raw: JsValue, origin: String| read_mcp_config(&raw, &origin);
     }
 }

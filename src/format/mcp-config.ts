@@ -36,14 +36,6 @@ export type PluginMcpServer = McpStdioServerConfig | RemoteMcpServer;
 export const MCP_TRANSPORTS: readonly ['stdio', 'sse', 'http', 'ws'] = call('MCP_TRANSPORTS');
 export type McpTransport = (typeof MCP_TRANSPORTS)[number];
 
-/** The transport of a server; one without a `type` is stdio. */
-export const mcpTransportOf = (server: PluginMcpServer): McpTransport =>
-  call('mcpTransportOf', server);
-
-/** "OAuth authentication works with HTTP servers", and the flags apply "to HTTP and SSE transports"; WebSocket "supports neither". */
-export const signsInWithOAuth = (server: PluginMcpServer): boolean =>
-  call('signsInWithOAuth', server);
-
 /**
  * True for a server whose transport is `sse`, `http` or `ws`. The transport decides, not the
  * presence of a `url`: a stdio entry may carry a `url` key (its `type` is then `stdio`) and stays stdio.
@@ -73,13 +65,6 @@ export interface McpServerRead {
  */
 export const readMcpServer = (name: string, raw: unknown, origin: string): McpServerRead =>
   call('readMcpServer', name, raw, origin);
-
-/**
- * Whether an entry of the manifest's inline `mcpServers` keeps the plugin from loading (oracle
- * 2.1.319): the manifest is validated, so any entry that cannot be read fails it, `type: "sdk"`
- * excepted. The same entry in a `.mcp.json` is only dropped.
- */
-export const rejectsManifest = (raw: unknown): boolean => call('rejectsManifest', raw);
 
 /**
  * A bundled server's own settings (plugins/components.md, "Include a packaged MCPB server"): what its

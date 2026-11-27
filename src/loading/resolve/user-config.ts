@@ -1,13 +1,18 @@
-import { USER_CONFIG_KEY, userConfigReferences } from '../../format/user-config-refs.ts';
 import type { UserConfigOption } from '../../format/index.ts';
 import type { UserConfigValue } from '../../protocol/official.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 export type { UserConfigValue };
+
+const call = coreModule('loading/resolve/user-config');
 
 /**
  * What the user (or the host) saved for a plugin's `userConfig` options
  * (plugins/manifest-reference.md, "User configuration"). The kit never stores or prompts: the
  * host reads `pluginConfigs` and its secure store and hands the values over as plain data.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/resolve/user_config.rs`,
+ * docs/RUST.md).
  */
 export interface ResolvedUserConfig {
   /** The manifest's `userConfig`. */
@@ -21,27 +26,23 @@ export interface ResolvedUserConfig {
 }
 
 /** The process variable a hook reads an option from: `api_token` is `CLAUDE_PLUGIN_OPTION_API_TOKEN`. */
-export const optionEnvName = (key: string): string => `CLAUDE_PLUGIN_OPTION_${key.toUpperCase()}`;
+export const optionEnvName = (key: string): string => call('optionEnvName', key);
 
 /**
  * The value `${user_config.KEY}` stands for: the saved one, else the declared `default` ("Value
  * used when the user provides nothing"), else `undefined`. Judgment: a key the manifest does
  * not declare has no value, whatever the host supplied.
  */
-export function userConfigValue(
+export const userConfigValue = (
   config: ResolvedUserConfig,
   key: string,
-): UserConfigValue | undefined {
-  if (!Object.hasOwn(config.declared, key)) return undefined;
-  return Object.hasOwn(config.values, key) ? config.values[key] : config.declared[key]?.default;
-}
+): UserConfigValue | undefined => call('userConfigValue', config, key);
 
 /**
  * A value as text. The docs show strings only; judgment: a number or boolean is written as
  * `String(value)`, a list joined by commas (one argument, no spaces to split on).
  */
-export const userConfigText = (value: UserConfigValue): string =>
-  typeof value === 'string' ? value : Array.isArray(value) ? value.join(',') : String(value);
+export const userConfigText = (value: UserConfigValue): string => call('userConfigText', value);
 
 /**
  * True when a template references `${user_config.*}`. It reads the template, never a value, so it
@@ -49,18 +50,12 @@ export const userConfigText = (value: UserConfigValue): string =>
  * shell field is refused for what it says, not for what is saved.
  */
 export const referencesUserConfig = (template: string): boolean =>
-  userConfigReferences(template).some((key) => USER_CONFIG_KEY.test(key));
+  call('referencesUserConfig', template);
 
 /**
  * The variables a hook process receives for the options (plugins/manifest-reference.md,
  * "Reference a saved value"): one per option, sensitive ones included. Judgment: an option
  * with neither a saved value nor a default has nothing to export and is left out.
  */
-export function optionEnvironment(config: ResolvedUserConfig): Record<string, string> {
-  const exported: Record<string, string> = {};
-  for (const key of Object.keys(config.declared)) {
-    const value = userConfigValue(config, key);
-    if (value !== undefined) exported[optionEnvName(key)] = userConfigText(value);
-  }
-  return exported;
-}
+export const optionEnvironment = (config: ResolvedUserConfig): Record<string, string> =>
+  call('optionEnvironment', config);

@@ -1,184 +1,37 @@
-import { error, warning, type PluginIssue } from '../format/issues.ts';
-import { declaredKey } from '../format/layout.ts';
-import { readLspConfig, mergeLspSources, type LspConfigRead } from '../format/lsp-config.ts';
-import { collectMcpServers } from '../format/mcp-sources.ts';
-import { readMonitors, type MonitorsRead } from '../format/monitors.ts';
-import { readHooksFile, readHooksSettings, type HooksRead } from '../format/hooks-settings.ts';
-import {
-  hasAppliedSettings,
-  readPluginSettings,
-  type PluginSettingsRead,
-} from '../format/plugin-settings.ts';
-import type { ConfigInput } from './discovered.ts';
-import { mergeHooks } from './merge-hooks.ts';
-import { readJson, readJsonWithoutBom } from '../format/read-json.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { ComponentRead, ComponentValues, ReaderContext } from './reader-types.ts';
 
-const failed = (path: string, message: string): PluginIssue[] => [error(path, message)];
+/**
+ * The component readers of the JSON configuration a plugin carries: hooks, LSP servers, monitors,
+ * MCP servers and default settings. A file is parsed first and read by its kind's format reader; an
+ * inline manifest value is read as is.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/readers_config.rs`, docs/RUST.md).
+ */
 
-/** Reads one source with the reader of its kind: a file is parsed first, an inline value is used as is. */
-async function readInput<R extends { readonly issues: readonly PluginIssue[] }>(
+const call = coreModule('loading/readers-config');
+
+export const readHooks = (
   context: ReaderContext,
-  input: ConfigInput,
-  reader: {
-    readonly file: (raw: unknown, path: string) => R;
-    readonly inline: (value: unknown) => R;
-    readonly empty: R;
-    readonly failure: (path: string, reason: string) => string;
-    /** A byte order mark makes the file unreadable (hooks files only, spec J2.3). */
-    readonly refusesBom?: true;
-  },
-): Promise<R> {
-  if ('inline' in input) return reader.inline(input.inline);
-  const read = reader.refusesBom ? readJsonWithoutBom : readJson;
-  const parsed = await read(context.files, input.file, context.signal);
-  if ('problem' in parsed) {
-    return {
-      ...reader.empty,
-      issues: failed(input.file, reader.failure(input.file, parsed.problem)),
-    };
-  }
-  return reader.file(parsed.value, input.file);
-}
+): Promise<ComponentRead<ComponentValues['hooks']>> => call.async('readHooks', context);
 
-const noHooks: HooksRead = { hooks: {}, issues: [] };
-
-/** Plugin hooks drop an entry they cannot read and keep the rest, but for a guard (oracle 2.1.319). */
-const LENIENT = { lenient: true } as const;
-
-/** A hooks file that fails "does not load": its errors are reported as `Failed to load hooks from <path>: <reason>`. */
-const hooksFile = (raw: unknown, path: string): HooksRead => {
-  const read = readHooksFile(raw, LENIENT);
-  return {
-    ...read,
-    issues: read.issues.map((found) =>
-      found.severity === 'error'
-        ? error(path, `Failed to load hooks from ${path}: ${found.message}`)
-        : found,
-    ),
-  };
-};
-
-/** A hook file's read without the events a marketplace entry's hooks replace. */
-const withoutEvents = (read: HooksRead, events: readonly string[]): HooksRead => ({
-  ...read,
-  hooks: Object.fromEntries(
-    Object.entries(read.hooks).filter(([event]) => !events.includes(event)),
-  ),
-});
-
-export async function readHooks(
+export const readLspServers = (
   context: ReaderContext,
-): Promise<ComponentRead<ComponentValues['hooks']>> {
-  const reads = await Promise.all(
-    context.discovered.hooks.map((input) =>
-      readInput(context, input, {
-        file: (raw, path) => withoutEvents(hooksFile(raw, path), context.replacedHookEvents),
-        inline: (raw) => readHooksSettings(raw, LENIENT),
-        empty: noHooks,
-        failure: (path, reason) => `Failed to load hooks from ${path}: ${reason}`,
-        refusesBom: true,
-      }),
-    ),
-  );
-  return {
-    value: mergeHooks(reads.map((read) => read.hooks)),
-    issues: reads.flatMap((read) => [...read.issues]),
-    ...(reads.some((read) => read.rejectsPlugin === true) && { rejectsPlugin: true }),
-  };
-}
+): Promise<ComponentRead<ComponentValues['lspServers']>> => call.async('readLspServers', context);
 
-const noLsp: LspConfigRead = { servers: {}, issues: [] };
-
-export async function readLspServers(
+export const readMonitorList = (
   context: ReaderContext,
-): Promise<ComponentRead<ComponentValues['lspServers']>> {
-  const reads = await Promise.all(
-    context.discovered.lspServers.map((input) =>
-      readInput(context, input, {
-        file: (raw, path) => readLspConfig(raw, path),
-        inline: (value) => readLspConfig(value, 'lspServers'),
-        empty: noLsp,
-        failure: (path, reason) => `Invalid LSP server config for "${path}": ${reason}`,
-      }),
-    ),
-  );
-  const merged = mergeLspSources(reads);
-  return { value: merged.servers, issues: merged.issues };
-}
+): Promise<ComponentRead<ComponentValues['monitors']>> => call.async('readMonitorList', context);
 
-const noMonitors: MonitorsRead = { monitors: [], issues: [] };
-
-export async function readMonitorList(
+export const readMcpServers = (
   context: ReaderContext,
-): Promise<ComponentRead<ComponentValues['monitors']>> {
-  const origin = declaredKey(context.manifest, 'monitors')?.key ?? 'monitors';
-  const reads = await Promise.all(
-    context.discovered.monitors.map((input) =>
-      readInput(context, input, {
-        file: (raw, path) => readMonitors(raw, path),
-        inline: (value) => readMonitors(value, origin),
-        empty: noMonitors,
-        failure: (path, reason) => `Invalid monitors in ${path}: ${reason}`,
-      }),
-    ),
-  );
-  return {
-    value: reads.flatMap((read) => read.monitors),
-    issues: reads.flatMap((read) => [...read.issues]),
-  };
-}
-
-export async function readMcpServers(
-  context: ReaderContext,
-): Promise<ComponentRead<ComponentValues['mcpServers']>> {
-  const collected = await collectMcpServers(
-    context.files,
-    context.manifest?.mcpServers,
-    context.mcp,
-  );
-  return {
-    value: { servers: collected.servers, bundles: collected.bundles },
-    issues: collected.issues,
-    ...(collected.rejectsPlugin === true && { rejectsPlugin: true }),
-  };
-}
-
-/** `settings.json` as read, with the issue its parse failure raised. */
-async function readSettingsFile(
-  context: ReaderContext,
-): Promise<{ readonly read: PluginSettingsRead | undefined; readonly issues: PluginIssue[] }> {
-  const file = context.discovered.settingsFile;
-  if (file === undefined) return { read: undefined, issues: [] };
-  const parsed = await readJson(context.files, file, context.signal);
-  if ('problem' in parsed) {
-    return {
-      read: undefined,
-      // A load warning, never a failure (spec §12.6 item 1, J12.10).
-      issues: [warning(file, `settings.json is not valid JSON: ${parsed.problem}`)],
-    };
-  }
-  return { read: readPluginSettings(parsed.value, file), issues: [] };
-}
+): Promise<ComponentRead<ComponentValues['mcpServers']>> => call.async('readMcpServers', context);
 
 /**
  * `settings.json` over the manifest's `settings` key: "when both exist and `settings.json` sets at
  * least one supported key, `settings.json` applies and the manifest's `settings` is ignored"
  * (components.md, "Default settings").
  */
-export async function readSettings(
+export const readSettings = (
   context: ReaderContext,
-): Promise<ComponentRead<ComponentValues['settings']>> {
-  const { read, issues } = await readSettingsFile(context);
-  const fileWins = read !== undefined && hasAppliedSettings(read);
-  const manifestRead = fileWins ? undefined : inlineSettings(context.manifest?.settings);
-  const reads = [read, manifestRead].flatMap((one) => (one ? [one] : []));
-  const chosen = fileWins ? read : (manifestRead ?? read);
-  return {
-    value: chosen?.settings ?? {},
-    issues: [...issues, ...reads.flatMap((one) => [...one.issues])],
-  };
-}
-
-const inlineSettings = (inline: unknown): PluginSettingsRead | undefined =>
-  inline === undefined ? undefined : readPluginSettings(inline, 'settings');
+): Promise<ComponentRead<ComponentValues['settings']>> => call.async('readSettings', context);

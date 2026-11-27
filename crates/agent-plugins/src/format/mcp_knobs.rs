@@ -13,27 +13,10 @@ use serde::{Deserialize, Serialize};
 use super::env_number::{plain_positive_whole_env, positive_whole_env, whole_env};
 use crate::js::JsValue;
 use crate::js::value::serialize_number;
-use crate::ports::BoxFuture;
 use crate::registry::Callback;
 
-/// What the host's `EnvLookup` (`mcp-env.ts`: `(name: string) => string | undefined`) answers: a
-/// function of the host's, so its answer may wait. A Rust host passes a closure, answered at once.
-pub trait EnvLookup: Send + Sync {
-    /// The variable's value, `None` when it is unset.
-    fn lookup<'a>(&'a self, name: &'a str) -> BoxFuture<'a, Option<String>>;
-}
-
-impl<F: Fn(&str) -> Option<String> + Send + Sync> EnvLookup for F {
-    fn lookup<'a>(&'a self, name: &'a str) -> BoxFuture<'a, Option<String>> {
-        Box::pin(std::future::ready(self(name)))
-    }
-}
-
-impl EnvLookup for Callback {
-    fn lookup<'a>(&'a self, name: &'a str) -> BoxFuture<'a, Option<String>> {
-        Box::pin(self.call(vec![JsValue::from(name)]))
-    }
-}
+/// What the host's `EnvLookup` answers: its trait lives with `mcp-env.ts`, which declares the type.
+pub use super::mcp_env::EnvLookup;
 
 /// A positive whole number of a numeric variable (spec §3.6.1 item 2, J3.17); anything else is `undefined`.
 #[must_use]
@@ -396,12 +379,10 @@ pub async fn claude_ai_connectors_fetched(
 
 crate::registry::exports! {
     "format/mcp-knobs" {
-        "positiveWhole" => ok |text: Option<String>| positive_whole(text.as_deref());
         "mcpTimeouts" => async ok |lookup: Callback, server: McpTimeoutServer| mcp_timeouts(&lookup, &server).await;
         "mcpConnectTimeoutMs" => async ok |lookup: Callback| mcp_connect_timeout_ms(&lookup).await;
         "mcpDescriptionLimits" => async ok |lookup: Callback| mcp_description_limits(&lookup).await;
         "cutMcpDescription" => ok |text: String, limit: f64| cut_mcp_description(&text, limit);
-        "switchOf" => ok |text: Option<String>| switch_of(text.as_deref());
         "MCP_ENV_BASELINE" => ok || MCP_ENV_BASELINE;
         "mcpStdioEnvironment" => ok |input: McpStdioEnvironmentInput| mcp_stdio_environment(&input);
         "claudeAiConnectorsFetched" => async ok |lookup: Callback, session: ClaudeAiSession| claude_ai_connectors_fetched(&lookup, &session).await;

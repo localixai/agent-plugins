@@ -253,18 +253,6 @@ pub fn experimental_map(path: &str, key: &str, raw: &JsValue) -> AgentFieldRead<
 
 crate::registry::exports! {
     "format/agent-scalars" {
-        "textField" => ok |path: String, key: String, raw: JsValue| text_field(&path, &key, &raw);
-        "modelField" => ok |path: String, key: String, raw: JsValue| model_field(&path, &key, &raw);
-        "boolField" => ok |path: String, key: String, raw: JsValue| bool_field(&path, &key, &raw);
-        "tokenList" => ok |path: String, key: String, raw: JsValue| token_list(&path, &key, &raw);
-        "positiveInt" => ok |path: String, key: String, raw: JsValue| positive_int(&path, &key, &raw);
-        "enumField" => ok |allowed: Vec<String>, path: String, key: String, raw: JsValue| {
-            let allowed: Vec<&str> = allowed.iter().map(String::as_str).collect();
-            enum_field(&allowed)(&path, &key, &raw)
-        };
-        "effortField" => ok |path: String, key: String, raw: JsValue| effort_field(&path, &key, &raw);
         "AUTO_COMPACT_RANGE" => ok || AUTO_COMPACT_RANGE;
-        "autoCompactWindow" => ok |path: String, key: String, raw: JsValue| auto_compact_window(&path, &key, &raw);
-        "experimentalMap" => ok |path: String, key: String, raw: JsValue| experimental_map(&path, &key, &raw);
     }
 }

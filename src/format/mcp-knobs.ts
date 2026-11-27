@@ -13,10 +13,6 @@ import type { EnvLookup } from './mcp-env.ts';
  */
 const call = coreModule('format/mcp-knobs');
 
-/** A positive whole number of a numeric variable (spec §3.6.1 item 2, J3.17); anything else is `undefined`. */
-export const positiveWhole = (text: string | undefined): number | undefined =>
-  call('positiveWhole', text);
-
 export interface McpTimeouts {
   /** `MCP_TIMEOUT`: one server's connect attempt. */
   readonly startupMs: number;
@@ -65,9 +61,6 @@ export const mcpDescriptionLimits = (lookup: EnvLookup): McpDescriptionLimits =>
 /** "Claude sees only the text before the cut"; the cut keeps a surrogate pair whole (judgment, spec/judgments.md). */
 export const cutMcpDescription = (text: string, limit: number): string =>
   call('cutMcpDescription', text, limit);
-
-/** `true`, `false`, or `undefined` for an unset, empty or unrecognised value. */
-export const switchOf = (text: string | undefined): boolean | undefined => call('switchOf', text);
 
 /**
  * Judgment (spec/judgments.md): the docs say "a safe baseline environment" and do not list it. These are

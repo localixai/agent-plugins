@@ -279,7 +279,7 @@ Five checks, each deterministic:
    and writes `crates/agent-plugins/tests/vectors/js/`. Never write such a rule from memory: add its inputs to the
    oracle.
 5. **Currency.** Every port's first line names its TypeScript source and the source's hash
-   (``//! Port of `src/format/messages.ts` at sha256:0a336bd48f23.``), and the vectors carry the
+   (``//! Port of `src/format/issues.ts` at sha256:<hash>.``), and the vectors carry the
    spec revision and the source hashes they were recorded at (`crates/agent-plugins/tests/vectors/SOURCES.json`).
    `bun scripts/rust/ports.ts --check` fails on a port whose source changed, on vectors recorded
    from an older source, and on vectors recorded at another spec revision than `spec/SOURCE.json`

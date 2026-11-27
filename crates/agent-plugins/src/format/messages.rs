@@ -1,4 +1,4 @@
-//! Port of `src/format/messages.ts`, switched.
+//! Ported from `src/format/messages.ts`; only the core uses it now, so it has no wrapper.
 //! The load messages of a plugin's component paths, as Claude Code shows them in the `/plugin`
 //! Errors tab and `claude plugin list` (plugins/manifest-reference.md, "Containment and
 //! existence" and "How each key combines with its default location"; errors.md, "Path escapes
@@ -75,10 +75,4 @@ pub fn agents_entry_not_file(path: &str) -> String {
 #[must_use]
 pub fn default_folder_ignored(folder: &str, key: &str) -> String {
     format!("Default {folder}/ folder is ignored because the manifest sets \"{key}\"")
-}
-
-crate::registry::exports! {
-    "format/messages" {
-        "pathNotFound" => ok |component: String, path: String| path_not_found(&component, &path);
-    }
 }

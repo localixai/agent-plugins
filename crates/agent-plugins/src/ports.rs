@@ -18,6 +18,7 @@ pub mod folder_scan;
 pub mod http_client;
 pub mod locations;
 pub mod marketplace;
+pub mod mcp_bundle;
 pub mod mcp_caller;
 pub mod model_runner;
 pub mod path_resolver;

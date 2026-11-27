@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- The JSON configuration readers (hooks, LSP servers, monitors, MCP servers, default settings),
+  `${user_config.*}` references and the shell guard, the agent and skill field readers, a skill
+  file, the skill listing and its budget, `claude mcp add` and `add-json`, the MCP sources, the
+  frontmatter rendering and the conversion to a core package run on the core. The output style
+  selection stays TypeScript: its selection hands back the host's style object itself.
 - Planning a plugin fetch, the dated-copy sweep, the `enabledPlugins` notes, the Node.js package
   install plan, its checks and its failure note, reading and writing `installed_plugins.json` and
   its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and

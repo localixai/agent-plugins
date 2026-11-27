@@ -1,4 +1,4 @@
-//! Port of `src/convert/adapters/sources.ts`, switched.
+//! Ported from `src/convert/adapters/sources.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The two hook adapters a conversion adds (Agent Plugins Extended §18.4.4), as the text of Node.js
 //! ES modules: self-contained, since they run where the kit is not installed, and the same bytes for
@@ -61,13 +61,6 @@ pub static RUN_CLAUDE_CODE_HANDLER_SOURCE: LazyLock<String> = LazyLock::new(|| {
     ]
     .concat()
 });
-
-crate::registry::exports! {
-    "convert/adapters/sources" {
-        "ADAPTER_RUNTIME" => ok || ADAPTER_RUNTIME;
-        "RUN_CLAUDE_CODE_HANDLER_SOURCE" => ok || RUN_CLAUDE_CODE_HANDLER_SOURCE.clone();
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-//! Port of `src/convert/placeholders.ts`, switched.
+//! Ported from `src/convert/placeholders.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The two forms' path placeholders (Agent Plugins Extended §18.3.3, §18.4.2 item 3, §18.4.3 item
 //! 3): the core's `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` (core §9.2) and Claude Code's
@@ -139,12 +139,4 @@ pub fn bridged_environment(
         .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
         .collect();
     in_key_order(kept.into_iter().chain(added).collect())
-}
-
-crate::registry::exports! {
-    "convert/placeholders" {
-        "toCorePlaceholders" => ok |text: String| to_core_placeholders(&text);
-        "holdsReference" => ok |text: String| holds_reference(&text);
-        "holdsOtherReference" => ok |text: String, form: String| holds_other_reference(&text, &form);
-    }
 }
