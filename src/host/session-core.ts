@@ -1,21 +1,40 @@
 import {
+  createHookRegistry,
   createOnceClaims,
   createStopBlockCap,
   type HookEngine,
   type HookRegistry,
   type OnceClaims,
+  type RegisteredHandler,
   type StopBlockCap,
 } from '../hooks/index.ts';
 import type { InvokedSkill } from '../loading/index.ts';
 
 import { type HookUsage } from '../skills/index.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import { createBackgroundQueue, type BackgroundQueue } from './background-queue.ts';
-import { createSessionStartRepeats, type SessionStartRepeats } from './session-start-repeats.ts';
-import { initialRegistry, refreshRegistry } from './session-registry.ts';
 import type { SessionOptions } from './session-types.ts';
 import type { HostState, HostStateSource } from './state.ts';
 import type { HookSessionGates } from '../settings/hooks/session-gates.ts';
 import { NO_HOOKS_YET } from '../skills/hook-limits.ts';
+
+/**
+ * The state of a session that must outlive a turn, as one handle of the Rust core
+ * (`crates/agent-plugins/src/host/session_core.rs`, docs/RUST.md, "The host session"): the
+ * registry, the registrations, the watch list, the background deliveries and the repeats of an
+ * async `SessionStart`, told apart by serials the core hands out. This module is its edge: what
+ * stays the host's (the state cell and the state object last taken up, the engine, the ledgers)
+ * and the mirror the TypeScript dispatch reads the registry through.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_core.rs`, docs/RUST.md).
+ */
+
+/** The core's handle of one session: given back to the core, it is the core's own object again. */
+export interface CoreHandle {
+  readonly coreHandle?: never;
+}
+
+const call = coreModule('host/session-core');
 
 /** One value a session keeps and its views read and replace. */
 export interface Cell<T> {
@@ -72,28 +91,30 @@ export interface BuiltEngine {
   readonly engine: HookEngine;
 }
 
+/** The registry as the edge reads it from the core: by serial, each entry one object for its life. */
+export interface RegistryMirror {
+  /** The registry now; the same object while it has not changed. */
+  get(): HookRegistry;
+  /** The serial the core registered `entry` under (`undefined` for one it never sent). */
+  serialOf(entry: RegisteredHandler): number | undefined;
+}
+
 /**
- * The state of a session that must outlive a turn, made once by `openSession` and shared by every
- * view `withTurn` makes: the hooks registered so far, with the skills' (a `once` hook that ran is
- * gone from the cell for every later turn), what skill hooks have used of their limits, what each
- * prefix of `addHooks` registered, the dynamic watch list and the background queue. The turn view
- * holds nothing of its own beyond the options of the turn. It also holds the host's state cell: a
- * view asks `currentOf` for the state at each use, so `host.update` reaches an open session.
+ * A session's core and what stays the host's beside it, made once by `openSession` and shared by
+ * every view `withTurn` makes. The turn view holds nothing of its own beyond the options of the
+ * turn. A view asks `currentOf` for the state at each use, so `host.update` reaches an open session.
  */
 export interface SessionCore {
+  /** The core's handle. */
+  readonly handle: CoreHandle;
   readonly cell: HostStateSource;
-  /** The state and gates the registry and the ledger were last made for. */
+  /** The state and gates the core was last given (`takeUp`). */
   readonly seen: Cell<Seen>;
-  readonly registry: Cell<HookRegistry>;
+  /** The hooks registered so far, read from the core. */
+  readonly registry: RegistryMirror;
   readonly skillHooks: SkillHookLedger;
-  /** What each prefix registered through `addHooks` or a skill: the ids to remove, by prefix. */
-  readonly registrations: Map<string, { readonly ids: readonly string[] }>;
-  /** The dynamic part of the FileChanged watch list: the last `watchPaths` an output returned. */
-  readonly watchPaths: Cell<readonly string[]>;
   /** The background deliveries of every dispatch of the session, for `takeBackground`. */
   readonly background: BackgroundQueue;
-  /** What each async `SessionStart` hook last gave, so a repeat is not handed on again. */
-  readonly sessionStarts: SessionStartRepeats;
   /** The session's engine, built again only when the state or the turn's ports or paths change. */
   readonly engine: Cell<BuiltEngine | undefined>;
   /** The consecutive Stop blocks of the session: every engine it builds counts in this one. */
@@ -155,18 +176,54 @@ export function monitorLedgerFor(
   return shared;
 }
 
+/** What the core reads of a state: each active plugin's id, name and hooks, and two gates. */
+const factsOf = (state: HostState, gates: HookSessionGates) => ({
+  active: state.active.map((plugin) => ({
+    id: plugin.id,
+    name: plugin.plugin.name,
+    hooks: plugin.plugin.hooks,
+  })),
+  gates: { settingsHooks: gates.settingsHooks, pluginOnlyHooks: gates.pluginOnlyHooks },
+});
+
+/** The registry the core answers, by serial (`entries`: `null` while it has not changed). */
+interface Mirrored {
+  readonly serials: readonly number[];
+  readonly fresh: readonly (readonly [number, RegisteredHandler])[];
+}
+
+function mirrorOf(handle: CoreHandle): RegistryMirror {
+  let registry = createHookRegistry([]);
+  let bySerial = new Map<number, RegisteredHandler>();
+  const serials = new WeakMap<RegisteredHandler, number>();
+  return {
+    get() {
+      const changed: Mirrored | null = call('entries', handle);
+      if (changed === null) return registry;
+      for (const [serial, entry] of changed.fresh) {
+        bySerial.set(serial, entry);
+        serials.set(entry, serial);
+      }
+      const entries = changed.serials.flatMap((serial) => bySerial.get(serial) ?? []);
+      bySerial = new Map(entries.map((entry) => [serials.get(entry) ?? -1, entry]));
+      registry = createHookRegistry(entries);
+      return registry;
+    },
+    serialOf: (entry) => serials.get(entry),
+  };
+}
+
 export function createSessionCore(cell: HostStateSource, monitors: MonitorLedger): SessionCore {
   const state = cell.current();
   const { gates } = state;
+  const handle: CoreHandle = call('createSessionCore', factsOf(state, gates));
   return {
+    handle,
     cell,
     seen: cellOf({ state, gates }),
-    registry: cellOf(initialRegistry(state, gates)),
+    registry: mirrorOf(handle),
     skillHooks: { used: new Map(), counted: new Map() },
-    registrations: new Map(),
-    watchPaths: cellOf<readonly string[]>([]),
     background: createBackgroundQueue(),
-    sessionStarts: createSessionStartRepeats(),
     engine: cellOf<BuiltEngine | undefined>(undefined),
     stopCap: createStopBlockCap(),
     onceClaims: createOnceClaims(),
@@ -204,7 +261,7 @@ function settleLedger(core: SessionCore, state: HostState): void {
  */
 function refresh(core: SessionCore, state: HostState): void {
   const { gates } = state;
-  refreshRegistry(core, { state, gates });
+  call('takeUp', core.handle, factsOf(state, gates));
   settleLedger(core, state);
   core.seen.set({ state, gates });
 }

@@ -229,8 +229,61 @@ under `h`. The host calls a method by the name `<h>#<method>` through `start` an
 one through `call` too), and `registry::release(h)` forgets it. The wrapper builds an object with
 those methods (`src/wasm/drive.ts`) and releases the handle when the object is collected
 (`FinalizationRegistry`); a method's call reads the host values of the call that made the handle,
-so a port the core keeps in it is still the host's. `registry/probe` holds an export of each kind
+so a port the core keeps in it is still the host's. The object given back to the core, as an
+argument at any depth, crosses as `{"$handle": h}` (`src/wasm/wire.ts` knows the objects it made)
+and is read as `registry::Own<T>`, the core's own object, neither copied nor asked: a parameter
+`core: Own<SessionCore>` is the session the host holds. `registry/probe` holds an export of each kind
 for the loop's tests (`tests/wasm/loop.test.ts`); no module of `src/` names it.
+
+### The host session: one handle, ids instead of identity
+
+A session keeps what outlives a turn (`src/host/session-core.ts`, docs/ARCHITECTURE.md, `host`),
+and the TypeScript told its parts apart by identity: a `WeakMap` per session or state, a `WeakSet`
+of `once` claims, `!==` on host states, a registration compared with `===`. Identity does not
+cross the boundary, so the session's state is one core handle, `SessionCore`
+(`crates/agent-plugins/src/host/session_core.rs`), and the core tells its parts apart by numbers
+it hands out:
+
+- **The registry** is the core's: each `RegisteredHandler` it holds has a serial, given when it
+  is registered (a hook registered again under the same id is a new serial, as it was a new
+  object). The rules of `session-registry` (what a state declares, what an update keeps, what
+  `addHooks` replaces), the dynamic watch list and the repeats of an async `SessionStart` are the
+  core's too. Each module keeps its file and its exports, which take the session's handle back
+  (`registry::Own<SessionCore>`, "Handles" above): `session_registry.rs`'s `registerEntries`,
+  `session_hook_scope.rs`'s `addHooks`, `recordOutcome`, `hasHooks`. The background queue's
+  deliveries are a handle of their own (`createBackgroundQueue`), as its tests make one alone.
+- **A registration** is its prefix and a serial: a `HookHandle` is a handle of the core whose
+  `remove` removes it only while the prefix still holds that serial (the `===` of
+  `registerEntries`), and a turn scope is a handle that keeps its registrations and removes them
+  at `end`.
+- **A state** is taken up once per host object: the edge compares the state object it last gave
+  with `cell.current()` (`currentOf`) and, when it changed, hands the core the facts it reads
+  (`takeUp`: each active plugin's id, name and hooks; the gates' `settingsHooks` and
+  `pluginOnlyHooks`), one crossing per update, none per use.
+- **What stays TypeScript, at the edge** (`src/host/session-core.ts`): what is the host's. The
+  state cell and the last state object; the host's closures (`onBackground`'s listeners, kept in
+  a `Set` and removed by identity: the core answers a delivery with what to announce, the edge
+  calls them); the host's promises (`.then` of each background promise reports `settle` into the
+  core by value, `.finally` drops the `once` registrations it spent). The registry crosses to
+  the TypeScript dispatch as a mirror the edge keeps by serial: `entries` answers the serials in
+  order and only the entries this edge has not been sent yet, so an entry keeps its object for its
+  life (a `once` claim, `Selection.monitor` and a test's `toBe` see the same one) and an unchanged
+  registry crosses as numbers.
+- **Not moved yet, each with its module**: the `once` claims (`hooks/select/once`: by serial in the
+  core, the TypeScript dispatch mapping its entries to serials through the mirror until
+  `run-all`, `dispatch` and `engine` run in the core); the skill-hook ledger (with
+  `session-skill-hooks`, which fills it); the monitor ledger (with `session-monitors`; a
+  subagent's core then shares its parent's ledger as one `Arc`, and `LEDGERS` goes); the engine
+  cache, the Stop cap and the environment files (`session-environment`'s `WeakMap`, a field of
+  the core) move with `engine`, whose dispatch becomes a method of the session, its stop cap a
+  flag instead of the host object `UNCOUNTED`. `session-skill-entries`' memo by `HostState`
+  becomes the core's by the state it took up, its entries naming their plugin by index into the
+  state's `active` list, which the edge maps back to the host's `ActivePlugin` and `readBody`.
+
+One crossing per operation, never per field: an `addHooks` is one call (register, filter by the
+gates, replace the prefix, keep it in the turn scope), a `recordOutcome` one (watch paths, the
+repeat check, answering the promises to watch), and a read of an unchanged registry answers
+`null`.
 
 ## Switching a module
 

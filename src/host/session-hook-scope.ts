@@ -1,21 +1,28 @@
-import {
-  fileChangedWatchList,
-  hasRunnableHandler,
-  mergeWatchPaths,
-  runnableHandlers,
-  type HookOutcome,
-  type HookSession,
-  type HookSource,
-  type HookSourceKind,
-  type RegisteredHandler,
-  type SettledDeliveries,
+import type {
+  BackgroundDelivery,
+  HookOutcome,
+  HookSession,
+  HookSource,
+  HookSourceKind,
+  RegisteredHandler,
+  SettledDeliveries,
 } from '../hooks/index.ts';
 import type { HooksSettings } from '../protocol/hook-config.ts';
 import type { HookEvent } from '../protocol/official.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { BackgroundListener } from './background-queue.ts';
 import { currentOf, type SessionCore } from './session-core.ts';
-import { dropRegistration, dropSpent, registerEntries } from './session-registry.ts';
-import { registerHooks } from '../hooks/register.ts';
+import { dropSpent } from './session-registry.ts';
+
+/**
+ * The scoped-hook part of a session: `addHooks`, `removeHooks`, `runScoped`'s turn scope and the
+ * reads over the registry, each one call of the session's core.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/host/session_hook_scope.rs`,
+ * docs/RUST.md); the host's listeners and promises stay here.
+ */
+
+const call = coreModule('host/session-hook-scope');
 
 /** Removes one registration; it does nothing once the prefix was registered again or removed. */
 export interface HookHandle {
@@ -39,26 +46,11 @@ export interface AddHooksOptions {
 
 /** The turn-lifetime registrations of one `runScoped`, dropped together when it ends. */
 export interface TurnScope {
-  readonly handles: HookHandle[];
-  /** True once `end` ran: a view kept past the callback registers nothing more with it. */
-  readonly ended: boolean;
+  /** Removes every registration it holds; a view kept past the callback registers nothing more. */
   end(): void;
 }
 
-export function createTurnScope(): TurnScope {
-  const handles: HookHandle[] = [];
-  let ended = false;
-  return {
-    handles,
-    get ended() {
-      return ended;
-    },
-    end() {
-      ended = true;
-      handles.splice(0).forEach((handle) => handle.remove());
-    },
-  };
-}
+export const createTurnScope = (): TurnScope => call('createTurnScope');
 
 /**
  * What a dispatch leaves in the core: `watchPaths` of a SessionStart, CwdChanged or FileChanged
@@ -72,34 +64,21 @@ export function recordOutcome(
   outcome: HookOutcome<HookEvent>,
   source?: unknown,
 ): void {
-  core.watchPaths.set(mergeWatchPaths(core.watchPaths.get(), outcome.effects.watchPaths));
   dropSpent(core);
+  const watched: readonly Promise<BackgroundDelivery>[] = call(
+    'recordOutcome',
+    core.handle,
+    outcome,
+    source,
+  );
   core.background.add(
-    core.sessionStarts.watch(outcome, source).map((delivery) =>
+    watched.map((delivery) =>
       delivery.finally(() => {
         dropSpent(core);
       }),
     ),
   );
 }
-
-/** What a lifetime does with the turn scope of the view: `turn` needs one to end it. */
-const ATTACH: {
-  readonly [L in HookLifetime]: (scope: TurnScope | undefined) => (handle: HookHandle) => void;
-} = {
-  session: () => () => undefined,
-  turn: (scope) => {
-    if (scope === undefined) {
-      throw new Error('addHooks with lifetime "turn" needs the view of session.runScoped');
-    }
-    if (scope.ended) {
-      throw new Error('addHooks with lifetime "turn" on a view whose session.runScoped has ended');
-    }
-    return (handle) => {
-      scope.handles.push(handle);
-    };
-  },
-};
 
 export interface HookScope {
   /**
@@ -149,35 +128,16 @@ export function createHookScope(
 ): HookScope {
   return {
     addHooks(prefix, hooks, source, options = {}) {
-      const seen = currentOf(core);
-      const attach = ATTACH[options.lifetime ?? 'session'](scope);
-      const entries = registerHooks(hooks, {
-        idPrefix: prefix,
-        source,
-        ...(options.pluginId === undefined ? {} : { pluginId: options.pluginId }),
-      });
-      const handle = registerEntries(core, seen, prefix, entries);
-      attach(handle);
-      return handle;
+      currentOf(core);
+      return call('addHooks', core.handle, prefix, hooks, source, options, scope);
     },
     removeHooks: (prefix) => {
       currentOf(core);
-      dropRegistration(core, prefix);
+      call('removeHooks', core.handle, prefix);
     },
-    hasHooks: (event) => {
-      const now = session();
-      return hasRunnableHandler(core.registry.get().entries, now, event);
-    },
-    hookEntries: () => runnableHandlers(core.registry.get().entries, session()),
-    fileChangedWatchList: () => {
-      const now = session();
-      return [
-        ...new Set([
-          ...fileChangedWatchList(core.registry.get().entries, now),
-          ...core.watchPaths.get(),
-        ]),
-      ];
-    },
+    hasHooks: (event) => call('hasHooks', core.handle, session(), event),
+    hookEntries: () => call('hookEntries', core.handle, session()),
+    fileChangedWatchList: () => call('fileChangedWatchList', core.handle, session()),
     takeBackground: () => core.background.take(),
     onBackground: (listener) =>
       core.background.listen((delivered, delivery) =>

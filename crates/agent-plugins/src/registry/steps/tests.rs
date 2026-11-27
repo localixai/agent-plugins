@@ -249,3 +249,24 @@ fn a_handle_is_called_by_its_number_and_released() {
         Step::Done(Answer::Fault(_))
     ));
 }
+
+#[test]
+fn an_own_handle_given_back_is_the_object_it_was() {
+    let counter = Handle::own(Counter::new(1.0));
+    let JsValue::Object(tag) = to_js_value(&counter).unwrap() else {
+        panic!("a handle is an object");
+    };
+    let number = tag.get("$own").cloned().unwrap();
+    let given = format!(r#"[{{"$handle":{}}},2]"#, number.to_json_text());
+    assert_eq!(call("registry/probe#addTo", &given), r#"{"result":3}"#);
+    assert_eq!(call("registry/probe#addTo", &given), r#"{"result":5}"#);
+    let other = Handle::own(crate::host::session_hook_scope::TurnScope::default());
+    let JsValue::Object(tag) = to_js_value(&other).unwrap() else {
+        panic!("a handle is an object");
+    };
+    let wrong = format!(
+        r#"[{{"$handle":{}}},2]"#,
+        tag.get("$own").unwrap().to_json_text()
+    );
+    assert!(call("registry/probe#addTo", &wrong).starts_with(r#"{"fault""#));
+}

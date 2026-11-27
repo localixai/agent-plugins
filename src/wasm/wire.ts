@@ -17,6 +17,7 @@
  *   made, which arrives as a new one);
  * - a promise of the host's: `{"$promise": n}` (the core awaits it by the need `then`);
  * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`,
+ *   or `{"$own": h, …}` for one the host may give back, which then crosses as `{"$handle": h}`;
  *   a function of the core's (a timer's `fire`): `{"$call": h}`, a function that calls the
  *   handle's one method, `call`, and a promise of the core's: `{"$promise": {"task": t}}`, a
  *   promise that drives task `t` (`drive.ts`).
@@ -85,13 +86,28 @@ const fromBase64 = (text: string): Uint8Array => {
   return bytes;
 };
 
+/**
+ * The objects the core's `$own` handles became, by identity: given back to the core, each crosses
+ * as its handle, `{"$handle": h}`, and is the core's own object again (`registry::Own`). Another
+ * handle given back stays a port, as the core reads it.
+ */
+const OWN = new WeakMap<object, number>();
+
+const ownOf = (value: unknown): number | undefined =>
+  typeof value === 'object' && value !== null ? OWN.get(value) : undefined;
+
+/** A number JSON has no text for, as its tag; `undefined` for one it has. */
+const numberTag = (value: number): unknown => {
+  if (Object.is(value, -0)) return { $number: '-0' };
+  return Number.isFinite(value) ? undefined : { $number: String(value) };
+};
+
 /** A value JSON cannot spell, as its tag; `undefined` for one it can. */
 function tagged(value: unknown, hosts: HostValues | undefined): unknown {
   if (value === undefined) return UNDEFINED;
-  if (typeof value === 'number') {
-    if (Object.is(value, -0)) return { $number: '-0' };
-    return Number.isFinite(value) ? undefined : { $number: String(value) };
-  }
+  const own = ownOf(value);
+  if (own !== undefined) return { $handle: own };
+  if (typeof value === 'number') return numberTag(value);
   if (value instanceof Set) return { $set: [...value] };
   if (value instanceof Map) return { $map: [...value] };
   if (value instanceof Uint8Array) return { $bytes: toBase64(value) };
@@ -163,6 +179,16 @@ const handle: Reader = (tag, _read, hosts) => {
     : undefined;
 };
 
+/** A result with methods the host may give back: the object, remembered as the core's own. */
+const own: Reader = (tag, _read, hosts) => {
+  const number = tag.$own;
+  const [sync, async] = [names(tag.sync), names(tag.async)];
+  if (hosts === undefined || typeof number !== 'number' || !sync || !async) return undefined;
+  const object = hosts.handle(number, sync, async);
+  OWN.set(object, number);
+  return { value: object };
+};
+
 /** A function of the core's, as a function that calls its handle's method `call`. */
 const coreFunction: Reader = (tag, _read, hosts) => {
   if (hosts === undefined || typeof tag.$call !== 'number') return undefined;
@@ -196,12 +222,18 @@ const READERS: Readonly<Record<string, Reader | undefined>> = {
   $fn: kept,
   $signal: signal,
   $handle: handle,
+  $own: own,
   $call: coreFunction,
   $promise: promise,
 };
 
 /** How many members a tag has with its key, when more than one. */
-const MEMBERS: Readonly<Record<string, number>> = { $regexp: 2, $signal: 2, $handle: 3 };
+const MEMBERS: Readonly<Record<string, number>> = {
+  $regexp: 2,
+  $signal: 2,
+  $handle: 3,
+  $own: 3,
+};
 
 /** A tag read back as its value (`{ value }`), or `undefined` when `value` is not a tag. */
 function untagged(

@@ -194,3 +194,13 @@ test('a handle is an object whose methods call the core, sync and async', async 
   expect(other.add(1)).toBe(11);
   expect(counter.add(0)).toBe(7);
 });
+
+test('a handle given back is the core object it was, not a copy or a port', () => {
+  interface Counter {
+    add(by: number): number;
+  }
+  const counter = probe<Counter>('counter', 1);
+  expect(probe<number>('addTo', counter, 2)).toBe(3);
+  expect(counter.add(0)).toBe(3);
+  expect(() => probe('addTo', { add: () => 0 }, 2)).toThrow(/Own|handle|decode|port/u);
+});

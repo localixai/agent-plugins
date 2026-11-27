@@ -1,4 +1,4 @@
-//! Port of `src/hooks/select/lock-gates.ts`, switched.
+//! Ported from `src/hooks/select/lock-gates.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The two managed settings that narrow where hooks may come from (hooks.md, "Hook locations" and
 //! "Limits on skill hooks"; settings-reference.md, "allowManagedHooksOnly" and
@@ -71,10 +71,4 @@ pub fn plugin_only_allows(entry: &RegisteredHandler) -> bool {
 pub fn passes_locks(entry: &RegisteredHandler, session: &HookSession) -> bool {
     (session.allow_managed_hooks_only != Some(true) || managed_only(entry, session))
         && (session.plugin_only_hooks != Some(true) || plugin_only_allows(entry))
-}
-
-crate::registry::exports! {
-    "hooks/select/lock-gates" {
-        "pluginOnlyAllows" => ok |entry: RegisteredHandler| plugin_only_allows(&entry);
-    }
 }

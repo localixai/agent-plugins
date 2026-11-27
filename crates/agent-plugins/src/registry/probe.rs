@@ -3,13 +3,13 @@
 //! export that uses it while no ported module does yet: needs asked together, a port with a
 //! method the host answers at once and one it answers with a promise, a host's throw caught, and
 //! a handle with a sync and an async method, promises of the host's awaited and caught, and an
-//! answer that holds a promise of the core's.
+//! answer that holds a promise of the core's, and a handle given back (`Own`).
 
 use std::sync::Mutex;
 
 use serde::Serialize;
 
-use super::{Callback, CorePromise, Handle, HostPromise, Port, catch_host};
+use super::{Callback, CorePromise, Handle, HostPromise, Own, Port, catch_host};
 use crate::js::JsValue;
 use crate::js::promise_all;
 use crate::ports::files::TextFileReader as _;
@@ -102,7 +102,8 @@ struct Later {
 
 crate::registry::exports! {
     "registry/probe" {
-        "counter" => ok |start: f64| Handle::new(Counter::new(start));
+        "counter" => ok |start: f64| Handle::own(Counter::new(start));
+        "addTo" => ok |counter: Own<Counter>, by: f64| counter.add(by);
         "both" => async ok |files: Port, first: String, second: String| both(files, first, second).await;
         "located" => async ok |locations: Port, plugin: String| located(locations, plugin).await;
         "opened" => async ok |scan: Port, dir: String| opened(scan, dir).await;
