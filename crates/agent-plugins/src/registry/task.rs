@@ -8,6 +8,13 @@
 //! answer is in that link. Every need written during one poll is handed to the host together, so
 //! a `join` in the core is concurrent work on the host, as `Promise.all` is in the TypeScript.
 //!
+//! A host's throw ends the task (`{"rethrow": id}`) unless a [`catch_host`](crate::registry::catch_host) scope awaits the
+//! need: then the scope answers it (`registry/catch.rs`).
+//!
+//! A task is an export's call, a handle method's call, or a future of the core's that crossed in
+//! an answer as a promise (`registry::CorePromise`): that one is kept without a poll ([`keep`]),
+//! and the host's first `resume` of it, with no answers, polls it the first time.
+//!
 //! The tables are the thread's: the WebAssembly module has one thread, and a Rust host that
 //! drives tasks on several threads gets a table on each.
 
@@ -19,6 +26,8 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll, Waker};
 
 use super::Answer;
+pub(crate) use super::asked::{ask, fail};
+use super::catch::Thrown;
 use crate::js::JsValue;
 
 /// An export's work as the registry keeps it: a future that gives the export's answer once the
@@ -44,8 +53,14 @@ pub struct Need {
 pub enum Reply {
     /// What the method returned (or its promise resolved to).
     Result(JsValue),
-    /// The method threw (or its promise rejected), with the message of what it threw.
-    Throws(String),
+    /// The method threw (or its promise rejected): the message of what it threw (`cause.message`
+    /// of an `Error`, `String(cause)` of anything else) and an `Error`'s `name`.
+    Throws {
+        /// `cause instanceof Error ? cause.message : String(cause)`.
+        message: String,
+        /// The error's `name` (`TypeError`), when it is an `Error`.
+        name: Option<String>,
+    },
 }
 
 /// Where a task is after a poll.
@@ -70,19 +85,51 @@ pub enum Step {
 
 /// Why a task ended before its future did.
 #[derive(Debug)]
-enum End {
+pub(super) enum End {
     Rethrow(u32),
     Fault(String),
 }
 
 /// What a task shares with the port calls it makes while it is polled.
 #[derive(Debug, Default)]
-struct Link {
-    next_need: u32,
-    asked: Vec<Need>,
-    waiting: BTreeSet<u32>,
-    replies: BTreeMap<u32, Reply>,
-    end: Option<End>,
+pub(super) struct Link {
+    /// The task's number: a need belongs to the task that asked it (`registry/asked.rs`).
+    pub(super) number: u32,
+    pub(super) next_need: u32,
+    pub(super) asked: Vec<Need>,
+    pub(super) waiting: BTreeSet<u32>,
+    /// Needs the host was asked whose future is gone (a scope dropped it): their answers, when
+    /// they come, are dropped too.
+    abandoned: BTreeSet<u32>,
+    pub(super) replies: BTreeMap<u32, Reply>,
+    pub(super) end: Option<End>,
+    /// The `catch_host` scopes being polled, innermost last, each with the throw it caught.
+    pub(super) scopes: Vec<Option<Thrown>>,
+}
+
+impl Link {
+    /// The host threw `thrown`: the innermost scope being polled catches it, or the task ends.
+    pub(super) fn raise(&mut self, thrown: Thrown) {
+        if let Some(scope) = self.scopes.last_mut() {
+            scope.get_or_insert(thrown);
+        } else {
+            self.end.get_or_insert(End::Rethrow(thrown.need));
+        }
+    }
+
+    /// Need `id`'s future is gone before its answer: a need not handed to the host yet is never
+    /// handed, one the host is doing is abandoned, an answer not read yet is dropped.
+    pub(super) fn retract(&mut self, id: u32) {
+        let before = self.asked.len();
+        self.asked.retain(|need| need.id != id);
+        if self.asked.len() < before {
+            self.waiting.remove(&id);
+        } else if self.waiting.contains(&id) {
+            self.abandoned.insert(id);
+        } else {
+            self.replies.remove(&id);
+        }
+    }
 }
 
 struct Task {
@@ -108,60 +155,8 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// The link of the task being polled, given to `body`; `None` outside a poll.
-fn with_current<R>(body: impl FnOnce(&mut Link) -> R) -> Option<R> {
+pub(super) fn with_current<R>(body: impl FnOnce(&mut Link) -> R) -> Option<R> {
     CURRENT.with(|current| lock(current).as_mut().map(body))
-}
-
-/// Asks the host for `method` of value `port`; the future is the host's answer.
-pub(crate) fn ask(port: u32, method: &str, args: Vec<JsValue>) -> Asked {
-    let id = with_current(|link| {
-        let id = link.next_need;
-        link.next_need += 1;
-        link.waiting.insert(id);
-        link.asked.push(Need {
-            id,
-            port,
-            method: method.to_owned(),
-            args,
-        });
-        id
-    });
-    Asked { id }
-}
-
-/// Ends the task being polled with a fault: the host answered what the port's type does not hold.
-pub(crate) fn fail(why: String) {
-    with_current(|link| {
-        link.end.get_or_insert(End::Fault(why));
-    });
-}
-
-/// A need's answer: pending until the host gives it.
-#[derive(Debug)]
-pub(crate) struct Asked {
-    /// `None` when it was asked outside a task, where no host will ever answer.
-    id: Option<u32>,
-}
-
-impl Future for Asked {
-    type Output = JsValue;
-
-    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<JsValue> {
-        let Some(id) = self.id else {
-            fail("a host value was used outside a task the host drives".to_owned());
-            return Poll::Pending;
-        };
-        match with_current(|link| link.replies.remove(&id)).flatten() {
-            Some(Reply::Result(value)) => Poll::Ready(value),
-            Some(Reply::Throws(_)) => {
-                with_current(|link| {
-                    link.end.get_or_insert(End::Rethrow(id));
-                });
-                Poll::Pending
-            }
-            None => Poll::Pending,
-        }
-    }
 }
 
 /// Polls a task once and says where it is; a task that still waits goes back into the table.
@@ -182,7 +177,7 @@ fn drive(number: u32, mut task: Task) -> Step {
         Some(End::Fault(why)) => return Step::Done(Answer::Fault(why)),
         None => {}
     }
-    if task.link.waiting.is_empty() {
+    if task.link.waiting.is_subset(&task.link.abandoned) {
         return Step::Done(Answer::Fault(
             "the export waits on nothing the host was asked".to_owned(),
         ));
@@ -195,21 +190,25 @@ fn drive(number: u32, mut task: Task) -> Step {
     }
 }
 
-/// Keeps an export's future as a new task and polls it the first time.
-pub(crate) fn start(future: Started) -> Step {
-    let number = TASKS.with(|tasks| {
+/// Keeps `future` as a new task without polling it; its number. The first `resume` (with no
+/// answers) polls it.
+pub(crate) fn keep(future: Started) -> u32 {
+    TASKS.with(|tasks| {
         let mut tasks = lock(tasks);
         let number = tasks.next;
         tasks.next = tasks.next.wrapping_add(1);
+        let link = Link {
+            number,
+            ..Link::default()
+        };
+        tasks.running.insert(number, Task { future, link });
         number
-    });
-    drive(
-        number,
-        Task {
-            future,
-            link: Link::default(),
-        },
-    )
+    })
+}
+
+/// Keeps an export's future as a new task and polls it the first time.
+pub(crate) fn start(future: Started) -> Step {
+    resume(keep(future), vec![])
 }
 
 /// Gives a waiting task the host's answers and polls it again. An answer to a need the task does
@@ -226,7 +225,9 @@ pub(crate) fn resume(number: u32, replies: Vec<(u32, Reply)>) -> Step {
                 "task {number} does not wait on need {id}"
             )));
         }
-        task.link.replies.insert(id, reply);
+        if !task.link.abandoned.remove(&id) {
+            task.link.replies.insert(id, reply);
+        }
     }
     drive(number, task)
 }

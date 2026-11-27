@@ -1,7 +1,6 @@
-import { STANDARD_LAYOUT, declaredKey, type ComponentKind } from '../format/layout.ts';
-import { warning, type PluginIssue } from '../format/issues.ts';
-import { defaultFolderIgnored } from '../format/messages.ts';
-import { isWithin, rootRelative } from '../format/path-text.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import type { ComponentKind } from '../format/layout.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { DiscoverContext } from './discovered.ts';
 
 /**
@@ -9,19 +8,13 @@ import type { DiscoverContext } from './discovered.ts';
  * (plugins/manifest-reference.md, "How each key combines with its default location"): "To avoid the
  * warning, set the key to a path inside that folder", and listing the folder itself keeps it. Only a
  * kind whose key replaces its default has a folder to ignore.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/loading/ignored_folder.rs`, docs/RUST.md).
  */
-export async function ignoredFolderIssues(
+const call = coreModule('loading/ignored-folder');
+
+export const ignoredFolderIssues = (
   kind: ComponentKind,
   declaredPaths: readonly string[],
   context: DiscoverContext,
-): Promise<PluginIssue[]> {
-  const { folder } = STANDARD_LAYOUT[kind];
-  const declared = declaredKey(context.manifest, kind);
-  if (folder === undefined || declared === undefined) return [];
-  const present = await context.files.stat(folder, context.signal);
-  if (!present?.isDirectory) return [];
-  const keeps = declaredPaths.some((path) =>
-    isWithin(folder, rootRelative(path, context.platform)),
-  );
-  return keeps ? [] : [warning(declared.key, defaultFolderIgnored(folder, declared.key))];
-}
+): Promise<PluginIssue[]> => call.async('ignoredFolderIssues', kind, declaredPaths, context);

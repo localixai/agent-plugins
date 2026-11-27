@@ -5,24 +5,24 @@ Lines are the TypeScript files as they are now: a switched module counts its wra
 
 | Module | switched | ported | stays TypeScript | TypeScript |
 | --- | --- | --- | --- | --- |
-| all | 70 (2809 lines) |  | 23 (1198 lines) | 1188 (117557 lines) |
-| `agents` |  |  |  | 37 (4160 lines) |
-| `cli` |  |  |  | 53 (6199 lines) |
-| `convert` |  |  |  | 27 (2306 lines) |
+| all | 417 (20272 lines) | 1 (97 lines) | 48 (3355 lines) | 779 (78222 lines) |
+| `agents` | 28 (1838 lines) |  | 1 (30 lines) | 8 (892 lines) |
+| `cli` | 23 (1322 lines) |  |  | 30 (3972 lines) |
+| `convert` | 12 (360 lines) |  |  | 5 (377 lines) |
 | `entry` |  |  |  | 16 (261 lines) |
-| `format` | 69 (2775 lines) |  |  | 90 (12223 lines) |
-| `foundation` |  |  |  | 11 (794 lines) |
-| `hooks` | 1 (34 lines) |  |  | 137 (11553 lines) |
-| `host` |  |  |  | 49 (5793 lines) |
+| `format` | 92 (4486 lines) |  | 1 (21 lines) | 62 (7567 lines) |
+| `foundation` | 3 (226 lines) |  | 3 (171 lines) | 4 (213 lines) |
+| `hooks` | 59 (2127 lines) |  | 10 (1013 lines) | 59 (5058 lines) |
+| `host` | 2 (43 lines) |  |  | 47 (5556 lines) |
 | `index.ts` |  |  |  | 1 (112 lines) |
-| `loading` |  |  |  | 95 (8177 lines) |
-| `marketplace` |  |  |  | 94 (12281 lines) |
+| `loading` | 48 (1807 lines) |  | 2 (37 lines) | 45 (4485 lines) |
+| `marketplace` | 49 (3199 lines) | 1 (97 lines) | 2 (264 lines) | 42 (5996 lines) |
 | `mods` |  |  |  | 214 (17885 lines) |
 | `ports` |  |  | 15 (536 lines) |  |
-| `protocol` |  |  | 1 (7 lines) | 17 (1445 lines) |
-| `rules` |  |  |  | 111 (10121 lines) |
+| `protocol` | 13 (1307 lines) |  | 1 (7 lines) | 4 (237 lines) |
+| `rules` | 67 (2366 lines) |  | 5 (499 lines) | 30 (3658 lines) |
 | `settings` |  |  |  | 158 (15905 lines) |
-| `skills` |  |  |  | 41 (4666 lines) |
+| `skills` | 16 (894 lines) |  | 1 (28 lines) | 22 (2860 lines) |
 | `testing` |  |  |  | 27 (2369 lines) |
-| `updates` |  |  |  | 10 (1307 lines) |
-| `wasm` |  |  | 7 (655 lines) |  |
+| `updates` | 5 (297 lines) |  |  | 5 (819 lines) |
+| `wasm` |  |  | 7 (749 lines) |  |

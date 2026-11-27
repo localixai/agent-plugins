@@ -24,6 +24,8 @@ import { bash, decision, deny } from '../support/decide.ts';
 import { call } from '../support/rule-context.ts';
 import { spec } from '../support/spec.ts';
 
+/** A function in the session's context: such a context crosses into the core as a port. */
+const requiresPermission = (): boolean => true;
 const TOOLS = ['AskUserQuestion', 'EnterPlanMode', 'ExitPlanMode', 'Bash', 'Read', 'Edit'];
 const session = (rest: Partial<ToolSession> = {}): ToolSession => ({
   platform: 'windows',
@@ -79,6 +81,12 @@ describe('Messages from denyInsteadOfPrompting', () => {
       expect(bash('default', 'npm test', { cannotPrompt: true, interactive: false })).toEqual(
         deny('prompt-unavailable'),
       );
+    });
+
+    test('a session whose context also holds functions still refuses the call', () => {
+      expect(
+        bash('default', 'npm test', { denyInsteadOfPrompting: true, requiresPermission }),
+      ).toEqual(deny('no-approval-surface'));
     });
 
     test('in auto mode the turn ends after 20 calls in a row that were refused', () => {

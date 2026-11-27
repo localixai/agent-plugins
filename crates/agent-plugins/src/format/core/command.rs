@@ -68,7 +68,6 @@ pub fn command_problem(command: &JsValue) -> Option<&'static str> {
 
 crate::registry::exports! {
     "format/core/command" {
-        "relativeCommandPath" => ok |command: String| relative_command_path(&command);
         "commandProblem" => ok |command: JsValue| command_problem(&command);
     }
 }

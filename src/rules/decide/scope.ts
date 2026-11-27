@@ -1,25 +1,16 @@
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PathContext } from '../types.ts';
-import { normalizeAbsolute, relativeWithin, toPosixPath } from '../path/posix.ts';
+
+/** Implemented by the Rust core (`crates/agent-plugins/src/rules/decide/scope.rs`, docs/RUST.md). */
+const call = coreModule('rules/decide/scope');
 
 /** A host path in the kit's one form: POSIX, absolute, `.` and `..` folded. */
-export const posixOf = (path: string, paths: PathContext): string =>
-  normalizeAbsolute(toPosixPath(path, paths.platform));
+export const posixOf = (path: string, paths: PathContext): string => call('posixOf', path, paths);
 
 /**
- * The working directory and the additional directories, in the kit's path form, each with its real
- * location when it is reached through a link (`PathContext.realDirectories`): a file the symlink
- * check resolves below the real location sits in that working directory (permissions.md, "Writes
- * through a symlink"; a judgment, spec/judgments.md).
+ * Whether `path` is the working directory or an additional directory, or below one. Each is taken
+ * with its real location when it is reached through a link (`PathContext.realDirectories`): a file
+ * the symlink check resolves below the real location sits in that working directory (permissions.md,
+ * "Writes through a symlink"; a judgment, spec/judgments.md).
  */
-const workingDirectories = (paths: PathContext): readonly string[] =>
-  [paths.primaryWorkingDirectory, ...paths.additionalDirectories].flatMap((dir) => {
-    const spelled = posixOf(dir, paths);
-    const real = paths.realDirectories?.get(spelled);
-    return real === undefined ? [spelled] : [spelled, real];
-  });
-
-/** Whether `path` is the working directory or an additional directory, or below one. */
-export const inScope = (path: string, paths: PathContext): boolean =>
-  workingDirectories(paths).some(
-    (root) => relativeWithin(root, path, paths.platform) !== undefined,
-  );
+export const inScope = (path: string, paths: PathContext): boolean => call('inScope', path, paths);

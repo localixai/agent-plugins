@@ -90,7 +90,17 @@ fn a_host_throw_ends_the_task_as_a_rethrow() {
     let before = task::waiting();
     let (number, _) = waits(start("format/listing#listSorted", &[port(0.0), ".".into()]));
     assert_eq!(task::waiting(), before + 1);
-    let step = resume(number, vec![(0, Reply::Throws("EACCES".into()))], &[]);
+    let step = resume(
+        number,
+        vec![(
+            0,
+            Reply::Throws {
+                message: "EACCES".into(),
+                name: None,
+            },
+        )],
+        &[],
+    );
     assert_eq!(step, Step::Rethrow { need: 0 });
     assert_eq!(task::waiting(), before);
     let again = resume(number, vec![], &[]);
@@ -122,6 +132,25 @@ fn an_export_that_waits_is_no_sync_call() {
     assert!(text.starts_with(r#"{"fault":"#), "{text}");
     let sync = start_json("format/read-json#invalidJsonSyntax", r#"["x"]"#);
     assert_eq!(sync, r#"{"done":{"result":"Invalid JSON syntax: x"}}"#);
+}
+
+#[test]
+fn an_async_export_that_asks_nothing_answers_a_sync_call() {
+    let ledger =
+        r#"{"loaded":[{"command":"a","content":"a body","order":1}],"grants":[],"disallowed":[]}"#;
+    let text = call(
+        "skills/lifecycle#reattachAfterCompaction",
+        &format!("[{ledger}]"),
+    );
+    assert_eq!(
+        text,
+        r#"{"result":[{"command":"a","content":"a body","order":1}]}"#
+    );
+    let waits = call(
+        "skills/lifecycle#reattachAfterCompaction",
+        &format!(r#"[{ledger},{{"tokens":{{"$port":0}}}}]"#),
+    );
+    assert!(waits.contains("it waits on the host"), "{waits}");
 }
 
 #[test]

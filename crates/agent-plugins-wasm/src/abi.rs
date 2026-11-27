@@ -21,7 +21,8 @@
 //! returns a step's buffer (`{"done"}`, `{"task", "needs"}` or `{"rethrow"}`,
 //! `agent_plugins::registry::Step`); `agent_plugins_resume` takes a task's number and a buffer
 //! of the host's answers (`{"answers": [...], "aborted": [...]}`) and returns the next step's;
-//! `agent_plugins_release` forgets a handle the host no longer holds.
+//! `agent_plugins_release` forgets a handle the host no longer holds, and `agent_plugins_cancel`
+//! drops a task it will not resume (a core promise it can no longer drive).
 #![expect(
     unsafe_code,
     reason = "an export keeps its name (`no_mangle`), and a buffer the host hands back is \
@@ -104,6 +105,13 @@ pub unsafe extern "C" fn agent_plugins_resume(
 #[unsafe(no_mangle)]
 pub extern "C" fn agent_plugins_release(handle: u32) {
     agent_plugins::registry::release(handle);
+}
+
+/// Drops the task `task` (`registry::cancel`): a core promise the host can no longer drive; a
+/// task already ended is no fault.
+#[unsafe(no_mangle)]
+pub extern "C" fn agent_plugins_cancel(task: u32) {
+    agent_plugins::registry::cancel(task);
 }
 
 /// The step's text for a name and arguments as bytes.

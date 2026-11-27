@@ -1,6 +1,6 @@
-import { invocationPolicy } from './invocation.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { NamedInvocable, SkillLookup } from './lookup.ts';
-import { isLeading, readSkillMentions, type SkillMention } from './mention.ts';
+import type { SkillMention } from './mention.ts';
 import type { SkillOverrides } from './visibility.ts';
 
 /**
@@ -11,7 +11,11 @@ import type { SkillOverrides } from './visibility.ts';
  * arguments may start with another command, ends it, and that token and everything after become the
  * argument text for every expanded skill. `readSkillMentions` finds the words; this decides which
  * of them are skills of the session that may be stacked.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/skills/stack.rs`, docs/RUST.md).
  */
+
+const call = coreModule('skills/stack');
 
 export interface StackOptions {
   /** True at the terminal prompt (the default); through the Agent SDK or `claude -p` only the first skill loads. */
@@ -33,36 +37,12 @@ export interface Stack<E extends NamedInvocable> {
   readonly mentions: readonly SkillMention[];
 }
 
-/** Whether a skill may be stacked after another: inline (no `context: fork`), user-invocable, not open-ended. */
-const stackableAfter =
-  (options: StackOptions) =>
-  ({ invocable }: NamedInvocable): boolean =>
-    invocable.context === undefined &&
-    invocationPolicy(invocable, options.overrides).user &&
-    options.takesCommandArguments?.has(invocable.command) !== true;
-
 /**
  * The skills a message starts with and the argument text they share. No skills when the message
  * does not start with a name of the catalog; the host then treats it as text.
  */
-export function stackSkills<E extends NamedInvocable>(
+export const stackSkills = <E extends NamedInvocable>(
   message: string,
   catalog: SkillLookup<E>,
   options: StackOptions = {},
-): Stack<E> {
-  const canStack = stackableAfter(options);
-  const mentions = readSkillMentions(message, {
-    ...(options.interactive === undefined ? {} : { interactive: options.interactive }),
-    stackable: (name) => {
-      const row = catalog.find(name);
-      return row !== undefined && canStack(row);
-    },
-    names: catalog.names,
-  });
-  const leading = mentions.filter(isLeading);
-  const skills = leading.flatMap((mention) => catalog.find(mention.command) ?? []);
-  const [first] = leading;
-  return first === undefined || skills.length !== leading.length
-    ? { skills: [], arguments: '', mentions }
-    : { skills, arguments: first.arguments, mentions };
-}
+): Stack<E> => call('stackSkills', message, catalog, options);

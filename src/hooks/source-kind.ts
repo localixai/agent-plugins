@@ -1,6 +1,11 @@
+/**
+ * What a kind of declaration site decides about its handlers, wherever the hooks read it.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/source_kind.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../wasm/bridge.ts';
 import type { HookSource, HookSourceKind } from './contracts.ts';
 
-/** What a kind of declaration site decides about its handlers, wherever the hooks read it. */
 export interface SourcePolicy {
   /** A plugin's hooks file. */
   readonly plugin: boolean;
@@ -26,46 +31,13 @@ export interface SourcePolicy {
   readonly scoped: boolean;
 }
 
-/** One row per kind: a registry over the union, so a new kind is a compile error here. */
-export const SOURCE_POLICY: { readonly [K in HookSourceKind]: SourcePolicy } = {
-  plugin: {
-    plugin: true,
-    mergesCopies: false,
-    honorsOnce: false,
-    raisesSessionEndBudget: false,
-    scoped: false,
-  },
-  settings: {
-    plugin: false,
-    mergesCopies: true,
-    honorsOnce: false,
-    raisesSessionEndBudget: true,
-    scoped: false,
-  },
-  skill: {
-    plugin: false,
-    mergesCopies: false,
-    honorsOnce: true,
-    raisesSessionEndBudget: false,
-    scoped: true,
-  },
-  agent: {
-    plugin: false,
-    mergesCopies: false,
-    honorsOnce: false,
-    raisesSessionEndBudget: false,
-    scoped: true,
-  },
-  session: {
-    plugin: false,
-    mergesCopies: false,
-    honorsOnce: false,
-    raisesSessionEndBudget: false,
-    scoped: true,
-  },
-};
+const call = coreModule('hooks/source-kind');
 
-export const isPluginSource = (source: HookSource): boolean => SOURCE_POLICY[source.kind].plugin;
+/** One row per kind: a registry over the union, so a new kind is a compile error here. */
+export const SOURCE_POLICY: { readonly [K in HookSourceKind]: SourcePolicy } =
+  call('SOURCE_POLICY');
+
+export const isPluginSource = (source: HookSource): boolean => call('isPluginSource', source);
 
 /**
  * The name a plugin hook's notices give its plugin: the manifest name, else the plugin id. One
@@ -75,4 +47,4 @@ export const isPluginSource = (source: HookSource): boolean => SOURCE_POLICY[sou
 export const pluginLabel = (entry: {
   readonly pluginId?: string | undefined;
   readonly source: HookSource;
-}): string | undefined => entry.source.pluginName ?? entry.pluginId;
+}): string | undefined => call('pluginLabel', entry);

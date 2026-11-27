@@ -63,15 +63,48 @@ fn with_handles<R>(body: impl FnOnce(&mut Handles) -> R) -> R {
     HANDLES.with(|handles| body(&mut handles.lock().unwrap_or_else(PoisonError::into_inner)))
 }
 
+/// Keeps `object` under a new number, which it answers.
+fn keep(object: &Arc<dyn Methods>) -> u32 {
+    with_handles(|handles| {
+        let number = handles.next;
+        handles.next = handles.next.wrapping_add(1);
+        handles.held.insert(number, Arc::clone(object));
+        number
+    })
+}
+
+/// A function of the core's that the host calls later, such as a timer's `fire`: an object whose
+/// one sync method is `call`, crossing as `{"$call": h}`, which the host makes a function that
+/// calls `<h>#call` (`src/wasm/wire.ts`). It is held as a handle is, until the host releases it.
+#[derive(Clone)]
+pub struct Function(Arc<dyn Methods>);
+
+impl Function {
+    /// The object as a function; its sync method `call` is what calling it does.
+    pub fn new(object: impl Methods) -> Self {
+        Self(Arc::new(object))
+    }
+}
+
+impl std::fmt::Debug for Function {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Function")
+    }
+}
+
+impl Serialize for Function {
+    /// Keeps the object under a new number, which it writes as `{"$call": h}`.
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(1))?;
+        map.serialize_entry("$call", &keep(&self.0))?;
+        map.end()
+    }
+}
+
 impl Serialize for Handle {
     /// Keeps the object under a new number, which it writes with the names of its methods.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let number = with_handles(|handles| {
-            let number = handles.next;
-            handles.next = handles.next.wrapping_add(1);
-            handles.held.insert(number, Arc::clone(&self.0));
-            number
-        });
+        let number = keep(&self.0);
         let mut map = serializer.serialize_map(Some(3))?;
         map.serialize_entry("$handle", &number)?;
         map.serialize_entry("sync", self.0.sync_methods())?;
@@ -107,9 +140,14 @@ pub(crate) fn held() -> usize {
 ///     Counter {
 ///         "add" => ok |this, by: f64| this.add(by);
 ///         "settle" => async ok |this, path: String| this.settle(&path).await;
+///         "home" => sync async ok |this| this.locations.home_dir().await;
 ///     }
 /// }
 /// ```
+///
+/// `sync async` marks a method the TypeScript answers at once that still asks the host (a
+/// `Locations.homeDir` that delegates to the host's own): the host lists it as sync and answers
+/// each of its needs as it comes, as a sync wrapper does (`src/wasm/drive.ts`).
 macro_rules! methods {
     ($type:ty { $($entries:tt)* }) => {
         $crate::registry::methods!(@munch $type [] [] [] $($entries)*);
@@ -138,6 +176,12 @@ macro_rules! methods {
                 }
             }
         }
+    };
+    (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
+        $name:literal => sync async $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;
+        $($rest:tt)*) => {
+        $crate::registry::methods!(@munch $type [$($sync)* $name] [$($async)*]
+            [$($done)* ($name $this [async $kind ($($param: $ptype),*) $body])] $($rest)*);
     };
     (@munch $type:ty [$($sync:literal)*] [$($async:literal)*] [$($done:tt)*]
         $name:literal => async $kind:ident |$this:ident $(, $param:ident : $ptype:ty)* $(,)?| $body:expr;

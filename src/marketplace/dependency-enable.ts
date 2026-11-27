@@ -1,7 +1,7 @@
-import { error, type PluginIssue } from '../format/issues.ts';
-import { dependencyId } from './dependencies.ts';
-import { dependenciesOf, isEnabled, recordsOf, type GraphFacts } from './dependency-graph.ts';
-import { installCommand, SCOPES_BY_PRECEDENCE, type InstallScope } from './install-scopes.ts';
+import type { PluginIssue } from '../format/issues.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { GraphFacts } from './dependency-graph.ts';
+import type { InstallScope } from './install-scopes.ts';
 
 /**
  * Enabling a plugin that declares dependencies (plugins/install.md, "Plugins with dependencies":
@@ -9,7 +9,11 @@ import { installCommand, SCOPES_BY_PRECEDENCE, type InstallScope } from './insta
  * dependency isn't installed, the enable fails and the message tells you to install it first";
  * plugins/cli-reference.md, `plugin enable`: the three ways it fails). Pure: the host writes the
  * settings the plan names.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/dependency_enable.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/dependency-enable');
 
 /** Why a dependency stops an enable. */
 export type EnableBlock = 'not-installed' | 'policy-blocked' | 'disabled-at-higher-scope';
@@ -33,84 +37,6 @@ export interface EnablePlan {
   readonly issues: readonly EnableIssue[];
 }
 
-const issueAt = (
-  dependency: string,
-  block: EnableBlock,
-  message: string,
-  extra: { readonly command?: string; readonly scope?: InstallScope } = {},
-): EnableIssue => ({
-  ...error(`dependencies.${dependency}`, message),
-  block,
-  dependency,
-  ...extra,
-});
-
-/** The scope that holds a `false` for the dependency and wins over `target`, if there is one. */
-const overriddenAbove = (
-  dependency: string,
-  target: InstallScope,
-  facts: GraphFacts,
-): InstallScope | undefined => {
-  const above = SCOPES_BY_PRECEDENCE.slice(0, SCOPES_BY_PRECEDENCE.indexOf(target));
-  return above.find((scope) => facts.enabled[scope]?.[dependency] === false);
-};
-
-/** What stops one dependency from being enabled at `target`, or `undefined`. */
-function blockOf(
-  dependency: string,
-  target: InstallScope,
-  facts: GraphFacts,
-): EnableIssue | undefined {
-  if (facts.blocked?.has(dependency) === true) {
-    return issueAt(
-      dependency,
-      'policy-blocked',
-      `Dependency "${dependency}" is blocked by your organization's plugin policy`,
-    );
-  }
-  if (recordsOf(dependency, facts).length === 0) {
-    const command = installCommand(dependency);
-    return issueAt(
-      dependency,
-      'not-installed',
-      `Dependency "${dependency}" is not installed; install it first: ${command}`,
-      { command },
-    );
-  }
-  const scope = overriddenAbove(dependency, target, facts);
-  return scope === undefined
-    ? undefined
-    : issueAt(
-        dependency,
-        'disabled-at-higher-scope',
-        `Dependency "${dependency}" is set to false at ${scope} scope, which takes precedence over ${target}; enable it at ${scope} scope or pass --scope ${scope}`,
-        { scope },
-      );
-}
-
-interface Walk {
-  readonly target: InstallScope;
-  readonly facts: GraphFacts;
-  readonly seen: Set<string>;
-  readonly enable: string[];
-  readonly issues: EnableIssue[];
-}
-
-function visit(id: string, walk: Walk): void {
-  for (const dep of dependenciesOf(id, walk.facts)) {
-    const dependency = dependencyId(dep);
-    if (walk.seen.has(dependency)) continue;
-    walk.seen.add(dependency);
-    const block = blockOf(dependency, walk.target, walk.facts);
-    if (block !== undefined) {
-      walk.issues.push(block);
-      continue;
-    }
-    visit(dependency, walk);
-    if (!isEnabled(dependency, walk.facts)) walk.enable.push(dependency);
-  }
-}
-
 /**
  * What enabling `id` at `target` does to its dependencies, transitively: the ones installed but
  * disabled are enabled, dependencies first; a dependency that is not installed, is blocked by the
@@ -119,9 +45,5 @@ function visit(id: string, walk: Walk): void {
  * "the plugin's dependencies" being enabled so that the plugin loads; a dependency already enabled
  * by a winning scope is left alone, and one installed at any scope counts as installed.
  */
-export function enablePlan(id: string, target: InstallScope, facts: GraphFacts): EnablePlan {
-  const walk: Walk = { target, facts, seen: new Set([id]), enable: [], issues: [] };
-  visit(id, walk);
-  const ok = walk.issues.length === 0;
-  return { ok, enable: ok ? walk.enable : [], issues: walk.issues };
-}
+export const enablePlan = (id: string, target: InstallScope, facts: GraphFacts): EnablePlan =>
+  call('enablePlan', id, target, facts);

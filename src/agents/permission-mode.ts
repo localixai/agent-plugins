@@ -1,12 +1,28 @@
+/**
+ * The values `permissionMode` accepts in a subagent file, and what the docs say of each mode
+ * (sub-agents.md, "Frontmatter reference" and "Permission modes").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/agents/permission_mode.rs`, docs/RUST.md).
+ */
 import type { PermissionMode } from '../protocol/official.ts';
-import { PERMISSION_MODES } from '../protocol/permission-modes.ts';
 import type { Assert, Equal } from '../protocol/type-equality.ts';
+import { coreModule } from '../wasm/bridge.ts';
+
+const call = coreModule('agents/permission-mode');
 
 /**
  * The values `permissionMode` accepts in a subagent file: the six modes' config values "and
  * `manual` as an alias for `default`" (sub-agents.md, "Frontmatter reference").
  */
-export const PERMISSION_MODE_INPUTS = [...PERMISSION_MODES, 'manual'] as const;
+export const PERMISSION_MODE_INPUTS: readonly [
+  'default',
+  'acceptEdits',
+  'bypassPermissions',
+  'plan',
+  'dontAsk',
+  'auto',
+  'manual',
+] = call('PERMISSION_MODE_INPUTS');
 export type PermissionModeInput = (typeof PERMISSION_MODE_INPUTS)[number];
 
 /** @public A compile-time drift guard: the inputs are the official modes plus `manual`. */
@@ -20,7 +36,8 @@ export type PermissionModeInputsMatchSdk = Assert<
  * `holds-plan` it stays in plan mode whichever mode it sets; `lets-set-apply` it runs in the mode
  * it sets, with two exceptions (`grantedWhenSet`).
  */
-export const MAIN_STANCES = ['forces', 'holds-plan', 'lets-set-apply'] as const;
+export const MAIN_STANCES: readonly ['forces', 'holds-plan', 'lets-set-apply'] =
+  call('MAIN_STANCES');
 export type MainStance = (typeof MAIN_STANCES)[number];
 
 /** What decides whether a subagent may be set to a mode when the main conversation allows it. */
@@ -43,39 +60,6 @@ export interface PermissionModeTraits {
   readonly grantedWhenSet: (environment: GrantEnvironment) => boolean;
 }
 
-const always = (): boolean => true;
-const never = (): boolean => false;
-
 /** The registry: a mode added to the SDK's union fails the typecheck here. */
-export const PERMISSION_MODE_TRAITS: { readonly [M in PermissionMode]: PermissionModeTraits } = {
-  default: {
-    deniesInsteadOfAsking: false,
-    whenMain: 'lets-set-apply',
-    grantedWhenSet: always,
-  },
-  acceptEdits: {
-    deniesInsteadOfAsking: false,
-    whenMain: 'forces',
-    grantedWhenSet: always,
-  },
-  auto: {
-    deniesInsteadOfAsking: false,
-    whenMain: 'forces',
-    grantedWhenSet: (environment) => environment.autoAvailable,
-  },
-  dontAsk: {
-    deniesInsteadOfAsking: true,
-    whenMain: 'lets-set-apply',
-    grantedWhenSet: always,
-  },
-  bypassPermissions: {
-    deniesInsteadOfAsking: false,
-    whenMain: 'forces',
-    grantedWhenSet: never,
-  },
-  plan: {
-    deniesInsteadOfAsking: false,
-    whenMain: 'holds-plan',
-    grantedWhenSet: always,
-  },
-};
+export const PERMISSION_MODE_TRAITS: { readonly [M in PermissionMode]: PermissionModeTraits } =
+  call('PERMISSION_MODE_TRAITS');

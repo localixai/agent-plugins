@@ -8,7 +8,6 @@ use serde::Deserialize;
 use super::task::{self, Need, Reply, Step};
 use super::{Answer, MODULES, decoded, handle, remote};
 use crate::js::JsValue;
-use crate::js::json_parse::json_parse;
 use crate::js::value::write_json_string;
 
 /// Starts `name` (`<module>#<export>`, or `<handle>#<method>` for a method of a
@@ -33,6 +32,23 @@ pub fn start(name: &str, args: &[JsValue]) -> Step {
     )
 }
 
+/// The answer of an export that waits on the host, called through `call` (`exports!`): a sync
+/// wrapper calls it so when no host value is among its arguments (`src/wasm/drive.ts`), and it
+/// answers as soon as it asks the host nothing; one that would wait is a fault, as the host must
+/// start it.
+#[doc(hidden)]
+#[must_use]
+pub fn settled(started: task::Started) -> Answer {
+    match task::start(started) {
+        Step::Done(answer) => answer,
+        Step::Needs { task, .. } => {
+            task::cancel(task);
+            Answer::Fault("it waits on the host: a host starts it (registry::start)".to_owned())
+        }
+        Step::Rethrow { .. } => Answer::Fault("it waits on the host".to_owned()),
+    }
+}
+
 /// Gives task `number` the host's answers to its needs, by need, and the numbers of the host's
 /// signals that aborted since, and runs it until it is done or waits again.
 #[must_use]
@@ -55,13 +71,15 @@ pub fn start_json(name: &str, args: &str) -> String {
 }
 
 /// One answer as the host writes it: `{"id": n, "result": value}` or `{"id": n, "throws":
-/// message}`.
+/// message, "name"?: name}` (`name` an `Error`'s, `registry::Thrown`).
 #[derive(Deserialize)]
 struct Given {
     id: u32,
     #[serde(default)]
     result: JsValue,
     throws: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
 }
 
 /// What the host gives `resume`: `{"answers": [...], "aborted": [n...]}`, `aborted` optional.
@@ -75,7 +93,7 @@ struct Resumed {
 /// [`resume`] with the answers' JSON text (`Resumed`); the step's JSON text.
 #[must_use]
 pub fn resume_json(number: u32, answers: &str) -> String {
-    let resumed = json_parse(answers)
+    let resumed = super::wire_json::read(answers)
         .map_err(|problem| format!("the answers are not JSON: {problem}"))
         .and_then(|raw| {
             Resumed::deserialize(raw).map_err(|error| format!("the answers do not decode: {error}"))
@@ -85,9 +103,13 @@ pub fn resume_json(number: u32, answers: &str) -> String {
             let replies = answers
                 .into_iter()
                 .map(|given| {
-                    let reply = given
-                        .throws
-                        .map_or(Reply::Result(given.result), Reply::Throws);
+                    let reply = match given.throws {
+                        Some(message) => Reply::Throws {
+                            message,
+                            name: given.name,
+                        },
+                        None => Reply::Result(given.result),
+                    };
                     (given.id, reply)
                 })
                 .collect();

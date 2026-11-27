@@ -1,75 +1,47 @@
 /**
- * Every number of the mods reference's Limits table (plugins/mods/reference.md, "Limits") as a named
- * constant, so no module of the kit writes one of them as a literal. Pure data: what each limit
- * does is the code of the module that owns the limited behaviour.
+ * Implemented by the Rust core (`crates/agent-plugins/src/protocol/mods_limits.rs`, docs/RUST.md).
  */
-const MIB = 1024 * 1024;
+import { coreModule } from '../wasm/bridge.ts';
 
-export const MOD_LIMITS = {
-  /** A hook's own execution time for one event, not counting time inside `next` or a mods API call other than `$.clock.sleep`. */
-  hookMs: 10_000,
-  /** The same limit for a `prompt.edit` hook. */
-  promptEditMs: 50,
-  /** A `.catch` handler's own execution time. */
-  catchMs: 1000,
-  /** How long a hook may keep running after its `next.signal` aborted before it is reported as lingering (claude-code/index.d.ts:5428, `HookBudget.lingerMs`). */
-  lingerMs: 5000,
-  /** All `session.end` hooks together, unless the SessionEnd hook budget is changed (hooks.md, "SessionEnd input"). */
-  sessionEndMs: 1500,
-  /** `$.process.run` timeout by default, and at most. */
-  runTimeoutMs: 30_000,
-  runTimeoutMaxMs: 600_000,
-  /** `$.process.run` `stdout` and `stderr`, each. */
-  outputBytes: 4 * MIB,
-  /** `$.model.complete` `maxTokens` by default, and at most. */
-  maxTokens: 1024,
-  maxTokensCap: 64_000,
-  /** `$.fs.read` and `$.fs.write`, one file. */
-  fileBytes: 4 * MIB,
-  /** A `$.http.fetch` request body, in characters; the response body, in bytes. */
-  httpRequestChars: 4 * MIB,
-  httpResponseBytes: 4 * MIB,
-  /** One `$.http.fetch` call, redirects and body included. */
-  httpMs: 30_000,
-  redirects: 5,
-  /** A `drop` reason or a `config.set` `deny` reason, in characters. */
-  reasonChars: 4096,
-  /** Text in one tree: the first characters drawn. */
-  treeText: 100_000,
-  /** A `Code`'s `language` or `path`, a `Select` option's `value`, a `Client`'s `module`. */
-  fieldChars: 10_000,
-  /** A `Link`'s `href`. */
-  hrefChars: 2048,
-  /** Nesting depth of one tree, below the root element. */
-  treeDepth: 32,
-  /** Elements and text children in one tree. */
-  treeNodes: 20_000,
-  /** `Raster` cells in one tree. */
-  rasterCells: 262_144,
-  /** PNG or RGBA bytes of all the `Image`s in one tree. */
-  imageBytes: 2 * MIB,
-  /** `$.store`: JSON in total. */
-  storeBytes: 4 * MIB,
-  /** `$.session.messages()`: the newest entries. */
-  messages: 4096,
-  toastMs: 4000,
-  /** `$.ui.invalidate('ui.render')` redraws a second, and in the terminal for the visible pane, the expanded band and the hint line. */
-  invalidatePerSecond: 10,
-  invalidatePerSecondTerminal: 30,
-  /** A pane opened without the user asking: placed from this many terminal columns, and from the second after they opened it once. */
-  paneColumns: 144,
-  paneColumnsAfterOpen: 110,
-  /** Command, tool, subagent type and pane names, and the `id` of a placed row or a backdrop. */
-  nameChars: 64,
-  /** Rows from `$.ui.place` that one mod has in a conversation at one time. */
-  placedRows: 500,
-  /** Scopes nested inside one another in one file of a hooks module. */
-  scopes: 2000,
-  /** Nesting depth of a mods API call's arguments, of a changed event passed to `next`, and of a hook's return value. */
-  nesting: 28_000,
-  /** One `claude plugin test` test. */
-  testMs: 5000,
-} as const;
+const call = coreModule('protocol/mods-limits');
+
+export const MOD_LIMITS: {
+  readonly hookMs: 10000;
+  readonly promptEditMs: 50;
+  readonly catchMs: 1000;
+  readonly lingerMs: 5000;
+  readonly sessionEndMs: 1500;
+  readonly runTimeoutMs: 30000;
+  readonly runTimeoutMaxMs: 600000;
+  readonly outputBytes: number;
+  readonly maxTokens: 1024;
+  readonly maxTokensCap: 64000;
+  readonly fileBytes: number;
+  readonly httpRequestChars: number;
+  readonly httpResponseBytes: number;
+  readonly httpMs: 30000;
+  readonly redirects: 5;
+  readonly reasonChars: 4096;
+  readonly treeText: 100000;
+  readonly fieldChars: 10000;
+  readonly hrefChars: 2048;
+  readonly treeDepth: 32;
+  readonly treeNodes: 20000;
+  readonly rasterCells: 262144;
+  readonly imageBytes: number;
+  readonly storeBytes: number;
+  readonly messages: 4096;
+  readonly toastMs: 4000;
+  readonly invalidatePerSecond: 10;
+  readonly invalidatePerSecondTerminal: 30;
+  readonly paneColumns: 144;
+  readonly paneColumnsAfterOpen: 110;
+  readonly nameChars: 64;
+  readonly placedRows: 500;
+  readonly scopes: 2000;
+  readonly nesting: 28000;
+  readonly testMs: 5000;
+} = call('MOD_LIMITS');
 
 /** Command, tool, subagent type and pane names: letters, digits, `_` and `-`, up to `nameChars`. */
-export const MOD_NAME_PATTERN: RegExp = new RegExp(`^[A-Za-z0-9_-]{1,${MOD_LIMITS.nameChars}}$`);
+export const MOD_NAME_PATTERN: RegExp = call('MOD_NAME_PATTERN');

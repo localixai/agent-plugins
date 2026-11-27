@@ -29,13 +29,22 @@ const allCountsSchema = z.record(
   }),
 );
 
+/** How long one measurement in a process of its own may take. */
+const MEASURE_TIMEOUT_MS = 30_000;
+
 const text = measured();
 const counts = allCountsSchema.parse(JSON.parse(text));
 
 describe('the work meter', () => {
-  test('gives the same counts on a second run', () => {
-    expect(measured()).toBe(text);
-  });
+  // A second process of its own (about 2 s alone): the default 5 s is too tight while the whole
+  // suite runs beside it.
+  test(
+    'gives the same counts on a second run',
+    () => {
+      expect(measured()).toBe(text);
+    },
+    MEASURE_TIMEOUT_MS,
+  );
 
   test('matches the committed baseline (bun run bench:update)', () => {
     expect(counts).toEqual(JSON.parse(readFileSync(BASELINE_FILE, 'utf8')));

@@ -46,9 +46,6 @@ export const escapesAsWritten = (path: string, platform: PathPlatform): boolean 
 export const rootRelative = (path: string, platform: PathPlatform = 'posix'): string =>
   call('rootRelative', path, platform);
 
-/** `base` and a child name, as a root-relative path. */
-export const childPath = (base: string, name: string): string => call('childPath', base, name);
-
 /**
  * Where `path` leads from the folder `root` (an absolute, `/`-spelled path): an absolute `path`
  * as itself in `/` spelling, a relative one joined to `root` with `.` and `..` resolved.

@@ -1,27 +1,14 @@
+/**
+ * How long a Bash or PowerShell command runs, in the foreground and in the background
+ * (tools-reference.md, "Timeout and output limits", "Time limit for background commands").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/semantics/bash_limits.rs`,
+ * docs/RUST.md).
+ */
 import type { Environment } from '../../../ports/environment.ts';
-import { positiveInteger } from './env-number.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
 
-/** tools-reference.md, "Timeout and output limits" and env-vars.md: milliseconds. */
-const DEFAULT_TIMEOUT_MS = 120_000;
-const MAX_TIMEOUT_MS = 600_000;
-const BACKGROUND_DEFAULT_MS = 1_800_000;
-const BACKGROUND_PRINT_DEFAULT_MS = 600_000;
-const BACKGROUND_MAX_MS = 7_200_000;
-
-const configured = (env: Pick<Environment, 'get'>) => ({
-  defaultMs: positiveInteger(env, 'BASH_DEFAULT_TIMEOUT_MS'),
-  maxMs: positiveInteger(env, 'BASH_MAX_TIMEOUT_MS'),
-});
-
-/** What a foreground command may run for: the default, and the ceiling over whatever Claude asks. */
-function foregroundLimits(env: Pick<Environment, 'get'>): { fallback: number; ceiling: number } {
-  const { defaultMs, maxMs } = configured(env);
-  const fallback = defaultMs ?? DEFAULT_TIMEOUT_MS;
-  return { fallback, ceiling: Math.max(maxMs ?? MAX_TIMEOUT_MS, fallback) };
-}
-
-const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0;
+const call = coreModule('rules/tools/semantics/bash-limits');
 
 /**
  * How long a foreground Bash or PowerShell command runs (tools-reference.md, "Timeout and output
@@ -31,10 +18,8 @@ const isPositiveNumber = (value: unknown): value is number =>
  * is the larger of the two. A timeout that is not a positive number counts as none, as does a
  * variable that is not a positive integer (spec/judgments.md).
  */
-export function effectiveBashTimeout(requested: unknown, env: Pick<Environment, 'get'>): number {
-  const { fallback, ceiling } = foregroundLimits(env);
-  return isPositiveNumber(requested) ? Math.min(requested, ceiling) : fallback;
-}
+export const effectiveBashTimeout = (requested: unknown, env: Pick<Environment, 'get'>): number =>
+  call('effectiveBashTimeout', requested, env);
 
 /** What the session is, as far as the background time limit goes. */
 export interface BackgroundSession {
@@ -60,12 +45,5 @@ export interface BackgroundRequest {
  * `BASH_DEFAULT_TIMEOUT_MS` above the default replaces it (a lower value never shortens it), and an
  * effective ceiling above 2 hours raises the maximum.
  */
-export function backgroundTimeLimit(request: BackgroundRequest): number | undefined {
-  const { session, env, timeout, moved } = request;
-  if (!session.unattended) return undefined;
-  const base = session.printWithTextPrompt ? BACKGROUND_PRINT_DEFAULT_MS : BACKGROUND_DEFAULT_MS;
-  const { defaultMs, maxMs } = configured(env);
-  const limit = Math.max(base, defaultMs ?? 0);
-  const maximum = Math.max(BACKGROUND_MAX_MS, defaultMs ?? 0, maxMs ?? 0);
-  return moved === true || !isPositiveNumber(timeout) ? limit : Math.min(timeout, maximum);
-}
+export const backgroundTimeLimit = (request: BackgroundRequest): number | undefined =>
+  call('backgroundTimeLimit', request);

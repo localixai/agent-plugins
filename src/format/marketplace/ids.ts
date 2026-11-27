@@ -17,8 +17,6 @@ export const isPluginIdPart = (name: string): boolean => call('isPluginIdPart', 
 
 export type IdPart = 'marketplace' | 'plugin';
 
-export const INSTALL_RULE: string = call('INSTALL_RULE');
-
 /**
  * What a marketplace or entry `name` breaks before it can be part of an id: a space, a control or
  * bidirectional-formatting character, for a marketplace a path separator or `..`, the grammar. Each rule that fires is reported (the docs list

@@ -13,6 +13,7 @@
     "spec/**",
     "target/**",
     "crates/agent-plugins/COVERAGE.md",
+    "crates/agent-plugins/src/format/mcp_schema_check/**/*.json",
     "crates/agent-plugins/tests/vectors/**"
   ]
 }

@@ -354,7 +354,6 @@ pub fn download_folder_issues(
 crate::registry::exports! {
     "format/marketplace/marketplace-names" {
         "spellingOf" => ok |name: String| spelling_of(&name);
-        "impersonates" => ok |name: String| impersonates(&name);
         "validationNameIssues" => ok |name: String| validation_name_issues(&name);
         "loadNameIssues" => ok |name: String, origin: Option<NameOrigin>| load_name_issues(&name, &origin.unwrap_or_default());
         "marketplaceNameIssues" => ok |name: String, origin: Option<NameOrigin>| marketplace_name_issues(&name, &origin.unwrap_or_default());

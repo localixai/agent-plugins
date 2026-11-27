@@ -1,4 +1,4 @@
-//! Port of `src/format/mcp-elicitation-check.ts`, switched.
+//! Ported from `src/format/mcp-elicitation-check.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! The check of one form value against its field (mcp.md, "Respond to MCP elicitation requests": the
 //! person "fills in the fields and submits"). The docs do not say how the client checks them; the
@@ -316,11 +316,5 @@ pub fn field_problem(field: &ElicitationField, value: &JsValue) -> Option<String
             }
         }
         ElicitationFieldType::MultiEnum => list_problem(field, value),
-    }
-}
-
-crate::registry::exports! {
-    "format/mcp-elicitation-check" {
-        "fieldProblem" => ok |field: ElicitationField, value: JsValue| field_problem(&field, &value);
     }
 }

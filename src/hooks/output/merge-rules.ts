@@ -3,12 +3,15 @@ import type { HookEvent } from '../../protocol/official.ts';
 import type { RegisteredHandler } from '../contracts.ts';
 import type { MergedBlock } from '../verdict/types.ts';
 import type { EventEffects } from './effects.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { CheckedOutput } from './schemas.ts';
 
 /**
  * What the per-event merge rules share: one hook's output as the rules read it, and what a rule
  * returns. A rule gets every hook's read, in registry order (the order hooks are registered in, so
  * the result does not depend on which hook finishes first).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/output/merge_rules.rs`, docs/RUST.md).
  */
 
 export interface Read {
@@ -38,11 +41,13 @@ export interface Merged {
 
 export type Merger = (reads: readonly Read[], facts: object) => Merged;
 
-export const NOTHING: Merged = { effects: {}, issues: [] };
+const call = coreModule('hooks/output/merge-rules');
+
+export const NOTHING: Merged = call('NOTHING');
 
 /** The last defined value: "choose last-in-registry-order wins" (spec/judgments.md). */
 export const lastOf = <T>(values: readonly (T | undefined)[]): T | undefined =>
-  values.reduce<T | undefined>((last, value) => value ?? last, undefined);
+  call('lastOf', values);
 
 export const eventSet = (...events: readonly HookEvent[]): ReadonlySet<HookEvent> =>
-  new Set(events);
+  call('eventSet', ...events);

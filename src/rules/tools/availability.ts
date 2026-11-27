@@ -1,7 +1,14 @@
-import { toolNameMatches } from '../tool-pattern.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PermissionRule } from '../types.ts';
-import { toolNamesOf, type HostToolNames } from './host-tool-names.ts';
-import { isMcpToolName, toolNameOfEntry } from './names.ts';
+import type { HostToolNames } from './host-tool-names.ts';
+
+/**
+ * Which of the tools the host can provide Claude sees, by the documented rules.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/availability.rs`,
+ * docs/RUST.md).
+ */
+const call = coreModule('rules/tools/availability');
 
 /**
  * The facts of a session that decide which of the tools the host can provide Claude actually sees.
@@ -41,120 +48,6 @@ export interface ToolSession {
   readonly names?: HostToolNames;
 }
 
-const END_CONVERSATION = 'EndConversation';
-const SEARCH_TOOLS: ReadonlySet<string> = new Set(['Glob', 'Grep']);
-const POWERSHELL = 'PowerShell';
-const WORKTREE_TOOLS: ReadonlySet<string> = new Set(['EnterWorktree', 'ExitWorktree']);
-/** The tools that wait on a person's answer, which `denyInsteadOfPrompting` leaves out. */
-const QUESTION_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion']);
-const PLAN_TOOLS: ReadonlySet<string> = new Set(['EnterPlanMode', 'ExitPlanMode']);
-/** The built-in tools `--restricted` removes: the ones that run commands or code, and WebFetch (spec/judgments.md). */
-const RESTRICTED_TOOLS: ReadonlySet<string> = new Set(['Bash', POWERSHELL, 'Monitor', 'WebFetch']);
-
-/** "A bare tool name ... removes the tool from Claude's context": a deny rule with no specifier. */
-const removesTool = (rule: PermissionRule, toolName: string): boolean =>
-  rule.behavior === 'deny' && rule.specifier === undefined && toolNameMatches(rule, toolName);
-
-const namesTool = (entries: readonly string[] | undefined, toolName: string): boolean =>
-  entries?.some((entry) => toolNameOfEntry(entry) === toolName) === true;
-
-/** `--restricted` removes the tool: it is one of the restricted ones and `--tools` does not name it individually. */
-const restrictedAway = (toolName: string, session: ToolSession): boolean =>
-  session.restricted === true &&
-  RESTRICTED_TOOLS.has(toolName) &&
-  !namesTool(session.toolsFlag, toolName);
-
-/** Bash is gone from the session: a bare deny rule or `--restricted` removes it (tools-reference.md, "Glob tool behavior"). */
-const bashRemoved = (session: ToolSession): boolean =>
-  restrictedAway('Bash', session) || session.rules.some((rule) => removesTool(rule, 'Bash'));
-
-/**
- * tools-reference.md, "Glob tool behavior": on macOS, Linux and WSL the tools are left out unless
- * `--tools` names them, naming either in `--allowedTools` restores both ("An allow rule in a
- * settings file doesn't have this effect"), or a deny rule, `--disallowedTools` or `--restricted`
- * removes Bash. A tool that is not one of the two is always offered.
- */
-function offeredByDefault(toolName: string, session: ToolSession): boolean {
-  if (!SEARCH_TOOLS.has(toolName) || session.platform === 'windows') return true;
-  return (
-    bashRemoved(session) ||
-    namesTool(session.toolsFlag, toolName) ||
-    [...SEARCH_TOOLS].some((search) => namesTool(session.allowedToolsFlag, search))
-  );
-}
-
-/**
- * settings-reference.md, "What else `denyInsteadOfPrompting` stops": "Claude Code leaves out
- * `AskUserQuestion`, `EnterPlanMode`, and `ExitPlanMode` ... A teammate in an agent team keeps
- * `EnterPlanMode` and `ExitPlanMode`".
- */
-const leftOutUnprompted = (toolName: string, session: ToolSession): boolean =>
-  session.denyInsteadOfPrompting === true &&
-  (QUESTION_TOOLS.has(toolName) || (PLAN_TOOLS.has(toolName) && session.teammate !== true));
-
-/**
- * `--tools` restricts built-in tools only: an MCP tool is not on that list (spec/judgments.md). The
- * entry `default` is the default set, which restricts nothing (cli-reference.md, `--tools`).
- */
-const inToolsFlag = (toolName: string, session: ToolSession): boolean =>
-  session.toolsFlag === undefined ||
-  isMcpToolName(toolName) ||
-  namesTool(session.toolsFlag, 'default') ||
-  namesTool(session.toolsFlag, toolName);
-
-/**
- * tools-reference.md, "Bash deny rules also turn off the PowerShell tool": on Windows with Git Bash,
- * any deny rule on Bash, scoped or not, turns PowerShell off, unless `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`
- * or a scoped `PowerShell(...)` rule is set.
- */
-function powerShellOffByBashDeny(session: ToolSession): boolean {
-  if (session.platform !== 'windows' || session.gitBash !== true) return false;
-  if (session.powerShellOptIn === true) return false;
-  const scopedPowerShell = session.rules.some(
-    (rule) => rule.specifier !== undefined && toolNameMatches(rule, POWERSHELL),
-  );
-  return (
-    !scopedPowerShell &&
-    session.rules.some((rule) => rule.behavior === 'deny' && toolNameMatches(rule, 'Bash'))
-  );
-}
-
-/** `--tools ""` with no MCP tool left and no allow rule naming `EndConversation`, or every other tool denied along with it. */
-function endConversationDropped(others: readonly string[], session: ToolSession): boolean {
-  const allowedByName = session.rules.some(
-    (rule) =>
-      rule.behavior === 'allow' &&
-      rule.specifier === undefined &&
-      !rule.toolGlob &&
-      rule.value.toolName === END_CONVERSATION,
-  );
-  if (allowedByName) return false;
-  const noMcpLeft = !others.some(isMcpToolName);
-  const emptyToolsFlag = session.toolsFlag?.length === 0 && noMcpLeft;
-  const deniedToo = session.rules.some((rule) => removesTool(rule, END_CONVERSATION));
-  return emptyToolsFlag || (others.length === 0 && deniedToo);
-}
-
-/** The Claude Code tools Claude sees, from Claude Code candidates (order kept). */
-function availableClaudeTools(
-  candidates: readonly string[],
-  session: ToolSession,
-): readonly string[] {
-  const kept = (toolName: string): boolean =>
-    offeredByDefault(toolName, session) &&
-    inToolsFlag(toolName, session) &&
-    !restrictedAway(toolName, session) &&
-    !(toolName === POWERSHELL && powerShellOffByBashDeny(session)) &&
-    !(WORKTREE_TOOLS.has(toolName) && session.blockWritesOutsideWorkingDirectories === true) &&
-    !leftOutUnprompted(toolName, session) &&
-    !session.rules.some((rule) => removesTool(rule, toolName));
-  const others = candidates.filter((toolName) => toolName !== END_CONVERSATION && kept(toolName));
-  const dropsEnd = endConversationDropped(others, session);
-  return candidates.filter((toolName) =>
-    toolName === END_CONVERSATION ? !dropsEnd : others.includes(toolName),
-  );
-}
-
 /**
  * The tools Claude sees, from the candidates the host can provide (order kept). A deny rule with no
  * specifier removes the tools it names, and so does a glob (permissions.md, "Manage permissions",
@@ -166,14 +59,7 @@ function availableClaudeTools(
  * both cases. With `session.names` the candidates are the host's tools, read through their Claude
  * Code names (judgment, spec/judgments.md).
  */
-export function availableTools(
+export const availableTools = (
   candidates: readonly string[],
   session: ToolSession,
-): readonly string[] {
-  const names = toolNamesOf(session.names);
-  const claude = [...new Set(candidates.flatMap(names.claudeNames))];
-  const kept = new Set(availableClaudeTools(claude, session));
-  // A host tool is one grant: it goes when any of its Claude Code names is removed, as a denied
-  // name takes a subagent's host tool (`resolveSubagentTools`).
-  return candidates.filter((tool) => names.claudeNames(tool).every((name) => kept.has(name)));
-}
+): readonly string[] => call('availableTools', candidates, session);

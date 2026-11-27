@@ -109,7 +109,6 @@ pub fn validate_renames(renames: &Renames, plugin_names: &[String]) -> Vec<Plugi
 
 crate::registry::exports! {
     "format/marketplace/renames" {
-        "followRenames" => ok |renames: Renames, start: String, plugins: crate::registry::Set<String>| follow_renames(&renames, &start, &plugins.members.into_iter().collect());
         "validateRenames" => ok |renames: Renames, plugin_names: Vec<String>| validate_renames(&renames, &plugin_names);
     }
 }

@@ -15,7 +15,11 @@
  * - a port (an object with methods): `{"$port": n}`; a function: `{"$fn": n}`;
  * - an `AbortSignal`: `{"$signal": n, "aborted": bool}` (`n` is `null` for a signal the core
  *   made, which arrives as a new one);
- * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`.
+ * - a promise of the host's: `{"$promise": n}` (the core awaits it by the need `then`);
+ * - from the core only, a result with methods: `{"$handle": h, "sync": [names], "async": [names]}`,
+ *   a function of the core's (a timer's `fire`): `{"$call": h}`, a function that calls the
+ *   handle's one method, `call`, and a promise of the core's: `{"$promise": {"task": t}}`, a
+ *   promise that drives task `t` (`drive.ts`).
  */
 
 const UNDEFINED = { $undefined: true } as const;
@@ -49,6 +53,8 @@ export interface HostValues {
   find(number: number): unknown;
   /** The object the host calls the core's handle `handle` through. */
   handle(handle: number, sync: readonly string[], async: readonly string[]): object;
+  /** The promise that drives the core's task `task`, kept for a promise of the core's. */
+  promise(task: number): Promise<unknown>;
 }
 
 /** Whether `value` is a port: an object with a method, its own or its class's. */
@@ -61,6 +67,7 @@ function hasMethods(value: object): boolean {
 /** A host value as its tag, kept in `hosts`; `undefined` for data. */
 function hostTagged(value: unknown, hosts: HostValues): unknown {
   if (typeof value === 'function') return { $fn: hosts.keep(value) };
+  if (value instanceof Promise) return { $promise: hosts.keep(value) };
   if (value instanceof AbortSignal) return { $signal: hosts.keep(value), aborted: value.aborted };
   return isRecord(value) && hasMethods(value) ? { $port: hosts.keep(value) } : undefined;
 }
@@ -125,7 +132,7 @@ const names = (value: unknown): readonly string[] | undefined =>
 
 /** A host value the core names by its number. */
 const kept: Reader = (tag, _read, hosts) => {
-  const number = tag.$port ?? tag.$fn ?? tag.$signal;
+  const number = tag.$port ?? tag.$fn ?? tag.$signal ?? tag.$promise;
   return hosts !== undefined && typeof number === 'number'
     ? { value: hosts.find(number) }
     : undefined;
@@ -139,11 +146,30 @@ const signal: Reader = (tag, read, hosts) => {
     : undefined;
 };
 
+/** A promise: the host's own by its number, or one that drives the core's task. */
+const promise: Reader = (tag, read, hosts) => {
+  if (typeof tag.$promise === 'number') return kept(tag, read, hosts);
+  const task: unknown = isRecord(tag.$promise) ? tag.$promise.task : undefined;
+  return hosts !== undefined && typeof task === 'number'
+    ? { value: hosts.promise(task) }
+    : undefined;
+};
+
 /** A result with methods, as the object the host calls them through. */
 const handle: Reader = (tag, _read, hosts) => {
   const [sync, async] = [names(tag.sync), names(tag.async)];
   return hosts !== undefined && typeof tag.$handle === 'number' && sync && async
     ? { value: hosts.handle(tag.$handle, sync, async) }
+    : undefined;
+};
+
+/** A function of the core's, as a function that calls its handle's method `call`. */
+const coreFunction: Reader = (tag, _read, hosts) => {
+  if (hosts === undefined || typeof tag.$call !== 'number') return undefined;
+  const object = hosts.handle(tag.$call, ['call'], []);
+  const call: unknown = Reflect.get(object, 'call');
+  return typeof call === 'function'
+    ? { value: (...args: readonly unknown[]): unknown => Reflect.apply(call, object, args) }
     : undefined;
 };
 
@@ -170,6 +196,8 @@ const READERS: Readonly<Record<string, Reader | undefined>> = {
   $fn: kept,
   $signal: signal,
   $handle: handle,
+  $call: coreFunction,
+  $promise: promise,
 };
 
 /** How many members a tag has with its key, when more than one. */

@@ -1,18 +1,17 @@
+/**
+ * The numbers a tool reads from the session's environment.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/semantics/env_number.rs`,
+ * docs/RUST.md).
+ */
 import type { Environment } from '../../../ports/environment.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
 
-/** The value of a variable that is plain digits, zero included; any other spelling is unset. */
-export function wholeNumber(env: Pick<Environment, 'get'>, name: string): number | undefined {
-  const text = env.get(name)?.trim();
-  if (text === undefined || !/^\d+$/.test(text)) return undefined;
-  const value = Number(text);
-  return Number.isSafeInteger(value) ? value : undefined;
-}
+const call = coreModule('rules/tools/semantics/env-number');
 
 /**
  * The value of a variable that is a positive integer; any other text counts as unset
  * (spec/judgments.md: the docs name no behaviour for a variable that is not a number).
  */
-export function positiveInteger(env: Pick<Environment, 'get'>, name: string): number | undefined {
-  const value = wholeNumber(env, name);
-  return value !== undefined && value > 0 ? value : undefined;
-}
+export const positiveInteger = (env: Pick<Environment, 'get'>, name: string): number | undefined =>
+  call('positiveInteger', env, name);

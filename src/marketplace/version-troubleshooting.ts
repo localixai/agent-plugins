@@ -1,11 +1,16 @@
-import { isWritableScope, type InstallScope } from './install-scopes.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { InstallScope } from './install-scopes.ts';
 
 /**
  * The way out of `Version: unknown` for a plugin installed from a git repository (plugins/
  * troubleshooting.md, "A plugin installed from a git repository shows version `unknown`"): Claude
  * Code could not read the commit it uses as the plugin's version. The four steps are the section's,
  * with the commands as it writes them; the plan is data a host shows or runs.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/version_troubleshooting.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/version-troubleshooting');
 
 export interface VersionStep {
   readonly command: string;
@@ -19,9 +24,6 @@ export interface UnknownVersionPlan {
   readonly rerun: readonly { readonly scope: InstallScope; readonly command: string }[];
 }
 
-/** "v2.1.302 or later, which clones in a format it can read the commit from". */
-const MINIMUM_CLAUDE_CODE = '2.1.302';
-
 /** A plugin as `<name>@<marketplace>`: the two parts the commands use, never split out of one string. */
 export interface PluginRef {
   readonly name: string;
@@ -34,21 +36,7 @@ export interface PluginRef {
  * Judgments: a managed scope gets no rerun, as the user cannot update it; a scope listed twice is
  * rerun once.
  */
-export function unknownVersionSteps(
+export const unknownVersionSteps = (
   plugin: PluginRef,
   unknownScopes: readonly InstallScope[],
-): UnknownVersionPlan {
-  const id = `${plugin.name}@${plugin.marketplace}`;
-  return {
-    steps: [
-      { command: 'claude update', minimumClaudeCode: MINIMUM_CLAUDE_CODE },
-      { command: `claude plugin marketplace update ${plugin.marketplace}` },
-      { command: `claude plugin update ${id}` },
-      { command: 'claude plugin list' },
-    ],
-    rerun: [...new Set(unknownScopes)].filter(isWritableScope).map((scope) => ({
-      scope,
-      command: `claude plugin update ${id} --scope ${scope}`,
-    })),
-  };
-}
+): UnknownVersionPlan => call('unknownVersionSteps', plugin, unknownScopes);

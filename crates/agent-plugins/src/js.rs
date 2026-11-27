@@ -1,18 +1,38 @@
 //! What the npm package gets from JavaScript itself and Rust spells differently: strings are
 //! UTF-16 code units there (their length, their order), a number has one text and reads from a
-//! text by JavaScript's grammar, `JSON.parse` words its errors and `new URL` reads an address.
+//! text by JavaScript's grammar, `JSON.parse` words its errors, `new URL` reads an address,
+//! `normalize` composes a text and `new RegExp` reads a pattern by ECMAScript's grammar and
+//! matches it on UTF-16 (`regexp`).
 //! The ports of its modules use these wherever JavaScript's own semantics reach a result;
 //! `scripts/rust/js-oracle.ts` records the built-ins themselves, which `tests/differential/js.rs`
 //! holds these to.
 
+pub mod array_join;
+pub mod identifier;
+pub mod indexing;
 pub mod json_parse;
 pub mod json_stringify;
+pub mod json_value;
+mod math;
+pub mod normalize;
+mod promise;
+mod radix;
+pub mod regexp;
+mod slice;
 mod string_to_number;
+mod uri;
 pub mod url;
+pub mod utf16;
 pub mod value;
 
+pub use array_join::{array_join, string_of};
 pub use json_stringify::{json_stringify, json_stringify_indented};
+pub use math::{math_max, math_min, math_round};
+pub use promise::{promise_all, promise_all_pair};
+pub use radix::{to_exponential, to_radix_string};
+pub use slice::{slice_code_units, slice_index};
 pub use string_to_number::number;
+pub use uri::{decode_uri_component, encode_uri_component};
 pub use value::{JsObject, JsValue};
 
 use std::cmp::Ordering;
@@ -57,6 +77,11 @@ pub fn is_whitespace(character: char) -> bool {
 pub fn trim(text: &str) -> &str {
     text.trim_matches(is_whitespace)
 }
+
+/// JavaScript's `\s` inside a character class of a Rust regular expression, `is_whitespace`'s
+/// set (RS6): `[{SPACE_CLASS}]` is `\s` and `[^{SPACE_CLASS}()]` is `[^\s()]`. Rust's own `\s`
+/// differs in U+0085 and U+FEFF, as `char::is_whitespace` does.
+pub const SPACE_CLASS: &str = r"\t\n\x0B\x0C\r \u{A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}";
 
 /// The largest integer a double holds exactly, `Number.MAX_SAFE_INTEGER` (2^53 - 1).
 pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
@@ -120,12 +145,6 @@ pub fn to_fixed(value: f64, digits: usize) -> String {
     format!("{sign}{integer}.{decimals}")
 }
 
-/// JavaScript's `\s` as the body of a character class (`[^{SPACE}@]`): its `WhiteSpace` and
-/// `LineTerminator`, which `is_whitespace` lists. Rust's `\s` is another set (it keeps U+0085 and
-/// lacks U+FEFF), so a pattern spells the class with this (RS6).
-pub const SPACE_CLASS: &str =
-    r"\t\n\x0B\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}";
-
 /// A regular expression literal of the package, compiled once. It is an `Option` because a
 /// pattern that fails to compile must never panic (RS4); a test of the module catches it.
 pub type Pattern = LazyLock<Option<Regex>>;
@@ -178,19 +197,20 @@ pub fn parse_int_hex(text: &str) -> f64 {
     if run.is_empty() {
         return f64::NAN;
     }
-    let number = hex_value(&run);
+    let number = radix_value(&run, 16.0);
     if negative { -number } else { number }
 }
 
-/// The value of hexadecimal digits as the runtime's `parseInt` sums them (JavaScriptCore): digit
-/// by digit, most significant first, while it stays below 2^53; past that the digits are summed
-/// again from the least significant one, each times a running power of 16 that is itself a double,
-/// so a long run is not the correctly rounded number (`parseIntOverflow`). Zeros after the power
-/// has overflowed add nothing; any other digit then makes the value infinite.
-fn hex_value(digits: &[u32]) -> f64 {
+/// The value of digits in a power-of-two radix as the runtime's `parseInt` sums them
+/// (JavaScriptCore): digit by digit, most significant first, while it stays below 2^53; past that
+/// the digits are summed again from the least significant one, each times a running power of the
+/// radix that is itself a double, so a long run is not the correctly rounded number
+/// (`parseIntOverflow`). Zeros after the power has overflowed add nothing; any other digit then
+/// makes the value infinite.
+fn radix_value(digits: &[u32], radix: f64) -> f64 {
     let mut number = 0.0_f64;
     for digit in digits {
-        number = number * 16.0 + f64::from(*digit);
+        number = number * radix + f64::from(*digit);
     }
     if number < 9_007_199_254_740_992.0 {
         return number;
@@ -205,9 +225,23 @@ fn hex_value(digits: &[u32]) -> f64 {
         } else {
             sum += f64::from(*digit) * multiplier;
         }
-        multiplier *= 16.0;
+        multiplier *= radix;
     }
     sum
+}
+
+/// JavaScript's `Number.parseInt(digits, 8)` of a run of octal digits (as YAML's `0o17` holds
+/// after its prefix), NaN for none.
+#[must_use]
+pub fn parse_int_octal(digits: &str) -> f64 {
+    let run: Vec<u32> = digits
+        .chars()
+        .map_while(|character| character.to_digit(8))
+        .collect();
+    if run.is_empty() {
+        return f64::NAN;
+    }
+    radix_value(&run, 8.0)
 }
 
 /// A text without the blanks before it, as JavaScript's `String.prototype.trimStart` cuts them.
@@ -216,11 +250,29 @@ pub fn trim_start(text: &str) -> &str {
     text.trim_start_matches(is_whitespace)
 }
 
+/// A text without the blanks after it, as JavaScript's `String.prototype.trimEnd` cuts them.
+#[must_use]
+pub fn trim_end(text: &str) -> &str {
+    text.trim_end_matches(is_whitespace)
+}
+
+/// `text.split(/\r?\n/)`: the lines of a text, each cut at a `\n` or a `\r\n`. A `\r` that is
+/// not followed by a `\n` stays in its line, and so does one at the very end of the text.
+#[must_use]
+pub fn split_line_breaks(text: &str) -> Vec<&str> {
+    let mut lines: Vec<&str> = text.split('\n').collect();
+    let last = lines.len().saturating_sub(1);
+    for line in lines.iter_mut().take(last) {
+        *line = line.strip_suffix('\r').unwrap_or(line);
+    }
+    lines
+}
+
 /// The shortest round-trip digits of a positive finite number and `n`, the position of the
 /// decimal point after the first digit counted as JavaScript's algorithm counts it. Of the
 /// shortest, the closest to the number, the even one of two as close (Number::toString, ECMA-262
 /// §6.1.6.1.20): Rust's shortest digits settle the count, its exact rounding then the digits.
-fn shortest_digits(value: f64) -> (String, i64) {
+pub(crate) fn shortest_digits(value: f64) -> (String, i64) {
     let shortest = format!("{value:e}");
     let count = shortest
         .split('e')
@@ -393,6 +445,13 @@ mod tests {
         assert!(truthy.iter().all(is_truthy));
     }
 
+    // bun -e 'console.log(JSON.stringify(" a\u00a0\ufeff\u0085 ".trimEnd()))' prints " a" ahead of U+0085
+    #[test]
+    fn trim_end_cuts_javascripts_blanks() {
+        assert_eq!(trim_end(" a\u{A0}\u{FEFF} "), " a");
+        assert_eq!(trim_end("a\u{85}"), "a\u{85}");
+    }
+
     // bun -e 'console.log(Object.keys({b:1,"10":2,a:3,"2":4}))' prints [ "2", "10", "b", "a" ]
     #[test]
     fn a_record_is_held_in_key_order() {
@@ -404,6 +463,17 @@ mod tests {
         ]);
         let keys: Vec<String> = in_key_order(map).into_keys().collect();
         assert_eq!(keys, ["2", "10", "b", "a"]);
+    }
+
+    // bun -e 'console.log(JSON.stringify(["a\r\nb","a\r\r\nb\r","\n","", "a\rb"].map((t) => t.split(/\r?\n/))))' prints
+    // [["a","b"],["a\r","b\r"],["",""],[""],["a\rb"]]
+    #[test]
+    fn lines_are_cut_at_a_line_feed_with_one_carriage_return() {
+        assert_eq!(split_line_breaks("a\r\nb"), ["a", "b"]);
+        assert_eq!(split_line_breaks("a\r\r\nb\r"), ["a\r", "b\r"]);
+        assert_eq!(split_line_breaks("\n"), ["", ""]);
+        assert_eq!(split_line_breaks(""), [""]);
+        assert_eq!(split_line_breaks("a\rb"), ["a\rb"]);
     }
 
     #[test]
@@ -524,6 +594,22 @@ mod tests {
         assert_eq!("\u{FF61}".cmp("\u{1F600}"), Ordering::Less);
         assert_eq!(code_unit_length("a\u{1F600}"), 3);
         assert_eq!(trim("\u{FEFF} a \u{85}"), "a \u{85}");
+    }
+
+    #[test]
+    fn the_space_class_is_is_whitespace() {
+        let class = Regex::new(&format!("^[{SPACE_CLASS}]$")).ok();
+        assert!(class.is_some(), "the class compiles");
+        for character in (0..=0xFFFF_u32).filter_map(char::from_u32) {
+            assert_eq!(
+                class
+                    .as_ref()
+                    .is_some_and(|class| class.is_match(&character.to_string())),
+                is_whitespace(character),
+                "U+{:04X}",
+                u32::from(character)
+            );
+        }
     }
 
     #[test]

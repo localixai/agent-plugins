@@ -150,8 +150,7 @@ const URL_CASES = [
 ];
 
 /** The members of a URL the package reads, as `new URL(text)` gives them. */
-function urlFields(text: string): unknown {
-  const url = new URL(text);
+function urlFields(url: URL): unknown {
   const { href, origin, protocol, username, password, host, hostname, port } = url;
   const { pathname, search, hash } = url;
   return {
@@ -176,8 +175,104 @@ export const recordUrls = (): void => {
       line(
         'URL',
         [text],
-        outcome(() => urlFields(text)),
+        outcome(() => urlFields(new URL(text))),
       ),
     ),
   );
+};
+
+/** The bases a redirect is resolved against: the URLs a download is sent to, and their odd kinds. */
+const BASES = [
+  'https://user:pw@example.com:8443/dir/file.zip?q=1#frag',
+  'http://h/a/b/',
+  'file:///dir/a/b.txt',
+  'https://example.com',
+  'http://h/a/b/c',
+  'http://[::1]:8080/x/y',
+  'file://host/share/x',
+  'foo://h/p/q',
+  'foo:/a/b',
+  'git+ssh://git@github.com/o/r.git',
+  'mailto:a@b.example',
+  'data:text/plain,x',
+  'not a url',
+  '',
+];
+
+/** A redirect's `Location` as servers write it: absolute, scheme-relative, rooted, relative, odd. */
+const RELATIVE_SEEDS = [
+  '/next/file.zip?x=1#f',
+  'other.zip',
+  '../up/a',
+  '//cdn.example/x',
+  '?only=query',
+  'https://Example.ORG:443/A',
+];
+const RELATIVE_EDITS = ['', '/', '\\', '.', ':', '?', '#', '%'];
+const RELATIVE_CASES = [
+  '',
+  '.',
+  '..',
+  './',
+  '../',
+  '../../../../a',
+  './a/../b/./c',
+  '%2e%2e/a',
+  '.%2E/a',
+  '#',
+  '?',
+  '#x',
+  '//',
+  '///a',
+  '////a',
+  '\\\\h\\x',
+  '\\a',
+  ' /a ',
+  '\n/a\t',
+  'http:x',
+  'http:/x',
+  'https:x',
+  'ftp:x',
+  'file:x',
+  'foo:x',
+  'HTTP://H/',
+  '//u:p@h:1/x',
+  '//h:99999/',
+  '//[::1/',
+  '//b\u00fccher.example/',
+  'a b',
+  '\u00e9',
+  'a?b#c',
+  'C:/x',
+  '/C:/x',
+  '\\C|/x',
+  '/c:',
+  '/C:?q',
+  '/C:#f',
+  '/C:x',
+  '/CD:/x',
+  '/\\h/x',
+  '\\/h/x',
+  '/\\',
+  '//\\\\h',
+  'a\\b',
+  'javascript:void(0)',
+];
+
+/** The edited seeds against the first bases (an origin with everything, a directory, a file), the fixed cases against every one. */
+const EDITED_BASES = 3;
+
+const based = (text: string, base: string): string | undefined =>
+  line(
+    'URL',
+    [text, base],
+    outcome(() => urlFields(new URL(text, base))),
+  );
+
+export const recordUrlBases = (): void => {
+  const edited = edits(RELATIVE_SEEDS, RELATIVE_EDITS);
+  write('url-base', [
+    ...BASES.slice(0, EDITED_BASES).flatMap((base) => edited.map((text) => based(text, base))),
+    ...BASES.flatMap((base) => RELATIVE_CASES.map((text) => based(text, base))),
+  ]);
 };

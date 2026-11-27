@@ -3,7 +3,14 @@
  * Claude Code's tools, so the kit reads every tool name in those terms: what a subagent's `tools`
  * and `disallowedTools` match, what a hook's `matcher` and `tool_name` see, what a permission rule
  * and a mod's `tool.call` matcher match. Judgment (spec/judgments.md).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/host_tool_names.rs`,
+ * docs/RUST.md).
  */
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('rules/tools/host-tool-names');
+
 export interface HostToolNames {
   /**
    * A host tool name and the Claude Code tool, or tools, it stands for: a built-in (`write_file` to
@@ -34,32 +41,6 @@ export interface ToolNames {
   readonly has: (claudeName: string) => boolean;
 }
 
-const listOf = (to: string | readonly string[]): readonly string[] =>
-  typeof to === 'string' ? [to] : to;
-
 /** The mapping both ways; `undefined` is the host whose tools are Claude Code's. */
-export function toolNamesOf(names: HostToolNames | undefined): ToolNames {
-  const toClaude = new Map(
-    Object.entries(names?.toClaude ?? {})
-      .map(([host, to]): [string, readonly string[]] => [host, listOf(to)])
-      .filter(([, to]) => to.length > 0),
-  );
-  const missing = new Set(names?.missing ?? []);
-  const claudeNames = (host: string): readonly string[] => toClaude.get(host) ?? [host];
-  const mappedTo = (claude: string): string[] =>
-    [...toClaude].filter(([, to]) => to.includes(claude)).map(([host]) => host);
-  // An unmapped Claude Code name is the host tool of that name, unless the host lacks it or that
-  // host name stands for another Claude Code tool.
-  const same = (claude: string): string[] =>
-    missing.has(claude) || toClaude.has(claude) ? [] : [claude];
-  const hostNames = (claude: string): string[] => {
-    const mapped = mappedTo(claude);
-    return mapped.length > 0 ? mapped : same(claude);
-  };
-  const claudeName = (host: string, input?: unknown): string => {
-    const listed = claudeNames(host);
-    const answer = names?.callName?.(host, input);
-    return answer !== undefined && listed.includes(answer) ? answer : (listed[0] ?? host);
-  };
-  return { claudeName, claudeNames, hostNames, has: (claude) => hostNames(claude).length > 0 };
-}
+export const toolNamesOf = (names: HostToolNames | undefined): ToolNames =>
+  call('toolNamesOf', names);

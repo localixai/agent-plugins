@@ -177,7 +177,6 @@ crate::registry::exports! {
         "leavesFolder" => ok |path: String, platform: PathPlatform| leaves_folder(&path, platform);
         "escapesAsWritten" => ok |path: String, platform: PathPlatform| escapes_as_written(&path, platform);
         "rootRelative" => ok |path: String, platform: Option<PathPlatform>| root_relative(&path, platform.unwrap_or_default());
-        "childPath" => ok |base: String, name: String| child_path(&base, &name);
         "resolveFrom" => ok |root: String, path: String, platform: PathPlatform| resolve_from(&root, &path, platform);
         "withoutTrailingSlashes" => ok |path: String| without_trailing_slashes(&path).to_owned();
         "isWithin" => ok |root: String, path: String| is_within(&root, &path);

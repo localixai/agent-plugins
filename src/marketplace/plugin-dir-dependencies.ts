@@ -1,7 +1,11 @@
-import type { PluginIssue } from '../format/issues.ts';
-import { type DependencyIssue, namesMarketplace, normalizeDependency } from './dependencies.ts';
-import { checkDeclaredDependency, type CopyLookup, type GraphFacts } from './dependency-graph.ts';
-import type { NormalizedDependency } from './types.ts';
+import { coreModule } from '../wasm/bridge.ts';
+import type { DependencyIssue } from './dependencies.ts';
+import type { CopyLookup, GraphFacts } from './dependency-graph.ts';
+
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/plugin_dir_dependencies.rs`, docs/RUST.md).
+ */
+const call = coreModule('marketplace/plugin-dir-dependencies');
 
 /** A plugin a session loads with `--plugin-dir`: its name and its manifest's `dependencies`. */
 export interface PluginDirPlugin {
@@ -15,47 +19,6 @@ export interface UnloadedPlugin {
   readonly issue: DependencyIssue;
 }
 
-const NO_FACTS: GraphFacts = { installed: [], enabled: {}, catalog: {}, allowlists: {} };
-
-/** A `--plugin-dir` plugin is `<name>@inline`: its bare dependency names resolve there. */
-const INLINE = 'inline';
-
-const isDependency = (value: NormalizedDependency | PluginIssue): value is NormalizedDependency =>
-  !('severity' in value);
-
-function firstIssue(
-  plugin: PluginDirPlugin,
-  facts: GraphFacts,
-  lookup: CopyLookup,
-): DependencyIssue | undefined {
-  for (const item of plugin.dependencies ?? []) {
-    const dep = normalizeDependency(item, INLINE);
-    if (!isDependency(dep)) continue;
-    const issue = checkDeclaredDependency(dep, facts, {
-      ...lookup,
-      namesMarketplace: namesMarketplace(item),
-    });
-    if (issue !== undefined) return issue;
-  }
-  return undefined;
-}
-
-/** One pass: the plugins still loading that a dependency now stops. */
-function pass(
-  plugins: readonly PluginDirPlugin[],
-  unloaded: ReadonlyMap<string, UnloadedPlugin>,
-  facts: GraphFacts,
-  lookup: CopyLookup,
-): UnloadedPlugin[] {
-  const loading = plugins.filter((plugin) => !unloaded.has(plugin.name));
-  const copies = loading.map((plugin) => ({ name: plugin.name, enabled: true }));
-  const withCopies = { ...facts, localCopies: [...(facts.localCopies ?? []), ...copies] };
-  return loading.flatMap((plugin) => {
-    const issue = firstIssue(plugin, withCopies, lookup);
-    return issue === undefined ? [] : [{ name: plugin.name, issue }];
-  });
-}
-
 /**
  * The `--plugin-dir` plugins of a session that do not load for a dependency (plugins/dependencies.md,
  * "Test a plugin and its dependency locally"): the session's other plugins are the local copies that
@@ -64,15 +27,8 @@ function pass(
  * (spec/judgments.md): oracle 2.1.319, a plugin that does not load is no copy, so a plugin that needs
  * it stops loading too; an entry `normalizeDependency` refuses is left to the manifest's validation.
  */
-export function pluginDirDependencyIssues(
+export const pluginDirDependencyIssues = (
   plugins: readonly PluginDirPlugin[],
-  facts: GraphFacts = NO_FACTS,
-  lookup: CopyLookup = {},
-): readonly UnloadedPlugin[] {
-  const unloaded = new Map<string, UnloadedPlugin>();
-  for (let found = pass(plugins, unloaded, facts, lookup); found.length > 0;) {
-    for (const one of found) unloaded.set(one.name, one);
-    found = pass(plugins, unloaded, facts, lookup);
-  }
-  return [...unloaded.values()];
-}
+  facts?: GraphFacts,
+  lookup?: CopyLookup,
+): readonly UnloadedPlugin[] => call('pluginDirDependencyIssues', plugins, facts, lookup);

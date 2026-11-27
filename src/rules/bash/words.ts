@@ -1,12 +1,28 @@
-import { BASH_DIALECT, type ShellDialect } from './dialect.ts';
-import { isBlank, newScan, skipUnit } from './scanner.ts';
-import { readWord, type WordValue } from './unquote.ts';
-
 /**
  * The words and redirections of one command (bash(1), "SHELL GRAMMAR" and "REDIRECTION"). An
  * unquoted `<` or `>` ends a word wherever it stands, so `echo x>/etc/x` is `echo x` writing
  * `/etc/x`; a descriptor number or `{name}` written right before the operator is part of it.
+ *
+ * Types only: the Rust core reads commands (`crates/agent-plugins/src/rules/bash/words.rs`,
+ * docs/RUST.md), and these are the shapes it answers in.
  */
+
+/**
+ * One shell word as the shell passes it to the command, and what in it the shell still expands
+ * (the core's `rules/bash/unquote.rs`). Judgment (spec/judgments.md, oracle 2.1.319 and 2.1.321):
+ * permissions.md does not say how a quoted command reads against a rule. Claude Code matches the
+ * command name with its quoting removed, so `"rm" -rf x`, `r"m"`, `\rm` and `$'rm'` are all `rm`
+ * to a rule, and leaves every argument as written: `echo "x y"` matches `Bash(echo "x y")` and not
+ * `Bash(echo x y)`.
+ */
+interface WordValue {
+  /** The word with its quotes, escapes and line continuations removed. */
+  readonly value: string;
+  /** A `$` or backtick outside single quotes: a variable or substitution may change the value. */
+  readonly expands: boolean;
+  /** A `*`, `?` or `[` outside quotes: the shell may expand the word to file names. */
+  readonly globs: boolean;
+}
 
 /** A word or a redirection operator of a command, with where it starts and ends in the command. */
 export interface Word {
@@ -39,131 +55,4 @@ export interface ShellCommand {
   readonly text: string;
   readonly words: readonly ShellWord[];
   readonly redirects: readonly Redirect[];
-}
-
-/** The operators, longest first; `<(` and `>(` open a process substitution instead. */
-const OPERATOR = /&>>|&>|<<<|<<-|<<|<>|<&|>&|>>|>\||<(?!\()|>(?!\()/y;
-const DESCRIPTOR_PREFIX = /^(?:\d+|\{[A-Za-z_][A-Za-z0-9_]*\})$/;
-const DESCRIPTOR_TARGET = /^(?:\d+-?|-)$/;
-
-function operatorAt(command: string, at: number): string | undefined {
-  OPERATOR.lastIndex = at;
-  return OPERATOR.exec(command)?.[0];
-}
-
-/** Only line continuations: the shell reads nothing there. */
-const isContinuation = (text: string, dialect: ShellDialect): boolean =>
-  text.replaceAll(`${dialect.escape}\n`, '') === '';
-
-interface Lexer {
-  readonly command: string;
-  readonly dialect: ShellDialect;
-  readonly words: Word[];
-  /** Where the word being read starts, or -1 between words. */
-  start: number;
-}
-
-/** Ends the word being read at `end`; a word of only line continuations is no word. */
-function close(lexer: Lexer, end: number): void {
-  const { start } = lexer;
-  const text = lexer.command.slice(start, end);
-  if (start >= 0 && !isContinuation(text, lexer.dialect)) {
-    lexer.words.push({ text, start, end, operator: false });
-  }
-  lexer.start = -1;
-}
-
-/** An operator at `at`, its descriptor prefix (`2`, `{fd}`) taken from the word before it. */
-function pushOperator(lexer: Lexer, at: number, operator: string): number {
-  const { command, start } = lexer;
-  const prefixed = start >= 0 && DESCRIPTOR_PREFIX.test(command.slice(start, at));
-  const from = prefixed ? start : at;
-  if (!prefixed) close(lexer, at);
-  const end = at + operator.length;
-  lexer.words.push({ text: command.slice(from, end), start: from, end, operator: true });
-  lexer.start = -1;
-  return end;
-}
-
-/** The words and operators of one command, quoted and nested parts kept whole. */
-export function wordsOf(command: string, dialect: ShellDialect = BASH_DIALECT): readonly Word[] {
-  const scan = newScan(command, dialect, 0);
-  const lexer: Lexer = { command, dialect, words: [], start: -1 };
-  while (scan.pos < command.length) {
-    const at = scan.pos;
-    const blank = isBlank(command[at]);
-    const operator = blank ? undefined : operatorAt(command, at);
-    if (operator !== undefined) scan.pos = pushOperator(lexer, at, operator);
-    else if (blank) {
-      close(lexer, at);
-      scan.pos += 1;
-    } else {
-      if (lexer.start < 0) lexer.start = at;
-      skipUnit(scan);
-    }
-  }
-  close(lexer, Math.min(scan.pos, command.length));
-  return lexer.words;
-}
-
-/** What each operator does with its target, the descriptor prefix left out. */
-const KINDS: { readonly [operator: string]: (target: string) => RedirectKind } = {
-  '>': () => 'output',
-  '>>': () => 'output',
-  '>|': () => 'output',
-  '&>': () => 'output',
-  '&>>': () => 'output',
-  '<': () => 'input',
-  '<>': () => 'both',
-  '>&': (target) => (DESCRIPTOR_TARGET.test(target) ? 'descriptor' : 'output'),
-  '<&': (target) => (DESCRIPTOR_TARGET.test(target) ? 'descriptor' : 'input'),
-  '<<': () => 'here',
-  '<<-': () => 'here',
-  '<<<': () => 'here',
-};
-
-const kindOf = (operator: string, target: ShellWord | undefined): RedirectKind => {
-  const bare = operator.replace(/^(?:\d+|\{[^}]*\})/, '');
-  const kind = Object.hasOwn(KINDS, bare) ? KINDS[bare] : undefined;
-  return kind?.(target?.value ?? '') ?? 'output';
-};
-
-const shellWord = (word: Word, dialect: ShellDialect): ShellWord => ({
-  ...word,
-  ...readWord(word.text, dialect),
-});
-
-/** One command read into its words and redirections. */
-export function readCommand(text: string, dialect: ShellDialect = BASH_DIALECT): ShellCommand {
-  const tokens = wordsOf(text, dialect);
-  const words: ShellWord[] = [];
-  const redirects: Redirect[] = [];
-  for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index];
-    if (token === undefined) continue;
-    if (!token.operator) {
-      words.push(shellWord(token, dialect));
-      continue;
-    }
-    const next = tokens[index + 1];
-    const target = next === undefined || next.operator ? undefined : shellWord(next, dialect);
-    if (target !== undefined) index += 1;
-    redirects.push({ operator: token.text, kind: kindOf(token.text, target), target });
-  }
-  return { text, words, redirects };
-}
-
-/**
- * A word as the shell passes it and as written. A Windows path is read both ways: its `\` is a
- * separator to the program though Bash reads it as an escape (`C:\Windows`, `\\server\share`).
- */
-export const spellingsOf = (word: ShellWord): readonly string[] =>
-  word.text === word.value ? [word.value] : [word.value, word.text];
-
-/** The command's words as a rule reads them: the name unquoted, one space apart, continuations cut. */
-export function spokenForm(words: readonly ShellWord[], dialect: ShellDialect): string {
-  const [name, ...rest] = words;
-  if (name === undefined) return '';
-  const args = rest.map((word) => word.text.replaceAll(`${dialect.escape}\n`, ''));
-  return [name.value, ...args].join(' ');
 }

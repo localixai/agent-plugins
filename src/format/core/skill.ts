@@ -1,6 +1,4 @@
-import { isRecord } from '../../protocol/is-record.ts';
-import { codePointLength } from '../code-points.ts';
-import { parseFrontmatter } from '../frontmatter.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 
 /**
  * A core package's skill (core §7.1): its `SKILL.md` conforms to the Agent Skills specification
@@ -13,7 +11,11 @@ import { parseFrontmatter } from '../frontmatter.ts';
  * Judgments (spec/judgments.md): a field the Agent Skills specification does not define is a
  * warning, not a skip, since the specification lists its fields without forbidding others (Agent
  * Plugins Extended §18.3.2 lets them exist); a description of blanks only is empty.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/core/skill.rs`, docs/RUST.md).
  */
+
+const call = coreModule('format/core/skill');
 
 export interface CoreSkillCheck {
   /** Why the skill is skipped; empty when it conforms. */
@@ -22,68 +24,6 @@ export interface CoreSkillCheck {
   readonly unknownFields: readonly string[];
 }
 
-type Check = (value: unknown, directory: string) => string | undefined;
-
-const lengthBetween = (value: unknown, max: number): boolean =>
-  typeof value === 'string' && codePointLength(value) >= 1 && codePointLength(value) <= max;
-
-const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-const nameCheck: Check = (value, directory) => {
-  if (typeof value !== 'string') return '"name" is required and must be a string';
-  if (!lengthBetween(value, 64) || !NAME.test(value)) {
-    return `"name" "${value}" must be 1 to 64 lowercase letters, digits and single hyphens, a letter or digit at each end`;
-  }
-  return value === directory
-    ? undefined
-    : `"name" "${value}" must match its directory "${directory}"`;
-};
-
-const descriptionCheck: Check = (value) =>
-  lengthBetween(value, 1024) && typeof value === 'string' && value.trim() !== ''
-    ? undefined
-    : '"description" is required: a string of 1 to 1024 characters';
-
-const optionalString =
-  (field: string): Check =>
-  (value) =>
-    typeof value === 'string' ? undefined : `"${field}" must be a string`;
-
-const compatibilityCheck: Check = (value) =>
-  lengthBetween(value, 500) ? undefined : '"compatibility" must be a string of 1 to 500 characters';
-
-const metadataCheck: Check = (value) =>
-  isRecord(value) && Object.values(value).every((member) => typeof member === 'string')
-    ? undefined
-    : '"metadata" must map strings to strings';
-
-/** The six Agent Skills fields and their checks; `name` and `description` are checked when absent too. */
-const FIELDS: Readonly<Record<string, Check>> = {
-  name: nameCheck,
-  description: descriptionCheck,
-  license: optionalString('license'),
-  compatibility: compatibilityCheck,
-  metadata: metadataCheck,
-  'allowed-tools': optionalString('allowed-tools'),
-};
-
-const REQUIRED = new Set(['name', 'description']);
-
 /** Checks a `SKILL.md` found in `skills/<directory>/` by the Agent Skills specification. */
-export function checkCoreSkill(text: string, directory: string): CoreSkillCheck {
-  const read = parseFrontmatter(text);
-  if (!read.present) return { problems: ['SKILL.md has no frontmatter'], unknownFields: [] };
-  if (read.problem !== undefined) {
-    return {
-      problems: [`SKILL.md frontmatter does not parse: ${read.problem}`],
-      unknownFields: [],
-    };
-  }
-  const { fields } = read;
-  const problems = Object.entries(FIELDS)
-    .filter(([field]) => REQUIRED.has(field) || Object.hasOwn(fields, field))
-    .map(([field, check]) => check(fields[field], directory))
-    .filter((problem): problem is string => problem !== undefined);
-  const unknownFields = Object.keys(fields).filter((field) => !Object.hasOwn(FIELDS, field));
-  return { problems, unknownFields };
-}
+export const checkCoreSkill = (text: string, directory: string): CoreSkillCheck =>
+  call('checkCoreSkill', text, directory);

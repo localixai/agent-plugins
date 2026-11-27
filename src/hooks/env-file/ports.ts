@@ -10,8 +10,14 @@
  * in the session"). Judgment (spec/judgments.md): the docs describe one session per process; a host
  * that runs many keys the files by the session id, so two sessions never share a file and a resumed
  * session (same id) finds its own again.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/hooks/env-file/ports.rs`, docs/RUST.md).
  */
-export const ENV_FILE_KINDS = ['session', 'cwd'] as const;
+import { coreModule } from '../../wasm/bridge.ts';
+
+const call = coreModule('hooks/env-file/ports');
+
+export const ENV_FILE_KINDS: readonly ['session', 'cwd'] = call('ENV_FILE_KINDS');
 export type EnvFileKind = (typeof ENV_FILE_KINDS)[number];
 
 export interface EnvFileStore {

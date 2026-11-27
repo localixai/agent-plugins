@@ -214,8 +214,6 @@
   "dependencies": {
     "acorn": "8.19.0",
     "ignore": "7.0.14",
-    "semver": "7.8.6",
-    "yaml": "2.9.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -232,7 +230,9 @@
     "oxfmt": "0.75.0",
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
-    "typescript": "7.0.2"
+    "semver": "7.8.6",
+    "typescript": "7.0.2",
+    "yaml": "2.9.1"
   },
   "peerDependencies": {
     "@anthropic-ai/claude-agent-sdk": ">=0.3.321 <0.4.0",

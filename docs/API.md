@@ -1391,7 +1391,7 @@ session removes) and `background` (the `additionalContext`, `systemMessage` or `
 a `defer` applies: `-p` and a single tool call); `permissionRequest` (the `decision`
 object: `allow` with `updatedInput` and `updatedPermissions`, or `deny` with `message` and
 `interrupt`); `updatedToolOutput` (a built-in tool's value that does not match its output type in
-`sdk-tools.d.ts`, read into `tool-shapes/` by `scripts/tool-output-shapes.ts`, is dropped with an
+`sdk-tools.d.ts`, read into the core's `tool_shapes/` by `scripts/tool-output-shapes.ts`, is dropped with an
 issue; MCP output and a tool without an output type pass through) and `classifierContext` (at most 2,000 characters over every hook); `elicitation`
 (`action` and `content` the MCP server receives: any decline wins); `initialUserMessage`,
 `sessionTitle`, `reloadSkills`, `suppressOriginalPrompt`, `watchPaths`, `displayContent`, `retry`,
@@ -2129,7 +2129,7 @@ read to the end (`npm test &&`); a deny or ask rule matches when any subcommand 
 subcommand is also tried after the fixed wrappers (`timeout`, `time`, `nice`, `nohup`, `stdbuf`,
 `command`, `builtin`, `noglob`, bare `xargs`) and leading `VAR=value` assignments are stripped (an
 allow rule strips only the known-safe assignments Claude Code 2.1.322 strips, each with the values it
-accepts, `LANG=C` but not `LANG=x`, `src/rules/bash/safe-env.ts`, and `MatchContext.safeEnvVars`
+accepts, `LANG=C` but not `LANG=x`, `crates/agent-plugins/src/rules/bash/safe_env.rs`, and `MatchContext.safeEnvVars`
 with any value). The read-only set sees through the same safe assignments, `noglob`, `command`
 (`-p`), `builtin` and `timeout DURATION`, in that order, and nothing else (`nice ls` asks). A prefix
 allow rule never approves `watch`, `setsid`, `ionice`, `flock` or a `find` that runs, deletes or

@@ -1,6 +1,6 @@
+import { coreModule } from '../wasm/bridge.ts';
 import type { McpTransport } from './mcp-config.ts';
 import type { EnvLookup } from './mcp-env.ts';
-import { plainPositiveWholeEnv, positiveWholeEnv, wholeEnv } from './env-number.ts';
 
 /**
  * The environment variables that tune MCP servers and what each decides (env-vars.md, "Variables";
@@ -8,24 +8,14 @@ import { plainPositiveWholeEnv, positiveWholeEnv, wholeEnv } from './env-number.
  * local stdio server"). Pure over a lookup of the environment: reading the real one, and starting
  * anything, are the host's. The typed registry of every host variable lives with the environment
  * module; these are the semantics of the MCP rows.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/format/mcp_knobs.rs`, docs/RUST.md).
  */
+const call = coreModule('format/mcp-knobs');
 
 /** A positive whole number of a numeric variable (spec §3.6.1 item 2, J3.17); anything else is `undefined`. */
-export const positiveWhole = positiveWholeEnv;
-
-/** "Timeout in milliseconds for MCP server startup (default: 30000, or 30 seconds)". */
-const DEFAULT_STARTUP_MS = 30_000;
-/** "Timeout in milliseconds for MCP tool execution (default: 100000000, about 28 hours)". */
-const DEFAULT_TOOL_MS = 100_000_000;
-/** "Each request also times out after 60 seconds by default". */
-const REQUEST_FLOOR_MS = 60_000;
-/** "Values below 1000 are floored to one second" (the variable) and "ignored" (the per-server field). */
-const MIN_TOOL_MS = 1_000;
-/** "Overrides the per-transport defaults of 300000 (5 minutes) for network servers and 1800000 (30 minutes) for stdio servers." */
-const NETWORK_IDLE_MS = 300_000;
-const STDIO_IDLE_MS = 1_800_000;
-/** "How long blocking MCP startup waits, in milliseconds, for the connection batch ... (default: 5000)". */
-const DEFAULT_CONNECT_MS = 5_000;
+export const positiveWhole = (text: string | undefined): number | undefined =>
+  call('positiveWhole', text);
 
 export interface McpTimeouts {
   /** `MCP_TIMEOUT`: one server's connect attempt. */
@@ -48,80 +38,17 @@ export interface McpTimeoutServer {
   readonly timeout?: unknown;
 }
 
-/** Which servers have the second, per-request timer: "Stdio and WebSocket servers have no per-request timer." */
-const HAS_REQUEST_TIMER: { readonly [T in McpServerKind]: boolean } = {
-  http: true,
-  sse: true,
-  connector: true,
-  stdio: false,
-  ws: false,
-  ide: false,
-  sdk: false,
-};
-
-/** The idle window of each kind of server; "doesn't apply to IDE servers or SDK in-process servers". */
-const DEFAULT_IDLE_MS: { readonly [T in McpServerKind]: number | undefined } = {
-  http: NETWORK_IDLE_MS,
-  sse: NETWORK_IDLE_MS,
-  ws: NETWORK_IDLE_MS,
-  connector: NETWORK_IDLE_MS,
-  stdio: STDIO_IDLE_MS,
-  ide: undefined,
-  sdk: undefined,
-};
-type McpServerKind = McpTimeoutServer['transport'];
-
-/**
- * The idle window of one server. `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` replaces the default of its kind:
- * `0` turns the check off, "values below 1000 are raised to one second, and the value is capped at the
- * effective `MCP_TOOL_TIMEOUT`"; "a per-server `timeout` of at least 1000 raises that server's idle
- * window to at least the `timeout` value". A value that is not plain digits is ignored (judgment,
- * spec/judgments.md).
- */
-function idleWindow(
-  lookup: EnvLookup,
-  transport: McpServerKind,
-  limits: { readonly toolMs: number; readonly own: number | undefined },
-): number | undefined {
-  const fallback = DEFAULT_IDLE_MS[transport];
-  if (fallback === undefined) return undefined;
-  const text = lookup('CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT');
-  const written = wholeEnv(text);
-  if (written === 0) return undefined;
-  const set =
-    written === undefined ? fallback : Math.min(Math.max(written, MIN_TOOL_MS), limits.toolMs);
-  return Math.max(set, limits.own ?? 0);
-}
-
 /**
  * `MCP_TIMEOUT`, `MCP_TOOL_TIMEOUT` and the server's own `timeout`. The tool timeout is the per-server
  * `timeout` (of at least 1000), else `MCP_TOOL_TIMEOUT` (below 1000 floored to 1000), else the default.
  * The per-request timer is "the greatest of three values: 60 seconds, the tool timeout that applies to
  * the server, and `MCP_TIMEOUT`", where an unset `MCP_TOOL_TIMEOUT` does not count its default.
  */
-export function mcpTimeouts(lookup: EnvLookup, server: McpTimeoutServer): McpTimeouts {
-  const startupMs = positiveWhole(lookup('MCP_TIMEOUT')) ?? DEFAULT_STARTUP_MS;
-  const text = lookup('MCP_TOOL_TIMEOUT');
-  const read = wholeEnv(text);
-  const fromVariable = read === undefined ? undefined : Math.max(read, MIN_TOOL_MS);
-  const own =
-    typeof server.timeout === 'number' && server.timeout >= MIN_TOOL_MS
-      ? server.timeout
-      : undefined;
-  const applies = own ?? fromVariable;
-  const toolMs = applies ?? DEFAULT_TOOL_MS;
-  return {
-    startupMs,
-    toolMs,
-    idleMs: idleWindow(lookup, server.transport, { toolMs, own }),
-    requestMs: HAS_REQUEST_TIMER[server.transport]
-      ? Math.max(REQUEST_FLOOR_MS, applies ?? 0, startupMs)
-      : undefined,
-  };
-}
+export const mcpTimeouts = (lookup: EnvLookup, server: McpTimeoutServer): McpTimeouts =>
+  call('mcpTimeouts', lookup, server);
 
 export const mcpConnectTimeoutMs = (lookup: EnvLookup): number =>
-  positiveWhole(lookup('MCP_CONNECT_TIMEOUT_MS')) ?? DEFAULT_CONNECT_MS;
+  call('mcpConnectTimeoutMs', lookup);
 
 export interface McpDescriptionLimits {
   /** A tool description that loads upfront. */
@@ -131,68 +58,23 @@ export interface McpDescriptionLimits {
   readonly instructions: number;
 }
 
-/** "Server instructions, and the description of a tool that loads upfront: 4,096 characters"; "through tool search: 16,384". */
-const DEFAULT_DESCRIPTION_LIMITS: McpDescriptionLimits = {
-  upfront: 4_096,
-  deferred: 16_384,
-  instructions: 4_096,
-};
-
 /** `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`: "Claude Code uses that number for both limits"; anything but plain digits is ignored. */
-export function mcpDescriptionLimits(lookup: EnvLookup): McpDescriptionLimits {
-  const value = plainPositiveWholeEnv(lookup('CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH'));
-  return value === undefined
-    ? DEFAULT_DESCRIPTION_LIMITS
-    : { upfront: value, deferred: value, instructions: value };
-}
-
-const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
+export const mcpDescriptionLimits = (lookup: EnvLookup): McpDescriptionLimits =>
+  call('mcpDescriptionLimits', lookup);
 
 /** "Claude sees only the text before the cut"; the cut keeps a surrogate pair whole (judgment, spec/judgments.md). */
-export function cutMcpDescription(text: string, limit: number): string {
-  if (text.length <= limit) return text;
-  const end = isHighSurrogate(text.charCodeAt(limit - 1)) ? limit - 1 : limit;
-  return text.slice(0, end);
-}
-
-/** "For variables that turn a behavior on or off, set `1`, `true`, `yes`, or `on` ... `0`, `false`, `no`, or `off`, in any casing." */
-const SWITCHES: Readonly<Record<string, boolean>> = {
-  '1': true,
-  true: true,
-  yes: true,
-  on: true,
-  '0': false,
-  false: false,
-  no: false,
-  off: false,
-};
+export const cutMcpDescription = (text: string, limit: number): string =>
+  call('cutMcpDescription', text, limit);
 
 /** `true`, `false`, or `undefined` for an unset, empty or unrecognised value. */
-export function switchOf(text: string | undefined): boolean | undefined {
-  const key = text?.toLowerCase();
-  return key !== undefined && Object.hasOwn(SWITCHES, key) ? SWITCHES[key] : undefined;
-}
+export const switchOf = (text: string | undefined): boolean | undefined => call('switchOf', text);
 
 /**
  * Judgment (spec/judgments.md): the docs say "a safe baseline environment" and do not list it. These are
  * the variables a process needs to find programs, its home and its locale, and none holds a credential;
  * the host passes its own list when it knows better.
  */
-export const MCP_ENV_BASELINE: readonly string[] = [
-  'PATH',
-  'HOME',
-  'USER',
-  'LOGNAME',
-  'SHELL',
-  'LANG',
-  'LC_ALL',
-  'TERM',
-  'TMPDIR',
-  'TEMP',
-  'TMP',
-  'SYSTEMROOT',
-  'USERPROFILE',
-];
+export const MCP_ENV_BASELINE: readonly string[] = call('MCP_ENV_BASELINE');
 
 export interface McpStdioEnvironmentInput {
   /** The environment Claude Code runs in. */
@@ -216,27 +98,14 @@ export interface McpStdioEnvironmentInput {
  * inheriting your shell environment"; `CLAUDE_PROJECT_DIR` is "set in the server's environment, not in
  * Claude Code's own environment".
  */
-export function mcpStdioEnvironment(input: McpStdioEnvironmentInput): Record<string, string> {
-  const allowlist = switchOf(input.snapshot.CLAUDE_CODE_MCP_ALLOWLIST_ENV) === true;
-  const names = new Set(input.baseline ?? MCP_ENV_BASELINE);
-  const inherited = allowlist
-    ? Object.entries(input.snapshot).filter(([name]) => names.has(name))
-    : Object.entries(input.snapshot);
-  return {
-    ...Object.fromEntries(inherited),
-    ...input.exported,
-    ...(input.projectDir === undefined ? {} : { CLAUDE_PROJECT_DIR: input.projectDir }),
-    ...input.configured,
-  };
-}
+export const mcpStdioEnvironment = (input: McpStdioEnvironmentInput): Record<string, string> =>
+  call('mcpStdioEnvironment', input);
 
 /**
  * `ENABLE_CLAUDEAI_MCP_SERVERS`: "Set to `false` to stop Claude Code from fetching claude.ai MCP servers.
  * Enabled by default for logged-in users." A value that is not an on/off spelling leaves the default.
  */
-export function claudeAiConnectorsFetched(
+export const claudeAiConnectorsFetched = (
   lookup: EnvLookup,
   session: { readonly loggedIn: boolean },
-): boolean {
-  return session.loggedIn && switchOf(lookup('ENABLE_CLAUDEAI_MCP_SERVERS')) !== false;
-}
+): boolean => call('claudeAiConnectorsFetched', lookup, session);

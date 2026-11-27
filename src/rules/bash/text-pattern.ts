@@ -1,13 +1,12 @@
-import type { PermissionRule, Specifier } from '../types.ts';
+/**
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/bash/text_pattern.rs`,
+ * docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PermissionRule } from '../types.ts';
 
-/** The command, path or skill text of each specifier form: only a `text` specifier has one. */
-const TEXT_OF: { readonly [F in Specifier['form']]: (specifier: Specifier) => string | undefined } =
-  {
-    param: () => undefined,
-    domain: () => undefined,
-    text: (specifier) => ('pattern' in specifier ? specifier.pattern : undefined),
-  };
+const call = coreModule('rules/bash/text-pattern');
 
 /** The pattern a rule matches command text with, or `undefined` for a bare or non-text rule. */
 export const textPatternOf = (rule: PermissionRule): string | undefined =>
-  rule.specifier === undefined ? undefined : TEXT_OF[rule.specifier.form](rule.specifier);
+  call('textPatternOf', rule);

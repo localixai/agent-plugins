@@ -14,10 +14,6 @@ import { coreModule } from '../../wasm/bridge.ts';
 
 const call = coreModule('format/core/command');
 
-/** The root-relative path a `./` command names, or `undefined` for a bare name. */
-export const relativeCommandPath = (command: string): string | undefined =>
-  call('relativeCommandPath', command);
-
 /** Why a `command` value breaks core §7.2.1 / §7.3.1, or `undefined` when it is a valid token. */
 export const commandProblem = (command: unknown): string | undefined =>
   call('commandProblem', command);

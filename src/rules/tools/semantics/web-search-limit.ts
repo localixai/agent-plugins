@@ -1,11 +1,14 @@
+/**
+ * WebSearch's session limit and how many calls it still allows (tools-reference.md, "Session search
+ * limit").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/rules/tools/semantics/web_search_limit.rs`,
+ * docs/RUST.md).
+ */
 import type { Environment } from '../../../ports/environment.ts';
-import { positiveInteger, wholeNumber } from './env-number.ts';
+import { coreModule } from '../../../wasm/bridge.ts';
 
-/** tools-reference.md, "Session search limit": "a limit of 200 WebSearch calls". */
-const DEFAULT_CAP = 200;
-/** "refills at about 100 calls per hour" in an interactive terminal session. */
-const INTERACTIVE_REFILLS_PER_HOUR = 100;
-const HOUR_MS = 3_600_000;
+const call = coreModule('rules/tools/semantics/web-search-limit');
 
 export interface WebSearchSession {
   /** An interactive terminal session; `false` for `-p` and the Agent SDK. */
@@ -28,18 +31,10 @@ export interface WebSearchLimits {
  * takes plain digits (`0` included); the default is 100 in an interactive session and 0, no
  * refill, in a non-interactive one. A number below 200 lowers the cap (spec/judgments.md).
  */
-export function webSearchLimits(
+export const webSearchLimits = (
   env: Pick<Environment, 'get'>,
   session: WebSearchSession,
-): WebSearchLimits {
-  return {
-    cap: positiveInteger(env, 'CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION') ?? DEFAULT_CAP,
-    refillPerHour:
-      wholeNumber(env, 'CLAUDE_CODE_WEB_SEARCH_REFILLS_PER_HOUR') ??
-      (session.interactive ? INTERACTIVE_REFILLS_PER_HOUR : 0),
-    perTurn: !session.interactive,
-  };
-}
+): WebSearchLimits => call('webSearchLimits', env, session);
 
 export interface WebSearchUsage {
   /** Calls counted so far in the session, or in the turn when the limits are per turn. */
@@ -53,8 +48,5 @@ export interface WebSearchUsage {
  * rounded down, and never gives back more than was used (spec/judgments.md: the docs say "about 100
  * calls per hour" and no more). At zero a call "did nothing" and Claude is told to carry on.
  */
-export function webSearchAllowance(limits: WebSearchLimits, usage: WebSearchUsage): number {
-  const refilled = Math.floor((limits.refillPerHour * usage.elapsedMs) / HOUR_MS);
-  const counted = Math.max(usage.used - refilled, 0);
-  return Math.max(limits.cap - counted, 0);
-}
+export const webSearchAllowance = (limits: WebSearchLimits, usage: WebSearchUsage): number =>
+  call('webSearchAllowance', limits, usage);

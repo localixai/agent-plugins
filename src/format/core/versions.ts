@@ -29,10 +29,3 @@ export const coreSchemaId = (version: CoreVersion, document: CoreDocument): stri
 /** The version a `$schema` value names for `document`, or `undefined` when it is no canonical identifier of it. */
 export const coreSchemaVersion = (value: unknown, document: CoreDocument): string | undefined =>
   call('coreSchemaVersion', value, document);
-
-/**
- * Whether a root `plugin.json` value makes the folder a core package (spec §1.3): a JSON object whose
- * `$schema` is a canonical core manifest identifier of any release (Judgment J1.1: anything else is
- * an ordinary file of a Claude Code plugin).
- */
-export const isCoreManifestValue = (raw: unknown): boolean => call('isCoreManifestValue', raw);

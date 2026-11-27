@@ -1,6 +1,7 @@
 /**
  * The WebAssembly module `crates/agent-plugins-wasm` builds, and its ABI as text in, text out
- * (`crates/agent-plugins-wasm/src/abi.rs`): a call, a task's start and resume, a handle's release.
+ * (`crates/agent-plugins-wasm/src/abi.rs`): a call, a task's start, resume and cancel, a handle's
+ * release.
  *
  * The module's bytes are `src/wasm/module.ts`, written by `bun run build:wasm` (not committed):
  * pure data, so the package still reads nothing of the machine it runs on (L3). It is compiled
@@ -18,6 +19,7 @@ interface Exports {
   agent_plugins_start(namePtr: number, nameLen: number, argsPtr: number, argsLen: number): number;
   agent_plugins_resume(task: number, answersPtr: number, answersLen: number): number;
   agent_plugins_release(handle: number): void;
+  agent_plugins_cancel(task: number): void;
 }
 
 const decodeBase64 = (text: string): Uint8Array<ArrayBuffer> => {
@@ -94,6 +96,11 @@ export const resumeText = (task: number, answers: string): string =>
     const [at, length] = put(answers);
     return taken(core.agent_plugins_resume(task, at, length));
   }, faultStep);
+
+/** Drops the core's task `task`, which no loop will resume, unless its instance is gone. */
+export function cancel(task: number, madeIn: number): void {
+  if (madeIn === generations) core.agent_plugins_cancel(task);
+}
 
 /** Forgets the core's handle `handle`, unless the instance that made it is gone. */
 export function release(handle: number, madeIn: number): void {

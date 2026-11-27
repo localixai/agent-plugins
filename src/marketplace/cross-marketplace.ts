@@ -1,5 +1,5 @@
 import type { Marketplace } from '../format/marketplace/types.ts';
-import { dependencyId } from './dependencies.ts';
+import { coreModule } from '../wasm/bridge.ts';
 import type { NormalizedDependency } from './types.ts';
 
 /**
@@ -9,18 +9,17 @@ import type { NormalizedDependency } from './types.ts';
  * the user is installing, lists it in `allowCrossMarketplaceDependenciesOn` (its list alone applies,
  * for the whole dependency chain), or when the user already has the dependency enabled at the same
  * scope. The kit decides; the host installs or refuses.
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/marketplace/cross_marketplace.rs`, docs/RUST.md).
  */
+
+const call = coreModule('marketplace/cross-marketplace');
 
 /** Where the dependency is declared: it decides what a refusal does. */
 export type DeclaredIn = 'entry' | 'plugin.json';
 
 /** What a refusal does: a marketplace entry's refuses the install; `plugin.json`'s installs without the dependency, and the plugin then fails to load. */
 export type RefusalEffect = 'refuse-install' | 'install-without-dependency';
-
-const EFFECTS: { readonly [P in DeclaredIn]: RefusalEffect } = {
-  entry: 'refuse-install',
-  'plugin.json': 'install-without-dependency',
-};
 
 export type CrossMarketplaceDecision =
   | { readonly allowed: true }
@@ -43,36 +42,11 @@ export interface CrossMarketplaceQuestion {
   readonly declaredIn: DeclaredIn;
 }
 
-const refusal = (question: CrossMarketplaceQuestion): CrossMarketplaceDecision => {
-  const { dep, requiredBy, root } = question;
-  const by = dependencyId(
-    requiredBy.marketplace === undefined
-      ? { name: requiredBy.name }
-      : { name: requiredBy.name, marketplace: requiredBy.marketplace },
-  );
-  return {
-    allowed: false,
-    effect: EFFECTS[question.declaredIn],
-    // The text up to "allowlist" is quoted by the docs; the rest names the field to set (docs: "and names the field to set").
-    message:
-      `Dependency "${dependencyId(dep)}" (required by ${by}) is in marketplace "${dep.marketplace}", ` +
-      `which is not in the allowlist; add it to "allowCrossMarketplaceDependenciesOn" in the marketplace.json of "${root.name}"`,
-  };
-};
-
 /**
  * Judgments (spec/judgments.md): a dependency in the root marketplace itself needs no entry on its
  * list (the user chose that marketplace); a name is matched exactly; a dependency with no
  * marketplace is never cross-marketplace.
  */
-export function crossMarketplaceDecision(
+export const crossMarketplaceDecision = (
   question: CrossMarketplaceQuestion,
-): CrossMarketplaceDecision {
-  const { dep, requiredBy, root } = question;
-  const target = dep.marketplace;
-  if (target === undefined || target === requiredBy.marketplace || target === root.name) {
-    return { allowed: true };
-  }
-  if (root.allowCrossMarketplaceDependenciesOn.includes(target)) return { allowed: true };
-  return question.enabledAtScope.has(dependencyId(dep)) ? { allowed: true } : refusal(question);
-}
+): CrossMarketplaceDecision => call('crossMarketplaceDecision', question);

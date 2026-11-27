@@ -37,8 +37,9 @@ function encodeRecord(value: object, seen: Set<object>, depth: number): Result {
   for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
     if (!descriptor.enumerable) continue;
     if (!('value' in descriptor)) return UNRECORDABLE;
+    // A member set to `undefined` is kept (`{"$undefined": true}`), as the bridge's wire keeps
+    // it: `{description: undefined}` asks to remove a key, which `{}` does not.
     const item: unknown = descriptor.value;
-    if (item === undefined) continue;
     const encoded = encodeAt(item, seen, depth + 1);
     if (encoded === UNRECORDABLE) return UNRECORDABLE;
     // Defined, not assigned: `out['__proto__'] = …` would set the prototype and lose the member.

@@ -1,4 +1,4 @@
-//! JavaScript's `new URL(text)` (no base URL): the members the package reads of a `URL`, which
+//! JavaScript's `new URL(text)` and `new URL(text, base)`: the members the package reads of a `URL`, which
 //! are the WHATWG URL Standard's basic URL parser's answer, here the `url` crate's. A text that
 //! makes `new URL` throw is `None`. `tests/differential/js.rs` holds it to the answers
 //! `scripts/rust/js-oracle.ts` recorded in Bun (JavaScriptCore).
@@ -190,4 +190,77 @@ pub fn parse(text: &str) -> Option<Url> {
         search: with_prefix('?', url.query()),
         hash: with_prefix('#', url.fragment()),
     })
+}
+
+/// Whether `text` opens with a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`), so it is not read against
+/// the base's path.
+fn opens_with_scheme(text: &str) -> bool {
+    let mut characters = text.chars();
+    characters
+        .next()
+        .is_some_and(|first| first.is_ascii_alphabetic())
+        && characters
+            .find(|character| !(character.is_ascii_alphanumeric() || "+.-".contains(*character)))
+            == Some(':')
+}
+
+/// Whether `text` opens with two of the separators a special URL reads, `/` and `\`.
+fn opens_with_two_separators(text: &str) -> bool {
+    let mut characters = text.chars();
+    matches!(
+        (characters.next(), characters.next()),
+        (Some('/' | '\\'), Some('/' | '\\'))
+    )
+}
+
+/// Whether `text` is a rooted path whose first segment is a Windows drive letter (`/C:` or `\C|`
+/// and then the end, a separator, a query or a fragment).
+fn rooted_drive_letter(text: &str) -> bool {
+    let mut characters = text.chars();
+    matches!(
+        (characters.next(), characters.next(), characters.next(), characters.next()),
+        (Some('/' | '\\'), Some(letter), Some(':' | '|'), None | Some('/' | '\\' | '?' | '#'))
+            if letter.is_ascii_alphabetic()
+    )
+}
+
+/// Parses `text` against `base` as `new URL(text, base)` does, or `None` where it throws: the base
+/// read as `new URL(base)` reads it, `text` resolved against it by the crate, and the result read
+/// again so the rules above apply to what it resolved to. Where the crate's `join` follows an older
+/// standard, the text is first written as the one the standard resolves it to:
+///
+/// - **Against a special base, two separators start the host**, and any more are skipped
+///   (the special authority ignore slashes state): `///h/x` is `<scheme>://h/x`, where the crate
+///   refuses it; such a text is read as `<scheme>:<text>`.
+/// - **Against a `file:` base with a host, a rooted drive letter keeps the host**: `/C:/x` against
+///   `file://h/a` is `file://h/C:/x` (the file slash state); the crate drops the host.
+/// - **Against a non-special base, `\` is no separator**: `\a` against `foo://h/p/q` is
+///   `foo://h/p/\a` and `/\a` is `foo://h/\a`, where the crate reads a leading `\` as `/`; the
+///   first is read as `./<text>`, the second after the base's scheme and authority.
+#[must_use]
+pub fn parse_with_base(text: &str, base: &str) -> Option<Url> {
+    let base = ::url::Url::parse(&parse(base)?.href).ok()?;
+    let text = cleaned(text);
+    if opens_with_scheme(&text) {
+        return parse(base.join(&text).ok()?.as_str());
+    }
+    let special = base.is_special();
+    if special && opens_with_two_separators(&text) {
+        return parse(&format!("{}:{text}", base.scheme()));
+    }
+    if let Some(host) = base
+        .host_str()
+        .filter(|host| base.scheme() == "file" && !host.is_empty() && rooted_drive_letter(&text))
+    {
+        return parse(&format!("file://{host}{text}"));
+    }
+    // An opaque path (`mailto:x`) takes only a fragment, which the crate answers.
+    let non_special_path = !special && !base.cannot_be_a_base();
+    if non_special_path && text.starts_with('\\') {
+        return parse(base.join(&format!("./{text}")).ok()?.as_str());
+    }
+    if non_special_path && text.starts_with("/\\") {
+        return parse(&format!("{}{text}", &base[..Position::BeforePath]));
+    }
+    parse(base.join(&text).ok()?.as_str())
 }
