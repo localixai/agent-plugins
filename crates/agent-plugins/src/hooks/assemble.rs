@@ -288,7 +288,6 @@ pub fn idle_outcome(event: &str, issues: Vec<JsValue>) -> JsObject {
 
 crate::registry::exports! {
     "hooks/assemble" {
-        "runFactsOfVerdict" => ok |verdict: JsObject| run_facts_of_verdict(&verdict);
         "assemble" => ok |event: String, verdicts: Vec<JsObject>, merged: MergedOutput, issues: Vec<JsValue>|
             assemble(&event, &verdicts, &merged, issues);
         "idleOutcome" => ok |event: String, issues: Vec<JsValue>| idle_outcome(&event, issues);

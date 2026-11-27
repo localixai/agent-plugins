@@ -12,11 +12,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { runHandler } from '../../../../src/hooks/handlers/index.ts';
-import { entry } from '../../../support/hooks-select.ts';
 import { pluginCommand, runContext, settingsCommand } from '../../../support/hooks-run.ts';
 import type { RunnerReply } from '../../../support/ports.ts';
 import { fakeEnvironment, locations, scriptedRunner } from '../../../support/ports.ts';
-import { HANDLERS } from '../../../../src/hooks/handlers/registry.ts';
 
 const where = async (
   directories: readonly string[],
@@ -229,15 +227,5 @@ describe('the run the port reports', () => {
       stdout: 'to stdout',
       stderr: 'to stderr',
     });
-  });
-});
-
-describe('a runner handed a hook of another type', () => {
-  test('reports it as not run instead of reading a shape it does not have', async () => {
-    const { run } = await HANDLERS.command(
-      entry('Stop', { handler: { type: 'http', url: 'https://x.test' } }),
-      runContext({ runner: scriptedRunner() }),
-    );
-    expect(run).toEqual({ kind: 'skipped', reason: 'The command runner was given a http hook.' });
   });
 });

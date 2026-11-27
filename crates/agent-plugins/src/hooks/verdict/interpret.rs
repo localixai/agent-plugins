@@ -12,18 +12,19 @@
 use serde::Deserialize;
 
 use super::background::delivery_of;
-use super::debug_lines::Subject;
+use super::debug_lines::{Parser, Subject};
 use super::exited::interpret_exited;
 use super::http_response::{interpret_http, interpret_http_failed};
 use super::model_verdict::{interpret_model, interpret_model_failed};
 use super::notices::{TIMED_OUT, timed_out_discarded};
 use super::on_failure::{Failure, FailureCause, failure_verdict, value_of};
-use super::types::HookNotice;
+use super::types::{BackgroundDelivery, HookNotice};
 use crate::hooks::handlers::context::{BackgroundResult, ExitedRun};
 use crate::hooks::handlers::remote::types::ModelRun;
 use crate::hooks::input::fact_read::text_fact_of;
 use crate::js::{JsObject, JsValue};
-use crate::registry::{Callback, CorePromise, HostPromise, Port};
+use crate::ports::BoxFuture;
+use crate::registry::{Callback, CorePromise, Detached, Port};
 
 /// What running any hook returns (`RawRun`): the command runs and the runs of the remote types.
 #[derive(Debug, Deserialize)]
@@ -55,7 +56,7 @@ pub enum RawRun {
     #[serde(rename = "background")]
     Background {
         /// What it reports once its process ends.
-        done: HostPromise<BackgroundResult>,
+        done: Detached<BackgroundResult>,
     },
     /// An HTTP hook's response.
     #[serde(rename = "http")]
@@ -157,13 +158,7 @@ async fn read_run(subject: &Subject, run: RawRun) -> JsObject {
             }
             verdict
         }
-        RawRun::Background { done } => {
-            let mut verdict = inactive(subject, "background");
-            let handler_id = subject.entry_id();
-            let delivery = CorePromise::new(async move { delivery_of(&handler_id, &done.await) });
-            verdict.insert("delivery".to_owned(), value_of(&delivery));
-            verdict
-        }
+        RawRun::Background { .. } => inactive(subject, "background"),
         RawRun::Http { status, body } => interpret_http(subject, status, &body).await,
         RawRun::HttpFailed { message } => interpret_http_failed(subject, &message),
         // "Claude Code reads the tool's text content the same way it reads command-hook stdout ...
@@ -195,7 +190,7 @@ async fn subject_of(entry: JsValue, context: Port) -> Subject {
         event: context.member::<String>("event").await,
         tool_name: text_fact_of(&facts, "tool_name"),
         facts,
-        parse: context.member::<Callback>("parse").await,
+        parse: Parser::Host(context.member::<Callback>("parse").await),
         timeout_ms: context.member::<Option<f64>>("timeoutMs").await,
         effects_ignored: context.member::<Option<bool>>("effectsIgnored").await == Some(true),
         git_bash_missing: context.member::<Option<bool>>("gitBashMissing").await == Some(true),
@@ -205,13 +200,46 @@ async fn subject_of(entry: JsValue, context: Port) -> Subject {
 
 /// What the run of `entry` came to.
 pub async fn interpret_run(entry: JsValue, run: RawRun, context: Port) -> JsObject {
-    let subject = subject_of(entry, context).await;
+    let (mut verdict, delivery) = interpret_subject(&subject_of(entry, context).await, run).await;
+    if let Some(delivery) = delivery {
+        verdict.insert("delivery".to_owned(), value_of(&CorePromise::new(delivery)));
+    }
+    verdict
+}
+
+/// What a background run hands over once its process ends.
+pub type Delivery = BoxFuture<'static, BackgroundDelivery>;
+
+/// What a run came to, for the subject the core built, and a background run's delivery, which the
+/// caller makes the verdict's `delivery` (the dispatch first wraps it, `hooks/run_all.rs`).
+pub async fn interpret_subject(subject: &Subject, run: RawRun) -> (JsObject, Option<Delivery>) {
+    match run {
+        RawRun::Background { done } => {
+            let handler_id = subject.entry_id();
+            let delivery: Delivery =
+                Box::pin(async move { delivery_of(&handler_id, &done.settled().await) });
+            (inactive(subject, "background"), Some(delivery))
+        }
+        run @ (RawRun::Exited(_)
+        | RawRun::TimedOut
+        | RawRun::NotStarted { .. }
+        | RawRun::Cancelled
+        | RawRun::Skipped { .. }
+        | RawRun::Http { .. }
+        | RawRun::HttpFailed { .. }
+        | RawRun::Mcp { .. }
+        | RawRun::Model(_)
+        | RawRun::ModelFailed { .. }) => (interpret_read(subject, run).await, None),
+    }
+}
+
+async fn interpret_read(subject: &Subject, run: RawRun) -> JsObject {
     let exit_code = if let RawRun::Exited(exited) = &run {
         Some(exited.exit_code)
     } else {
         None
     };
-    let mut verdict = read_run(&subject, run).await;
+    let mut verdict = read_run(subject, run).await;
     if let Some(exit_code) = exit_code {
         verdict.insert("exitCode".to_owned(), JsValue::Number(f64::from(exit_code)));
     }

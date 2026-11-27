@@ -1,5 +1,4 @@
 import {
-  createHookRegistry,
   type DispatchRequest,
   type EventFactsOf,
   type HookOutcome,
@@ -14,7 +13,7 @@ import { toolNamesOf } from '../rules/index.ts';
 import { currentOf, type SessionCore } from './session-core.ts';
 import type { CoreCallFacts } from '../hooks/core/types.ts';
 import { dispatchBothForms } from './session-core-dispatch.ts';
-import { engineFor, uncappedEngineFor } from './session-engine.ts';
+import { dispatchIn, engineFor } from './session-engine.ts';
 import { portsOf, subprocessFor, type HookEnvironment } from './session-environment.ts';
 import {
   createHookScope,
@@ -113,7 +112,7 @@ export interface HookPart {
  * The hooks of one turn over the session's core: the engine (`engineFor`), the registry and what
  * lasts across dispatches are the core's, so a skill's hooks and the `once` hooks already spent are
  * the same in every turn. A dispatch leaves its `watchPaths` and background promises in the core,
- * and drops the `once` registrations its runs spent.
+ * and a run that spends a `once` registration drops it there.
  */
 export function createHookPart(
   core: SessionCore,
@@ -140,13 +139,6 @@ export function createHookPart(
       async dispatch(event, facts, { sourcesOnly, core: callFacts, ...request }) {
         const { state, gates } = currentOf(core);
         const options = optionsOf();
-        const registry = core.registry.get();
-        const selected =
-          sourcesOnly === undefined
-            ? registry
-            : createHookRegistry(
-                registry.entries.filter((entry) => sourcesOnly.includes(entry.source.kind)),
-              );
         const named = inClaudeNames(facts, options);
         const session = sessionOf(state, gates, options);
         const outcome = await dispatchBothForms(
@@ -166,9 +158,11 @@ export function createHookPart(
             signal: request.signal,
           },
           (capped) =>
-            (capped ? engineFor(core, options) : uncappedEngineFor(core, options)).dispatch(
-              selected,
+            dispatchIn(
+              engineFor(core, options),
+              core,
               { ...request, event, facts: named, session },
+              { sourcesOnly, capped },
             ),
         );
         recordOutcome(core, outcome, Reflect.get(facts, 'source'));

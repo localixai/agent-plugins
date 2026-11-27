@@ -17,6 +17,11 @@ export interface HostValues {
   handle(handle: number, sync: readonly string[], async: readonly string[]): object;
   /** The promise that drives the core's task `task`, kept for a promise of the core's. */
   promise(task: number): Promise<unknown>;
+  /**
+   * Reads `other`'s values too: a core object given back holds the host values of the call that
+   * made it (an output stage's scratch port), which the core may ask for in this call.
+   */
+  adopt(other: HostValues): void;
 }
 
 /** A tag as the core wrote it. */
@@ -34,10 +39,16 @@ export type Reader = (
  * as its handle, `{"$handle": h}`, and is the core's own object again (`registry::Own`). Another
  * handle given back stays a port, as the core reads it.
  */
-const OWN = new WeakMap<object, number>();
+const OWN = new WeakMap<object, OwnHandle>();
+
+/** A core object's handle, and the host values of the call that made it. */
+interface OwnHandle {
+  readonly number: number;
+  readonly hosts: HostValues;
+}
 
 /** The handle `value` crosses back as, when it is the core's own. */
-export const ownOf = (value: unknown): number | undefined =>
+export const ownOf = (value: unknown): OwnHandle | undefined =>
   (typeof value === 'object' && value !== null) || typeof value === 'function'
     ? OWN.get(value)
     : undefined;
@@ -63,7 +74,7 @@ const own: Reader = (tag, _read, hosts) => {
   const [sync, async] = [names(tag.sync), names(tag.async)];
   if (hosts === undefined || typeof number !== 'number' || !sync || !async) return undefined;
   const object = hosts.handle(number, sync, async);
-  OWN.set(object, number);
+  OWN.set(object, { number, hosts });
   return { value: object };
 };
 
@@ -99,10 +110,10 @@ const coreAsyncFunction: Reader = (tag, _read, hosts) => {
   const number = tag.$asyncCall;
   if (hosts === undefined || typeof number !== 'number') return undefined;
   const known = CALLS.get(number)?.deref();
-  if (known !== undefined && OWN.get(known) === number) return { value: known };
+  if (known !== undefined && OWN.get(known)?.number === number) return { value: known };
   const value = callOf(hosts, number, true);
   if (typeof value !== 'function') return undefined;
-  OWN.set(value, number);
+  OWN.set(value, { number, hosts });
   CALLS.set(number, new WeakRef(value));
   forgotten.register(value, number);
   return { value };

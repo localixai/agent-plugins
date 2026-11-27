@@ -1,4 +1,4 @@
-//! Port of `src/hooks/verdict/blocked-prompt.ts`, switched.
+//! Ported from `src/hooks/verdict/blocked-prompt.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! What a blocked prompt leaves behind (hooks.md, "What a blocked prompt leaves behind"): "By
 //! default the block message shown to the user ends with `Original prompt:` followed by the
@@ -48,11 +48,4 @@ pub fn with_original_prompt(mut outcome: JsObject, facts: &JsValue) -> JsObject 
         JsValue::String(format!("{message}\n{ORIGINAL_PROMPT} {prompt}")),
     );
     outcome
-}
-
-crate::registry::exports! {
-    "hooks/verdict/blocked-prompt" {
-        "withOriginalPrompt" => ok |outcome: JsObject, facts: JsValue|
-            with_original_prompt(outcome, &facts);
-    }
 }

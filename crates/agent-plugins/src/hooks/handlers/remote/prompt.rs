@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/remote/prompt.ts`, switched.
+//! Ported from `src/hooks/handlers/remote/prompt.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! A `prompt` hook (hooks.md, "Prompt-based hooks"): the hook input and the prompt go to a model
 //! and "the LLM responds with structured JSON containing a decision". What `ok: false` does on an
@@ -28,10 +28,4 @@ pub async fn run_prompt(entry: &TimedEntry, context: RunContext) -> ModelHandled
         },
     )
     .await
-}
-
-crate::registry::exports! {
-    "hooks/handlers/remote/prompt" {
-        "runPrompt" => async ok |entry: TimedEntry, context: RunContext| run_prompt(&entry, context).await;
-    }
 }

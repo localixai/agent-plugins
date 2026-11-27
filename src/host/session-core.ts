@@ -1,13 +1,12 @@
 import {
   createHookRegistry,
-  createOnceClaims,
   createStopBlockCap,
-  type HookEngine,
+  type EnvFiles,
   type HookRegistry,
-  type OnceClaims,
   type RegisteredHandler,
   type StopBlockCap,
 } from '../hooks/index.ts';
+import type { CoreEngine } from '../hooks/engine.ts';
 import type { InvokedSkill } from '../loading/index.ts';
 
 import { type HookUsage } from '../skills/index.ts';
@@ -22,9 +21,10 @@ import { NO_HOOKS_YET } from '../skills/hook-limits.ts';
  * The state of a session that must outlive a turn, as one handle of the Rust core
  * (`crates/agent-plugins/src/host/session_core.rs`, docs/RUST.md, "The host session"): the
  * registry, the registrations, the watch list, the background deliveries and the repeats of an
- * async `SessionStart`, told apart by serials the core hands out. This module is its edge: what
- * stays the host's (the state cell and the state object last taken up, the engine, the ledgers)
- * and the mirror the TypeScript dispatch reads the registry through.
+ * async `SessionStart` and the `once` claims, told apart by serials the core hands out. This module
+ * is its edge: what stays the host's (the state cell and the state object last taken up, the
+ * engine built over the turn's ports, the environment files, the ledgers) and the mirror the
+ * TypeScript reads the registry through.
  *
  * Implemented by the Rust core (`crates/agent-plugins/src/host/session_core.rs`, docs/RUST.md).
  */
@@ -88,7 +88,7 @@ export interface EngineInputs {
 /** The session's engine and what it was built over (`engineFor`). */
 export interface BuiltEngine {
   readonly inputs: EngineInputs;
-  readonly engine: HookEngine;
+  readonly engine: CoreEngine;
 }
 
 /** The registry as the edge reads it from the core: by serial, each entry one object for its life. */
@@ -119,8 +119,8 @@ export interface SessionCore {
   readonly engine: Cell<BuiltEngine | undefined>;
   /** The consecutive Stop blocks of the session: every engine it builds counts in this one. */
   readonly stopCap: StopBlockCap;
-  /** The `once` handlers its dispatches hold and spent: every engine it builds reads this one. */
-  readonly onceClaims: OnceClaims;
+  /** `CLAUDE_ENV_FILE`'s files, made at the first use and kept for the session. */
+  readonly envFiles: Cell<EnvFiles | undefined>;
   /** The skills that ran and the monitors started in this session (`session.monitorsToStart`). */
   readonly monitors: MonitorLedger;
 }
@@ -226,7 +226,7 @@ export function createSessionCore(cell: HostStateSource, monitors: MonitorLedger
     background: createBackgroundQueue(),
     engine: cellOf<BuiltEngine | undefined>(undefined),
     stopCap: createStopBlockCap(),
-    onceClaims: createOnceClaims(),
+    envFiles: cellOf<EnvFiles | undefined>(undefined),
     monitors,
   };
 }

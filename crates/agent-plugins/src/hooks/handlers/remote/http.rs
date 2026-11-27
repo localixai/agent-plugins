@@ -1,4 +1,4 @@
-//! Port of `src/hooks/handlers/remote/http.ts`, switched.
+//! Ported from `src/hooks/handlers/remote/http.ts`; only the core uses it now, so it has no wrapper.
 //!
 //! An `http` hook (hooks.md, "HTTP hook fields"): "Claude Code sends the hook's JSON input as the
 //! POST request body with `Content-Type: application/json`". The run is the raw answer; what a
@@ -190,11 +190,5 @@ pub async fn run_http(entry: &TimedEntry, context: RunContext) -> HttpHandled {
     HttpHandled {
         run,
         issues: Vec::new(),
-    }
-}
-
-crate::registry::exports! {
-    "hooks/handlers/remote/http" {
-        "runHttp" => async ok |entry: TimedEntry, context: RunContext| run_http(&entry, context).await;
     }
 }

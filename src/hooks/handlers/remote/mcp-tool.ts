@@ -1,6 +1,5 @@
 import { coreModule } from '../../../wasm/bridge.ts';
 import type { HookEvent } from '../../../protocol/official.ts';
-import type { HandlerEntry, HandlerResult, RunContext } from '../context.ts';
 
 /**
  * An `mcp_tool` hook (hooks.md, "MCP tool hook fields"). The `server` is passed as the hook writes
@@ -26,8 +25,3 @@ const call = coreModule('hooks/handlers/remote/mcp-tool');
  * `SubagentStart`, `PostToolUseFailure`) does not.
  */
 export const WAITS_FOR_SERVER: { readonly [E in HookEvent]: boolean } = call('WAITS_FOR_SERVER');
-
-export const runMcpTool = (
-  entry: HandlerEntry<'mcp_tool'>,
-  context: RunContext,
-): Promise<HandlerResult> => call.async('runMcpTool', entry, context);

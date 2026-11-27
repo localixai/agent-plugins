@@ -76,7 +76,10 @@ const numberTag = (value: number): unknown => {
 function tagged(value: unknown, hosts: HostValues | undefined): unknown {
   if (value === undefined) return UNDEFINED;
   const own = ownOf(value);
-  if (own !== undefined) return { $handle: own };
+  if (own !== undefined) {
+    hosts?.adopt(own.hosts);
+    return { $handle: own.number };
+  }
   if (typeof value === 'number') return numberTag(value);
   if (value instanceof Set) return { $set: [...value] };
   if (value instanceof Map) return { $map: [...value] };

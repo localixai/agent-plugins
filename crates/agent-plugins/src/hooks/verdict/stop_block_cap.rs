@@ -170,7 +170,6 @@ crate::registry::methods! {
 
 crate::registry::exports! {
     "hooks/verdict/stop-block-cap" {
-        "isToolCall" => ok |event: String| is_tool_call(&event);
-        "createStopBlockCap" => ok || Handle::new(create_stop_block_cap());
+        "createStopBlockCap" => ok || Handle::own(create_stop_block_cap());
     }
 }

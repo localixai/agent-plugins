@@ -8,9 +8,9 @@
 //! out, never by the identity of a host object: each registered handler has a serial, each
 //! registration a serial, and the state is the facts the edge hands over when it takes one up.
 //!
-//! What stays the host's (the state cell and the state object last taken up, the engine, the
-//! skill-hook and monitor ledgers, the listeners and the promises) is kept by the TypeScript edge
-//! in `src/host/session-core.ts`.
+//! What stays the host's (the state cell and the state object last taken up, the engine built over
+//! the turn's ports, the skill-hook and monitor ledgers, the listeners and the promises) is kept by
+//! the TypeScript edge in `src/host/session-core.ts`.
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -22,6 +22,7 @@ use super::session_registry::initial_registry;
 use super::session_start_repeats::SessionStartRepeats;
 use crate::hooks::contracts::RegisteredHandler as HandlerFacts;
 use crate::hooks::register::HookGroup;
+use crate::hooks::select::once::{Claims, OnceClaims};
 use crate::js::JsValue;
 use crate::registry::{Handle, Own};
 
@@ -161,6 +162,23 @@ pub struct SessionCore {
     pub(crate) state: Mutex<CoreState>,
     /// What each async `SessionStart` hook last gave, so a repeat is not handed on again.
     pub(crate) session_starts: SessionStartRepeats,
+    /// The `once` handlers its dispatches hold and spent, by serial.
+    pub(crate) once: OnceClaims,
+}
+
+/// A session's dispatches claim its `once` handlers by serial, and a run that spends one drops it
+/// from the registry at once (a background one when its process ends): the hook is gone for every
+/// later turn, and one registered again under the same id while the run was in flight stays.
+impl Claims for SessionCore {
+    fn take(&self, selected: Vec<(u32, JsValue)>) -> Vec<(u32, JsValue)> {
+        self.once.take(selected)
+    }
+
+    fn settle(&self, serial: u32, entry: &JsValue, succeeded: bool) {
+        if self.once.settle(serial, entry, succeeded) {
+            super::session_registry::drop_spent(&mut self.lock(), &[serial]);
+        }
+    }
 }
 
 impl SessionCore {

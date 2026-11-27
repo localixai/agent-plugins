@@ -7,6 +7,15 @@
   workflow and permission policies, `pluginSuggestionMarketplaces`, the command sources and the
   official marketplace's registration. Each policy's questions are functions of the core's, so a
   question costs one call.
+- **Breaking** (`/hooks`): `createOnceClaims`, `OnceClaims`, `withoutSpent` and
+  `HookEngineOptions.onceClaims` are gone. An engine holds its own `once` claims, and a session's
+  dispatches share the session's, by registration serial; a spent handler is dropped by the core.
+- A hook dispatch is one call into the core (`createHookEngine`'s `dispatch`): select, build the
+  input, run each handler, read it, cap and merge, the Stop cap and the `once` claims. The registry
+  crosses as serials and only the entries the engine does not hold yet cross whole. A background
+  hook's process still starts during the dispatch: the core hands its run to the host at once
+  (the `$hold` need). `createOutputStage` and `createStopBlockCap` return the core's own handles,
+  so an engine given one uses it without a crossing per call.
 - The permission decision runs on the core in one call: the rules stage, the permission modes,
   file targets, redirects, shell commands, PowerShell edits and the hook and mod outcomes. A hook's
   input is parsed by the core (`parseFacts`); no TypeScript module builds a hook input schema.

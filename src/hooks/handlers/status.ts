@@ -1,15 +1,11 @@
 import type { HookEvent } from '../../protocol/official.ts';
-import { coreModule } from '../../wasm/bridge.ts';
-import type { RegisteredHandler } from '../contracts.ts';
 
 /**
  * `statusMessage` (hooks.md, "Common fields"): "Custom spinner message displayed while the hook
  * runs". Showing a spinner is the host's job; the kit tells it when a hook starts and with what
- * text.
- *
- * Implemented by the Rust core (`crates/agent-plugins/src/hooks/handlers/status.rs`, docs/RUST.md).
+ * text. The core announces a start (`crates/agent-plugins/src/hooks/handlers/status.rs`); these
+ * are the shapes the host's observer is called with.
  */
-const call = coreModule('hooks/handlers/status');
 
 /** What the host is told when a hook starts. */
 export interface HookStarted {
@@ -23,15 +19,3 @@ export interface HookStarted {
 export interface StartObserver {
   started?(info: HookStarted): void;
 }
-
-/**
- * Calls one of the host's observer callbacks. A callback that throws is the host's fault and tells
- * the host nothing it can use mid-dispatch: it neither stops the hook nor rejects the dispatch, so
- * a sibling hook's block still reaches the outcome (judgment, spec/judgments.md).
- */
-export const observe = (callback: () => void): void => call('observe', callback);
-
-export const announceStart = (
-  observer: StartObserver | undefined,
-  entry: RegisteredHandler,
-): void => call('announceStart', observer, entry);

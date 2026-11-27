@@ -27,9 +27,6 @@ import type { HookOutcome } from '../outcome.ts';
  */
 const call = coreModule('hooks/verdict/stop-block-cap');
 
-/** Whether this event is a tool call, which ends the run of consecutive blocks. */
-export const isToolCall = (event: HookEvent): boolean => call('isToolCall', event);
-
 export interface StopBlockCap {
   /** Counts this dispatch and overrides the hold once it exceeds the cap. */
   apply<E extends HookEvent>(

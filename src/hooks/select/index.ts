@@ -11,8 +11,7 @@ export { MATCHER_VALUES } from './matcher-values.ts';
 export { MATCHER_TARGETS } from './matcher-targets.ts';
 export type { MatcherTarget, MatcherValue } from './matcher-targets.ts';
 export { canonicalMatcherModel } from './model-switch.ts';
-export { consumedByRun, createOnceClaims, withoutSpent } from './once.ts';
-export type { OnceClaims } from './once.ts';
+export { consumedByRun } from './once.ts';
 export { selectHandlers } from './select.ts';
 export type { SelectRequest } from './select.ts';
 export {
