@@ -1,4 +1,8 @@
+/** Implemented by the Rust core (`crates/agent-plugins/src/settings/hooks/origins.rs`, docs/RUST.md). */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PluginId } from '../plugins/plugin-id.ts';
+
+const call = coreModule('settings/hooks/origins');
 
 /**
  * Where a hook comes from, as a host reports it. What `allowManagedHooksOnly`, `disableAllHooks` and
@@ -6,7 +10,6 @@ import type { PluginId } from '../plugins/plugin-id.ts';
  * (settings-reference.md, `disableAllHooks` "The reach depends on which file carries the key" and
  * "What runs under `allowManagedHooksOnly`"), so the host names the origin and the policy answers.
  */
-
 /** A plugin that ships hooks, with the facts the locks look at. */
 export interface PluginHookSource {
   /** `plugin@marketplace`, matched whole against the plugins managed settings force-enable. */
@@ -59,12 +62,13 @@ export type PolicyHookSource =
     };
 
 /** Why a hook does not run. */
-export const HOOK_BLOCK_REASONS = [
+export const HOOK_BLOCK_REASONS: readonly [
   'commandSourceDisabled',
   'disableAllHooks',
   'allowManagedHooksOnly',
   'strictPluginOnlyCustomization.hooks',
-] as const;
+] = call('HOOK_BLOCK_REASONS');
+
 export type HookBlockReason = (typeof HOOK_BLOCK_REASONS)[number];
 
 export type HookVerdict =

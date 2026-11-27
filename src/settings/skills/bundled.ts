@@ -1,5 +1,12 @@
-import { isTruthyEnv } from '../../format/env-flag.ts';
+/**
+ * Whether the bundled skills are off (settings-reference.md, `disableBundledSkills`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/skills/bundled.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/skills/bundled');
 
 /** What turned the bundled skills off. */
 export type BundledOffBy = 'setting' | 'env';
@@ -19,26 +26,14 @@ export interface BundledSkillsDecision {
 }
 
 /** `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS`, the name of the variable the host's environment carries. */
-export const BUNDLED_SKILLS_ENV = 'CLAUDE_CODE_DISABLE_BUNDLED_SKILLS';
+export const BUNDLED_SKILLS_ENV: string = call('BUNDLED_SKILLS_ENV');
 
 /**
  * `disableBundledSkills` and `CLAUDE_CODE_DISABLE_BUNDLED_SKILLS` (settings-reference.md,
  * `disableBundledSkills`: "whichever of the two turns them off, the other can't turn them back
  * on"). The setting is the one the files combine to; `env` is the host's environment as data.
  */
-export function bundledSkills(
+export const bundledSkills = (
   view: PolicyView,
   env: Readonly<Record<string, string | undefined>>,
-): BundledSkillsDecision {
-  const decidedBy: BundledOffBy[] = [];
-  if (view.get('disableBundledSkills') === true) decidedBy.push('setting');
-  // "Set to `1`": an on/off variable with the full spelling set (J3.16).
-  if (isTruthyEnv(env[BUNDLED_SKILLS_ENV])) decidedBy.push('env');
-  const disabled = decidedBy.length > 0;
-  return {
-    disabled,
-    decidedBy,
-    builtInCommandsListedToModel: !disabled,
-    builtInCommandsTypable: true,
-  };
-}
+): BundledSkillsDecision => call('bundledSkills', view, env);

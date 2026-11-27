@@ -1,7 +1,6 @@
 import type { ArtifactInput } from '../../protocol/official-tools.ts';
 import type { Assert, Equal } from '../../protocol/type-equality.ts';
 import { coreModule } from '../../wasm/bridge.ts';
-import type { SpecifierMatcher } from '../matchers.ts';
 import type { PermissionRule, PreparedCall } from '../types.ts';
 
 /**
@@ -31,14 +30,6 @@ export type ArtifactReadIsAction = Assert<
  */
 export const matchDomainPattern = (pattern: string, url: string): boolean =>
   call('matchDomainPattern', pattern, url);
-
-/**
- * The matcher of the `domain` rule format: a `WebFetch(domain:...)` rule against the call's `url`.
- * A specifier without the `domain:` prefix matches nothing, because the docs give WebFetch no other
- * form (spec/judgments.md).
- */
-export const matchWebFetchRule: SpecifierMatcher = (rule, prepared, ctx) =>
-  call('matchWebFetchRule', rule, prepared, ctx);
 
 /**
  * Whether a `WebFetch(domain:...)` rule covers an `Artifact` read (permissions.md, "Allow or deny

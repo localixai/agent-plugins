@@ -7,6 +7,15 @@
   its recovery, the refusal while a record cannot be read, the session's `--plugin-dir` and
   `--plugin-url` plugins, the orphaned-version cleanup and the uninstall's record selection run on
   the core.
+- `ignore` is no longer a dependency: the core matches gitignore patterns itself (held to npm
+  `ignore` 7.0.14 on 34,580 cases), and the path rules, `Cd` rules, `!` carve-outs, symlink
+  preparation and the specifier matchers run on the core.
+- The settings' area decisions run on the core over the host's `PolicyView`: the channel gate
+  and allowlist, permission relay text, the agent, theme, teammate, output style, launcher and
+  `worktree` keys, plugin defaults, the subagent status line and its run, the hooks merge, the
+  sideload verdicts, the running mode after a settings change, `enabledPlugins`, the claude.ai
+  sync, the trust warning, bundled skills and inline shell, workflow enablement and size, and the
+  host-wide environment switches.
 - A skill's injected commands run on the core (permission answer, refusal, the run, the output
   window, the move to the background), and so do stacked skills in one message, the
   `headersHelper` run and its retry on a 401 or 403, the component walk of a plugin folder,

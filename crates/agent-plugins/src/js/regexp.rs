@@ -33,6 +33,11 @@ pub use syntax_error::SyntaxError;
 /// The flags JavaScript knows, in the order its `flags` getter spells them.
 const FLAG_ORDER: &str = "dgimsuvy";
 
+/// The longest pattern JavaScriptCore compiles, in UTF-16 code units, whatever its flags and
+/// before its syntax is read: one unit more is "regular expression too large" (measured in Bun,
+/// and recorded by `scripts/rust/js-oracle/ignore.ts`, whose glob patterns reach it).
+const MAX_PATTERN_LENGTH: usize = 1024 * 1024;
+
 /// A compiled regular expression with the state JavaScript's keeps: `lastIndex`, which `exec`
 /// and `test` read and write when the pattern is global (`g`) or sticky (`y`).
 #[derive(Debug, Clone)]
@@ -89,6 +94,9 @@ impl RegExp {
     pub fn new(source: &str, flags: &str) -> Result<Self, SyntaxError> {
         if !valid_flags(flags) {
             return Err(SyntaxError::flags());
+        }
+        if super::code_unit_length(source) > MAX_PATTERN_LENGTH {
+            return Err(SyntaxError::refused("regular expression too large"));
         }
         let has = |flag: char| flags.contains(flag);
         let unicode = has('u') || has('v');
@@ -167,6 +175,17 @@ impl RegExp {
     /// `regexp.test(text)`.
     pub fn test(&mut self, text: &str) -> bool {
         self.exec(text).is_some()
+    }
+
+    /// `regexp.test(text)` of a pattern several readers share: the same answer, with `lastIndex`
+    /// written only to a copy when the pattern is global or sticky, so the pattern stays as it was.
+    #[must_use]
+    pub fn test_shared(&self, text: &str) -> bool {
+        if self.global() || self.sticky() {
+            return self.clone().test(text);
+        }
+        let units: Vec<u16> = text.encode_utf16().collect();
+        self.find_at(&units, 0, false).is_some()
     }
 
     /// `regexp.exec(text)`.
@@ -334,5 +353,35 @@ mod tests {
             error.to_string(),
             "Invalid flags supplied to RegExp constructor."
         );
+    }
+
+    #[test]
+    fn refuses_a_pattern_longer_than_javascript_core_compiles() {
+        let longest = "a".repeat(1024 * 1024);
+        assert!(RegExp::new(&longest, "").is_ok());
+        let too_large = "Invalid regular expression: regular expression too large";
+        let error = RegExp::new(&format!("{longest}("), "").unwrap_err();
+        assert_eq!(error.to_string(), too_large);
+        let pairs = "😀".repeat(512 * 1024);
+        assert_eq!(
+            RegExp::new(&format!("{pairs}a"), "u")
+                .unwrap_err()
+                .to_string(),
+            too_large
+        );
+        let error = RegExp::new(&format!("{longest}a"), "gq").unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Invalid flags supplied to RegExp constructor."
+        );
+    }
+
+    #[test]
+    fn a_shared_test_leaves_the_pattern_as_it_was() {
+        let global = RegExp::new("a", "g").unwrap();
+        assert!(global.test_shared("ba"));
+        assert!(global.test_shared("ba"));
+        assert_eq!(global.last_index(), 0);
+        assert!(!RegExp::new("^a", "").unwrap().test_shared("ba"));
     }
 }

@@ -1,5 +1,4 @@
 import { coreModule } from '../../wasm/bridge.ts';
-import type { SpecifierMatcher } from '../matchers.ts';
 import type { ShellCommand, ShellWord } from './words.ts';
 
 /**
@@ -19,7 +18,3 @@ export const cmdletCall = (
 /** The command (or pattern) with its first word, when it names a cmdlet another way, as the cmdlet. */
 export const canonicalizePowerShell = (command: string): string =>
   call('canonicalizePowerShell', command);
-
-/** `PowerShell(...)` rules with a command pattern. */
-export const matchPowerShellRule: SpecifierMatcher = (rule, prepared, ctx) =>
-  call('matchPowerShellRule', rule, prepared, ctx);

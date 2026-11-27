@@ -680,4 +680,50 @@ mod tests {
             .collect();
         assert_eq!(keys, ["2", "10", "b", "01", "a"]);
     }
+
+    // bun -e 'console.log(JSON.stringify({b:1,"2":[0,5,-0,"a\n"],d:null}),
+    //   JSON.stringify({a:undefined,b:NaN,c:[undefined]}))' writes
+    // {"2":[0,5,0,"a\n"],"b":1,"d":null} and {"b":null,"c":[null]}.
+    #[test]
+    fn json_stringify_writes_what_javascript_writes() {
+        let value =
+            json_parse::json_parse(r#"{"b":1,"2":[0,5,-0,"a\n"],"d":null}"#).unwrap_or_default();
+        assert_eq!(
+            json_stringify(&value).as_deref(),
+            Some(r#"{"2":[0,5,0,"a\n"],"b":1,"d":null}"#)
+        );
+        assert_eq!(json_stringify(&JsValue::Undefined), None);
+        let object = JsValue::from([
+            ("a", JsValue::Undefined),
+            ("b", JsValue::Number(f64::NAN)),
+            ("c", JsValue::Array(vec![JsValue::Undefined])),
+        ]);
+        assert_eq!(
+            json_stringify(&object).as_deref(),
+            Some(r#"{"b":null,"c":[null]}"#)
+        );
+    }
+
+    // bun -e 'console.log([undefined,null,false,0,-0,NaN,"","0",[],{},1].map(Boolean).join())'
+    // writes false,false,false,false,false,false,false,true,true,true,true.
+    #[test]
+    fn is_truthy_answers_as_javascript() {
+        let falsy = [
+            JsValue::Undefined,
+            JsValue::Null,
+            JsValue::Bool(false),
+            JsValue::Number(0.0),
+            JsValue::Number(-0.0),
+            JsValue::Number(f64::NAN),
+            JsValue::String(String::new()),
+        ];
+        assert!(falsy.iter().all(|value| !is_truthy(value)));
+        let truthy = [
+            JsValue::String("0".to_owned()),
+            JsValue::Array(Vec::new()),
+            JsValue::Object(JsObject::new()),
+            JsValue::Number(1.0),
+        ];
+        assert!(truthy.iter().all(is_truthy));
+    }
 }

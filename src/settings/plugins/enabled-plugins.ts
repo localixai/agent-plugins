@@ -1,6 +1,14 @@
-import type { PolicyKey } from '../../protocol/settings-keys.ts';
-import type { KeyHolder, PolicyScope } from '../layers.ts';
+/**
+ * `enabledPlugins`: whether a plugin is on and what decided it (settings-reference.md,
+ * `enabledPlugins`; plugins/org.md, "Control matrix").
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/plugins/enabled_plugins.rs`, docs/RUST.md).
+ */
+import { coreModule } from '../../wasm/bridge.ts';
+import type { PolicyScope } from '../layers.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/plugins/enabled-plugins');
 
 /** Where an `enabledPlugins` decision came from: a file, or the plugin's own `defaultEnabled`. */
 export type DecidedBy = PolicyScope | 'defaultEnabled';
@@ -13,16 +21,6 @@ export interface EnabledDecision {
   /** The same `false`: "hidden from the marketplace". */
   readonly hiddenInMarketplace: boolean;
 }
-
-const KEY = 'enabledPlugins' satisfies PolicyKey;
-
-/**
- * Whether a file's entry for the id counts. A `--add-dir` directory is the lowest source and "Only a
- * `true` value has an effect" there (plugins/loading.md, "Find where a plugin is enabled"), so any
- * other value of its entry is passed over and a lower file, or the manifest, decides.
- */
-const decides = (holder: KeyHolder<typeof KEY>, id: string): boolean =>
-  Object.hasOwn(holder.value, id) && (holder.scope !== 'addDir' || holder.value[id] === true);
 
 /**
  * Whether a plugin is on (settings-reference.md, `enabledPlugins`; plugins/org.md, "Control
@@ -37,35 +35,15 @@ const decides = (holder: KeyHolder<typeof KEY>, id: string): boolean =>
  * Judgment (spec/judgments.md): the SDK also types a list or an object as an entry, which the
  * settings docs do not describe; only `false` turns a plugin off, so those read as enabled.
  */
-export function enabledPlugin(
+export const enabledPlugin = (
   view: PolicyView,
   id: string,
   manifestDefaultEnabled = true,
-): EnabledDecision {
-  const holder = view.eachFromHighest(KEY).find((each) => decides(each, id));
-  if (holder === undefined) {
-    return {
-      on: manifestDefaultEnabled,
-      decidedBy: 'defaultEnabled',
-      blockedByManaged: false,
-      hiddenInMarketplace: false,
-    };
-  }
-  const on = holder.value[id] !== false;
-  const blocked = holder.scope === 'managed' && !on;
-  return {
-    on,
-    decidedBy: holder.scope,
-    blockedByManaged: blocked,
-    hiddenInMarketplace: blocked,
-  };
-}
+): EnabledDecision => call('enabledPlugin', view, id, manifestDefaultEnabled);
 
 /**
  * Whether managed settings force-enable the plugin. The id is matched whole, so a plugin of the
  * same name from another marketplace is not matched (settings-reference.md, `allowManagedHooksOnly`).
  */
-export function forceEnabledByManaged(view: PolicyView, id: string): boolean {
-  const decision = enabledPlugin(view, id);
-  return decision.decidedBy === 'managed' && decision.on;
-}
+export const forceEnabledByManaged = (view: PolicyView, id: string): boolean =>
+  call('forceEnabledByManaged', view, id);

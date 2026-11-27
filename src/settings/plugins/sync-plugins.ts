@@ -1,6 +1,14 @@
+/**
+ * Whether the plugins and skills of the claude.ai account sync (settings-reference.md,
+ * `syncClaudeAiPlugins`, `syncClaudeAiSkills`).
+ *
+ * Implemented by the Rust core (`crates/agent-plugins/src/settings/plugins/sync_plugins.rs`, docs/RUST.md).
+ */
 import type { PolicyKey } from '../../protocol/settings-keys.ts';
-import type { PolicyScope } from '../layers.ts';
+import { coreModule } from '../../wasm/bridge.ts';
 import type { PolicyView } from '../view.ts';
+
+const call = coreModule('settings/plugins/sync-plugins');
 
 /** What `syncClaudeAiPlugins` asks the host to do; the host does the I/O. */
 export interface SyncDecision {
@@ -15,9 +23,6 @@ export interface SyncDecision {
 /** The two keys that stop the claude.ai sync; they read the same way (settings.md, "Exceptions"). */
 export type SyncKey = Extract<PolicyKey, 'syncClaudeAiPlugins' | 'syncClaudeAiSkills'>;
 
-/** The files whose `false` also moves the synced plugins (settings-reference.md: "user or managed"). */
-const MOVES: readonly PolicyScope[] = ['user', 'managed'];
-
 /**
  * Whether Claude Code syncs and loads the plugins of the claude.ai account. Only `false` counts: `true`
  * is the same as unset. A `false` the key's scope line admits (user, local, managed, `--settings`)
@@ -28,21 +33,12 @@ const MOVES: readonly PolicyScope[] = ['user', 'managed'];
  * Judgment (spec/judgments.md): one `false` in a user or managed file moves the plugins, even when
  * a higher file only stops the sync.
  */
-export function syncDecision(view: PolicyView): SyncDecision {
-  return syncDecisionOf(view, 'syncClaudeAiPlugins');
-}
+export const syncDecision = (view: PolicyView): SyncDecision => call('syncDecision', view);
 
 /**
  * The reading both sync keys share: `syncClaudeAiSkills` has the same scope line, the same
  * honored-only-`false` rule and the same move to the trash (settings-reference.md, skills.md "How
  * synced skills behave"), only into `~/.claude/skills/.trash/`.
  */
-export function syncDecisionOf(view: PolicyView, key: SyncKey): SyncDecision {
-  const off = view.eachFromHighest(key).filter((holder) => !holder.value);
-  if (off.length === 0) return { download: true, loadSynced: true, moveToTrash: false };
-  return {
-    download: false,
-    loadSynced: false,
-    moveToTrash: off.some((holder) => MOVES.includes(holder.scope)),
-  };
-}
+export const syncDecisionOf = (view: PolicyView, key: SyncKey): SyncDecision =>
+  call('syncDecisionOf', view, key);
